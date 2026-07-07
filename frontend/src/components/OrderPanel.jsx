@@ -141,7 +141,7 @@ export default function OrderPanel({
       </div>
 
       {/* Footer */}
-      <div className="p-6 border-t border-[#333] bg-[#141414]">
+      <div className="p-6 pb-10 border-t border-[#333] bg-[#141414]">
         <div className="flex items-baseline justify-between mb-4">
           <span className="text-sm text-neutral-400 uppercase tracking-widest font-bold">
             Σύνολο
