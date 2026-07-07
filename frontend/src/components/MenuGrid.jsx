@@ -35,26 +35,40 @@ export default function MenuGrid({ categories, items, activeCategory, onCategory
         className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-6"
         data-testid="menu-items-grid"
       >
-        {filtered.map((it) => (
-          <button
-            key={it.id}
-            onClick={() => onItemClick(it)}
-            data-testid={`menu-item-${it.id}`}
-            className="group flex flex-col justify-between p-4 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] rounded-lg text-left h-32 transition-all active:scale-[0.98] no-select"
-          >
-            <span className="font-heading text-lg font-semibold leading-tight text-white line-clamp-2">
-              {it.name}
-            </span>
-            <div className="flex items-end justify-between mt-2">
-              <span className="font-mono text-xl font-bold text-[#FF6B00]">{eur(it.price)}</span>
-              {it.customizable && (
-                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-                  Custom
-                </span>
+        {filtered.map((it) => {
+          const unavailable = it.available === false;
+          return (
+            <button
+              key={it.id}
+              onClick={() => !unavailable && onItemClick(it)}
+              disabled={unavailable}
+              data-testid={`menu-item-${it.id}`}
+              data-available={unavailable ? "false" : "true"}
+              className={`group flex flex-col justify-between p-4 rounded-lg text-left h-32 transition-all no-select relative ${
+                unavailable
+                  ? "bg-[#141414] border border-[#2A2A2A] cursor-not-allowed opacity-50"
+                  : "bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] active:scale-[0.98]"
+              }`}
+            >
+              <span className="font-heading text-lg font-semibold leading-tight text-white line-clamp-2">
+                {it.name}
+              </span>
+              <div className="flex items-end justify-between mt-2">
+                <span className="font-mono text-xl font-bold text-[#FF6B00]">{eur(it.price)}</span>
+                {it.customizable && !unavailable && (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                    Custom
+                  </span>
+                )}
+              </div>
+              {unavailable && (
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-[#FF3B30]/20 text-[#FF6961] text-[10px] font-bold uppercase tracking-widest">
+                  Έλλειψη
+                </div>
               )}
-            </div>
-          </button>
-        ))}
+            </button>
+          );
+        })}
         {filtered.length === 0 && categories.length > 0 && (
           <div className="col-span-full text-neutral-500 text-center py-16">
             Δεν υπάρχουν προϊόντα σε αυτή την κατηγορία

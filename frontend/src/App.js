@@ -8,6 +8,8 @@ import Analytics from "@/pages/Analytics";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import MenuManagement from "@/pages/MenuManagement";
+import Stock from "@/pages/Stock";
+import Schedule from "@/pages/Schedule";
 
 function App() {
   return (
@@ -38,6 +40,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/stock"
+              element={
+                <ProtectedRoute>
+                  <Stock />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/schedule"
+              element={
+                <ProtectedRoute>
+                  <Schedule />
                 </ProtectedRoute>
               }
             />

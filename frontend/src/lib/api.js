@@ -34,6 +34,27 @@ export const apiCreateItem = (payload) => api.post("/menu/items", payload).then(
 export const apiUpdateItem = (id, payload) => api.put(`/menu/items/${id}`, payload).then((r) => r.data);
 export const apiDeleteItem = (id) => api.delete(`/menu/items/${id}`).then((r) => r.data);
 export const apiUpdateCustomization = (payload) => api.put("/menu/customization", payload).then((r) => r.data);
+export const apiSetItemAvailability = (id, payload) =>
+  api.patch(`/menu/items/${id}/availability`, payload).then((r) => r.data);
+
+// SHOPPING
+export const apiListShopping = () => api.get("/shopping").then((r) => r.data);
+export const apiAddShopping = (text) => api.post("/shopping", { text }).then((r) => r.data);
+export const apiUpdateShopping = (id, payload) => api.put(`/shopping/${id}`, payload).then((r) => r.data);
+export const apiDeleteShopping = (id) => api.delete(`/shopping/${id}`).then((r) => r.data);
+
+// EMPLOYEES
+export const apiListEmployees = () => api.get("/employees").then((r) => r.data);
+export const apiCreateEmployee = (name) => api.post("/employees", { name }).then((r) => r.data);
+export const apiUpdateEmployee = (id, name) => api.put(`/employees/${id}`, { name }).then((r) => r.data);
+export const apiDeleteEmployee = (id) => api.delete(`/employees/${id}`).then((r) => r.data);
+
+// SHIFTS
+export const apiListShifts = (weekStart) =>
+  api.get("/shifts", { params: { week_start: weekStart } }).then((r) => r.data);
+export const apiUpsertShift = (payload) => api.put("/shifts", payload).then((r) => r.data);
+export const apiDeleteShift = (employeeId, weekStart, day) =>
+  api.delete("/shifts", { params: { employee_id: employeeId, week_start: weekStart, day } }).then((r) => r.data);
 
 // ORDERS
 export const fetchNextOrderNumber = async () => (await api.get("/orders/next-number")).data.next_order_number;

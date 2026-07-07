@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { BarChart3, Utensils, LogOut, Settings } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import AppShell from "@/components/AppShell";
 import MenuGrid from "@/components/MenuGrid";
 import OrderPanel from "@/components/OrderPanel";
 import CustomizationModal from "@/components/CustomizationModal";
 import Receipt from "@/components/Receipt";
+import { useAuth } from "@/context/AuthContext";
 import { ORDER_SOURCES } from "@/data/menu";
 import {
   apiGetMenuConfig,
@@ -19,8 +18,7 @@ let LINE_SEQ = 1;
 const newLineId = () => `L${Date.now()}-${LINE_SEQ++}`;
 
 export default function PDA() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [config, setConfig] = useState({ categories: [], items: [], customization: null });
   const [activeCategory, setActiveCategory] = useState(null);
   const [orderNumber, setOrderNumber] = useState(0);
@@ -78,6 +76,7 @@ export default function PDA() {
   };
 
   const handleItemClick = (item) => {
+    if (item.available === false) return;
     if (item.customizable) {
       setModalItem(item);
       setModalOpen(true);
@@ -138,63 +137,18 @@ export default function PDA() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
   if (loading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#0D0D0D] text-neutral-400">
-        Φόρτωση μενού...
-      </div>
+      <AppShell title="Παραγγελίες">
+        <div className="flex-1 flex items-center justify-center text-neutral-400">
+          Φόρτωση μενού...
+        </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#0D0D0D] text-white overflow-hidden">
-      <header className="flex items-center justify-between px-6 h-16 border-b border-[#333] bg-[#0D0D0D] shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md bg-[#FF6B00] flex items-center justify-center">
-            <Utensils className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span
-              className="font-heading text-2xl font-bold tracking-tight"
-              data-testid="restaurant-name"
-            >
-              {user?.restaurant_name || "POS"}
-            </span>
-            <span className="text-xs uppercase tracking-widest text-neutral-500">POS</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/menu"
-            data-testid="nav-menu-btn"
-            className="flex items-center gap-2 h-11 px-4 rounded-md border border-[#333] hover:border-[#FF6B00] text-neutral-200 hover:text-white transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            <span className="text-sm font-bold hidden md:inline">Διαχείριση μενού</span>
-          </Link>
-          <Link
-            to="/analytics"
-            data-testid="nav-analytics-btn"
-            className="flex items-center gap-2 h-11 px-4 rounded-md border border-[#333] hover:border-[#FF6B00] text-neutral-200 hover:text-white transition-colors"
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span className="text-sm font-bold hidden md:inline">Στατιστικά</span>
-          </Link>
-          <button
-            onClick={handleLogout}
-            data-testid="logout-btn"
-            className="flex items-center gap-2 h-11 px-4 rounded-md border border-[#333] hover:border-[#FF3B30] text-neutral-300 hover:text-[#FF3B30] transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
-
+    <AppShell title="Παραγγελίες">
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-hidden">
         <section className="p-6 overflow-hidden flex flex-col">
           <MenuGrid
@@ -229,8 +183,7 @@ export default function PDA() {
         }}
         onConfirm={handleConfirmCustomization}
       />
-
       <Receipt order={printOrder} />
-    </div>
+    </AppShell>
   );
 }

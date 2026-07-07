@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import {
-  ArrowLeft,
   Receipt as ReceiptIcon,
   Euro,
   TrendingUp,
@@ -9,6 +7,7 @@ import {
   Award,
   RefreshCcw,
 } from "lucide-react";
+import AppShell from "@/components/AppShell";
 import {
   BarChart,
   Bar,
@@ -94,24 +93,8 @@ export default function Analytics() {
   const hourly = (data?.hourly || []).filter((h) => h.orders > 0);
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white">
-      <header className="flex items-center justify-between px-6 h-16 border-b border-[#333]">
-        <div className="flex items-center gap-4">
-          <Link
-            to="/"
-            data-testid="back-to-pda-btn"
-            className="flex items-center gap-2 h-11 px-4 rounded-md border border-[#333] hover:border-[#FF6B00] text-neutral-200 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-bold">Πίσω στο PDA</span>
-          </Link>
-          <h1 className="font-heading text-2xl font-bold" data-testid="analytics-title">
-            Στατιστικά
-          </h1>
-        </div>
-      </header>
-
-      <main className="p-6 md:p-8 max-w-[1600px] mx-auto">
+    <AppShell title="Στατιστικά">
+      <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-[1600px] mx-auto w-full">
         {/* Filters */}
         <div className="p-5 bg-[#1A1A1A] border border-[#333] rounded-lg mb-6">
           <div className="flex flex-wrap items-end gap-4">
@@ -349,6 +332,6 @@ export default function Analytics() {
           )}
         </div>
       </main>
-    </div>
+    </AppShell>
   );
 }

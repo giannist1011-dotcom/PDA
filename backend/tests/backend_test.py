@@ -267,3 +267,196 @@ def test_analytics_date_filter_scoped(http, demo_token):
     assert d["total_orders"] == 0
     assert d["total_revenue"] == 0
     assert len(d["hourly"]) == 24
+
+
+# ========== ITERATION 3: AVAILABILITY, SHOPPING, EMPLOYEES, SHIFTS ==========
+
+def _register(http, tag="Iter3"):
+    email = _rand_email()
+    r = http.post(f"{API}/auth/register", json={"email": email, "password": "pass1234", "restaurant_name": f"TEST_{tag}"})
+    assert r.status_code == 200, r.text
+    return email, r.json()["token"]
+
+
+# ---------- Availability ----------
+def test_availability_patch_and_config_returns_fields(http):
+    _, tok = _register(http, "Avail")
+    hdr = _auth_headers(tok)
+    cfg = http.get(f"{API}/menu/config", headers=hdr).json()
+    item = cfg["items"][0]
+    # default fields present
+    assert "available" in item
+    assert item["available"] is True
+    assert "unavailable_note" in item
+
+    # PATCH mark unavailable
+    r = http.patch(f"{API}/menu/items/{item['id']}/availability",
+                   json={"available": False, "unavailable_note": "τελείωσαν"}, headers=hdr)
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["available"] is False
+    assert d["unavailable_note"] == "τελείωσαν"
+
+    # verify via GET
+    cfg2 = http.get(f"{API}/menu/config", headers=hdr).json()
+    it2 = next(i for i in cfg2["items"] if i["id"] == item["id"])
+    assert it2["available"] is False
+    assert it2["unavailable_note"] == "τελείωσαν"
+
+    # PATCH back to available
+    r = http.patch(f"{API}/menu/items/{item['id']}/availability",
+                   json={"available": True, "unavailable_note": ""}, headers=hdr)
+    assert r.status_code == 200
+    assert r.json()["available"] is True
+
+    # 404 on unknown item
+    r = http.patch(f"{API}/menu/items/does-not-exist/availability",
+                   json={"available": False, "unavailable_note": ""}, headers=hdr)
+    assert r.status_code == 404
+
+
+# ---------- Shopping ----------
+def test_shopping_crud_and_tenancy(http):
+    _, tok_a = _register(http, "ShopA")
+    _, tok_b = _register(http, "ShopB")
+    a, b = _auth_headers(tok_a), _auth_headers(tok_b)
+
+    # initially empty
+    r = http.get(f"{API}/shopping", headers=a)
+    assert r.status_code == 200
+    assert r.json() == []
+
+    # create
+    r = http.post(f"{API}/shopping", json={"text": "TEST_5kg πατάτες"}, headers=a)
+    assert r.status_code == 200
+    item = r.json()
+    assert item["text"] == "TEST_5kg πατάτες"
+    assert item["bought"] is False
+    sid = item["id"]
+
+    # list contains it
+    lst = http.get(f"{API}/shopping", headers=a).json()
+    assert any(x["id"] == sid for x in lst)
+
+    # B doesn't see A's item (tenancy)
+    lst_b = http.get(f"{API}/shopping", headers=b).json()
+    assert lst_b == []
+
+    # toggle bought
+    r = http.put(f"{API}/shopping/{sid}", json={"bought": True}, headers=a)
+    assert r.status_code == 200
+    lst2 = http.get(f"{API}/shopping", headers=a).json()
+    assert next(x for x in lst2 if x["id"] == sid)["bought"] is True
+
+    # B cannot update A's item
+    r = http.put(f"{API}/shopping/{sid}", json={"bought": False}, headers=b)
+    assert r.status_code == 404
+
+    # delete
+    r = http.delete(f"{API}/shopping/{sid}", headers=a)
+    assert r.status_code == 200
+    assert http.get(f"{API}/shopping", headers=a).json() == []
+
+
+# ---------- Employees ----------
+def test_employees_crud_and_tenancy(http):
+    _, tok_a = _register(http, "EmpA")
+    _, tok_b = _register(http, "EmpB")
+    a, b = _auth_headers(tok_a), _auth_headers(tok_b)
+
+    # empty
+    assert http.get(f"{API}/employees", headers=a).json() == []
+
+    # create
+    r = http.post(f"{API}/employees", json={"name": "TEST_Γιώργος"}, headers=a)
+    assert r.status_code == 200
+    emp = r.json()
+    assert emp["name"] == "TEST_Γιώργος"
+    eid = emp["id"]
+
+    # list
+    lst = http.get(f"{API}/employees", headers=a).json()
+    assert any(x["id"] == eid for x in lst)
+
+    # B doesn't see
+    assert http.get(f"{API}/employees", headers=b).json() == []
+
+    # update
+    r = http.put(f"{API}/employees/{eid}", json={"name": "TEST_Νίκος"}, headers=a)
+    assert r.status_code == 200
+    assert r.json()["name"] == "TEST_Νίκος"
+
+    # B cannot update
+    r = http.put(f"{API}/employees/{eid}", json={"name": "hack"}, headers=b)
+    assert r.status_code == 404
+
+    # create a shift, then delete emp -> shifts cascade
+    ws = "2026-01-05"  # Monday
+    r = http.put(f"{API}/shifts", json={"employee_id": eid, "week_start": ws, "day": 0,
+                                        "start": "17:00", "end": "23:00"}, headers=a)
+    assert r.status_code == 200
+    sh_list = http.get(f"{API}/shifts", params={"week_start": ws}, headers=a).json()
+    assert any(s["employee_id"] == eid for s in sh_list)
+
+    # delete employee
+    r = http.delete(f"{API}/employees/{eid}", headers=a)
+    assert r.status_code == 200
+
+    # cascaded
+    sh_list2 = http.get(f"{API}/shifts", params={"week_start": ws}, headers=a).json()
+    assert not any(s["employee_id"] == eid for s in sh_list2)
+
+
+# ---------- Shifts ----------
+def test_shifts_upsert_and_isolation(http):
+    _, tok_a = _register(http, "ShiftA")
+    _, tok_b = _register(http, "ShiftB")
+    a, b = _auth_headers(tok_a), _auth_headers(tok_b)
+
+    emp_a = http.post(f"{API}/employees", json={"name": "TEST_A_Emp"}, headers=a).json()
+    emp_b = http.post(f"{API}/employees", json={"name": "TEST_B_Emp"}, headers=b).json()
+
+    ws = "2026-01-12"  # Monday
+
+    # A upserts shift
+    r = http.put(f"{API}/shifts", json={"employee_id": emp_a["id"], "week_start": ws, "day": 2,
+                                        "start": "09:00", "end": "17:00"}, headers=a)
+    assert r.status_code == 200
+    d = r.json()
+    assert d["start"] == "09:00" and d["end"] == "17:00" and d["day"] == 2
+
+    # upsert same (emp, week, day) overwrites, no duplicate
+    r = http.put(f"{API}/shifts", json={"employee_id": emp_a["id"], "week_start": ws, "day": 2,
+                                        "start": "10:00", "end": "18:00"}, headers=a)
+    assert r.status_code == 200
+    lst = http.get(f"{API}/shifts", params={"week_start": ws}, headers=a).json()
+    matches = [s for s in lst if s["employee_id"] == emp_a["id"] and s["day"] == 2]
+    assert len(matches) == 1
+    assert matches[0]["start"] == "10:00"
+    assert matches[0]["end"] == "18:00"
+
+    # A cannot upsert shift for B's employee -> 404
+    r = http.put(f"{API}/shifts", json={"employee_id": emp_b["id"], "week_start": ws, "day": 0,
+                                        "start": "09:00", "end": "17:00"}, headers=a)
+    assert r.status_code == 404
+
+    # B does not see A's shifts (tenancy)
+    lst_b = http.get(f"{API}/shifts", params={"week_start": ws}, headers=b).json()
+    assert not any(s["employee_id"] == emp_a["id"] for s in lst_b)
+
+    # DELETE
+    r = http.delete(f"{API}/shifts", params={"employee_id": emp_a["id"], "week_start": ws, "day": 2}, headers=a)
+    assert r.status_code == 200
+    lst2 = http.get(f"{API}/shifts", params={"week_start": ws}, headers=a).json()
+    assert not any(s["employee_id"] == emp_a["id"] and s["day"] == 2 for s in lst2)
+
+    # cleanup
+    http.delete(f"{API}/employees/{emp_a['id']}", headers=a)
+    http.delete(f"{API}/employees/{emp_b['id']}", headers=b)
+
+
+def test_shifts_and_shopping_require_auth(http):
+    assert http.get(f"{API}/shopping").status_code == 401
+    assert http.post(f"{API}/shopping", json={"text": "x"}).status_code == 401
+    assert http.get(f"{API}/employees").status_code == 401
+    assert http.get(f"{API}/shifts", params={"week_start": "2026-01-05"}).status_code == 401

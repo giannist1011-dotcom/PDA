@@ -109,10 +109,17 @@ class MenuItemIn(BaseModel):
     category: str
     customizable: bool = False
     double_meat_eligible: bool = False
+    available: bool = True
+    unavailable_note: str = ""
 
 
 class MenuItem(MenuItemIn):
     id: str
+
+
+class AvailabilityIn(BaseModel):
+    available: bool
+    unavailable_note: str = ""
 
 
 class CustomizationConfig(BaseModel):
@@ -174,6 +181,8 @@ async def seed_user_menu(user_id: str):
             "category": it["category"],
             "customizable": it.get("customizable", False),
             "double_meat_eligible": it.get("double_meat_eligible", False),
+            "available": True,
+            "unavailable_note": "",
         })
     await db.items.insert_many(docs)
 
@@ -300,6 +309,8 @@ async def create_item(body: MenuItemIn, user: dict = Depends(get_current_user)):
         "category": body.category,
         "customizable": bool(body.customizable),
         "double_meat_eligible": bool(body.double_meat_eligible),
+        "available": bool(body.available),
+        "unavailable_note": body.unavailable_note.strip(),
     }
     await db.items.insert_one(doc)
     doc.pop("user_id", None)
@@ -315,12 +326,24 @@ async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(get_curre
         "category": body.category,
         "customizable": bool(body.customizable),
         "double_meat_eligible": bool(body.double_meat_eligible),
+        "available": bool(body.available),
+        "unavailable_note": body.unavailable_note.strip(),
     }
     r = await db.items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
     if r.matched_count == 0:
         raise HTTPException(404, "Not found")
     return {"id": iid, **update}
 
+
+@api.patch("/menu/items/{iid}/availability")
+async def set_item_availability(iid: str, body: AvailabilityIn, user: dict = Depends(get_current_user)):
+    r = await db.items.update_one(
+        {"id": iid, "user_id": user["id"]},
+        {"$set": {"available": bool(body.available), "unavailable_note": body.unavailable_note.strip()}},
+    )
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"id": iid, "available": body.available, "unavailable_note": body.unavailable_note.strip()}
 
 @api.delete("/menu/items/{iid}")
 async def delete_item(iid: str, user: dict = Depends(get_current_user)):
@@ -460,6 +483,161 @@ async def root():
     return {"status": "ok", "service": "Peinokio POS SaaS"}
 
 
+# ============ SHOPPING LIST ============
+class ShoppingItemIn(BaseModel):
+    text: str = Field(min_length=1, max_length=200)
+
+
+@api.get("/shopping")
+async def list_shopping(user: dict = Depends(get_current_user)):
+    docs = await db.shopping.find(
+        {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
+    ).sort("created_at", 1).to_list(1000)
+    return docs
+
+
+@api.post("/shopping")
+async def add_shopping(body: ShoppingItemIn, user: dict = Depends(get_current_user)):
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "text": body.text.strip(),
+        "bought": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.shopping.insert_one(doc)
+    return {k: v for k, v in doc.items() if k not in ("_id", "user_id")}
+
+
+class ShoppingUpdateIn(BaseModel):
+    text: Optional[str] = None
+    bought: Optional[bool] = None
+
+
+@api.put("/shopping/{sid}")
+async def update_shopping(sid: str, body: ShoppingUpdateIn, user: dict = Depends(get_current_user)):
+    update = {}
+    if body.text is not None:
+        update["text"] = body.text.strip()
+    if body.bought is not None:
+        update["bought"] = bool(body.bought)
+    if not update:
+        raise HTTPException(400, "Nothing to update")
+    r = await db.shopping.update_one({"id": sid, "user_id": user["id"]}, {"$set": update})
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"id": sid, **update}
+
+
+@api.delete("/shopping/{sid}")
+async def delete_shopping(sid: str, user: dict = Depends(get_current_user)):
+    r = await db.shopping.delete_one({"id": sid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
+# ============ EMPLOYEES ============
+class EmployeeIn(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+@api.get("/employees")
+async def list_employees(user: dict = Depends(get_current_user)):
+    docs = await db.employees.find(
+        {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
+    ).sort("order", 1).to_list(500)
+    return docs
+
+
+@api.post("/employees")
+async def create_employee(body: EmployeeIn, user: dict = Depends(get_current_user)):
+    count = await db.employees.count_documents({"user_id": user["id"]})
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "name": body.name.strip(),
+        "order": count,
+    }
+    await db.employees.insert_one(doc)
+    return {"id": doc["id"], "name": doc["name"], "order": doc["order"]}
+
+
+@api.put("/employees/{eid}")
+async def update_employee(eid: str, body: EmployeeIn, user: dict = Depends(get_current_user)):
+    r = await db.employees.update_one(
+        {"id": eid, "user_id": user["id"]},
+        {"$set": {"name": body.name.strip()}},
+    )
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"id": eid, "name": body.name.strip()}
+
+
+@api.delete("/employees/{eid}")
+async def delete_employee(eid: str, user: dict = Depends(get_current_user)):
+    await db.shifts.delete_many({"user_id": user["id"], "employee_id": eid})
+    r = await db.employees.delete_one({"id": eid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
+# ============ SHIFTS ============
+class ShiftIn(BaseModel):
+    employee_id: str
+    week_start: str  # YYYY-MM-DD (Monday)
+    day: int = Field(ge=0, le=6)  # 0=Mon .. 6=Sun
+    start: str  # HH:MM
+    end: str    # HH:MM
+
+
+@api.get("/shifts")
+async def list_shifts(week_start: str, user: dict = Depends(get_current_user)):
+    docs = await db.shifts.find(
+        {"user_id": user["id"], "week_start": week_start},
+        {"_id": 0, "user_id": 0},
+    ).to_list(1000)
+    return docs
+
+
+@api.put("/shifts")
+async def upsert_shift(body: ShiftIn, user: dict = Depends(get_current_user)):
+    # ensure employee belongs to this user
+    emp = await db.employees.find_one({"id": body.employee_id, "user_id": user["id"]})
+    if not emp:
+        raise HTTPException(404, "Employee not found")
+    key = {
+        "user_id": user["id"],
+        "employee_id": body.employee_id,
+        "week_start": body.week_start,
+        "day": body.day,
+    }
+    update = {
+        "$set": {"start": body.start.strip(), "end": body.end.strip()},
+        "$setOnInsert": {"id": str(uuid.uuid4()), **key},
+    }
+    await db.shifts.update_one(key, update, upsert=True)
+    doc = await db.shifts.find_one(key, {"_id": 0, "user_id": 0})
+    return doc
+
+
+@api.delete("/shifts")
+async def delete_shift(
+    employee_id: str,
+    week_start: str,
+    day: int,
+    user: dict = Depends(get_current_user),
+):
+    r = await db.shifts.delete_one({
+        "user_id": user["id"],
+        "employee_id": employee_id,
+        "week_start": week_start,
+        "day": day,
+    })
+    return {"ok": True, "deleted": r.deleted_count}
+
+
 # ============ APP SETUP ============
 app.include_router(api)
 
@@ -478,6 +656,13 @@ async def on_startup():
     await db.categories.create_index([("user_id", 1)])
     await db.items.create_index([("user_id", 1)])
     await db.orders.create_index([("user_id", 1), ("created_at", -1)])
+    await db.shopping.create_index([("user_id", 1), ("created_at", 1)])
+    await db.employees.create_index([("user_id", 1), ("order", 1)])
+    await db.shifts.create_index([("user_id", 1), ("week_start", 1)])
+    await db.shifts.create_index(
+        [("user_id", 1), ("employee_id", 1), ("week_start", 1), ("day", 1)],
+        unique=True,
+    )
     await ensure_demo_account()
 
 

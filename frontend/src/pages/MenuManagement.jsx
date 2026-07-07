@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X } from "lucide-react";
+import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -382,21 +382,8 @@ export default function MenuManagement() {
   const filteredItems = config.items.filter((i) => i.category === activeCat);
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white">
-      <header className="flex items-center justify-between px-6 h-16 border-b border-[#333]">
-        <div className="flex items-center gap-4">
-          <Link
-            to="/"
-            data-testid="back-to-pda-btn"
-            className="flex items-center gap-2 h-11 px-4 rounded-md border border-[#333] hover:border-[#FF6B00] text-neutral-200 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-bold">Πίσω στο PDA</span>
-          </Link>
-          <h1 className="font-heading text-2xl font-bold" data-testid="menu-mgmt-title">
-            Διαχείριση Μενού
-          </h1>
-        </div>
+    <AppShell title="Διαχείριση Μενού">
+      <div className="flex items-center justify-end px-6 py-3 border-b border-[#222]">
         <Button
           onClick={() => setCustModalOpen(true)}
           data-testid="open-customization-config-btn"
@@ -404,9 +391,9 @@ export default function MenuManagement() {
         >
           Επιλογές παραμετροποίησης
         </Button>
-      </header>
+      </div>
 
-      <main className="p-6 max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+      <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
         {/* Categories */}
         <aside className="bg-[#1A1A1A] border border-[#333] rounded-lg p-4">
           <h2 className="font-heading text-lg font-semibold mb-4">Κατηγορίες</h2>
@@ -576,6 +563,6 @@ export default function MenuManagement() {
         onClose={() => setCustModalOpen(false)}
         onSave={saveCustomization}
       />
-    </div>
+    </AppShell>
   );
 }
