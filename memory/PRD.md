@@ -1,40 +1,52 @@
 # Πεινώκιο POS – PRD
 
 ## Original Problem Statement
-Full Greek-language React restaurant PDA (Point-of-Sale) app for a takeaway called "Πεινώκιο". Counter-facing app for Windows PC/tablet. Dark mode, no authentication, all text in Greek.
+Multi-tenant Greek restaurant PDA/POS SaaS. Started as a single-store app for takeaway "Πεινώκιο"; extended so any restaurant can register and manage their own menu, orders and analytics — all scoped per account. Dark mode, all text in Greek.
 
-## Users
-- Restaurant counter staff (single-role, open access).
+## Users / Personas
+- Restaurant owner/manager (registers store, manages menu & customization options)
+- Counter staff (uses PDA to take orders and print receipts)
 
 ## Core Requirements
-- Menu browsing by category with tap-to-add items.
-- Order panel on the right (items, quantities, total).
-- Order source tagging: Ταμείο / Τηλέφωνο / efood / Box.
-- Auto-incrementing order number per day.
-- Print receipt via browser print dialog (80mm formatted).
-- Order history persisted in MongoDB.
-- Analytics dashboard with "Από" / "Έως" date range filter: total orders, revenue, avg order, by-source, popular items, hourly breakdown.
-- Sandwich customization modal: bread (single), extras (multi), sauces (multi), double-meat (+1.50€, only Χοιρινό/Κοτόπουλο/Πανσέτα).
+- Multi-tenant: one account = one restaurant/store, all data scoped by user_id.
+- JWT Bearer auth (register + login + me) with 30-day tokens in localStorage.
+- Header shows the logged-in restaurant's name.
+- Menu management: CRUD categories, CRUD items (name/price/category/customizable flag/double-meat-eligible flag), edit customization options (bread, extras, sauces, double-meat surcharge).
+- PDA POS: category tabs, tap-to-add, sandwich customization modal, order panel with qty/source/total, 80mm receipt print, auto-incrementing order number per store per day.
+- Analytics: "Από" / "Έως" date range filter + presets, total orders/revenue/avg, by-source pie, popular items table, hourly bar chart. All scoped per user.
+- Πεινώκιο data seeded to demo account (demo@peinokio.gr / demo1234) and used as starter template for new registrations.
 
 ## Architecture
-- Backend: FastAPI + Motor (MongoDB) at 0.0.0.0:8001, all routes prefixed /api.
-  - Endpoints: GET /api/orders/next-number, POST /api/orders, GET /api/orders, GET /api/analytics.
-- Frontend: React + React Router + Tailwind + shadcn/ui + Recharts.
+- Backend: FastAPI + Motor (MongoDB) at 0.0.0.0:8001, all routes prefixed /api. JWT Bearer (PyJWT + bcrypt).
+- Frontend: React + React Router + Tailwind + shadcn/ui + Recharts. Axios instance with token interceptor.
 - Design: Dark mode, orange (#FF6B00) accent, Outfit/Manrope/JetBrains Mono fonts.
 
+### Endpoints
+- POST /api/auth/register, POST /api/auth/login, GET /api/auth/me
+- GET /api/menu/config
+- POST /api/menu/categories, PUT /api/menu/categories/{id}, DELETE /api/menu/categories/{id}
+- POST /api/menu/items, PUT /api/menu/items/{id}, DELETE /api/menu/items/{id}
+- PUT /api/menu/customization
+- GET /api/orders/next-number, POST /api/orders, GET /api/orders
+- GET /api/analytics
+
+### Collections
+- users (email uniq, password_hash bcrypt, restaurant_name, customization)
+- categories (user_id, id, name, order)
+- items (user_id, id, name, price, category, customizable, double_meat_eligible)
+- orders (user_id, id, order_number, items, subtotal, total, source, created_at)
+
 ## Implemented (2026-02)
-- Complete backend with 4 endpoints + Pydantic models.
-- Complete PDA view with 7 categories and 42 menu items.
-- Sandwich customization modal with dynamic double-meat pricing.
-- Order panel with qty +/-, remove, clear, source toggle, submit + print.
-- Receipt component with print-only visibility (@media print).
-- Analytics dashboard with date range filter, presets (Σήμερα/7/30 μέρες), 4 stat cards, hourly bar chart, source pie chart, popular items table.
-- 8/8 backend pytest tests pass; frontend flows validated end-to-end.
+- V1 (single-tenant): PDA, sandwich modal, order flow, printing, analytics with Από/Έως — done.
+- V2 (multi-tenant SaaS): auth (register/login/me), per-user data scoping, menu management UI, restaurant name in header, demo account with pre-seeded Πεινώκιο menu, starter menu on register — done.
+- Testing: 10/10 backend pytest tests pass; full frontend e2e verified.
 
 ## Backlog
-- P1: Order edit / void after submission.
-- P1: Split payments (cash/card) at checkout.
-- P2: Printer via dedicated ESC/POS integration (thermal printer).
-- P2: Item availability toggle (86-list) with real-time updates.
+- P1: Order edit / void after submission (per store).
+- P1: Split payments (cash/card).
+- P1: Password reset flow (magic link / email).
+- P2: Staff roles (owner/cashier) per store.
+- P2: Item availability toggle (86-list) with real-time sync.
 - P2: Export analytics to CSV/Excel.
-- P2: Delivery driver assignment for Τηλέφωνο orders.
+- P2: Thermal ESC/POS direct printing.
+- P2: Multi-branch support (one owner, many stores).
