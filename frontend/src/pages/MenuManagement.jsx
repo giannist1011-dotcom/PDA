@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Save, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, ChevronDown, ChevronUp } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import {
   apiGetMenuConfig,
@@ -31,6 +41,18 @@ const emptyItem = (categoryId = "") => ({
   category: categoryId,
   customizable: false,
   double_meat_eligible: false,
+  option_groups: [],
+});
+
+const shortId = () =>
+  Math.random().toString(36).slice(2, 8);
+
+const emptyGroup = () => ({
+  id: shortId(),
+  name: "",
+  type: "single",
+  required: false,
+  options: [{ name: "", price: 0 }],
 });
 
 // ---------- Item Modal ----------
@@ -39,25 +61,82 @@ function ItemModal({ open, initial, categories, onClose, onSave }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setForm(initial || emptyItem(categories[0]?.id || ""));
+    const base = initial || emptyItem(categories[0]?.id || "");
+    setForm({ ...base, option_groups: base.option_groups || [] });
   }, [initial, open, categories]);
 
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
+      // Sanitize option_groups: remove empty option rows and empty groups
+      const cleanGroups = (form.option_groups || [])
+        .map((g) => ({
+          id: g.id || shortId(),
+          name: (g.name || "").trim(),
+          type: g.type === "multi" ? "multi" : "single",
+          required: !!g.required,
+          options: (g.options || [])
+            .map((o) => ({
+              name: (o.name || "").trim(),
+              price: parseFloat(String(o.price).replace(",", ".")) || 0,
+            }))
+            .filter((o) => o.name),
+        }))
+        .filter((g) => g.name && g.options.length > 0);
+
       await onSave({
         ...form,
         price: parseFloat(String(form.price).replace(",", ".")) || 0,
+        option_groups: cleanGroups,
       });
     } finally {
       setBusy(false);
     }
   };
 
+  const addGroup = () =>
+    setForm((f) => ({ ...f, option_groups: [...(f.option_groups || []), emptyGroup()] }));
+  const removeGroup = (idx) =>
+    setForm((f) => ({
+      ...f,
+      option_groups: f.option_groups.filter((_, i) => i !== idx),
+    }));
+  const updateGroup = (idx, patch) =>
+    setForm((f) => ({
+      ...f,
+      option_groups: f.option_groups.map((g, i) => (i === idx ? { ...g, ...patch } : g)),
+    }));
+  const addOption = (gi) =>
+    setForm((f) => ({
+      ...f,
+      option_groups: f.option_groups.map((g, i) =>
+        i === gi ? { ...g, options: [...g.options, { name: "", price: 0 }] } : g
+      ),
+    }));
+  const removeOption = (gi, oi) =>
+    setForm((f) => ({
+      ...f,
+      option_groups: f.option_groups.map((g, i) =>
+        i === gi ? { ...g, options: g.options.filter((_, j) => j !== oi) } : g
+      ),
+    }));
+  const updateOption = (gi, oi, patch) =>
+    setForm((f) => ({
+      ...f,
+      option_groups: f.option_groups.map((g, i) =>
+        i === gi
+          ? {
+              ...g,
+              options: g.options.map((o, j) => (j === oi ? { ...o, ...patch } : o)),
+            }
+          : g
+      ),
+    }));
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg bg-[#0D0D0D] border-[#333] text-white" data-testid="item-modal">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#0D0D0D] border-[#333] text-white" data-testid="item-modal">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">
             {form.id ? "Επεξεργασία προϊόντος" : "Νέο προϊόν"}
@@ -112,8 +191,8 @@ function ItemModal({ open, initial, categories, onClose, onSave }) {
           </div>
           <div className="flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border border-[#333] rounded-md">
             <div>
-              <div className="font-semibold text-sm">Παραμετροποιήσιμο</div>
-              <div className="text-xs text-neutral-500">Ανοίγει modal για ψωμί/σως</div>
+              <div className="font-semibold text-sm">Παραμετροποιήσιμο (σάντουιτς)</div>
+              <div className="text-xs text-neutral-500">Χρησιμοποιεί επιλογές ψωμί/extras/σως</div>
             </div>
             <Switch
               checked={form.customizable}
@@ -134,6 +213,108 @@ function ItemModal({ open, initial, categories, onClose, onSave }) {
               />
             </div>
           )}
+
+          {/* Option groups editor */}
+          <div className="border-t border-[#222] pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <div className="font-heading font-bold text-sm">Ομάδες επιλογών</div>
+                <div className="text-xs text-neutral-500">
+                  Π.χ. Μέγεθος, Έξτρα υλικά. Δουλεύουν σε οποιοδήποτε προϊόν.
+                </div>
+              </div>
+              <Button
+                type="button"
+                onClick={addGroup}
+                data-testid="add-option-group-btn"
+                className="h-9 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white text-sm"
+              >
+                <Plus className="w-4 h-4 mr-1" /> Ομάδα
+              </Button>
+            </div>
+
+            {(form.option_groups || []).map((g, gi) => (
+              <div
+                key={g.id}
+                data-testid={`option-group-${gi}`}
+                className="mt-3 p-3 bg-[#1A1A1A] border border-[#333] rounded-md space-y-2"
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    value={g.name}
+                    onChange={(e) => updateGroup(gi, { name: e.target.value })}
+                    placeholder="Όνομα ομάδας (π.χ. Μέγεθος)"
+                    data-testid={`group-name-${gi}`}
+                    className="flex-1 h-10 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+                  />
+                  <select
+                    value={g.type}
+                    onChange={(e) => updateGroup(gi, { type: e.target.value })}
+                    data-testid={`group-type-${gi}`}
+                    className="h-10 px-2 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none"
+                  >
+                    <option value="single">Μία</option>
+                    <option value="multi">Πολλές</option>
+                  </select>
+                  <label className="flex items-center gap-1 text-xs text-neutral-400">
+                    <input
+                      type="checkbox"
+                      checked={!!g.required}
+                      onChange={(e) => updateGroup(gi, { required: e.target.checked })}
+                      data-testid={`group-required-${gi}`}
+                    />
+                    Υποχρ.
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeGroup(gi)}
+                    data-testid={`remove-group-${gi}`}
+                    className="p-2 text-neutral-500 hover:text-[#FF3B30]"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                {g.options.map((o, oi) => (
+                  <div key={oi} className="flex items-center gap-2">
+                    <input
+                      value={o.name}
+                      onChange={(e) => updateOption(gi, oi, { name: e.target.value })}
+                      placeholder="Επιλογή"
+                      data-testid={`option-name-${gi}-${oi}`}
+                      className="flex-1 h-9 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+                    />
+                    <input
+                      type="number"
+                      step="0.10"
+                      min="0"
+                      value={o.price}
+                      onChange={(e) => updateOption(gi, oi, { price: e.target.value })}
+                      placeholder="+€"
+                      data-testid={`option-price-${gi}-${oi}`}
+                      className="w-24 h-9 px-2 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm font-mono focus:outline-none focus:border-[#FF6B00]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeOption(gi, oi)}
+                      data-testid={`remove-option-${gi}-${oi}`}
+                      className="p-1 text-neutral-500 hover:text-[#FF3B30]"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  onClick={() => addOption(gi)}
+                  data-testid={`add-option-${gi}`}
+                  className="h-8 bg-transparent border border-dashed border-[#444] hover:border-[#FF6B00] text-neutral-400 hover:text-white text-xs w-full"
+                >
+                  <Plus className="w-3 h-3 mr-1" /> Προσθήκη επιλογής
+                </Button>
+              </div>
+            ))}
+          </div>
+
           <DialogFooter className="pt-2">
             <Button type="button" variant="ghost" onClick={onClose} className="text-neutral-300">
               Άκυρο
@@ -270,6 +451,8 @@ export default function MenuManagement() {
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [custModalOpen, setCustModalOpen] = useState(false);
+  const [confirmItem, setConfirmItem] = useState(null);
+  const [confirmCat, setConfirmCat] = useState(null);
 
   const load = async () => {
     try {
@@ -314,20 +497,8 @@ export default function MenuManagement() {
     }
   };
 
-  const deleteCategory = async (cid) => {
-    if (!window.confirm("Διαγραφή κατηγορίας και όλων των προϊόντων της;")) return;
-    try {
-      await apiDeleteCategory(cid);
-      setConfig((p) => ({
-        ...p,
-        categories: p.categories.filter((c) => c.id !== cid),
-        items: p.items.filter((i) => i.category !== cid),
-      }));
-      if (activeCat === cid) setActiveCat(config.categories[0]?.id || null);
-      toast.success("Διαγράφηκε");
-    } catch (e) {
-      toast.error(formatApiError(e));
-    }
+  const deleteCategory = (c) => {
+    setConfirmCat(c);
   };
 
   const saveItem = async (form) => {
@@ -338,6 +509,7 @@ export default function MenuManagement() {
         category: form.category,
         customizable: !!form.customizable,
         double_meat_eligible: !!form.double_meat_eligible,
+        option_groups: form.option_groups || [],
       };
       if (form.id) {
         const upd = await apiUpdateItem(form.id, payload);
@@ -357,14 +529,34 @@ export default function MenuManagement() {
     }
   };
 
-  const deleteItem = async (id) => {
-    if (!window.confirm("Διαγραφή προϊόντος;")) return;
+  const confirmDeleteItem = async () => {
+    if (!confirmItem) return;
     try {
-      await apiDeleteItem(id);
-      setConfig((p) => ({ ...p, items: p.items.filter((i) => i.id !== id) }));
+      await apiDeleteItem(confirmItem.id);
+      setConfig((p) => ({ ...p, items: p.items.filter((i) => i.id !== confirmItem.id) }));
       toast.success("Διαγράφηκε");
     } catch (e) {
       toast.error(formatApiError(e));
+    } finally {
+      setConfirmItem(null);
+    }
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!confirmCat) return;
+    try {
+      await apiDeleteCategory(confirmCat.id);
+      setConfig((p) => ({
+        ...p,
+        categories: p.categories.filter((c) => c.id !== confirmCat.id),
+        items: p.items.filter((i) => i.category !== confirmCat.id),
+      }));
+      if (activeCat === confirmCat.id) setActiveCat(config.categories[0]?.id || null);
+      toast.success("Διαγράφηκε");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setConfirmCat(null);
     }
   };
 
@@ -458,7 +650,7 @@ export default function MenuManagement() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteCategory(c.id);
+                          deleteCategory(c);
                         }}
                         data-testid={`delete-cat-${c.id}`}
                         className="p-1 text-neutral-400 hover:text-[#FF3B30]"
@@ -532,7 +724,7 @@ export default function MenuManagement() {
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => deleteItem(it.id)}
+                      onClick={() => setConfirmItem(it)}
                       data-testid={`delete-item-${it.id}`}
                       className="p-2 text-neutral-400 hover:text-[#FF3B30]"
                     >
@@ -563,6 +755,58 @@ export default function MenuManagement() {
         onClose={() => setCustModalOpen(false)}
         onSave={saveCustomization}
       />
+
+      <AlertDialog open={!!confirmItem} onOpenChange={(v) => !v && setConfirmItem(null)}>
+        <AlertDialogContent className="bg-[#0D0D0D] border-[#333] text-white" data-testid="delete-item-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading text-xl">Διαγραφή προϊόντος;</AlertDialogTitle>
+            <AlertDialogDescription className="text-neutral-400">
+              Θα διαγραφεί οριστικά το «{confirmItem?.name}».
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              data-testid="delete-item-cancel"
+              className="bg-[#1A1A1A] border-[#333] text-neutral-300 hover:bg-[#222] hover:text-white"
+            >
+              Άκυρο
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteItem}
+              data-testid="delete-item-confirm"
+              className="bg-[#FF3B30] hover:bg-[#FF5A50] text-white"
+            >
+              Διαγραφή
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!confirmCat} onOpenChange={(v) => !v && setConfirmCat(null)}>
+        <AlertDialogContent className="bg-[#0D0D0D] border-[#333] text-white" data-testid="delete-cat-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading text-xl">Διαγραφή κατηγορίας;</AlertDialogTitle>
+            <AlertDialogDescription className="text-neutral-400">
+              Θα διαγραφεί η «{confirmCat?.name}» μαζί με όλα τα προϊόντα της.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              data-testid="delete-cat-cancel"
+              className="bg-[#1A1A1A] border-[#333] text-neutral-300 hover:bg-[#222] hover:text-white"
+            >
+              Άκυρο
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteCategory}
+              data-testid="delete-cat-confirm"
+              className="bg-[#FF3B30] hover:bg-[#FF5A50] text-white"
+            >
+              Διαγραφή
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }

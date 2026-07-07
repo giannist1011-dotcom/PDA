@@ -5,24 +5,30 @@ import {
   X,
   ShoppingCart,
   BarChart3,
-  Settings,
+  Settings as SettingsIcon,
   Utensils,
   Calendar,
   LogOut,
   ClipboardList,
+  KeyRound,
+  RefreshCw,
+  Crown,
+  User as UserIcon,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-const NAV = [
-  { to: "/", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda" },
-  { to: "/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics" },
-  { to: "/menu", label: "Διαχείριση μενού", icon: Settings, testId: "drawer-link-menu" },
-  { to: "/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock" },
-  { to: "/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule" },
+// Full nav list. Each entry may require owner.
+const NAV_ALL = [
+  { to: "/", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", owner: false },
+  { to: "/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", owner: true },
+  { to: "/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", owner: true },
+  { to: "/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock", owner: true },
+  { to: "/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule", owner: false },
+  { to: "/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", owner: true },
 ];
 
 export default function AppShell({ title, children }) {
-  const { user, logout } = useAuth();
+  const { user, logout, exitProfile, isOwner } = useAuth();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,6 +37,31 @@ export default function AppShell({ title, children }) {
     logout();
     navigate("/login");
   };
+
+  const handleSwitchProfile = async () => {
+    try {
+      await exitProfile();
+    } catch {
+      // even if it fails, navigate anyway
+    }
+    navigate("/select-profile");
+  };
+
+  const nav = NAV_ALL.filter((n) => (n.owner ? isOwner : true)).map((n) => {
+    // For employee, schedule label reads "Πρόγραμμα (προβολή)"
+    if (!isOwner && n.to === "/schedule") return { ...n, label: "Πρόγραμμα (προβολή)" };
+    return n;
+  });
+
+  const profileBadge = user && user !== false && user.profile === "owner" ? (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FF6B00]/15 text-[#FF6B00] text-[10px] font-bold uppercase tracking-widest">
+      <Crown className="w-3 h-3" /> Ιδιοκτήτης
+    </span>
+  ) : user && user !== false && user.profile === "employee" ? (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#00B0FF]/15 text-[#00B0FF] text-[10px] font-bold uppercase tracking-widest">
+      <UserIcon className="w-3 h-3" /> Υπάλληλος
+    </span>
+  ) : null;
 
   return (
     <div className="min-h-screen w-screen flex flex-col bg-[#0D0D0D] text-white">
@@ -48,7 +79,7 @@ export default function AppShell({ title, children }) {
             <div className="w-9 h-9 rounded-md bg-[#FF6B00] flex items-center justify-center">
               <Utensils className="w-5 h-5 text-white" />
             </div>
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-baseline gap-2 flex-wrap">
               <span
                 className="font-heading text-xl md:text-2xl font-bold tracking-tight"
                 data-testid="restaurant-name"
@@ -63,9 +94,11 @@ export default function AppShell({ title, children }) {
             </div>
           </div>
         </div>
+        <div className="hidden sm:block" data-testid="profile-badge">
+          {profileBadge}
+        </div>
       </header>
 
-      {/* Drawer */}
       {open && (
         <>
           <div
@@ -74,7 +107,7 @@ export default function AppShell({ title, children }) {
             data-testid="drawer-backdrop"
           />
           <aside
-            className="fixed left-0 top-0 bottom-0 z-50 w-[300px] bg-[#0D0D0D] border-r border-[#333] flex flex-col"
+            className="fixed left-0 top-0 bottom-0 z-50 w-[320px] bg-[#0D0D0D] border-r border-[#333] flex flex-col"
             data-testid="drawer"
           >
             <div className="flex items-center justify-between px-5 h-16 border-b border-[#333]">
@@ -82,9 +115,12 @@ export default function AppShell({ title, children }) {
                 <div className="w-9 h-9 rounded-md bg-[#FF6B00] flex items-center justify-center">
                   <Utensils className="w-5 h-5 text-white" />
                 </div>
-                <span className="font-heading text-lg font-bold">
-                  {user?.restaurant_name || "POS"}
-                </span>
+                <div>
+                  <div className="font-heading text-lg font-bold leading-tight">
+                    {user?.restaurant_name || "POS"}
+                  </div>
+                  <div className="mt-0.5">{profileBadge}</div>
+                </div>
               </div>
               <button
                 onClick={() => setOpen(false)}
@@ -95,7 +131,7 @@ export default function AppShell({ title, children }) {
               </button>
             </div>
             <nav className="flex-1 p-3 overflow-y-auto">
-              {NAV.map((n) => {
+              {nav.map((n) => {
                 const Icon = n.icon;
                 const active = location.pathname === n.to;
                 return (
@@ -115,6 +151,17 @@ export default function AppShell({ title, children }) {
                   </Link>
                 );
               })}
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  handleSwitchProfile();
+                }}
+                data-testid="drawer-switch-profile-btn"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-md mb-1 text-neutral-200 hover:bg-[#1A1A1A] border border-transparent"
+              >
+                <RefreshCw className="w-5 h-5" />
+                <span className="font-semibold">Αλλαγή προφίλ</span>
+              </button>
             </nav>
             <div className="p-3 border-t border-[#333]">
               <button

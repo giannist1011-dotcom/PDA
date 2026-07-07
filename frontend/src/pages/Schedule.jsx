@@ -29,6 +29,7 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { DAY_LABELS, DAY_SHORT, isoDate, mondayOf, addDays, formatWeekRange } from "@/lib/dates";
+import { useAuth } from "@/context/AuthContext";
 
 // Shift editor modal
 function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, onDelete }) {
@@ -128,6 +129,8 @@ function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, 
 }
 
 export default function Schedule() {
+  const { isOwner } = useAuth();
+  const readOnly = !isOwner;
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [weekStart, setWeekStart] = useState(isoDate(mondayOf(new Date())));
@@ -219,6 +222,7 @@ export default function Schedule() {
     shifts.find((s) => s.employee_id === employeeId && s.day === day);
 
   const openShiftModal = (employee, day) => {
+    if (readOnly) return;
     setModalCtx({ employee, day, initial: findShift(employee.id, day) });
     setModalOpen(true);
   };
@@ -267,13 +271,13 @@ export default function Schedule() {
   }, [weekStart]);
 
   return (
-    <AppShell title="Πρόγραμμα υπαλλήλων">
+    <AppShell title={readOnly ? "Πρόγραμμα (προβολή)" : "Πρόγραμμα υπαλλήλων"}>
       <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-[1600px] mx-auto w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
           <div>
             <h2 className="font-heading text-2xl font-bold flex items-center gap-2">
               <CalendarIcon className="w-6 h-6 text-[#FF6B00]" />
-              Εβδομαδιαίο πρόγραμμα
+              {readOnly ? "Εβδομαδιαίο πρόγραμμα (προβολή)" : "Εβδομαδιαίο πρόγραμμα"}
             </h2>
             <p className="text-sm text-neutral-400 mt-1" data-testid="week-range">
               Εβδομάδα: {formatWeekRange(weekStart)}
@@ -304,26 +308,28 @@ export default function Schedule() {
           </div>
         </div>
 
-        {/* Add employee */}
-        <form
-          onSubmit={addEmployee}
-          className="flex gap-2 mb-5 p-4 bg-[#1A1A1A] border border-[#333] rounded-lg"
-        >
-          <input
-            value={newEmp}
-            onChange={(e) => setNewEmp(e.target.value)}
-            placeholder="Όνομα υπαλλήλου..."
-            data-testid="new-employee-input"
-            className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
-          />
-          <Button
-            type="submit"
-            data-testid="add-employee-btn"
-            className="h-11 bg-[#FF6B00] hover:bg-[#FF8533] px-5 font-bold"
+        {/* Add employee (owner only) */}
+        {!readOnly && (
+          <form
+            onSubmit={addEmployee}
+            className="flex gap-2 mb-5 p-4 bg-[#1A1A1A] border border-[#333] rounded-lg"
           >
-            <Plus className="w-4 h-4 mr-1" /> Προσθήκη
-          </Button>
-        </form>
+            <input
+              value={newEmp}
+              onChange={(e) => setNewEmp(e.target.value)}
+              placeholder="Όνομα υπαλλήλου..."
+              data-testid="new-employee-input"
+              className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+            />
+            <Button
+              type="submit"
+              data-testid="add-employee-btn"
+              className="h-11 bg-[#FF6B00] hover:bg-[#FF8533] px-5 font-bold"
+            >
+              <Plus className="w-4 h-4 mr-1" /> Προσθήκη
+            </Button>
+          </form>
+        )}
 
         {loading ? (
           <div className="text-neutral-500 py-12 text-center">Φόρτωση...</div>

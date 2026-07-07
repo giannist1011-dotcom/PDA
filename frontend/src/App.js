@@ -10,6 +10,8 @@ import Register from "@/pages/Register";
 import MenuManagement from "@/pages/MenuManagement";
 import Stock from "@/pages/Stock";
 import Schedule from "@/pages/Schedule";
+import ProfileSelect from "@/pages/ProfileSelect";
+import Settings from "@/pages/Settings";
 
 function App() {
   return (
@@ -19,6 +21,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/select-profile" element={<ProfileSelect />} />
             <Route
               path="/"
               element={
@@ -30,7 +33,7 @@ function App() {
             <Route
               path="/menu"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireOwner>
                   <MenuManagement />
                 </ProtectedRoute>
               }
@@ -38,7 +41,7 @@ function App() {
             <Route
               path="/analytics"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireOwner>
                   <Analytics />
                 </ProtectedRoute>
               }
@@ -46,7 +49,7 @@ function App() {
             <Route
               path="/stock"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireOwner>
                   <Stock />
                 </ProtectedRoute>
               }
@@ -56,6 +59,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Schedule />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute requireOwner>
+                  <Settings />
                 </ProtectedRoute>
               }
             />

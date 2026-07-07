@@ -7,11 +7,18 @@ const summarize = (c) => {
   if (c.double_meat) parts.push("Διπλό κρέας");
   if (c.extras?.length) parts.push(`Extras: ${c.extras.join(", ")}`);
   if (c.sauces?.length) parts.push(`Σως: ${c.sauces.join(", ")}`);
+  if (c.selections?.length) {
+    c.selections.forEach((sel) => {
+      const names = sel.choices.map((ch) => ch.name).join(", ");
+      if (names) parts.push(`${sel.group_name}: ${names}`);
+    });
+  }
   return parts.join(" · ");
 };
 
 export default function Receipt({ order }) {
   if (!order) return null;
+  const d = order.delivery;
   return (
     <div id="print-area" className="hidden print:block">
       <div className="receipt-title text-center">
@@ -22,6 +29,18 @@ export default function Receipt({ order }) {
       <div>Αρ. Παρ.: #{String(order.order_number).padStart(3, "0")}</div>
       <div>Πηγή: {order.source}</div>
       <div>Ημ/νία: {formatGRDateTime(order.created_at || new Date().toISOString())}</div>
+      {d && (
+        <>
+          <hr />
+          <div style={{ fontWeight: 800, fontSize: 13 }}>
+            {d.delivery_type === "delivery" ? "★ ΠΑΡΑΔΟΣΗ" : "★ TAKEAWAY"}
+          </div>
+          {d.name && <div>Όνομα: {d.name}</div>}
+          {d.phone && <div>Τηλ.: {d.phone}</div>}
+          {d.delivery_type === "delivery" && d.address && <div>Δ/νση: {d.address}</div>}
+          {d.delivery_type === "delivery" && d.floor && <div>Όροφος: {d.floor}</div>}
+        </>
+      )}
       <hr />
       {order.items.map((it, idx) => (
         <div key={idx} style={{ marginBottom: 4 }}>

@@ -1,5 +1,13 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { apiLogin, apiMe, apiRegister, setToken, getToken } from "@/lib/api";
+import {
+  apiLogin,
+  apiMe,
+  apiRegister,
+  apiSelectProfile,
+  apiExitProfile,
+  setToken,
+  getToken,
+} from "@/lib/api";
 
 const AuthCtx = createContext(null);
 
@@ -44,14 +52,48 @@ export function AuthProvider({ children }) {
     setUser(false);
   };
 
+  const selectProfile = async (profile, pin) => {
+    const { token } = await apiSelectProfile(profile, pin);
+    setToken(token);
+    const me = await apiMe();
+    setUser(me);
+    return me;
+  };
+
+  const exitProfile = async () => {
+    const { token } = await apiExitProfile();
+    setToken(token);
+    const me = await apiMe();
+    setUser(me);
+    return me;
+  };
+
   const refreshMe = async () => {
     const me = await apiMe();
     setUser(me);
     return me;
   };
 
+  const isOwner = user && user !== false && user.profile === "owner";
+  const isEmployee = user && user !== false && user.profile === "employee";
+  const hasProfile = user && user !== false && !!user.profile;
+
   return (
-    <AuthCtx.Provider value={{ user, error, login, register, logout, refreshMe }}>
+    <AuthCtx.Provider
+      value={{
+        user,
+        error,
+        login,
+        register,
+        logout,
+        selectProfile,
+        exitProfile,
+        refreshMe,
+        isOwner,
+        isEmployee,
+        hasProfile,
+      }}
+    >
       {children}
     </AuthCtx.Provider>
   );

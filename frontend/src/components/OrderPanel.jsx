@@ -1,4 +1,5 @@
-import { Minus, Plus, Trash2, Printer, ReceiptText } from "lucide-react";
+import { useEffect } from "react";
+import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ORDER_SOURCES } from "@/data/menu";
 import { eur } from "@/lib/format";
@@ -10,8 +11,26 @@ const summarizeCustomization = (c) => {
   if (c.double_meat) parts.push("Διπλό κρέας");
   if (c.extras?.length) parts.push(`Extras: ${c.extras.join(", ")}`);
   if (c.sauces?.length) parts.push(`Σως: ${c.sauces.join(", ")}`);
+  if (c.selections?.length) {
+    c.selections.forEach((sel) => {
+      const names = sel.choices.map((ch) => ch.name).join(", ");
+      if (names) parts.push(`${sel.group_name}: ${names}`);
+    });
+  }
   return parts.join(" · ");
 };
+
+const DELIVERY_FIELDS = [
+  { key: "name", label: "Όνομα", placeholder: "π.χ. Νίκος" },
+  { key: "phone", label: "Τηλέφωνο", placeholder: "6912345678", inputMode: "tel" },
+  { key: "address", label: "Διεύθυνση", placeholder: "π.χ. Ερμού 12" },
+  { key: "floor", label: "Όροφος", placeholder: "π.χ. 3ος" },
+];
+
+const TAKEAWAY_FIELDS = [
+  { key: "name", label: "Όνομα", placeholder: "π.χ. Νίκος" },
+  { key: "phone", label: "Τηλέφωνο", placeholder: "6912345678", inputMode: "tel" },
+];
 
 export default function OrderPanel({
   orderNumber,
@@ -24,16 +43,34 @@ export default function OrderPanel({
   onClear,
   onSubmit,
   submitting,
+  delivery,
+  setDelivery,
 }) {
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
   const isEmpty = items.length === 0;
+  const isPhone = source === "Τηλέφωνο";
+
+  // Reset delivery when source changes away from phone
+  useEffect(() => {
+    if (!isPhone && delivery) setDelivery(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source]);
+
+  const setField = (k, v) => setDelivery((d) => ({ ...(d || {}), [k]: v }));
+
+  const canSubmit = !isEmpty && (!isPhone || !!delivery?.delivery_type);
+
+  const activeFields = delivery?.delivery_type === "delivery"
+    ? DELIVERY_FIELDS
+    : delivery?.delivery_type === "takeaway"
+      ? TAKEAWAY_FIELDS
+      : [];
 
   return (
     <aside
       className="flex flex-col h-full bg-[#1A1A1A] border-l border-[#333] overflow-hidden"
       data-testid="order-panel"
     >
-      {/* Header */}
       <div className="p-6 border-b border-[#333]">
         <div className="flex items-baseline justify-between">
           <div>
@@ -52,7 +89,6 @@ export default function OrderPanel({
           </div>
         </div>
 
-        {/* Source toggle */}
         <div className="grid grid-cols-4 gap-1 p-1 mt-5 bg-[#0D0D0D] rounded-md" data-testid="source-toggle">
           {ORDER_SOURCES.map((s) => {
             const active = source === s;
@@ -75,7 +111,6 @@ export default function OrderPanel({
         </div>
       </div>
 
-      {/* Items */}
       <div className="flex-1 overflow-y-auto px-6" data-testid="order-items">
         {isEmpty ? (
           <div className="h-full flex flex-col items-center justify-center text-neutral-500 py-16 text-center">
@@ -138,9 +173,63 @@ export default function OrderPanel({
             </div>
           ))
         )}
+
+        {/* Phone delivery section */}
+        {isPhone && (
+          <div className="mt-4 mb-2 p-3 rounded-md border border-[#FF6B00]/40 bg-[#FF6B00]/5" data-testid="delivery-section">
+            <div className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-2">
+              Τύπος τηλεφωνικής παραγγελίας
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <button
+                onClick={() => setDelivery({ delivery_type: "delivery", ...(delivery || {}) })}
+                data-testid="delivery-btn-delivery"
+                data-state={delivery?.delivery_type === "delivery" ? "on" : "off"}
+                className={`h-12 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
+                  delivery?.delivery_type === "delivery"
+                    ? "bg-[#FF6B00] border-[#FF6B00] text-white"
+                    : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+                }`}
+              >
+                <Truck className="w-4 h-4" /> Παράδοση
+              </button>
+              <button
+                onClick={() => setDelivery({ delivery_type: "takeaway", ...(delivery || {}) })}
+                data-testid="delivery-btn-takeaway"
+                data-state={delivery?.delivery_type === "takeaway" ? "on" : "off"}
+                className={`h-12 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
+                  delivery?.delivery_type === "takeaway"
+                    ? "bg-[#FF6B00] border-[#FF6B00] text-white"
+                    : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+                }`}
+              >
+                <ShoppingBag className="w-4 h-4" /> Takeaway
+              </button>
+            </div>
+
+            {activeFields.length > 0 && (
+              <div className="space-y-2">
+                {activeFields.map((f) => (
+                  <div key={f.key}>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                      {f.label}
+                    </label>
+                    <input
+                      value={delivery?.[f.key] || ""}
+                      onChange={(e) => setField(f.key, e.target.value)}
+                      inputMode={f.inputMode || "text"}
+                      placeholder={f.placeholder}
+                      data-testid={`delivery-input-${f.key}`}
+                      className="w-full h-10 px-3 mt-0.5 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white focus:outline-none focus:border-[#FF6B00]"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Footer */}
       <div className="p-6 pb-16 border-t border-[#333] bg-[#141414]">
         <div className="flex items-baseline justify-between mb-4">
           <span className="text-sm text-neutral-400 uppercase tracking-widest font-bold">
@@ -165,7 +254,7 @@ export default function OrderPanel({
           </Button>
           <Button
             onClick={onSubmit}
-            disabled={isEmpty || submitting}
+            disabled={!canSubmit || submitting}
             data-testid="order-submit-btn"
             className="col-span-3 h-16 text-lg font-bold bg-[#FF6B00] hover:bg-[#FF8533] text-white flex items-center justify-center gap-2 disabled:opacity-40"
           >
@@ -173,6 +262,11 @@ export default function OrderPanel({
             {submitting ? "Αποθήκευση..." : "Εκτύπωση & Αποθήκευση"}
           </Button>
         </div>
+        {isPhone && !delivery?.delivery_type && (
+          <div className="mt-2 text-xs text-[#FFB300] text-center">
+            Επιλέξτε Παράδοση ή Takeaway για να συνεχίσετε
+          </div>
+        )}
       </div>
     </aside>
   );

@@ -29,6 +29,7 @@ export default function PDA() {
   const [submitting, setSubmitting] = useState(false);
   const [printOrder, setPrintOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [delivery, setDelivery] = useState(null);
 
   const loadNext = async () => {
     try {
@@ -77,7 +78,8 @@ export default function PDA() {
 
   const handleItemClick = (item) => {
     if (item.available === false) return;
-    if (item.customizable) {
+    const hasGroups = Array.isArray(item.option_groups) && item.option_groups.length > 0;
+    if (hasGroups || item.customizable) {
       setModalItem(item);
       setModalOpen(true);
     } else {
@@ -113,6 +115,7 @@ export default function PDA() {
       source,
       subtotal,
       total: subtotal,
+      delivery: source === "Τηλέφωνο" && delivery?.delivery_type ? delivery : null,
       items: items.map((it) => ({
         item_id: it.item_id,
         name: it.name,
@@ -129,6 +132,7 @@ export default function PDA() {
       setTimeout(() => window.print(), 100);
       toast.success(`Παραγγελία #${saved.order_number} αποθηκεύτηκε`);
       setItems([]);
+      setDelivery(null);
       await loadNext();
     } catch (e) {
       toast.error(formatApiError(e));
@@ -164,6 +168,8 @@ export default function PDA() {
           items={items}
           source={source}
           onSourceChange={setSource}
+          delivery={delivery}
+          setDelivery={setDelivery}
           onIncrement={(id) => updateQty(id, 1)}
           onDecrement={(id) => updateQty(id, -1)}
           onRemove={removeLine}

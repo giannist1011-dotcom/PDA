@@ -37,6 +37,13 @@ export const apiUpdateCustomization = (payload) => api.put("/menu/customization"
 export const apiSetItemAvailability = (id, payload) =>
   api.patch(`/menu/items/${id}/availability`, payload).then((r) => r.data);
 
+// PROFILE / ROLES
+export const apiSelectProfile = (profile, pin) =>
+  api.post("/profile/select", { profile, pin }).then((r) => r.data);
+export const apiExitProfile = () => api.post("/profile/exit").then((r) => r.data);
+export const apiChangePin = (target, new_pin) =>
+  api.put("/profile/pin", { target, new_pin }).then((r) => r.data);
+
 // SHOPPING
 export const apiListShopping = () => api.get("/shopping").then((r) => r.data);
 export const apiAddShopping = (text) => api.post("/shopping", { text }).then((r) => r.data);

@@ -44,10 +44,11 @@ def verify_password(pw: str, hashed: str) -> bool:
     return bcrypt.checkpw(pw.encode("utf-8"), hashed.encode("utf-8"))
 
 
-def create_token(user_id: str, email: str) -> str:
+def create_token(user_id: str, email: str, profile: Optional[str] = None) -> str:
     payload = {
         "sub": user_id,
         "email": email,
+        "profile": profile,
         "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_TTL_HOURS),
         "type": "access",
     }
@@ -67,6 +68,13 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
     if not user:
         raise HTTPException(401, "User not found")
+    user["profile"] = payload.get("profile")
+    return user
+
+
+async def require_owner(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("profile") != "owner":
+        raise HTTPException(403, "Απαιτείται πρόσβαση ιδιοκτήτη")
     return user
 
 
@@ -76,6 +84,9 @@ def public_user(u: dict) -> dict:
         "email": u["email"],
         "restaurant_name": u["restaurant_name"],
         "created_at": u.get("created_at"),
+        "profile": u.get("profile"),
+        "owner_pin_set": bool(u.get("owner_pin_set", False)),
+        "employee_pin_set": bool(u.get("employee_pin_set", False)),
     }
 
 
@@ -103,6 +114,21 @@ class Category(BaseModel):
     order: int = 0
 
 
+class MenuOption(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    name: str
+    price: float = 0.0
+
+
+class MenuOptionGroup(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    type: Literal["single", "multi"] = "single"
+    required: bool = False
+    options: List[MenuOption] = Field(default_factory=list)
+
+
 class MenuItemIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     price: float = Field(ge=0)
@@ -111,6 +137,7 @@ class MenuItemIn(BaseModel):
     double_meat_eligible: bool = False
     available: bool = True
     unavailable_note: str = ""
+    option_groups: List[MenuOptionGroup] = Field(default_factory=list)
 
 
 class MenuItem(MenuItemIn):
@@ -129,12 +156,20 @@ class CustomizationConfig(BaseModel):
     double_meat_price: float = Field(ge=0)
 
 
+class OptionSelection(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    group_id: str
+    group_name: str
+    choices: List[MenuOption] = Field(default_factory=list)
+
+
 class OrderItemCustomization(BaseModel):
     model_config = ConfigDict(extra="ignore")
     bread: Optional[str] = None
     extras: List[str] = Field(default_factory=list)
     sauces: List[str] = Field(default_factory=list)
     double_meat: bool = False
+    selections: List[OptionSelection] = Field(default_factory=list)
 
 
 class OrderItem(BaseModel):
@@ -148,6 +183,15 @@ class OrderItem(BaseModel):
     customization: Optional[OrderItemCustomization] = None
 
 
+class DeliveryInfo(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    delivery_type: Literal["delivery", "takeaway"]
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    floor: Optional[str] = None
+
+
 class OrderCreate(BaseModel):
     order_number: int
     items: List[OrderItem]
@@ -155,6 +199,7 @@ class OrderCreate(BaseModel):
     total: float
     source: Literal["Ταμείο", "Τηλέφωνο", "efood", "Box"]
     note: Optional[str] = None
+    delivery: Optional[DeliveryInfo] = None
 
 
 class Order(OrderCreate):
@@ -198,6 +243,17 @@ async def ensure_demo_account():
                 {"email": demo_email},
                 {"$set": {"password_hash": hash_password(demo_pw)}},
             )
+        # Backfill default PINs if missing
+        if "owner_pin_hash" not in existing:
+            await db.users.update_one(
+                {"email": demo_email},
+                {"$set": {
+                    "owner_pin_hash": hash_password("0000"),
+                    "employee_pin_hash": hash_password("0000"),
+                    "owner_pin_set": False,
+                    "employee_pin_set": False,
+                }},
+            )
         return
     uid = str(uuid.uuid4())
     user_doc = {
@@ -206,6 +262,10 @@ async def ensure_demo_account():
         "password_hash": hash_password(demo_pw),
         "restaurant_name": "Πεινώκιο",
         "customization": DEFAULT_CUSTOMIZATION,
+        "owner_pin_hash": hash_password("0000"),
+        "employee_pin_hash": hash_password("0000"),
+        "owner_pin_set": False,
+        "employee_pin_set": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.users.insert_one(user_doc)
@@ -226,6 +286,10 @@ async def register(body: RegisterIn):
         "password_hash": hash_password(body.password),
         "restaurant_name": body.restaurant_name.strip(),
         "customization": DEFAULT_CUSTOMIZATION,
+        "owner_pin_hash": hash_password("0000"),
+        "employee_pin_hash": hash_password("0000"),
+        "owner_pin_set": False,
+        "employee_pin_set": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.users.insert_one(doc)
@@ -250,6 +314,50 @@ async def me(user: dict = Depends(get_current_user)):
     return public_user(user)
 
 
+# ============ PROFILE / ROLES ============
+class ProfileSelectIn(BaseModel):
+    profile: Literal["owner", "employee"]
+    pin: str = Field(min_length=4, max_length=4)
+
+
+class ProfilePinIn(BaseModel):
+    target: Literal["owner", "employee"]
+    new_pin: str = Field(min_length=4, max_length=4)
+
+
+@api.post("/profile/select")
+async def profile_select(body: ProfileSelectIn, user: dict = Depends(get_current_user)):
+    if not body.pin.isdigit():
+        raise HTTPException(400, "Ο κωδικός πρέπει να είναι 4 ψηφία")
+    full = await db.users.find_one({"id": user["id"]})
+    pin_field = "owner_pin_hash" if body.profile == "owner" else "employee_pin_hash"
+    stored = full.get(pin_field)
+    if not stored or not verify_password(body.pin, stored):
+        raise HTTPException(401, "Λάθος κωδικός")
+    token = create_token(user["id"], user["email"], profile=body.profile)
+    return {"token": token, "profile": body.profile}
+
+
+@api.post("/profile/exit")
+async def profile_exit(user: dict = Depends(get_current_user)):
+    """Return a token with profile cleared (used for 'Αλλαγή προφίλ')."""
+    token = create_token(user["id"], user["email"], profile=None)
+    return {"token": token, "profile": None}
+
+
+@api.put("/profile/pin")
+async def change_pin(body: ProfilePinIn, user: dict = Depends(require_owner)):
+    if not body.new_pin.isdigit():
+        raise HTTPException(400, "Ο κωδικός πρέπει να είναι 4 ψηφία")
+    field = "owner_pin_hash" if body.target == "owner" else "employee_pin_hash"
+    set_flag = "owner_pin_set" if body.target == "owner" else "employee_pin_set"
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {field: hash_password(body.new_pin), set_flag: True}},
+    )
+    return {"ok": True, "target": body.target}
+
+
 # ============ MENU ROUTES ============
 @api.get("/menu/config")
 async def get_menu_config(user: dict = Depends(get_current_user)):
@@ -270,7 +378,7 @@ class CategoryIn(BaseModel):
 
 
 @api.post("/menu/categories")
-async def create_category(body: CategoryIn, user: dict = Depends(get_current_user)):
+async def create_category(body: CategoryIn, user: dict = Depends(require_owner)):
     # generate slug-ish id
     cid = str(uuid.uuid4())[:8]
     doc = {"id": cid, "name": body.name.strip(), "order": body.order, "user_id": user["id"]}
@@ -290,7 +398,7 @@ async def update_category(cid: str, body: CategoryIn, user: dict = Depends(get_c
 
 
 @api.delete("/menu/categories/{cid}")
-async def delete_category(cid: str, user: dict = Depends(get_current_user)):
+async def delete_category(cid: str, user: dict = Depends(require_owner)):
     await db.items.delete_many({"user_id": user["id"], "category": cid})
     r = await db.categories.delete_one({"id": cid, "user_id": user["id"]})
     if r.deleted_count == 0:
@@ -299,7 +407,7 @@ async def delete_category(cid: str, user: dict = Depends(get_current_user)):
 
 
 @api.post("/menu/items")
-async def create_item(body: MenuItemIn, user: dict = Depends(get_current_user)):
+async def create_item(body: MenuItemIn, user: dict = Depends(require_owner)):
     iid = str(uuid.uuid4())
     doc = {
         "id": iid,
@@ -311,6 +419,7 @@ async def create_item(body: MenuItemIn, user: dict = Depends(get_current_user)):
         "double_meat_eligible": bool(body.double_meat_eligible),
         "available": bool(body.available),
         "unavailable_note": body.unavailable_note.strip(),
+        "option_groups": [g.model_dump() for g in body.option_groups],
     }
     await db.items.insert_one(doc)
     doc.pop("user_id", None)
@@ -319,7 +428,7 @@ async def create_item(body: MenuItemIn, user: dict = Depends(get_current_user)):
 
 
 @api.put("/menu/items/{iid}")
-async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(get_current_user)):
+async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(require_owner)):
     update = {
         "name": body.name.strip(),
         "price": float(body.price),
@@ -328,6 +437,7 @@ async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(get_curre
         "double_meat_eligible": bool(body.double_meat_eligible),
         "available": bool(body.available),
         "unavailable_note": body.unavailable_note.strip(),
+        "option_groups": [g.model_dump() for g in body.option_groups],
     }
     r = await db.items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
     if r.matched_count == 0:
@@ -346,7 +456,7 @@ async def set_item_availability(iid: str, body: AvailabilityIn, user: dict = Dep
     return {"id": iid, "available": body.available, "unavailable_note": body.unavailable_note.strip()}
 
 @api.delete("/menu/items/{iid}")
-async def delete_item(iid: str, user: dict = Depends(get_current_user)):
+async def delete_item(iid: str, user: dict = Depends(require_owner)):
     r = await db.items.delete_one({"id": iid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
@@ -354,7 +464,7 @@ async def delete_item(iid: str, user: dict = Depends(get_current_user)):
 
 
 @api.put("/menu/customization")
-async def update_customization(body: CustomizationConfig, user: dict = Depends(get_current_user)):
+async def update_customization(body: CustomizationConfig, user: dict = Depends(require_owner)):
     await db.users.update_one(
         {"id": user["id"]},
         {"$set": {"customization": body.model_dump()}},
@@ -420,7 +530,7 @@ async def list_orders(
 async def analytics(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_owner),
 ):
     today = datetime.now(timezone.utc).date().isoformat()
     df = date_from or today
@@ -489,7 +599,7 @@ class ShoppingItemIn(BaseModel):
 
 
 @api.get("/shopping")
-async def list_shopping(user: dict = Depends(get_current_user)):
+async def list_shopping(user: dict = Depends(require_owner)):
     docs = await db.shopping.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
     ).sort("created_at", 1).to_list(1000)
@@ -497,7 +607,7 @@ async def list_shopping(user: dict = Depends(get_current_user)):
 
 
 @api.post("/shopping")
-async def add_shopping(body: ShoppingItemIn, user: dict = Depends(get_current_user)):
+async def add_shopping(body: ShoppingItemIn, user: dict = Depends(require_owner)):
     doc = {
         "id": str(uuid.uuid4()),
         "user_id": user["id"],
@@ -515,7 +625,7 @@ class ShoppingUpdateIn(BaseModel):
 
 
 @api.put("/shopping/{sid}")
-async def update_shopping(sid: str, body: ShoppingUpdateIn, user: dict = Depends(get_current_user)):
+async def update_shopping(sid: str, body: ShoppingUpdateIn, user: dict = Depends(require_owner)):
     update = {}
     if body.text is not None:
         update["text"] = body.text.strip()
@@ -530,7 +640,7 @@ async def update_shopping(sid: str, body: ShoppingUpdateIn, user: dict = Depends
 
 
 @api.delete("/shopping/{sid}")
-async def delete_shopping(sid: str, user: dict = Depends(get_current_user)):
+async def delete_shopping(sid: str, user: dict = Depends(require_owner)):
     r = await db.shopping.delete_one({"id": sid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
@@ -551,7 +661,7 @@ async def list_employees(user: dict = Depends(get_current_user)):
 
 
 @api.post("/employees")
-async def create_employee(body: EmployeeIn, user: dict = Depends(get_current_user)):
+async def create_employee(body: EmployeeIn, user: dict = Depends(require_owner)):
     count = await db.employees.count_documents({"user_id": user["id"]})
     doc = {
         "id": str(uuid.uuid4()),
@@ -564,7 +674,7 @@ async def create_employee(body: EmployeeIn, user: dict = Depends(get_current_use
 
 
 @api.put("/employees/{eid}")
-async def update_employee(eid: str, body: EmployeeIn, user: dict = Depends(get_current_user)):
+async def update_employee(eid: str, body: EmployeeIn, user: dict = Depends(require_owner)):
     r = await db.employees.update_one(
         {"id": eid, "user_id": user["id"]},
         {"$set": {"name": body.name.strip()}},
@@ -575,7 +685,7 @@ async def update_employee(eid: str, body: EmployeeIn, user: dict = Depends(get_c
 
 
 @api.delete("/employees/{eid}")
-async def delete_employee(eid: str, user: dict = Depends(get_current_user)):
+async def delete_employee(eid: str, user: dict = Depends(require_owner)):
     await db.shifts.delete_many({"user_id": user["id"], "employee_id": eid})
     r = await db.employees.delete_one({"id": eid, "user_id": user["id"]})
     if r.deleted_count == 0:
@@ -602,7 +712,7 @@ async def list_shifts(week_start: str, user: dict = Depends(get_current_user)):
 
 
 @api.put("/shifts")
-async def upsert_shift(body: ShiftIn, user: dict = Depends(get_current_user)):
+async def upsert_shift(body: ShiftIn, user: dict = Depends(require_owner)):
     # ensure employee belongs to this user
     emp = await db.employees.find_one({"id": body.employee_id, "user_id": user["id"]})
     if not emp:
@@ -627,7 +737,7 @@ async def delete_shift(
     employee_id: str,
     week_start: str,
     day: int,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_owner),
 ):
     r = await db.shifts.delete_one({
         "user_id": user["id"],
