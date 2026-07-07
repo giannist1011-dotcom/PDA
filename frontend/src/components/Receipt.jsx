@@ -1,6 +1,6 @@
 import { eur, formatGRDateTime } from "@/lib/format";
 
-const summarizeCustomization = (c) => {
+const summarize = (c) => {
   if (!c) return null;
   const parts = [];
   if (c.bread) parts.push(c.bread);
@@ -14,7 +14,9 @@ export default function Receipt({ order }) {
   if (!order) return null;
   return (
     <div id="print-area" className="hidden print:block">
-      <div className="receipt-title text-center">ΠΕΙΝΩΚΙΟ</div>
+      <div className="receipt-title text-center">
+        {(order.restaurant_name || "POS").toUpperCase()}
+      </div>
       <div style={{ textAlign: "center", fontSize: 11 }}>Souvlaki & Take-away</div>
       <hr />
       <div>Αρ. Παρ.: #{String(order.order_number).padStart(3, "0")}</div>
@@ -28,9 +30,7 @@ export default function Receipt({ order }) {
             <span>{eur(it.line_total)}</span>
           </div>
           {it.customization && (
-            <div style={{ fontSize: 10, paddingLeft: 8 }}>
-              {summarizeCustomization(it.customization)}
-            </div>
+            <div style={{ fontSize: 10, paddingLeft: 8 }}>{summarize(it.customization)}</div>
           )}
         </div>
       ))}
@@ -47,9 +47,7 @@ export default function Receipt({ order }) {
         <span>{eur(order.total)}</span>
       </div>
       <hr />
-      <div style={{ textAlign: "center", fontSize: 10 }}>
-        Ευχαριστούμε! Καλή όρεξη
-      </div>
+      <div style={{ textAlign: "center", fontSize: 10 }}>Ευχαριστούμε! Καλή όρεξη</div>
     </div>
   );
 }

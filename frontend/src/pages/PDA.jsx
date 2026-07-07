@@ -1,19 +1,28 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { BarChart3, Utensils } from "lucide-react";
+import { BarChart3, Utensils, LogOut, Settings } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import MenuGrid from "@/components/MenuGrid";
 import OrderPanel from "@/components/OrderPanel";
 import CustomizationModal from "@/components/CustomizationModal";
 import Receipt from "@/components/Receipt";
-import { CATEGORIES, ORDER_SOURCES } from "@/data/menu";
-import { fetchNextOrderNumber, submitOrder } from "@/lib/api";
+import { ORDER_SOURCES } from "@/data/menu";
+import {
+  apiGetMenuConfig,
+  fetchNextOrderNumber,
+  submitOrder,
+  formatApiError,
+} from "@/lib/api";
 
-let LINE_ID = 1;
-const newLineId = () => `L${Date.now()}-${LINE_ID++}`;
+let LINE_SEQ = 1;
+const newLineId = () => `L${Date.now()}-${LINE_SEQ++}`;
 
 export default function PDA() {
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [config, setConfig] = useState({ categories: [], items: [], customization: null });
+  const [activeCategory, setActiveCategory] = useState(null);
   const [orderNumber, setOrderNumber] = useState(0);
   const [source, setSource] = useState(ORDER_SOURCES[0]);
   const [items, setItems] = useState([]);
@@ -21,34 +30,51 @@ export default function PDA() {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [printOrder, setPrintOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const loadNextNumber = async () => {
+  const loadNext = async () => {
     try {
-      const n = await fetchNextOrderNumber();
-      setOrderNumber(n);
-    } catch (e) {
-      console.error(e);
+      setOrderNumber(await fetchNextOrderNumber());
+    } catch {
       setOrderNumber(1);
     }
   };
 
+  const loadConfig = async () => {
+    try {
+      const c = await apiGetMenuConfig();
+      setConfig(c);
+      if (c.categories?.length && !activeCategory) {
+        setActiveCategory(c.categories[0].id);
+      }
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadNextNumber();
+    loadConfig();
+    loadNext();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const addLine = (item, customization = null, unitPriceOverride = null) => {
     const unit_price = unitPriceOverride ?? item.price;
-    const line = {
-      line_id: newLineId(),
-      item_id: item.id,
-      name: item.name,
-      category: item.category,
-      unit_price,
-      quantity: 1,
-      line_total: unit_price,
-      customization,
-    };
-    setItems((prev) => [...prev, line]);
+    setItems((prev) => [
+      ...prev,
+      {
+        line_id: newLineId(),
+        item_id: item.id,
+        name: item.name,
+        category: item.category,
+        unit_price,
+        quantity: 1,
+        line_total: unit_price,
+        customization,
+      },
+    ]);
   };
 
   const handleItemClick = (item) => {
@@ -68,27 +94,16 @@ export default function PDA() {
 
   const updateQty = (lineId, delta) => {
     setItems((prev) =>
-      prev
-        .map((it) =>
-          it.line_id === lineId
-            ? {
-                ...it,
-                quantity: Math.max(1, it.quantity + delta),
-                line_total: it.unit_price * Math.max(1, it.quantity + delta),
-              }
-            : it
-        )
-        .filter(Boolean)
+      prev.map((it) => {
+        if (it.line_id !== lineId) return it;
+        const nq = Math.max(1, it.quantity + delta);
+        return { ...it, quantity: nq, line_total: it.unit_price * nq };
+      })
     );
   };
 
-  const removeLine = (lineId) => {
-    setItems((prev) => prev.filter((it) => it.line_id !== lineId));
-  };
-
-  const clearOrder = () => {
-    setItems([]);
-  };
+  const removeLine = (lineId) => setItems((prev) => prev.filter((it) => it.line_id !== lineId));
+  const clearOrder = () => setItems([]);
 
   const handleSubmit = async () => {
     if (items.length === 0) return;
@@ -97,6 +112,8 @@ export default function PDA() {
     const payload = {
       order_number: orderNumber,
       source,
+      subtotal,
+      total: subtotal,
       items: items.map((it) => ({
         item_id: it.item_id,
         name: it.name,
@@ -106,31 +123,36 @@ export default function PDA() {
         line_total: it.line_total,
         customization: it.customization,
       })),
-      subtotal,
-      total: subtotal,
     };
     try {
       const saved = await submitOrder(payload);
-      setPrintOrder(saved);
-      // print
-      setTimeout(() => {
-        window.print();
-      }, 100);
-      // reset
+      setPrintOrder({ ...saved, restaurant_name: user.restaurant_name });
+      setTimeout(() => window.print(), 100);
       toast.success(`Παραγγελία #${saved.order_number} αποθηκεύτηκε`);
       setItems([]);
-      await loadNextNumber();
+      await loadNext();
     } catch (e) {
-      console.error(e);
-      toast.error("Σφάλμα κατά την αποθήκευση");
+      toast.error(formatApiError(e));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#0D0D0D] text-neutral-400">
+        Φόρτωση μενού...
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-screen flex flex-col bg-[#0D0D0D] text-white overflow-hidden">
-      {/* Top bar */}
       <header className="flex items-center justify-between px-6 h-16 border-b border-[#333] bg-[#0D0D0D] shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-md bg-[#FF6B00] flex items-center justify-center">
@@ -139,29 +161,45 @@ export default function PDA() {
           <div className="flex items-baseline gap-2">
             <span
               className="font-heading text-2xl font-bold tracking-tight"
-              data-testid="app-title"
+              data-testid="restaurant-name"
             >
-              Πεινώκιο
+              {user?.restaurant_name || "POS"}
             </span>
-            <span className="text-xs uppercase tracking-widest text-neutral-500">
-              POS
-            </span>
+            <span className="text-xs uppercase tracking-widest text-neutral-500">POS</span>
           </div>
         </div>
-        <Link
-          to="/analytics"
-          data-testid="nav-analytics-btn"
-          className="flex items-center gap-2 h-11 px-4 rounded-md border border-[#333] hover:border-[#FF6B00] text-neutral-200 hover:text-white transition-colors"
-        >
-          <BarChart3 className="w-4 h-4" />
-          <span className="text-sm font-bold">Στατιστικά</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/menu"
+            data-testid="nav-menu-btn"
+            className="flex items-center gap-2 h-11 px-4 rounded-md border border-[#333] hover:border-[#FF6B00] text-neutral-200 hover:text-white transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="text-sm font-bold hidden md:inline">Διαχείριση μενού</span>
+          </Link>
+          <Link
+            to="/analytics"
+            data-testid="nav-analytics-btn"
+            className="flex items-center gap-2 h-11 px-4 rounded-md border border-[#333] hover:border-[#FF6B00] text-neutral-200 hover:text-white transition-colors"
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span className="text-sm font-bold hidden md:inline">Στατιστικά</span>
+          </Link>
+          <button
+            onClick={handleLogout}
+            data-testid="logout-btn"
+            className="flex items-center gap-2 h-11 px-4 rounded-md border border-[#333] hover:border-[#FF3B30] text-neutral-300 hover:text-[#FF3B30] transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </header>
 
-      {/* Main layout */}
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-hidden">
         <section className="p-6 overflow-hidden flex flex-col">
           <MenuGrid
+            categories={config.categories}
+            items={config.items}
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
             onItemClick={handleItemClick}
@@ -183,6 +221,7 @@ export default function PDA() {
 
       <CustomizationModal
         item={modalItem}
+        config={config.customization}
         open={modalOpen}
         onClose={() => {
           setModalOpen(false);

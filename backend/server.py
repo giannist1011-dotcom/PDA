@@ -1,30 +1,127 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+"""FastAPI server for Πεινώκιο multi-tenant POS SaaS."""
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Literal
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / ".env")
+
+import os
 import uuid
+import logging
+import bcrypt
+import jwt
 from datetime import datetime, timezone, timedelta
 from collections import Counter, defaultdict
+from typing import List, Optional, Literal
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Query
+from starlette.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+from seed_data import DEFAULT_CATEGORIES, DEFAULT_CUSTOMIZATION, DEFAULT_ITEMS
+
+logger = logging.getLogger("peinokio")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+JWT_SECRET = os.environ["JWT_SECRET"]
+JWT_ALG = "HS256"
+JWT_TTL_HOURS = 24 * 30  # 30 days for POS convenience
+
+# Mongo
+mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[os.environ["DB_NAME"]]
 
-# App
-app = FastAPI(title="Peinokio POS API")
-api_router = APIRouter(prefix="/api")
+app = FastAPI(title="Peinokio POS SaaS")
+api = APIRouter(prefix="/api")
+
+# ============ HELPERS ============
+def hash_password(pw: str) -> str:
+    return bcrypt.hashpw(pw.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
-# Models
+def verify_password(pw: str, hashed: str) -> bool:
+    return bcrypt.checkpw(pw.encode("utf-8"), hashed.encode("utf-8"))
+
+
+def create_token(user_id: str, email: str) -> str:
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_TTL_HOURS),
+        "type": "access",
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
+
+
+async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "Not authenticated")
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(401, "Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(401, "Invalid token")
+    user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+    if not user:
+        raise HTTPException(401, "User not found")
+    return user
+
+
+def public_user(u: dict) -> dict:
+    return {
+        "id": u["id"],
+        "email": u["email"],
+        "restaurant_name": u["restaurant_name"],
+        "created_at": u.get("created_at"),
+    }
+
+
+# ============ MODELS ============
+class RegisterIn(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=4)
+    restaurant_name: str = Field(min_length=1, max_length=80)
+
+
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class TokenOut(BaseModel):
+    token: str
+    user: dict
+
+
+class Category(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    order: int = 0
+
+
+class MenuItemIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    price: float = Field(ge=0)
+    category: str
+    customizable: bool = False
+    double_meat_eligible: bool = False
+
+
+class MenuItem(MenuItemIn):
+    id: str
+
+
+class CustomizationConfig(BaseModel):
+    bread_options: List[str]
+    extras_options: List[str]
+    sauces_options: List[str]
+    double_meat_price: float = Field(ge=0)
+
+
 class OrderItemCustomization(BaseModel):
     model_config = ConfigDict(extra="ignore")
     bread: Optional[str] = None
@@ -54,53 +151,233 @@ class OrderCreate(BaseModel):
 
 
 class Order(OrderCreate):
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    id: str
+    user_id: str
+    created_at: datetime
 
 
-class NextOrderNumberResponse(BaseModel):
-    next_order_number: int
+# ============ SEEDING ============
+async def seed_user_menu(user_id: str):
+    """Create default categories, customization config and menu items for a user."""
+    # customization config on user document already; here we insert items & categories.
+    await db.categories.insert_many([
+        {"id": c["id"], "name": c["name"], "order": c["order"], "user_id": user_id}
+        for c in DEFAULT_CATEGORIES
+    ])
+    docs = []
+    for it in DEFAULT_ITEMS:
+        docs.append({
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "name": it["name"],
+            "price": float(it["price"]),
+            "category": it["category"],
+            "customizable": it.get("customizable", False),
+            "double_meat_eligible": it.get("double_meat_eligible", False),
+        })
+    await db.items.insert_many(docs)
 
 
-# Routes
-@api_router.get("/")
-async def root():
-    return {"message": "Peinokio POS API", "status": "ok"}
+async def ensure_demo_account():
+    demo_email = os.environ.get("DEMO_EMAIL", "demo@peinokio.gr").lower()
+    demo_pw = os.environ.get("DEMO_PASSWORD", "demo1234")
+    existing = await db.users.find_one({"email": demo_email})
+    if existing:
+        # Update password if changed
+        if not verify_password(demo_pw, existing.get("password_hash", "")):
+            await db.users.update_one(
+                {"email": demo_email},
+                {"$set": {"password_hash": hash_password(demo_pw)}},
+            )
+        return
+    uid = str(uuid.uuid4())
+    user_doc = {
+        "id": uid,
+        "email": demo_email,
+        "password_hash": hash_password(demo_pw),
+        "restaurant_name": "Πεινώκιο",
+        "customization": DEFAULT_CUSTOMIZATION,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.users.insert_one(user_doc)
+    await seed_user_menu(uid)
+    logger.info("Seeded demo Πεινώκιο account: %s", demo_email)
 
 
-@api_router.get("/orders/next-number", response_model=NextOrderNumberResponse)
-async def next_order_number():
-    """Return the next order number for today (auto-increment per day)."""
+# ============ AUTH ROUTES ============
+@api.post("/auth/register", response_model=TokenOut)
+async def register(body: RegisterIn):
+    email = body.email.lower()
+    if await db.users.find_one({"email": email}):
+        raise HTTPException(400, "Το email χρησιμοποιείται ήδη")
+    uid = str(uuid.uuid4())
+    doc = {
+        "id": uid,
+        "email": email,
+        "password_hash": hash_password(body.password),
+        "restaurant_name": body.restaurant_name.strip(),
+        "customization": DEFAULT_CUSTOMIZATION,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.users.insert_one(doc)
+    # Seed starter menu (Πεινώκιο template) for convenience
+    await seed_user_menu(uid)
+    token = create_token(uid, email)
+    return {"token": token, "user": public_user(doc)}
+
+
+@api.post("/auth/login", response_model=TokenOut)
+async def login(body: LoginIn):
+    email = body.email.lower()
+    user = await db.users.find_one({"email": email})
+    if not user or not verify_password(body.password, user["password_hash"]):
+        raise HTTPException(401, "Λάθος email ή κωδικός")
+    token = create_token(user["id"], email)
+    return {"token": token, "user": public_user(user)}
+
+
+@api.get("/auth/me")
+async def me(user: dict = Depends(get_current_user)):
+    return public_user(user)
+
+
+# ============ MENU ROUTES ============
+@api.get("/menu/config")
+async def get_menu_config(user: dict = Depends(get_current_user)):
+    cats = await db.categories.find({"user_id": user["id"]}, {"_id": 0, "user_id": 0}).sort("order", 1).to_list(500)
+    items = await db.items.find({"user_id": user["id"]}, {"_id": 0, "user_id": 0}).to_list(2000)
+    # customization from user doc
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "customization": 1})
+    return {
+        "categories": cats,
+        "items": items,
+        "customization": u.get("customization") if u else DEFAULT_CUSTOMIZATION,
+    }
+
+
+class CategoryIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    order: int = 0
+
+
+@api.post("/menu/categories")
+async def create_category(body: CategoryIn, user: dict = Depends(get_current_user)):
+    # generate slug-ish id
+    cid = str(uuid.uuid4())[:8]
+    doc = {"id": cid, "name": body.name.strip(), "order": body.order, "user_id": user["id"]}
+    await db.categories.insert_one(doc)
+    return {"id": cid, "name": body.name.strip(), "order": body.order}
+
+
+@api.put("/menu/categories/{cid}")
+async def update_category(cid: str, body: CategoryIn, user: dict = Depends(get_current_user)):
+    r = await db.categories.update_one(
+        {"id": cid, "user_id": user["id"]},
+        {"$set": {"name": body.name.strip(), "order": body.order}},
+    )
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"id": cid, "name": body.name.strip(), "order": body.order}
+
+
+@api.delete("/menu/categories/{cid}")
+async def delete_category(cid: str, user: dict = Depends(get_current_user)):
+    await db.items.delete_many({"user_id": user["id"], "category": cid})
+    r = await db.categories.delete_one({"id": cid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
+@api.post("/menu/items")
+async def create_item(body: MenuItemIn, user: dict = Depends(get_current_user)):
+    iid = str(uuid.uuid4())
+    doc = {
+        "id": iid,
+        "user_id": user["id"],
+        "name": body.name.strip(),
+        "price": float(body.price),
+        "category": body.category,
+        "customizable": bool(body.customizable),
+        "double_meat_eligible": bool(body.double_meat_eligible),
+    }
+    await db.items.insert_one(doc)
+    doc.pop("user_id", None)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.put("/menu/items/{iid}")
+async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(get_current_user)):
+    update = {
+        "name": body.name.strip(),
+        "price": float(body.price),
+        "category": body.category,
+        "customizable": bool(body.customizable),
+        "double_meat_eligible": bool(body.double_meat_eligible),
+    }
+    r = await db.items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"id": iid, **update}
+
+
+@api.delete("/menu/items/{iid}")
+async def delete_item(iid: str, user: dict = Depends(get_current_user)):
+    r = await db.items.delete_one({"id": iid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
+@api.put("/menu/customization")
+async def update_customization(body: CustomizationConfig, user: dict = Depends(get_current_user)):
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"customization": body.model_dump()}},
+    )
+    return body.model_dump()
+
+
+# ============ ORDER ROUTES ============
+@api.get("/orders/next-number")
+async def next_order_number(user: dict = Depends(get_current_user)):
     today = datetime.now(timezone.utc).date().isoformat()
-    # Find max order_number for today's orders
-    start = f"{today}T00:00:00+00:00"
-    end = f"{today}T23:59:59+00:00"
-    cursor = db.orders.find(
-        {"created_at": {"$gte": start, "$lte": end}},
+    docs = await db.orders.find(
+        {
+            "user_id": user["id"],
+            "created_at": {"$gte": f"{today}T00:00:00+00:00", "$lte": f"{today}T23:59:59+00:00"},
+        },
         {"_id": 0, "order_number": 1},
-    ).sort("order_number", -1).limit(1)
-    docs = await cursor.to_list(1)
+    ).sort("order_number", -1).limit(1).to_list(1)
     next_num = (docs[0]["order_number"] + 1) if docs else 1
     return {"next_order_number": next_num}
 
 
-@api_router.post("/orders", response_model=Order)
-async def create_order(payload: OrderCreate):
-    order = Order(**payload.model_dump())
-    doc = order.model_dump()
-    doc["created_at"] = doc["created_at"].isoformat()
+@api.post("/orders", response_model=Order)
+async def create_order(body: OrderCreate, user: dict = Depends(get_current_user)):
+    oid = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    doc = body.model_dump()
+    doc.update({
+        "id": oid,
+        "user_id": user["id"],
+        "created_at": now.isoformat(),
+    })
     await db.orders.insert_one(doc)
-    return order
+    doc.pop("_id", None)
+    doc["created_at"] = now
+    return doc
 
 
-@api_router.get("/orders", response_model=List[Order])
+@api.get("/orders", response_model=List[Order])
 async def list_orders(
-    date_from: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
-    date_to: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     limit: int = 500,
+    user: dict = Depends(get_current_user),
 ):
-    query = {}
+    query = {"user_id": user["id"]}
     if date_from or date_to:
         rng = {}
         if date_from:
@@ -115,40 +392,32 @@ async def list_orders(
     return docs
 
 
-@api_router.get("/analytics")
+# ============ ANALYTICS ============
+@api.get("/analytics")
 async def analytics(
-    date_from: Optional[str] = Query(None),
-    date_to: Optional[str] = Query(None),
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(get_current_user),
 ):
-    """Aggregated analytics filtered by date range."""
-    # Default: today
     today = datetime.now(timezone.utc).date().isoformat()
     df = date_from or today
     dt = date_to or today
-
     query = {
-        "created_at": {
-            "$gte": f"{df}T00:00:00+00:00",
-            "$lte": f"{dt}T23:59:59+00:00",
-        }
+        "user_id": user["id"],
+        "created_at": {"$gte": f"{df}T00:00:00+00:00", "$lte": f"{dt}T23:59:59+00:00"},
     }
-    docs = await db.orders.find(query, {"_id": 0}).to_list(10000)
-
+    docs = await db.orders.find(query, {"_id": 0}).to_list(50000)
     total_orders = len(docs)
     total_revenue = round(sum(d.get("total", 0) for d in docs), 2)
     avg_order = round(total_revenue / total_orders, 2) if total_orders else 0.0
-
     by_source = defaultdict(lambda: {"count": 0, "revenue": 0.0})
     hourly = defaultdict(lambda: {"orders": 0, "revenue": 0.0})
     item_counter = Counter()
     item_revenue = defaultdict(float)
-
     for d in docs:
         src = d.get("source", "Ταμείο")
         by_source[src]["count"] += 1
         by_source[src]["revenue"] += d.get("total", 0)
-
-        # hour
         try:
             dt_obj = datetime.fromisoformat(d["created_at"])
             hr = dt_obj.hour
@@ -156,41 +425,24 @@ async def analytics(
             hourly[hr]["revenue"] += d.get("total", 0)
         except Exception:
             pass
-
         for item in d.get("items", []):
-            key = item["name"]
-            item_counter[key] += item.get("quantity", 1)
-            item_revenue[key] += item.get("line_total", 0)
+            k = item["name"]
+            item_counter[k] += item.get("quantity", 1)
+            item_revenue[k] += item.get("line_total", 0)
 
-    # Build ordered hourly (0-23) for chart
     hourly_list = [
-        {
-            "hour": h,
-            "label": f"{h:02d}:00",
-            "orders": hourly[h]["orders"],
-            "revenue": round(hourly[h]["revenue"], 2),
-        }
+        {"hour": h, "label": f"{h:02d}:00",
+         "orders": hourly[h]["orders"], "revenue": round(hourly[h]["revenue"], 2)}
         for h in range(24)
     ]
-
-    popular_items = [
-        {
-            "name": name,
-            "quantity": qty,
-            "revenue": round(item_revenue[name], 2),
-        }
-        for name, qty in item_counter.most_common(10)
+    popular = [
+        {"name": n, "quantity": q, "revenue": round(item_revenue[n], 2)}
+        for n, q in item_counter.most_common(10)
     ]
-
     sources_list = [
-        {
-            "source": s,
-            "count": v["count"],
-            "revenue": round(v["revenue"], 2),
-        }
+        {"source": s, "count": v["count"], "revenue": round(v["revenue"], 2)}
         for s, v in by_source.items()
     ]
-
     return {
         "date_from": df,
         "date_to": dt,
@@ -198,29 +450,37 @@ async def analytics(
         "total_revenue": total_revenue,
         "avg_order_value": avg_order,
         "by_source": sources_list,
-        "popular_items": popular_items,
+        "popular_items": popular,
         "hourly": hourly_list,
     }
 
 
-# Include router
-app.include_router(api_router)
+@api.get("/")
+async def root():
+    return {"status": "ok", "service": "Peinokio POS SaaS"}
+
+
+# ============ APP SETUP ============
+app.include_router(api)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_credentials=False,
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def on_startup():
+    await db.users.create_index("email", unique=True)
+    await db.categories.create_index([("user_id", 1)])
+    await db.items.create_index([("user_id", 1)])
+    await db.orders.create_index([("user_id", 1), ("created_at", -1)])
+    await ensure_demo_account()
 
 
 @app.on_event("shutdown")
-async def shutdown_db_client():
+async def on_shutdown():
     client.close()
