@@ -1,0 +1,93 @@
+{
+  "theme": "dark",
+  "archetype": "4 (Swiss & High-Contrast)",
+  "design_philosophy": "A high-speed, command-center POS for a fast-paced Greek takeaway 'Πεινώκιο'. Prioritizes extreme legibility, massive touch targets, and high-contrast cues. It uses deep obsidian backgrounds with stark white text and electric amber/orange for primary actions, stripping away all decorative elements to focus entirely on rapid order entry.",
+  "colors": {
+    "background": "#0D0D0D",
+    "surface": "#1A1A1A",
+    "surface_hover": "#262626",
+    "border": "#333333",
+    "primary": "#FF6B00",
+    "primary_hover": "#FF8533",
+    "primary_foreground": "#FFFFFF",
+    "secondary": "#2A2A2A",
+    "secondary_foreground": "#E0E0E0",
+    "success": "#00E676",
+    "warning": "#FFB300",
+    "destructive": "#FF3B30",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A3A3A3",
+    "text_muted": "#737373"
+  },
+  "typography": {
+    "font_heading": "Outfit",
+    "font_body": "Manrope",
+    "font_mono": "JetBrains Mono",
+    "h1": "text-4xl sm:text-5xl font-bold tracking-tight",
+    "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+    "h3": "text-xl sm:text-2xl font-semibold",
+    "h4": "text-lg sm:text-xl font-medium",
+    "body": "text-base leading-relaxed",
+    "small": "text-sm font-medium tracking-wide",
+    "receipt": "font-mono text-sm leading-tight"
+  },
+  "layout": {
+    "spacing_scale": "Generous inner padding but dense grids (p-4, p-6).",
+    "global_structure": "Two-panel horizontal split. Left: 70% width for categories and item grid. Right: 30% width fixed sidebar for the current order.",
+    "left_panel": {
+      "categories": "flex flex-wrap gap-4 mb-8",
+      "items_grid": "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+    },
+    "right_panel": {
+      "order_sidebar": "flex flex-col h-full bg-[#1A1A1A] border-l border-[#333333] p-6 sticky top-0"
+    },
+    "touch_targets": "All interactive elements (buttons, menu items) MUST have a minimum height of 64px (h-16) for fast PDA tapping. Menu items should be tall cards (h-32)."
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#FF6B00] text-white hover:bg-[#FF8533] h-16 text-lg font-bold rounded-md transition-colors",
+      "category": "bg-[#1A1A1A] text-white border border-[#333333] hover:border-[#FF6B00] h-14 px-6 text-lg font-medium rounded-md",
+      "category_active": "bg-[#FF6B00] text-white h-14 px-6 text-lg font-bold rounded-md"
+    },
+    "menu_item_card": "flex flex-col justify-between p-4 bg-[#1A1A1A] border border-[#333333] hover:border-[#FF6B00] rounded-lg cursor-pointer h-32 transition-all active:scale-95",
+    "customization_modal": {
+      "overlay": "backdrop-blur-xl bg-black/80",
+      "container": "bg-[#0D0D0D] border border-[#333333] rounded-xl p-8 max-w-3xl w-full",
+      "option_toggle": "flex items-center justify-between p-4 border border-[#333333] rounded-lg cursor-pointer hover:bg-[#1A1A1A] data-[state=on]:border-[#FF6B00] data-[state=on]:bg-[#FF6B00]/10"
+    },
+    "order_item_row": "flex justify-between items-start py-4 border-b border-[#333333] last:border-0",
+    "quantity_controls": "flex items-center gap-4 bg-[#0D0D0D] rounded-md p-1",
+    "source_toggle": "flex bg-[#0D0D0D] p-1 rounded-md",
+    "source_button": "flex-1 py-3 text-center rounded text-sm font-bold data-[state=on]:bg-[#333333] data-[state=on]:text-white data-[state=off]:text-[#A3A3A3]"
+  },
+  "animations": {
+    "click_feedback": "active:scale-[0.98] transition-transform duration-75",
+    "modal_enter": "animate-in fade-in zoom-in-95 duration-200",
+    "item_add": "animate-in slide-in-from-right-4 duration-300"
+  },
+  "accessibility": {
+    "contrast": "Ensure pure white text on the #FF6B00 primary button. Ensure text on #1A1A1A meets 4.5:1 ratio.",
+    "testing": "All buttons, items, and toggles MUST use data-testid. Examples: data-testid='category-btn-orektika', data-testid='menu-item-pita', data-testid='order-submit-btn'."
+  },
+  "image_urls": {
+    "logo_placeholder": {
+      "url": "https://images.unsplash.com/photo-1703793578040-07e1778b6b2c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwyfHxyZXN0YXVyYW50JTIwcG9zJTIwbW9kZXJuJTIwZGFya3xlbnwwfHx8fDE3ODM0MTIyMzZ8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Ambient dark restaurant background, useful for a subtle login/idle screen background overlay if needed."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Initialize Tailwind, React Router, and Shadcn UI (button, dialog, input, select, popover, calendar, toast, table, chart).",
+    "Install lucide-react for icons.",
+    "Install date-fns for the analytics date range picker.",
+    "Create a responsive, touch-friendly POS layout. The UI must be strictly Dark Mode (#0D0D0D base).",
+    "DO NOT use generic shadow classes. Rely on 1px solid borders (#333333) for structural definition.",
+    "The left panel must contain horizontal wrapping pills for Categories (Ορεκτικά, Αλοιφές, Τεμάχια, Σάντουιτς, Μερίδες, Αναψυκτικά, Μπύρες/Ποτά).",
+    "When a category is selected, the grid updates. Items are large, highly tappable cards (min-h-[128px]).",
+    "Clicking a 'Σάντουιτς' item MUST open the Customization Modal with toggles for Bread (single), Extras (multi), Sauces (multi), and Double Meat (+1.50€).",
+    "The right panel is the Order Summary. It must show selected items, allow quantity +/- (which update the total), select source (Ταμείο/Τηλέφωνο/efood/Box), and have a massive Print/Checkout button.",
+    "Implement browser printing for the receipt (hide UI elements using @media print, format receipt using JetBrains Mono).",
+    "Build the Analytics view with Recharts. Include a Date Range picker (Από/Έως). Show Total Revenue, Total Orders, Sales by Source, and Popular Items.",
+    "Ensure Greek typography is legible (use Manrope for body, Outfit for headers).",
+    "Add data-testid attributes to all interactive elements for robust automated testing."
+  ]
+}
