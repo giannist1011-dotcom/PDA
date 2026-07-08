@@ -31,18 +31,20 @@ Multi-tenant Greek restaurant PDA/POS SaaS with per-store isolation, role-based 
 - Menu: /api/menu/config, categories CRUD, items CRUD (+PATCH /{id}/availability), PUT /menu/customization
 - Orders: /api/orders/next-number, POST /api/orders (with optional delivery), GET /api/orders, GET /api/analytics
 - Shopping: /api/shopping (CRUD)
+- Stock (independent inventory): /api/stock/config, /api/stock/categories (CRUD), /api/stock/items (CRUD, PATCH availability/note)
 - Employees: /api/employees (CRUD, cascades shifts)
 - Shifts: PUT /api/shifts (upsert), GET /api/shifts?week_start, DELETE /api/shifts
 
 ### Collections
-users (+owner/employee_pin_hash, *_pin_set flags), categories, items (+available, unavailable_note, option_groups), orders (+delivery), shopping, employees, shifts (unique index user_id+employee_id+week_start+day)
+users (+owner/employee_pin_hash, *_pin_set flags), categories, items (+available, unavailable_note, option_groups), orders (+delivery), shopping, stock_categories, stock_items (+available, note), employees, shifts (unique index user_id+employee_id+week_start+day)
 
 ## Implemented (2026-02)
 - V1 (single-tenant POS) — done
 - V2 (multi-tenant SaaS with auth + menu management) — done
 - V3 (burger nav + Ελλείψεις + Πρόγραμμα) — done
 - V4 (profile PIN system + Ρυθμίσεις + option groups + phone delivery + menu delete AlertDialog fix) — done
-- Testing: 17/17 backend + 100% frontend E2E verified (iteration 4)
+- V5 (editable order lines, tap/hover animations, analytics date-comparison, menu bulk edit) — done
+- V6 (2026-02): MenuGrid hover clipping fix + Shopping list print (window.print with restaurant header/date) + Stock page fully decoupled from food menu into own custom inventory (categories/items CRUD, availability toggle, notes) — manual curl + screenshot verified
 
 ## Backlog
 - P1: Password reset flow

@@ -51,6 +51,21 @@ export const apiAddShopping = (text) => api.post("/shopping", { text }).then((r)
 export const apiUpdateShopping = (id, payload) => api.put(`/shopping/${id}`, payload).then((r) => r.data);
 export const apiDeleteShopping = (id) => api.delete(`/shopping/${id}`).then((r) => r.data);
 
+// STOCK (independent custom inventory)
+export const apiGetStockConfig = () => api.get("/stock/config").then((r) => r.data);
+export const apiCreateStockCategory = (payload) =>
+  api.post("/stock/categories", payload).then((r) => r.data);
+export const apiUpdateStockCategory = (id, payload) =>
+  api.put(`/stock/categories/${id}`, payload).then((r) => r.data);
+export const apiDeleteStockCategory = (id) =>
+  api.delete(`/stock/categories/${id}`).then((r) => r.data);
+export const apiCreateStockItem = (payload) =>
+  api.post("/stock/items", payload).then((r) => r.data);
+export const apiUpdateStockItem = (id, payload) =>
+  api.patch(`/stock/items/${id}`, payload).then((r) => r.data);
+export const apiDeleteStockItem = (id) =>
+  api.delete(`/stock/items/${id}`).then((r) => r.data);
+
 // EMPLOYEES
 export const apiListEmployees = () => api.get("/employees").then((r) => r.data);
 export const apiCreateEmployee = (name) => api.post("/employees", { name }).then((r) => r.data);

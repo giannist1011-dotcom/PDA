@@ -700,6 +700,118 @@ class ShoppingItemIn(BaseModel):
     text: str = Field(min_length=1, max_length=200)
 
 
+# ============ STOCK (INDEPENDENT INVENTORY) ============
+class StockCategoryIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    order: int = 0
+
+
+class StockItemIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    category_id: str
+    available: bool = True
+    note: str = ""
+
+
+class StockItemPatchIn(BaseModel):
+    name: Optional[str] = None
+    category_id: Optional[str] = None
+    available: Optional[bool] = None
+    note: Optional[str] = None
+
+
+@api.get("/stock/config")
+async def stock_config(user: dict = Depends(get_current_user)):
+    cats = await db.stock_categories.find(
+        {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
+    ).sort("order", 1).to_list(500)
+    items = await db.stock_items.find(
+        {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
+    ).sort("created_at", 1).to_list(2000)
+    return {"categories": cats, "items": items}
+
+
+@api.post("/stock/categories")
+async def create_stock_category(body: StockCategoryIn, user: dict = Depends(require_owner)):
+    count = await db.stock_categories.count_documents({"user_id": user["id"]})
+    doc = {
+        "id": str(uuid.uuid4())[:8],
+        "user_id": user["id"],
+        "name": body.name.strip(),
+        "order": body.order if body.order else count,
+    }
+    await db.stock_categories.insert_one(doc)
+    return {k: v for k, v in doc.items() if k not in ("_id", "user_id")}
+
+
+@api.put("/stock/categories/{cid}")
+async def update_stock_category(cid: str, body: StockCategoryIn, user: dict = Depends(require_owner)):
+    r = await db.stock_categories.update_one(
+        {"id": cid, "user_id": user["id"]},
+        {"$set": {"name": body.name.strip(), "order": body.order}},
+    )
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"id": cid, "name": body.name.strip(), "order": body.order}
+
+
+@api.delete("/stock/categories/{cid}")
+async def delete_stock_category(cid: str, user: dict = Depends(require_owner)):
+    await db.stock_items.delete_many({"user_id": user["id"], "category_id": cid})
+    r = await db.stock_categories.delete_one({"id": cid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
+@api.post("/stock/items")
+async def create_stock_item(body: StockItemIn, user: dict = Depends(require_owner)):
+    cat = await db.stock_categories.find_one({"id": body.category_id, "user_id": user["id"]})
+    if not cat:
+        raise HTTPException(404, "Η κατηγορία δεν βρέθηκε")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "name": body.name.strip(),
+        "category_id": body.category_id,
+        "available": bool(body.available),
+        "note": body.note.strip(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.stock_items.insert_one(doc)
+    return {k: v for k, v in doc.items() if k not in ("_id", "user_id")}
+
+
+@api.patch("/stock/items/{iid}")
+async def update_stock_item(iid: str, body: StockItemPatchIn, user: dict = Depends(get_current_user)):
+    update = {}
+    if body.name is not None:
+        update["name"] = body.name.strip()
+    if body.category_id is not None:
+        cat = await db.stock_categories.find_one({"id": body.category_id, "user_id": user["id"]})
+        if not cat:
+            raise HTTPException(404, "Η κατηγορία δεν βρέθηκε")
+        update["category_id"] = body.category_id
+    if body.available is not None:
+        update["available"] = bool(body.available)
+    if body.note is not None:
+        update["note"] = body.note.strip()
+    if not update:
+        raise HTTPException(400, "Nothing to update")
+    r = await db.stock_items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"id": iid, **update}
+
+
+@api.delete("/stock/items/{iid}")
+async def delete_stock_item(iid: str, user: dict = Depends(require_owner)):
+    r = await db.stock_items.delete_one({"id": iid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
 @api.get("/shopping")
 async def list_shopping(user: dict = Depends(require_owner)):
     docs = await db.shopping.find(
@@ -869,6 +981,8 @@ async def on_startup():
     await db.items.create_index([("user_id", 1)])
     await db.orders.create_index([("user_id", 1), ("created_at", -1)])
     await db.shopping.create_index([("user_id", 1), ("created_at", 1)])
+    await db.stock_categories.create_index([("user_id", 1), ("order", 1)])
+    await db.stock_items.create_index([("user_id", 1), ("category_id", 1)])
     await db.employees.create_index([("user_id", 1), ("order", 1)])
     await db.shifts.create_index([("user_id", 1), ("week_start", 1)])
     await db.shifts.create_index(

@@ -19,7 +19,7 @@ export default function MenuGrid({
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full">
       <div className="flex flex-wrap gap-3 mb-6" data-testid="category-bar">
         {categories.map((c) => {
           const active = c.id === activeCategory;
@@ -47,7 +47,7 @@ export default function MenuGrid({
       </div>
 
       <div
-        className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-6"
+        className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto overflow-x-hidden px-2 pt-2 pr-3 pb-6"
         data-testid="menu-items-grid"
       >
         {filtered.map((it) => {
