@@ -4,15 +4,14 @@ import {
   Plus,
   Trash2,
   ShoppingBasket,
-  PackageX,
   Check,
   Printer,
   Pencil,
   FolderPlus,
+  Package,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import {
   apiGetStockConfig,
@@ -20,7 +19,7 @@ import {
   apiUpdateStockCategory,
   apiDeleteStockCategory,
   apiCreateStockItem,
-  apiUpdateStockItem,
+  apiToggleStockItemShopping,
   apiDeleteStockItem,
   apiListShopping,
   apiAddShopping,
@@ -29,74 +28,61 @@ import {
   formatApiError,
 } from "@/lib/api";
 
-// ---------- Stock row ----------
-function StockRow({ item, onToggle, onNote, onDelete, canEdit }) {
-  const [noteEdit, setNoteEdit] = useState(item.note || "");
-  const unavailable = item.available === false;
-
-  useEffect(() => {
-    setNoteEdit(item.note || "");
-  }, [item.note]);
-
-  const persistNote = async () => {
-    if (noteEdit === (item.note || "")) return;
-    await onNote(item.id, noteEdit);
-  };
-
+// ---------- Stock row (checkbox = "add to shopping list") ----------
+function StockRow({ item, onToggleNeed, onDelete, canEdit }) {
+  const needs = !!item.shopping_item_id;
   return (
-    <div
-      className={`p-4 bg-[#1A1A1A] border rounded-lg flex flex-col md:flex-row md:items-center md:justify-between gap-3 group ${
-        unavailable ? "border-[#FF3B30]/50" : "border-[#333]"
+    <label
+      className={`p-4 bg-[#1A1A1A] border rounded-lg flex items-center gap-4 group cursor-pointer select-none transition-colors ${
+        needs
+          ? "border-[#FF6B00] bg-[#FF6B00]/5"
+          : "border-[#333] hover:border-[#555]"
       }`}
       data-testid={`stock-row-${item.id}`}
     >
-      <div className="flex-1 min-w-0 flex items-center gap-3">
-        <div className="min-w-0">
-          <div className="font-heading font-semibold text-white truncate">{item.name}</div>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          onToggleNeed(item);
+        }}
+        data-testid={`stock-check-${item.id}`}
+        aria-checked={needs}
+        role="checkbox"
+        className={`w-7 h-7 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+          needs
+            ? "bg-[#FF6B00] border-[#FF6B00]"
+            : "border-[#555] hover:border-[#FF6B00] bg-[#0D0D0D]"
+        }`}
+      >
+        {needs && <Check className="w-5 h-5 text-white" strokeWidth={3} />}
+      </button>
+      <div className="flex-1 min-w-0">
+        <div className={`font-heading font-semibold truncate ${needs ? "text-white" : "text-neutral-100"}`}>
+          {item.name}
         </div>
-        {unavailable && (
-          <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-[#FF3B30]/20 text-[#FF6961]">
-            Έλλειψη
-          </span>
+        {needs && (
+          <div className="text-[11px] font-bold uppercase tracking-widest text-[#FF6B00] mt-0.5">
+            Στη λίστα αγορών
+          </div>
         )}
       </div>
-      <div className="flex items-center gap-3">
-        {unavailable && (
-          <input
-            value={noteEdit}
-            onChange={(e) => setNoteEdit(e.target.value)}
-            onBlur={persistNote}
-            placeholder="π.χ. τελειώνει αύριο"
-            data-testid={`stock-note-${item.id}`}
-            className="w-48 h-10 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white focus:outline-none focus:border-[#FF6B00]"
-          />
-        )}
-        <div className="flex items-center gap-2">
-          <span
-            className={`text-xs font-bold ${
-              unavailable ? "text-neutral-500" : "text-[#00E676]"
-            }`}
-          >
-            {unavailable ? "Μη διαθέσιμο" : "Διαθέσιμο"}
-          </span>
-          <Switch
-            checked={!unavailable}
-            onCheckedChange={() => onToggle(item)}
-            data-testid={`stock-toggle-${item.id}`}
-          />
-        </div>
-        {canEdit && (
-          <button
-            onClick={() => onDelete(item)}
-            data-testid={`stock-delete-${item.id}`}
-            className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-[#FF3B30]"
-            title="Διαγραφή"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-    </div>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onDelete(item);
+          }}
+          data-testid={`stock-delete-${item.id}`}
+          className="opacity-0 group-hover:opacity-100 p-1.5 text-neutral-400 hover:text-[#FF3B30]"
+          title="Διαγραφή"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+    </label>
   );
 }
 
@@ -311,7 +297,6 @@ export default function Stock() {
   const [activeCat, setActiveCat] = useState("all");
   const [loading, setLoading] = useState(true);
 
-  // modals
   const [catModal, setCatModal] = useState({ open: false, editing: null });
   const [itemModal, setItemModal] = useState({ open: false });
 
@@ -363,8 +348,11 @@ export default function Stock() {
     if (!window.confirm(msg)) return;
     try {
       await apiDeleteStockCategory(cat.id);
+      const removedIds = new Set(items.filter((i) => i.category_id === cat.id).map((i) => i.id));
       setCategories((p) => p.filter((c) => c.id !== cat.id));
       setItems((p) => p.filter((i) => i.category_id !== cat.id));
+      // remove any shopping entries linked to those stock items
+      setShopping((p) => p.filter((s) => !s.source_stock_id || !removedIds.has(s.source_stock_id)));
       if (activeCat === cat.id) setActiveCat("all");
       toast.success("Κατηγορία διαγράφηκε");
     } catch (e) {
@@ -383,25 +371,39 @@ export default function Stock() {
     }
   };
 
-  const toggleAvailability = async (item) => {
-    const nextAvail = item.available === false;
-    setItems((p) => p.map((i) => (i.id === item.id ? { ...i, available: nextAvail } : i)));
-    try {
-      await apiUpdateStockItem(item.id, {
-        available: nextAvail,
-        note: nextAvail ? "" : item.note || "",
-      });
-    } catch (e) {
-      toast.error(formatApiError(e));
-      setItems((p) => p.map((i) => (i.id === item.id ? { ...i, available: !nextAvail } : i)));
+  const handleToggleNeed = async (item) => {
+    const wasNeeded = !!item.shopping_item_id;
+    const optimisticId = wasNeeded ? null : `pending-${item.id}`;
+    setItems((p) => p.map((i) => (i.id === item.id ? { ...i, shopping_item_id: optimisticId } : i)));
+    if (wasNeeded) {
+      setShopping((p) => p.filter((s) => s.id !== item.shopping_item_id));
     }
-  };
-
-  const setNote = async (id, note) => {
-    setItems((p) => p.map((i) => (i.id === id ? { ...i, note } : i)));
     try {
-      await apiUpdateStockItem(id, { note });
+      const res = await apiToggleStockItemShopping(item.id, !wasNeeded);
+      setItems((p) =>
+        p.map((i) => (i.id === item.id ? { ...i, shopping_item_id: res.shopping_item_id } : i))
+      );
+      if (!wasNeeded && res.shopping_item) {
+        setShopping((p) => [
+          ...p.filter((s) => s.id !== res.shopping_item.id),
+          res.shopping_item,
+        ]);
+        toast.success(`Προστέθηκε: ${item.name}`);
+      } else if (wasNeeded) {
+        toast.success(`Αφαιρέθηκε από τη λίστα`);
+      }
     } catch (e) {
+      // revert
+      setItems((p) => p.map((i) => (i.id === item.id ? { ...i, shopping_item_id: item.shopping_item_id } : i)));
+      if (wasNeeded) {
+        // put shopping entry back — refetch to be safe
+        try {
+          const shop = await apiListShopping();
+          setShopping(shop);
+        } catch (_err) {
+          /* ignore refetch errors */
+        }
+      }
       toast.error(formatApiError(e));
     }
   };
@@ -411,6 +413,9 @@ export default function Stock() {
     try {
       await apiDeleteStockItem(item.id);
       setItems((p) => p.filter((i) => i.id !== item.id));
+      if (item.shopping_item_id) {
+        setShopping((p) => p.filter((s) => s.id !== item.shopping_item_id));
+      }
       toast.success("Διαγράφηκε");
     } catch (e) {
       toast.error(formatApiError(e));
@@ -430,7 +435,7 @@ export default function Stock() {
     }
   };
 
-  const toggleShop = async (item) => {
+  const toggleShopBought = async (item) => {
     const next = !item.bought;
     setShopping((p) => p.map((s) => (s.id === item.id ? { ...s, bought: next } : s)));
     try {
@@ -440,10 +445,18 @@ export default function Stock() {
     }
   };
 
-  const removeShop = async (id) => {
-    setShopping((p) => p.filter((s) => s.id !== id));
+  const removeShop = async (shop) => {
+    setShopping((p) => p.filter((s) => s.id !== shop.id));
+    // if linked to a stock item, uncheck that item too
+    if (shop.source_stock_id) {
+      setItems((p) =>
+        p.map((i) =>
+          i.id === shop.source_stock_id ? { ...i, shopping_item_id: null } : i
+        )
+      );
+    }
     try {
-      await apiDeleteShopping(id);
+      await apiDeleteShopping(shop.id);
     } catch (e) {
       toast.error(formatApiError(e));
     }
@@ -451,11 +464,11 @@ export default function Stock() {
 
   const filteredItems = useMemo(() => {
     if (activeCat === "all") return items;
-    if (activeCat === "unavailable") return items.filter((i) => i.available === false);
+    if (activeCat === "needs") return items.filter((i) => !!i.shopping_item_id);
     return items.filter((i) => i.category_id === activeCat);
   }, [items, activeCat]);
 
-  const unavailableCount = items.filter((i) => i.available === false).length;
+  const needsCount = items.filter((i) => !!i.shopping_item_id).length;
   const restaurantName = user?.restaurant_name || "";
 
   const onPrint = () => printShoppingList({ restaurantName, items: shopping });
@@ -469,11 +482,11 @@ export default function Stock() {
             <div className="flex items-start justify-between mb-4 gap-4 flex-wrap">
               <div>
                 <div className="flex items-center gap-2">
-                  <PackageX className="w-5 h-5 text-[#FF6B00]" />
+                  <Package className="w-5 h-5 text-[#FF6B00]" />
                   <h2 className="font-heading text-2xl font-bold">Απόθεμα καταστήματος</h2>
                 </div>
                 <p className="text-sm text-neutral-400 mt-1">
-                  Προσθέστε δικές σας κατηγορίες (π.χ. Καθαριστικά, Συσκευασία) και προϊόντα για παρακολούθηση αποθέματος
+                  Τσεκάρετε ό,τι τελειώνει και προστίθεται αυτόματα στη λίστα αγορών →
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -499,12 +512,12 @@ export default function Stock() {
                   </>
                 )}
                 <div className="text-sm ml-2">
-                  <span className="text-neutral-400">Ελλείψεις: </span>
+                  <span className="text-neutral-400">Στη λίστα: </span>
                   <span
-                    className="font-mono font-bold text-[#FF6961]"
-                    data-testid="unavailable-count"
+                    className="font-mono font-bold text-[#FF6B00]"
+                    data-testid="needs-count"
                   >
-                    {unavailableCount}
+                    {needsCount}
                   </span>
                 </div>
               </div>
@@ -524,15 +537,15 @@ export default function Stock() {
                 Όλα ({items.length})
               </button>
               <button
-                onClick={() => setActiveCat("unavailable")}
-                data-testid="stock-filter-unavailable"
+                onClick={() => setActiveCat("needs")}
+                data-testid="stock-filter-needs"
                 className={`h-10 px-4 rounded-md text-sm font-bold border ${
-                  activeCat === "unavailable"
-                    ? "bg-[#FF3B30] border-[#FF3B30] text-white"
-                    : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-[#FF3B30]"
+                  activeCat === "needs"
+                    ? "bg-[#FF6B00] border-[#FF6B00] text-white"
+                    : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
                 }`}
               >
-                Ελλείψεις ({unavailableCount})
+                Στη λίστα ({needsCount})
               </button>
               {categories.map((c) => {
                 const count = items.filter((i) => i.category_id === c.id).length;
@@ -579,7 +592,7 @@ export default function Stock() {
               <div className="text-neutral-500 py-12 text-center">Φόρτωση...</div>
             ) : categories.length === 0 ? (
               <div className="text-neutral-500 py-12 text-center border border-dashed border-[#333] rounded-lg">
-                <PackageX className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                <Package className="w-8 h-8 mx-auto mb-3 opacity-50" />
                 <div className="mb-2">Δεν έχετε δημιουργήσει κατηγορίες αποθέματος</div>
                 {isOwner && (
                   <button
@@ -601,8 +614,7 @@ export default function Stock() {
                   <StockRow
                     key={it.id}
                     item={it}
-                    onToggle={toggleAvailability}
-                    onNote={setNote}
+                    onToggleNeed={handleToggleNeed}
                     onDelete={handleDeleteItem}
                     canEdit={isOwner}
                   />
@@ -659,13 +671,14 @@ export default function Stock() {
                     className="flex items-center gap-3 p-3 bg-[#0D0D0D] border border-[#333] rounded-md group"
                   >
                     <button
-                      onClick={() => toggleShop(s)}
+                      onClick={() => toggleShopBought(s)}
                       data-testid={`shopping-check-${s.id}`}
-                      className={`w-6 h-6 rounded-md border flex items-center justify-center ${
+                      className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 ${
                         s.bought
                           ? "bg-[#00E676] border-[#00E676]"
-                          : "border-[#555] hover:border-[#FF6B00]"
+                          : "border-[#555] hover:border-[#00E676]"
                       }`}
+                      title={s.bought ? "Αγοράστηκε" : "Σημείωση ως αγορασμένο"}
                     >
                       {s.bought && <Check className="w-4 h-4 text-black" />}
                     </button>
@@ -676,8 +689,16 @@ export default function Stock() {
                     >
                       {s.text}
                     </span>
+                    {s.source_stock_id && (
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#FF6B00]/20 text-[#FF6B00]"
+                        title="Από απόθεμα"
+                      >
+                        Αποθ.
+                      </span>
+                    )}
                     <button
-                      onClick={() => removeShop(s.id)}
+                      onClick={() => removeShop(s)}
                       data-testid={`shopping-delete-${s.id}`}
                       className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-[#FF3B30]"
                     >
@@ -706,7 +727,7 @@ export default function Stock() {
         open={itemModal.open}
         onClose={() => setItemModal({ open: false })}
         categories={categories}
-        defaultCategoryId={activeCat !== "all" && activeCat !== "unavailable" ? activeCat : ""}
+        defaultCategoryId={activeCat !== "all" && activeCat !== "needs" ? activeCat : ""}
         onSubmit={handleCreateItem}
       />
     </AppShell>

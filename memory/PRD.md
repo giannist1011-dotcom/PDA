@@ -45,6 +45,7 @@ users (+owner/employee_pin_hash, *_pin_set flags), categories, items (+available
 - V4 (profile PIN system + Ρυθμίσεις + option groups + phone delivery + menu delete AlertDialog fix) — done
 - V5 (editable order lines, tap/hover animations, analytics date-comparison, menu bulk edit) — done
 - V6 (2026-02): MenuGrid hover clipping fix + Shopping list print (window.print with restaurant header/date) + Stock page fully decoupled from food menu into own custom inventory (categories/items CRUD, availability toggle, notes) — manual curl + screenshot verified
+- V7 (2026-02): Stock UX overhaul — replaced availability toggle with **checkbox = "add to shopping list"**. Backend adds `POST /api/stock/items/{iid}/shopping` with bidirectional sync (`source_stock_id` on shopping doc, `shopping_item_id` on stock item). Deleting shopping entry clears the stock link; deleting stock item/category cascades shopping cleanup. Origin badge "ΑΠΟΘ." on synced shopping rows. Curl + screenshot verified.
 
 ## Backlog
 - P1: Password reset flow

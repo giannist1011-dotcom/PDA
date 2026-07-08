@@ -63,6 +63,8 @@ export const apiCreateStockItem = (payload) =>
   api.post("/stock/items", payload).then((r) => r.data);
 export const apiUpdateStockItem = (id, payload) =>
   api.patch(`/stock/items/${id}`, payload).then((r) => r.data);
+export const apiToggleStockItemShopping = (id, needs) =>
+  api.post(`/stock/items/${id}/shopping`, { needs }).then((r) => r.data);
 export const apiDeleteStockItem = (id) =>
   api.delete(`/stock/items/${id}`).then((r) => r.data);
 

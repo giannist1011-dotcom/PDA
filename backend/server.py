@@ -757,6 +757,14 @@ async def update_stock_category(cid: str, body: StockCategoryIn, user: dict = De
 
 @api.delete("/stock/categories/{cid}")
 async def delete_stock_category(cid: str, user: dict = Depends(require_owner)):
+    # cascade: remove shopping entries created from items in this category
+    stock_ids = [
+        d["id"] async for d in db.stock_items.find(
+            {"user_id": user["id"], "category_id": cid}, {"_id": 0, "id": 1}
+        )
+    ]
+    if stock_ids:
+        await db.shopping.delete_many({"user_id": user["id"], "source_stock_id": {"$in": stock_ids}})
     await db.stock_items.delete_many({"user_id": user["id"], "category_id": cid})
     r = await db.stock_categories.delete_one({"id": cid, "user_id": user["id"]})
     if r.deleted_count == 0:
@@ -776,6 +784,7 @@ async def create_stock_item(body: StockItemIn, user: dict = Depends(require_owne
         "category_id": body.category_id,
         "available": bool(body.available),
         "note": body.note.strip(),
+        "shopping_item_id": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.stock_items.insert_one(doc)
@@ -801,11 +810,68 @@ async def update_stock_item(iid: str, body: StockItemPatchIn, user: dict = Depen
     r = await db.stock_items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
     if r.matched_count == 0:
         raise HTTPException(404, "Not found")
+    # keep linked shopping text in sync on rename
+    if "name" in update:
+        item = await db.stock_items.find_one({"id": iid, "user_id": user["id"]}, {"_id": 0, "shopping_item_id": 1})
+        sid = item.get("shopping_item_id") if item else None
+        if sid:
+            await db.shopping.update_one(
+                {"id": sid, "user_id": user["id"]},
+                {"$set": {"text": update["name"]}},
+            )
     return {"id": iid, **update}
+
+
+class StockShoppingIn(BaseModel):
+    needs: bool
+
+
+@api.post("/stock/items/{iid}/shopping")
+async def toggle_stock_item_shopping(
+    iid: str, body: StockShoppingIn, user: dict = Depends(require_owner)
+):
+    item = await db.stock_items.find_one({"id": iid, "user_id": user["id"]})
+    if not item:
+        raise HTTPException(404, "Not found")
+    existing_id = item.get("shopping_item_id")
+    if body.needs:
+        if existing_id:
+            existing = await db.shopping.find_one({"id": existing_id, "user_id": user["id"]}, {"_id": 0, "user_id": 0})
+            if existing:
+                return {"item_id": iid, "shopping_item_id": existing_id, "shopping_item": existing}
+        sid = str(uuid.uuid4())
+        shopping_doc = {
+            "id": sid,
+            "user_id": user["id"],
+            "text": item["name"],
+            "bought": False,
+            "source_stock_id": iid,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.shopping.insert_one(shopping_doc)
+        await db.stock_items.update_one(
+            {"id": iid, "user_id": user["id"]}, {"$set": {"shopping_item_id": sid}}
+        )
+        return {
+            "item_id": iid,
+            "shopping_item_id": sid,
+            "shopping_item": {k: v for k, v in shopping_doc.items() if k not in ("_id", "user_id")},
+        }
+    # needs=false → remove linked shopping entry
+    if existing_id:
+        await db.shopping.delete_one({"id": existing_id, "user_id": user["id"]})
+        await db.stock_items.update_one(
+            {"id": iid, "user_id": user["id"]}, {"$set": {"shopping_item_id": None}}
+        )
+    return {"item_id": iid, "shopping_item_id": None}
+
 
 
 @api.delete("/stock/items/{iid}")
 async def delete_stock_item(iid: str, user: dict = Depends(require_owner)):
+    item = await db.stock_items.find_one({"id": iid, "user_id": user["id"]}, {"_id": 0, "shopping_item_id": 1})
+    if item and item.get("shopping_item_id"):
+        await db.shopping.delete_one({"id": item["shopping_item_id"], "user_id": user["id"]})
     r = await db.stock_items.delete_one({"id": iid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
@@ -858,6 +924,11 @@ async def delete_shopping(sid: str, user: dict = Depends(require_owner)):
     r = await db.shopping.delete_one({"id": sid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
+    # if this shopping entry was linked from a stock item, clear the link
+    await db.stock_items.update_many(
+        {"user_id": user["id"], "shopping_item_id": sid},
+        {"$set": {"shopping_item_id": None}},
+    )
     return {"ok": True}
 
 
