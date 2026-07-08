@@ -36,7 +36,6 @@ const OptionTile = ({ selected, label, badge, onClick, testId }) => (
   </button>
 );
 
-// Legacy sandwich-style customization (bread/extras/sauces/double_meat)
 function LegacyOptions({ item, config, state, setState }) {
   const breadOptions = config?.bread_options ?? [];
   const extrasOptions = config?.extras_options ?? [];
@@ -118,7 +117,6 @@ function LegacyOptions({ item, config, state, setState }) {
   );
 }
 
-// Generic option groups on any item
 function GroupsOptions({ groups, selections, setSelections }) {
   const toggleChoice = (groupIdx, opt) => {
     setSelections((prev) => {
@@ -175,36 +173,51 @@ function GroupsOptions({ groups, selections, setSelections }) {
   });
 }
 
-export default function CustomizationModal({ item, config, open, onClose, onConfirm }) {
-  const legacyMode = !!item?.customizable && (!item?.option_groups || item.option_groups.length === 0);
+export default function CustomizationModal({
+  item,
+  config,
+  open,
+  onClose,
+  onConfirm,
+  mode = "add",
+  initialCustomization = null,
+}) {
+  const legacyMode =
+    !!item?.customizable && (!item?.option_groups || item.option_groups.length === 0);
   const groups = item?.option_groups || [];
 
-  // legacy state
   const [state, setState] = useState({
     bread: config?.bread_options?.[0] || "",
     extras: [],
     sauces: [],
     double_meat: false,
   });
-  // groups state
   const [selections, setSelections] = useState({});
 
   useEffect(() => {
     if (!open || !item) return;
-    setState({
-      bread: config?.bread_options?.[0] || "",
-      extras: [],
-      sauces: [],
-      double_meat: false,
-    });
-    const init = {};
-    (item.option_groups || []).forEach((g) => (init[g.id] = []));
-    setSelections(init);
-  }, [open, item, config]);
+    if (legacyMode) {
+      setState({
+        bread: initialCustomization?.bread || config?.bread_options?.[0] || "",
+        extras: initialCustomization?.extras ? [...initialCustomization.extras] : [],
+        sauces: initialCustomization?.sauces ? [...initialCustomization.sauces] : [],
+        double_meat: !!initialCustomization?.double_meat,
+      });
+    } else {
+      const init = {};
+      groups.forEach((g) => (init[g.id] = []));
+      if (initialCustomization?.selections) {
+        initialCustomization.selections.forEach((s) => {
+          if (init[s.group_id] !== undefined) init[s.group_id] = [...s.choices];
+        });
+      }
+      setSelections(init);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, item, config, initialCustomization]);
 
   if (!item) return null;
 
-  // compute price
   const doubleMeatPrice = config?.double_meat_price ?? 0;
   let extra = 0;
   if (legacyMode) {
@@ -217,7 +230,6 @@ export default function CustomizationModal({ item, config, open, onClose, onConf
   }
   const finalPrice = Number(item.price) + extra;
 
-  // Required validation for group modes
   const missingRequired = !legacyMode
     ? groups.some((g) => g.required && (selections[g.id] || []).length === 0)
     : false;
@@ -251,6 +263,8 @@ export default function CustomizationModal({ item, config, open, onClose, onConf
     onConfirm({ customization, unit_price: finalPrice });
   };
 
+  const isEdit = mode === "edit";
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
@@ -260,7 +274,9 @@ export default function CustomizationModal({ item, config, open, onClose, onConf
         <div className="p-6 pb-2">
           <DialogHeader>
             <DialogTitle className="font-heading text-2xl">{item.name}</DialogTitle>
-            <p className="text-sm text-neutral-400 mt-1">Επιλέξτε τις προτιμήσεις σας</p>
+            <p className="text-sm text-neutral-400 mt-1">
+              {isEdit ? "Ενημερώστε τις επιλογές" : "Επιλέξτε τις προτιμήσεις σας"}
+            </p>
           </DialogHeader>
         </div>
 
@@ -274,7 +290,9 @@ export default function CustomizationModal({ item, config, open, onClose, onConf
 
         <DialogFooter className="p-6 pt-4 border-t border-[#222] flex flex-row items-center justify-between gap-4 sm:justify-between">
           <div className="text-left">
-            <div className="text-xs text-neutral-400 uppercase tracking-widest">Σύνολο</div>
+            <div className="text-xs text-neutral-400 uppercase tracking-widest">
+              {isEdit ? "Νέα τιμή" : "Σύνολο"}
+            </div>
             <div className="text-2xl font-bold font-mono">{eur(finalPrice)}</div>
           </div>
           <div className="flex gap-3">
@@ -292,7 +310,7 @@ export default function CustomizationModal({ item, config, open, onClose, onConf
               data-testid="customization-confirm"
               className="h-14 px-8 text-base font-bold bg-[#FF6B00] hover:bg-[#FF8533] text-white disabled:opacity-50"
             >
-              Προσθήκη
+              {isEdit ? "Ενημέρωση" : "Προσθήκη"}
             </Button>
           </div>
         </DialogFooter>

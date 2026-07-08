@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import LineEditModal from "@/components/LineEditModal";
 import { ORDER_SOURCES } from "@/data/menu";
 import { eur } from "@/lib/format";
 
@@ -35,20 +36,24 @@ const TAKEAWAY_FIELDS = [
 export default function OrderPanel({
   orderNumber,
   items,
+  menuItemsById,
   source,
   onSourceChange,
   onIncrement,
   onDecrement,
+  onSetQuantity,
   onRemove,
   onClear,
   onSubmit,
   submitting,
   delivery,
   setDelivery,
+  onEditOptions,
 }) {
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
   const isEmpty = items.length === 0;
   const isPhone = source === "Τηλέφωνο";
+  const [editingLine, setEditingLine] = useState(null);
 
   // Reset delivery when source changes away from phone
   useEffect(() => {
@@ -118,13 +123,21 @@ export default function OrderPanel({
             <div className="text-sm mt-1">Επιλέξτε προϊόντα από το μενού</div>
           </div>
         ) : (
-          items.map((it) => (
+          items.map((it) => {
+            const menuItem = menuItemsById?.[it.item_id];
+            const hasOpts = !!menuItem && (menuItem.customizable || (menuItem.option_groups || []).length > 0);
+            return (
             <div
               key={it.line_id}
               className="py-4 border-b border-[#333] last:border-0"
               data-testid={`order-line-${it.line_id}`}
             >
-              <div className="flex justify-between items-start gap-3">
+              <button
+                type="button"
+                onClick={() => setEditingLine(it)}
+                data-testid={`order-line-body-${it.line_id}`}
+                className="w-full flex justify-between items-start gap-3 text-left rounded-md hover:bg-[#0F0F0F] active:scale-[0.995] transition-all p-1 -m-1"
+              >
                 <div className="flex-1">
                   <div className="font-semibold text-white text-base leading-tight">
                     {it.name}
@@ -138,7 +151,7 @@ export default function OrderPanel({
                 <div className="font-mono font-bold text-white">
                   {eur(it.line_total)}
                 </div>
-              </div>
+              </button>
               <div className="flex items-center justify-between mt-3">
                 <div className="flex items-center gap-2 bg-[#0D0D0D] rounded-md p-1">
                   <button
@@ -171,7 +184,8 @@ export default function OrderPanel({
                 </button>
               </div>
             </div>
-          ))
+            );
+          })
         )}
 
         {/* Phone delivery section */}
@@ -268,6 +282,23 @@ export default function OrderPanel({
           </div>
         )}
       </div>
+
+      <LineEditModal
+        open={!!editingLine}
+        line={editingLine}
+        hasOptions={(() => {
+          if (!editingLine) return false;
+          const m = menuItemsById?.[editingLine.item_id];
+          return !!m && (m.customizable || (m.option_groups || []).length > 0);
+        })()}
+        onClose={() => setEditingLine(null)}
+        onQtyChange={(id, q) => onSetQuantity(id, q)}
+        onRemove={(id) => onRemove(id)}
+        onEditOptions={(line) => {
+          setEditingLine(null);
+          onEditOptions(line);
+        }}
+      />
     </aside>
   );
 }

@@ -108,3 +108,12 @@ h1, h2, h3, h4, h5, .font-heading {
   100% { transform: scale(1); opacity: 1; }
 }
 .pk-pop { animation: pk-pop 120ms ease-out; }
+
+@keyframes pk-flash {
+  0% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.5); background-color: rgba(255, 107, 0, 0.15); }
+  60% { background-color: rgba(255, 107, 0, 0.08); }
+  100% { box-shadow: 0 0 0 12px rgba(255, 107, 0, 0); background-color: transparent; }
+}
+.menu-item--pulse {
+  animation: pk-flash 220ms ease-out;
+}

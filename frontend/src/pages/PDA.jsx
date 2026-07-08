@@ -26,6 +26,9 @@ export default function PDA() {
   const [items, setItems] = useState([]);
   const [modalItem, setModalItem] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("add"); // "add" | "edit"
+  const [editingLineId, setEditingLineId] = useState(null);
+  const [initialCustomization, setInitialCustomization] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [printOrder, setPrintOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,16 +84,56 @@ export default function PDA() {
     const hasGroups = Array.isArray(item.option_groups) && item.option_groups.length > 0;
     if (hasGroups || item.customizable) {
       setModalItem(item);
+      setModalMode("add");
+      setEditingLineId(null);
+      setInitialCustomization(null);
       setModalOpen(true);
     } else {
       addLine(item);
     }
   };
 
+  const handleEditLineOptions = (line) => {
+    const menuItem = config.items.find((i) => i.id === line.item_id);
+    if (!menuItem) return;
+    setModalItem(menuItem);
+    setModalMode("edit");
+    setEditingLineId(line.line_id);
+    setInitialCustomization(line.customization || null);
+    setModalOpen(true);
+  };
+
   const handleConfirmCustomization = ({ customization, unit_price }) => {
-    addLine(modalItem, customization, unit_price);
+    if (modalMode === "edit" && editingLineId) {
+      setItems((prev) =>
+        prev.map((it) =>
+          it.line_id === editingLineId
+            ? {
+                ...it,
+                customization,
+                unit_price,
+                line_total: unit_price * it.quantity,
+              }
+            : it
+        )
+      );
+    } else {
+      addLine(modalItem, customization, unit_price);
+    }
     setModalOpen(false);
     setModalItem(null);
+    setModalMode("add");
+    setEditingLineId(null);
+    setInitialCustomization(null);
+  };
+
+  const setLineQuantity = (lineId, qty) => {
+    const q = Math.max(1, Number(qty) || 1);
+    setItems((prev) =>
+      prev.map((it) =>
+        it.line_id === lineId ? { ...it, quantity: q, line_total: it.unit_price * q } : it
+      )
+    );
   };
 
   const updateQty = (lineId, delta) => {
@@ -166,15 +209,18 @@ export default function PDA() {
         <OrderPanel
           orderNumber={orderNumber}
           items={items}
+          menuItemsById={Object.fromEntries((config.items || []).map((i) => [i.id, i]))}
           source={source}
           onSourceChange={setSource}
           delivery={delivery}
           setDelivery={setDelivery}
           onIncrement={(id) => updateQty(id, 1)}
           onDecrement={(id) => updateQty(id, -1)}
+          onSetQuantity={setLineQuantity}
           onRemove={removeLine}
           onClear={clearOrder}
           onSubmit={handleSubmit}
+          onEditOptions={handleEditLineOptions}
           submitting={submitting}
         />
       </main>
@@ -183,9 +229,14 @@ export default function PDA() {
         item={modalItem}
         config={config.customization}
         open={modalOpen}
+        mode={modalMode}
+        initialCustomization={initialCustomization}
         onClose={() => {
           setModalOpen(false);
           setModalItem(null);
+          setModalMode("add");
+          setEditingLineId(null);
+          setInitialCustomization(null);
         }}
         onConfirm={handleConfirmCustomization}
       />

@@ -1,7 +1,22 @@
+import { useState } from "react";
 import { eur } from "@/lib/format";
 
-export default function MenuGrid({ categories, items, activeCategory, onCategoryChange, onItemClick }) {
+export default function MenuGrid({
+  categories,
+  items,
+  activeCategory,
+  onCategoryChange,
+  onItemClick,
+}) {
   const filtered = items.filter((i) => i.category === activeCategory);
+  const [pulsedId, setPulsedId] = useState(null);
+
+  const handleClick = (it) => {
+    if (it.available === false) return;
+    setPulsedId(it.id);
+    onItemClick(it);
+    setTimeout(() => setPulsedId((p) => (p === it.id ? null : p)), 240);
+  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -37,27 +52,35 @@ export default function MenuGrid({ categories, items, activeCategory, onCategory
       >
         {filtered.map((it) => {
           const unavailable = it.available === false;
+          const pulsing = pulsedId === it.id;
           return (
             <button
               key={it.id}
-              onClick={() => !unavailable && onItemClick(it)}
+              onClick={() => handleClick(it)}
               disabled={unavailable}
               data-testid={`menu-item-${it.id}`}
               data-available={unavailable ? "false" : "true"}
-              className={`group flex flex-col justify-between p-4 rounded-lg text-left h-32 transition-all no-select relative ${
+              className={`menu-item group flex flex-col justify-between p-4 rounded-lg text-left h-32 no-select relative overflow-hidden will-change-transform ${
                 unavailable
                   ? "bg-[#141414] border border-[#2A2A2A] cursor-not-allowed opacity-50"
-                  : "bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] active:scale-[0.98]"
+                  : `bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] hover:scale-[1.03] hover:shadow-lg hover:shadow-[#FF6B00]/10 hover:bg-[#1F1F1F] active:scale-[0.96] transition-[transform,box-shadow,background-color,border-color] duration-[130ms] ease-out ${
+                      pulsing ? "menu-item--pulse" : ""
+                    }`
               }`}
             >
-              <span className="font-heading text-lg font-semibold leading-tight text-white line-clamp-2">
+              <span className="font-heading text-lg font-semibold leading-tight text-white line-clamp-2 relative z-[1]">
                 {it.name}
               </span>
-              <div className="flex items-end justify-between mt-2">
+              <div className="flex items-end justify-between mt-2 relative z-[1]">
                 <span className="font-mono text-xl font-bold text-[#FF6B00]">{eur(it.price)}</span>
                 {it.customizable && !unavailable && (
                   <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
                     Custom
+                  </span>
+                )}
+                {!it.customizable && (it.option_groups || []).length > 0 && !unavailable && (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                    Επιλογές
                   </span>
                 )}
               </div>

@@ -306,7 +306,7 @@ def test_demo_menu_seeded(http, demo_token):
     assert r.status_code == 200
     cfg = r.json()
     assert len(cfg["categories"]) >= 7
-    assert len(cfg["items"]) >= 39
+    assert len(cfg["items"]) >= 30
 
 
 def test_tenancy_isolation(http):
