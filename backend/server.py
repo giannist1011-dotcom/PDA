@@ -463,6 +463,108 @@ async def delete_item(iid: str, user: dict = Depends(require_owner)):
     return {"ok": True}
 
 
+# ---------- Bulk item operations ----------
+class BulkItemsIn(BaseModel):
+    ids: List[str] = Field(min_length=1)
+    action: Literal[
+        "set_price",
+        "adjust_price",
+        "adjust_price_pct",
+        "set_category",
+        "set_availability",
+        "add_option_group",
+        "delete",
+    ]
+    price: Optional[float] = None
+    delta: Optional[float] = None
+    pct: Optional[float] = None
+    category: Optional[str] = None
+    available: Optional[bool] = None
+    note: Optional[str] = ""
+    group: Optional[MenuOptionGroup] = None
+
+
+@api.post("/menu/items/bulk")
+async def bulk_items(body: BulkItemsIn, user: dict = Depends(require_owner)):
+    q = {"user_id": user["id"], "id": {"$in": body.ids}}
+
+    if body.action == "delete":
+        r = await db.items.delete_many(q)
+        return {"ok": True, "affected": r.deleted_count}
+
+    if body.action == "set_price":
+        if body.price is None or body.price < 0:
+            raise HTTPException(400, "Άκυρη τιμή")
+        r = await db.items.update_many(q, {"$set": {"price": float(body.price)}})
+        return {"ok": True, "affected": r.modified_count}
+
+    if body.action == "adjust_price":
+        if body.delta is None:
+            raise HTTPException(400, "Άκυρη μεταβολή")
+        docs = await db.items.find(q, {"_id": 0, "id": 1, "price": 1}).to_list(2000)
+        affected = 0
+        for d in docs:
+            new_price = round(max(0.0, float(d.get("price", 0)) + float(body.delta)), 2)
+            await db.items.update_one(
+                {"id": d["id"], "user_id": user["id"]},
+                {"$set": {"price": new_price}},
+            )
+            affected += 1
+        return {"ok": True, "affected": affected}
+
+    if body.action == "adjust_price_pct":
+        if body.pct is None:
+            raise HTTPException(400, "Άκυρο ποσοστό")
+        docs = await db.items.find(q, {"_id": 0, "id": 1, "price": 1}).to_list(2000)
+        affected = 0
+        factor = 1 + float(body.pct) / 100.0
+        for d in docs:
+            new_price = round(max(0.0, float(d.get("price", 0)) * factor), 2)
+            await db.items.update_one(
+                {"id": d["id"], "user_id": user["id"]},
+                {"$set": {"price": new_price}},
+            )
+            affected += 1
+        return {"ok": True, "affected": affected}
+
+    if body.action == "set_category":
+        if not body.category:
+            raise HTTPException(400, "Άκυρη κατηγορία")
+        cat = await db.categories.find_one({"id": body.category, "user_id": user["id"]})
+        if not cat:
+            raise HTTPException(404, "Η κατηγορία δεν βρέθηκε")
+        r = await db.items.update_many(q, {"$set": {"category": body.category}})
+        return {"ok": True, "affected": r.modified_count}
+
+    if body.action == "set_availability":
+        if body.available is None:
+            raise HTTPException(400, "Άκυρη τιμή διαθεσιμότητας")
+        r = await db.items.update_many(
+            q,
+            {"$set": {"available": bool(body.available), "unavailable_note": (body.note or "").strip()}},
+        )
+        return {"ok": True, "affected": r.modified_count}
+
+    if body.action == "add_option_group":
+        if body.group is None:
+            raise HTTPException(400, "Απαιτείται ομάδα")
+        group_doc = body.group.model_dump()
+        docs = await db.items.find(q, {"_id": 0, "id": 1, "option_groups": 1}).to_list(2000)
+        affected = 0
+        for d in docs:
+            existing = d.get("option_groups", []) or []
+            others = [g for g in existing if g.get("id") != group_doc["id"]]
+            new_groups = others + [group_doc]
+            await db.items.update_one(
+                {"id": d["id"], "user_id": user["id"]},
+                {"$set": {"option_groups": new_groups}},
+            )
+            affected += 1
+        return {"ok": True, "affected": affected}
+
+    raise HTTPException(400, "Άκυρη ενέργεια")
+
+
 @api.put("/menu/customization")
 async def update_customization(body: CustomizationConfig, user: dict = Depends(require_owner)):
     await db.users.update_one(

@@ -395,6 +395,226 @@ def test_employees_and_shifts_flow(http):
 
 
 # ============================================================
+# ITERATION 6: BULK MENU OPERATIONS
+# ============================================================
+def _create_items(http, hdr, cid, n=4, price=10.0, tag="Bulk"):
+    ids = []
+    for i in range(n):
+        r = http.post(f"{API}/menu/items",
+                      json={"name": f"TEST_{tag}_{i}", "price": price, "category": cid},
+                      headers=hdr)
+        assert r.status_code == 200, r.text
+        ids.append(r.json()["id"])
+    return ids
+
+
+def test_bulk_set_price(http):
+    _, _, tok = _register(http, "BulkSet")
+    hdr = _auth_headers(tok)
+    cfg = http.get(f"{API}/menu/config", headers=hdr).json()
+    cid = cfg["categories"][0]["id"]
+    ids = _create_items(http, hdr, cid, n=3, price=5.0)
+
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "set_price", "price": 7.5},
+                  headers=hdr)
+    assert r.status_code == 200, r.text
+    assert r.json()["affected"] == 3
+
+    cfg2 = http.get(f"{API}/menu/config", headers=hdr).json()
+    for iid in ids:
+        it = next(i for i in cfg2["items"] if i["id"] == iid)
+        assert it["price"] == 7.5
+
+
+def test_bulk_adjust_price_delta_clamped(http):
+    _, _, tok = _register(http, "BulkAdj")
+    hdr = _auth_headers(tok)
+    cfg = http.get(f"{API}/menu/config", headers=hdr).json()
+    cid = cfg["categories"][0]["id"]
+    ids = _create_items(http, hdr, cid, n=2, price=0.1)
+
+    # delta=+0.2 -> 0.3
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "adjust_price", "delta": 0.2},
+                  headers=hdr)
+    assert r.status_code == 200
+    assert r.json()["affected"] == 2
+    cfg2 = http.get(f"{API}/menu/config", headers=hdr).json()
+    for iid in ids:
+        assert next(i for i in cfg2["items"] if i["id"] == iid)["price"] == 0.3
+
+    # delta=-5 clamped to 0
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "adjust_price", "delta": -5},
+                  headers=hdr)
+    assert r.status_code == 200
+    cfg3 = http.get(f"{API}/menu/config", headers=hdr).json()
+    for iid in ids:
+        assert next(i for i in cfg3["items"] if i["id"] == iid)["price"] == 0.0
+
+
+def test_bulk_adjust_price_pct(http):
+    _, _, tok = _register(http, "BulkPct")
+    hdr = _auth_headers(tok)
+    cfg = http.get(f"{API}/menu/config", headers=hdr).json()
+    cid = cfg["categories"][0]["id"]
+    ids = _create_items(http, hdr, cid, n=2, price=10.0)
+
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "adjust_price_pct", "pct": 10},
+                  headers=hdr)
+    assert r.status_code == 200
+    assert r.json()["affected"] == 2
+    cfg2 = http.get(f"{API}/menu/config", headers=hdr).json()
+    for iid in ids:
+        assert next(i for i in cfg2["items"] if i["id"] == iid)["price"] == 11.0
+
+
+def test_bulk_set_category_and_unknown_404(http):
+    _, _, tok = _register(http, "BulkCat")
+    hdr = _auth_headers(tok)
+    cfg = http.get(f"{API}/menu/config", headers=hdr).json()
+    cid1 = cfg["categories"][0]["id"]
+    # create a second cat
+    cid2 = http.post(f"{API}/menu/categories",
+                     json={"name": "TEST_BulkCatB", "order": 99},
+                     headers=hdr).json()["id"]
+    ids = _create_items(http, hdr, cid1, n=2)
+
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "set_category", "category": cid2},
+                  headers=hdr)
+    assert r.status_code == 200
+    assert r.json()["affected"] == 2
+    cfg2 = http.get(f"{API}/menu/config", headers=hdr).json()
+    for iid in ids:
+        assert next(i for i in cfg2["items"] if i["id"] == iid)["category"] == cid2
+
+    # unknown category -> 404
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "set_category", "category": "not-a-cat"},
+                  headers=hdr)
+    assert r.status_code == 404
+
+
+def test_bulk_set_availability(http):
+    _, _, tok = _register(http, "BulkAvail")
+    hdr = _auth_headers(tok)
+    cfg = http.get(f"{API}/menu/config", headers=hdr).json()
+    cid = cfg["categories"][0]["id"]
+    ids = _create_items(http, hdr, cid, n=2)
+
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "set_availability",
+                        "available": False, "note": "TEST_out"},
+                  headers=hdr)
+    assert r.status_code == 200
+    assert r.json()["affected"] == 2
+    cfg2 = http.get(f"{API}/menu/config", headers=hdr).json()
+    for iid in ids:
+        it = next(i for i in cfg2["items"] if i["id"] == iid)
+        assert it.get("available") is False
+        assert it.get("unavailable_note") == "TEST_out"
+
+
+def test_bulk_add_option_group(http):
+    _, _, tok = _register(http, "BulkOpt")
+    hdr = _auth_headers(tok)
+    cfg = http.get(f"{API}/menu/config", headers=hdr).json()
+    cid = cfg["categories"][0]["id"]
+    ids = _create_items(http, hdr, cid, n=2)
+
+    group = {"id": "gsize", "name": "Μέγεθος", "type": "single", "required": True,
+             "options": [{"name": "Μικρό", "price": 0}, {"name": "Μεγάλο", "price": 1.5}]}
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "add_option_group", "group": group},
+                  headers=hdr)
+    assert r.status_code == 200
+    assert r.json()["affected"] == 2
+    cfg2 = http.get(f"{API}/menu/config", headers=hdr).json()
+    for iid in ids:
+        it = next(i for i in cfg2["items"] if i["id"] == iid)
+        assert any(g.get("id") == "gsize" and g.get("name") == "Μέγεθος"
+                   for g in it.get("option_groups", []))
+
+    # re-apply same group id → overwrite (not duplicate)
+    group2 = dict(group, name="Μέγεθος v2")
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "add_option_group", "group": group2},
+                  headers=hdr)
+    assert r.status_code == 200
+    cfg3 = http.get(f"{API}/menu/config", headers=hdr).json()
+    for iid in ids:
+        it = next(i for i in cfg3["items"] if i["id"] == iid)
+        groups = [g for g in it["option_groups"] if g["id"] == "gsize"]
+        assert len(groups) == 1
+        assert groups[0]["name"] == "Μέγεθος v2"
+
+
+def test_bulk_delete(http):
+    _, _, tok = _register(http, "BulkDel")
+    hdr = _auth_headers(tok)
+    cfg = http.get(f"{API}/menu/config", headers=hdr).json()
+    cid = cfg["categories"][0]["id"]
+    ids = _create_items(http, hdr, cid, n=3)
+
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "delete"},
+                  headers=hdr)
+    assert r.status_code == 200
+    assert r.json()["affected"] == 3
+    cfg2 = http.get(f"{API}/menu/config", headers=hdr).json()
+    for iid in ids:
+        assert not any(i["id"] == iid for i in cfg2["items"])
+
+
+def test_bulk_employee_forbidden(http):
+    _, base_tok, owner_tok = _register(http, "BulkEmp")
+    ohdr = _auth_headers(owner_tok)
+    cfg = http.get(f"{API}/menu/config", headers=ohdr).json()
+    cid = cfg["categories"][0]["id"]
+    ids = _create_items(http, ohdr, cid, n=1)
+
+    emp_tok = _select_profile(http, base_tok, "employee", "0000")
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": ids, "action": "set_price", "price": 1.0},
+                  headers=_auth_headers(emp_tok))
+    assert r.status_code == 403
+
+
+def test_bulk_tenancy_isolation(http):
+    _, _, a_tok = _register(http, "BulkTenA")
+    _, _, b_tok = _register(http, "BulkTenB")
+    a, b = _auth_headers(a_tok), _auth_headers(b_tok)
+    a_cfg = http.get(f"{API}/menu/config", headers=a).json()
+    a_cat = a_cfg["categories"][0]["id"]
+    a_ids = _create_items(http, a, a_cat, n=2, price=3.0, tag="TenA")
+
+    # B tries to bulk-update A's items
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": a_ids, "action": "set_price", "price": 999.0},
+                  headers=b)
+    assert r.status_code == 200
+    assert r.json()["affected"] == 0
+
+    # verify A's items untouched
+    a_cfg2 = http.get(f"{API}/menu/config", headers=a).json()
+    for iid in a_ids:
+        assert next(i for i in a_cfg2["items"] if i["id"] == iid)["price"] == 3.0
+
+    # B tries to bulk-delete A's items
+    r = http.post(f"{API}/menu/items/bulk",
+                  json={"ids": a_ids, "action": "delete"},
+                  headers=b)
+    assert r.status_code == 200
+    assert r.json()["affected"] == 0
+    a_cfg3 = http.get(f"{API}/menu/config", headers=a).json()
+    for iid in a_ids:
+        assert any(i["id"] == iid for i in a_cfg3["items"])
+
+
+# ============================================================
 # CLEANUP: reset demo PINs at end of session
 # ============================================================
 @pytest.fixture(scope="session", autouse=True)

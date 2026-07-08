@@ -36,6 +36,7 @@ export const apiDeleteItem = (id) => api.delete(`/menu/items/${id}`).then((r) =>
 export const apiUpdateCustomization = (payload) => api.put("/menu/customization", payload).then((r) => r.data);
 export const apiSetItemAvailability = (id, payload) =>
   api.patch(`/menu/items/${id}/availability`, payload).then((r) => r.data);
+export const apiBulkItems = (payload) => api.post("/menu/items/bulk", payload).then((r) => r.data);
 
 // PROFILE / ROLES
 export const apiSelectProfile = (profile, pin) =>

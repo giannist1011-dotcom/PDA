@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Save, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, ChevronDown, ChevronUp, CheckSquare, Square } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import BulkActionsBar from "@/components/BulkActionsBar";
 import {
   Dialog,
   DialogContent,
@@ -453,6 +454,8 @@ export default function MenuManagement() {
   const [custModalOpen, setCustModalOpen] = useState(false);
   const [confirmItem, setConfirmItem] = useState(null);
   const [confirmCat, setConfirmCat] = useState(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const load = async () => {
     try {
@@ -572,10 +575,53 @@ export default function MenuManagement() {
   };
 
   const filteredItems = config.items.filter((i) => i.category === activeCat);
+  const selectedInView = filteredItems.filter((i) => selectedIds.includes(i.id));
+  const allSelected = filteredItems.length > 0 && selectedInView.length === filteredItems.length;
+
+  const toggleSelect = (id) =>
+    setSelectedIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds((p) => p.filter((id) => !filteredItems.some((it) => it.id === id)));
+    } else {
+      const catIds = filteredItems.map((i) => i.id);
+      setSelectedIds((p) => Array.from(new Set([...p, ...catIds])));
+    }
+  };
+
+  const clearSelection = () => setSelectedIds([]);
+  const exitBulk = () => {
+    setBulkMode(false);
+    clearSelection();
+  };
+  const refreshAfterBulk = async () => {
+    await load();
+    clearSelection();
+  };
 
   return (
     <AppShell title="Διαχείριση Μενού">
-      <div className="flex items-center justify-end px-6 py-3 border-b border-[#222]">
+      <div className="flex items-center justify-between gap-2 px-6 py-3 border-b border-[#222]">
+        <Button
+          onClick={() => (bulkMode ? exitBulk() : setBulkMode(true))}
+          data-testid="toggle-bulk-mode-btn"
+          className={`h-11 ${
+            bulkMode
+              ? "bg-[#FF6B00] hover:bg-[#FF8533] text-white"
+              : "bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white"
+          }`}
+        >
+          {bulkMode ? (
+            <>
+              <X className="w-4 h-4 mr-2" /> Έξοδος μαζικής
+            </>
+          ) : (
+            <>
+              <CheckSquare className="w-4 h-4 mr-2" /> Μαζική επεξεργασία
+            </>
+          )}
+        </Button>
         <Button
           onClick={() => setCustModalOpen(true)}
           data-testid="open-customization-config-btn"
@@ -676,7 +722,7 @@ export default function MenuManagement() {
                 setEditingItem(emptyItem(activeCat));
                 setItemModalOpen(true);
               }}
-              disabled={!activeCat}
+              disabled={!activeCat || bulkMode}
               data-testid="add-item-btn"
               className="bg-[#FF6B00] hover:bg-[#FF8533] font-bold"
             >
@@ -684,22 +730,58 @@ export default function MenuManagement() {
             </Button>
           </div>
 
+          {bulkMode && filteredItems.length > 0 && (
+            <div className="mb-3">
+              <button
+                onClick={toggleSelectAll}
+                data-testid="select-all-btn"
+                className={`inline-flex items-center gap-2 h-10 px-4 rounded-md text-sm font-bold border transition-colors ${
+                  allSelected
+                    ? "bg-[#FF6B00]/15 border-[#FF6B00] text-[#FF6B00]"
+                    : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+                }`}
+              >
+                {allSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                {allSelected ? "Αποεπιλογή όλων" : "Επιλογή όλων της κατηγορίας"}
+              </button>
+            </div>
+          )}
+
           {filteredItems.length === 0 ? (
             <div className="text-center text-neutral-500 py-12">
               Δεν υπάρχουν προϊόντα σε αυτή την κατηγορία
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filteredItems.map((it) => (
+              {filteredItems.map((it) => {
+                const checked = selectedIds.includes(it.id);
+                return (
                 <div
                   key={it.id}
                   data-testid={`mgmt-item-${it.id}`}
-                  className="p-4 bg-[#0D0D0D] border border-[#333] rounded-lg flex justify-between items-start"
+                  onClick={() => bulkMode && toggleSelect(it.id)}
+                  className={`p-4 bg-[#0D0D0D] border rounded-lg flex justify-between items-start transition-colors ${
+                    bulkMode ? "cursor-pointer" : ""
+                  } ${
+                    checked
+                      ? "border-[#FF6B00] bg-[#FF6B00]/5"
+                      : "border-[#333] hover:border-[#444]"
+                  }`}
                 >
+                  {bulkMode && (
+                    <div
+                      className={`w-6 h-6 mt-0.5 mr-3 rounded-md border flex items-center justify-center shrink-0 ${
+                        checked ? "bg-[#FF6B00] border-[#FF6B00]" : "border-[#555]"
+                      }`}
+                      data-testid={`select-item-${it.id}`}
+                    >
+                      {checked && <CheckSquare className="w-4 h-4 text-white" />}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="font-heading font-semibold text-white truncate">{it.name}</div>
                     <div className="font-mono text-[#FF6B00] font-bold mt-1">{eur(it.price)}</div>
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex gap-2 mt-2 flex-wrap">
                       {it.customizable && (
                         <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-[#FF6B00]/15 text-[#FF6B00]">
                           Custom
@@ -710,33 +792,61 @@ export default function MenuManagement() {
                           Διπλό
                         </span>
                       )}
+                      {(it.option_groups || []).length > 0 && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-[#00B0FF]/15 text-[#00B0FF]">
+                          {it.option_groups.length} ομ.
+                        </span>
+                      )}
+                      {it.available === false && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-[#FF3B30]/15 text-[#FF6961]">
+                          Έλλειψη
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1 ml-2">
-                    <button
-                      onClick={() => {
-                        setEditingItem(it);
-                        setItemModalOpen(true);
-                      }}
-                      data-testid={`edit-item-${it.id}`}
-                      className="p-2 text-neutral-400 hover:text-white"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setConfirmItem(it)}
-                      data-testid={`delete-item-${it.id}`}
-                      className="p-2 text-neutral-400 hover:text-[#FF3B30]"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {!bulkMode && (
+                    <div className="flex flex-col gap-1 ml-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingItem(it);
+                          setItemModalOpen(true);
+                        }}
+                        data-testid={`edit-item-${it.id}`}
+                        className="p-2 text-neutral-400 hover:text-white"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmItem(it);
+                        }}
+                        data-testid={`delete-item-${it.id}`}
+                        className="p-2 text-neutral-400 hover:text-[#FF3B30]"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
       </main>
+
+      {bulkMode && (
+        <div className="px-6 pb-6 max-w-[1400px] mx-auto w-full">
+          <BulkActionsBar
+            selected={selectedIds}
+            categories={config.categories}
+            onDone={refreshAfterBulk}
+            onClear={clearSelection}
+          />
+        </div>
+      )}
 
       <ItemModal
         open={itemModalOpen}
