@@ -50,6 +50,12 @@ export const apiListShopping = () => api.get("/shopping").then((r) => r.data);
 export const apiAddShopping = (text) => api.post("/shopping", { text }).then((r) => r.data);
 export const apiUpdateShopping = (id, payload) => api.put(`/shopping/${id}`, payload).then((r) => r.data);
 export const apiDeleteShopping = (id) => api.delete(`/shopping/${id}`).then((r) => r.data);
+export const apiResetShopping = () => api.post("/shopping/reset").then((r) => r.data);
+
+// PHOTOS
+export const apiListPhotos = () => api.get("/photos").then((r) => r.data);
+export const apiCreatePhoto = (payload) => api.post("/photos", payload).then((r) => r.data);
+export const apiDeletePhoto = (id) => api.delete(`/photos/${id}`).then((r) => r.data);
 
 // STOCK (independent custom inventory)
 export const apiGetStockConfig = () => api.get("/stock/config").then((r) => r.data);

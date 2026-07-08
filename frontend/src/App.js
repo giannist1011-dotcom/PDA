@@ -12,6 +12,7 @@ import Stock from "@/pages/Stock";
 import Schedule from "@/pages/Schedule";
 import ProfileSelect from "@/pages/ProfileSelect";
 import Settings from "@/pages/Settings";
+import Photos from "@/pages/Photos";
 
 function App() {
   return (
@@ -49,8 +50,16 @@ function App() {
             <Route
               path="/stock"
               element={
-                <ProtectedRoute requireOwner>
+                <ProtectedRoute>
                   <Stock />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/photos"
+              element={
+                <ProtectedRoute requireOwner>
+                  <Photos />
                 </ProtectedRoute>
               }
             />

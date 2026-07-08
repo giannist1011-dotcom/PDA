@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Save, X, ChevronDown, ChevronUp, CheckSquare, Square } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, CheckSquare, Square, ImageOff } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import BulkActionsBar from "@/components/BulkActionsBar";
@@ -31,6 +31,7 @@ import {
   apiUpdateItem,
   apiDeleteItem,
   apiUpdateCustomization,
+  apiListPhotos,
   formatApiError,
 } from "@/lib/api";
 import { eur } from "@/lib/format";
@@ -43,6 +44,7 @@ const emptyItem = (categoryId = "") => ({
   customizable: false,
   double_meat_eligible: false,
   option_groups: [],
+  photo_id: null,
 });
 
 const shortId = () =>
@@ -53,18 +55,26 @@ const emptyGroup = () => ({
   name: "",
   type: "single",
   required: false,
+  price_mode: "add",
   options: [{ name: "", price: 0 }],
 });
 
 // ---------- Item Modal ----------
-function ItemModal({ open, initial, categories, onClose, onSave }) {
+function ItemModal({ open, initial, categories, photos, onClose, onSave }) {
   const [form, setForm] = useState(initial || emptyItem());
   const [busy, setBusy] = useState(false);
+  const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
 
   useEffect(() => {
     const base = initial || emptyItem(categories[0]?.id || "");
-    setForm({ ...base, option_groups: base.option_groups || [] });
+    setForm({
+      ...base,
+      option_groups: base.option_groups || [],
+      photo_id: base.photo_id || null,
+    });
   }, [initial, open, categories]);
+
+  const selectedPhoto = photos.find((p) => p.id === form.photo_id);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -77,6 +87,7 @@ function ItemModal({ open, initial, categories, onClose, onSave }) {
           name: (g.name || "").trim(),
           type: g.type === "multi" ? "multi" : "single",
           required: !!g.required,
+          price_mode: g.price_mode === "replace" ? "replace" : "add",
           options: (g.options || [])
             .map((o) => ({
               name: (o.name || "").trim(),
@@ -90,6 +101,7 @@ function ItemModal({ open, initial, categories, onClose, onSave }) {
         ...form,
         price: parseFloat(String(form.price).replace(",", ".")) || 0,
         option_groups: cleanGroups,
+        photo_id: form.photo_id || null,
       });
     } finally {
       setBusy(false);
@@ -191,6 +203,50 @@ function ItemModal({ open, initial, categories, onClose, onSave }) {
             </div>
           </div>
           <div className="flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border border-[#333] rounded-md">
+            <div className="flex items-center gap-3 min-w-0">
+              {selectedPhoto ? (
+                <img
+                  src={selectedPhoto.data_url}
+                  alt=""
+                  className="w-14 h-14 rounded-md object-cover shrink-0 border border-[#333]"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-md bg-[#0D0D0D] border border-dashed border-[#333] flex items-center justify-center shrink-0">
+                  <ImageOff className="w-5 h-5 text-neutral-600" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="font-semibold text-sm">Φωτογραφία προϊόντος</div>
+                <div className="text-xs text-neutral-500 truncate">
+                  {selectedPhoto ? selectedPhoto.filename : "Καμία επιλογή"}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              {form.photo_id && (
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, photo_id: null })}
+                  data-testid="item-photo-clear"
+                  className="text-xs text-neutral-400 hover:text-[#FF3B30] px-2 py-1"
+                >
+                  Αφαίρεση
+                </button>
+              )}
+              <Button
+                type="button"
+                onClick={() => setPhotoPickerOpen(true)}
+                data-testid="item-photo-pick-btn"
+                disabled={photos.length === 0}
+                className="h-9 bg-[#0D0D0D] border border-[#333] hover:border-[#FF6B00] text-white text-xs"
+                title={photos.length === 0 ? "Ανεβάστε πρώτα φωτογραφίες" : "Επιλογή"}
+              >
+                {form.photo_id ? "Αλλαγή" : "Επιλογή"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border border-[#333] rounded-md">
             <div>
               <div className="font-semibold text-sm">Παραμετροποιήσιμο (σάντουιτς)</div>
               <div className="text-xs text-neutral-500">Χρησιμοποιεί επιλογές ψωμί/extras/σως</div>
@@ -275,6 +331,20 @@ function ItemModal({ open, initial, categories, onClose, onSave }) {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 shrink-0">
+                    Τύπος τιμής
+                  </label>
+                  <select
+                    value={g.price_mode || "add"}
+                    onChange={(e) => updateGroup(gi, { price_mode: e.target.value })}
+                    data-testid={`group-price-mode-${gi}`}
+                    className="flex-1 h-9 px-2 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-xs focus:outline-none focus:border-[#FF6B00]"
+                  >
+                    <option value="add">Προσαύξηση (+€ πάνω στη βάση)</option>
+                    <option value="replace">Καθορισμός τιμής (αντικαθιστά τη βασική)</option>
+                  </select>
+                </div>
                 {g.options.map((o, oi) => (
                   <div key={oi} className="flex items-center gap-2">
                     <input
@@ -330,6 +400,61 @@ function ItemModal({ open, initial, categories, onClose, onSave }) {
             </Button>
           </DialogFooter>
         </form>
+
+        {/* Photo picker overlay (inline modal on top) */}
+        {photoPickerOpen && (
+          <div
+            className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4"
+            data-testid="item-photo-picker"
+          >
+            <div className="bg-[#0D0D0D] border border-[#333] rounded-lg p-5 w-full max-w-3xl max-h-[85vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-heading text-xl font-bold">Επιλογή φωτογραφίας</h3>
+                <button
+                  onClick={() => setPhotoPickerOpen(false)}
+                  data-testid="item-photo-picker-close"
+                  className="w-9 h-9 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {photos.length === 0 ? (
+                <div className="text-neutral-500 py-12 text-center">
+                  Δεν υπάρχουν φωτογραφίες. Ανεβάστε από «Βιβλιοθήκη φωτογραφιών».
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                  {photos.map((p) => {
+                    const active = p.id === form.photo_id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setForm({ ...form, photo_id: p.id });
+                          setPhotoPickerOpen(false);
+                        }}
+                        data-testid={`item-photo-option-${p.id}`}
+                        className={`rounded-lg overflow-hidden border-2 transition-colors ${
+                          active
+                            ? "border-[#FF6B00] ring-2 ring-[#FF6B00]/40"
+                            : "border-[#333] hover:border-[#FF6B00]"
+                        }`}
+                      >
+                        <img
+                          src={p.data_url}
+                          alt={p.filename}
+                          className="w-full aspect-square object-cover"
+                          loading="lazy"
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

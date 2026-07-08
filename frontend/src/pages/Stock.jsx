@@ -25,6 +25,7 @@ import {
   apiAddShopping,
   apiUpdateShopping,
   apiDeleteShopping,
+  apiResetShopping,
   formatApiError,
 } from "@/lib/api";
 
@@ -471,7 +472,21 @@ export default function Stock() {
   const needsCount = items.filter((i) => !!i.shopping_item_id).length;
   const restaurantName = user?.restaurant_name || "";
 
-  const onPrint = () => printShoppingList({ restaurantName, items: shopping });
+  const onPrint = async () => {
+    if (shopping.length === 0) return;
+    // Snapshot then print
+    const snapshot = [...shopping];
+    printShoppingList({ restaurantName, items: snapshot });
+    // Reset backend + local state so next print starts fresh
+    try {
+      await apiResetShopping();
+      setShopping([]);
+      setItems((p) => p.map((i) => (i.shopping_item_id ? { ...i, shopping_item_id: null } : i)));
+      toast.success("Η λίστα εκτυπώθηκε και μηδενίστηκε");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  };
 
   return (
     <AppShell title="Ελλείψεις">
@@ -632,31 +647,37 @@ export default function Stock() {
               </div>
               <button
                 onClick={onPrint}
-                disabled={shopping.length === 0}
+                disabled={shopping.length === 0 || !isOwner}
                 data-testid="shopping-print-btn"
                 className="flex items-center gap-1.5 h-9 px-3 rounded-md bg-[#0D0D0D] border border-[#333] text-neutral-200 text-sm font-bold hover:border-[#FF6B00] hover:text-[#FF6B00] disabled:opacity-40 disabled:cursor-not-allowed"
-                title="Εκτύπωση λίστας"
+                title={isOwner ? "Εκτύπωση & μηδενισμός λίστας" : "Μόνο ιδιοκτήτης"}
               >
                 <Printer className="w-4 h-4" />
                 Εκτύπωση
               </button>
             </div>
-            <form onSubmit={addShopItem} className="flex gap-2 mb-4">
-              <input
-                value={shopText}
-                onChange={(e) => setShopText(e.target.value)}
-                placeholder="π.χ. 5kg πατάτες"
-                data-testid="shopping-input"
-                className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
-              />
-              <Button
-                type="submit"
-                data-testid="shopping-add-btn"
-                className="h-11 bg-[#FF6B00] hover:bg-[#FF8533] px-3"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </form>
+            {isOwner ? (
+              <form onSubmit={addShopItem} className="flex gap-2 mb-4">
+                <input
+                  value={shopText}
+                  onChange={(e) => setShopText(e.target.value)}
+                  placeholder="π.χ. 5kg πατάτες"
+                  data-testid="shopping-input"
+                  className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+                />
+                <Button
+                  type="submit"
+                  data-testid="shopping-add-btn"
+                  className="h-11 bg-[#FF6B00] hover:bg-[#FF8533] px-3"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </form>
+            ) : (
+              <div className="text-[11px] text-neutral-500 mb-4 uppercase tracking-widest">
+                Προβολή μόνο — χειροκίνητη προσθήκη & εκτύπωση διαθέσιμα σε ιδιοκτήτη
+              </div>
+            )}
 
             {shopping.length === 0 ? (
               <div className="text-neutral-500 text-sm text-center py-8">
@@ -671,9 +692,10 @@ export default function Stock() {
                     className="flex items-center gap-3 p-3 bg-[#0D0D0D] border border-[#333] rounded-md group"
                   >
                     <button
-                      onClick={() => toggleShopBought(s)}
+                      onClick={() => (isOwner ? toggleShopBought(s) : null)}
+                      disabled={!isOwner}
                       data-testid={`shopping-check-${s.id}`}
-                      className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 ${
+                      className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 disabled:cursor-not-allowed ${
                         s.bought
                           ? "bg-[#00E676] border-[#00E676]"
                           : "border-[#555] hover:border-[#00E676]"
@@ -697,13 +719,15 @@ export default function Stock() {
                         Αποθ.
                       </span>
                     )}
-                    <button
-                      onClick={() => removeShop(s)}
-                      data-testid={`shopping-delete-${s.id}`}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-[#FF3B30]"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {isOwner && (
+                      <button
+                        onClick={() => removeShop(s)}
+                        data-testid={`shopping-delete-${s.id}`}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-[#FF3B30]"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -20,8 +20,6 @@ import { Button } from "@/components/ui/button";
 import {
   Euro,
   FolderInput,
-  ToggleLeft,
-  ToggleRight,
   ListPlus,
   Trash2,
   X,
@@ -191,6 +189,7 @@ function OptionGroupDialog({ open, count, onClose, onApply }) {
     name: "",
     type: "single",
     required: false,
+    price_mode: "add",
     options: [{ name: "", price: 0 }],
   });
   const [busy, setBusy] = useState(false);
@@ -201,6 +200,7 @@ function OptionGroupDialog({ open, count, onClose, onApply }) {
       name: "",
       type: "single",
       required: false,
+      price_mode: "add",
       options: [{ name: "", price: 0 }],
     });
 
@@ -267,6 +267,20 @@ function OptionGroupDialog({ open, count, onClose, onApply }) {
               />
               Υποχρ.
             </label>
+          </div>
+          <div>
+            <label className="text-xs font-bold uppercase tracking-widest text-neutral-400 block mb-1">
+              Τύπος τιμής
+            </label>
+            <select
+              value={group.price_mode}
+              onChange={(e) => setGroup({ ...group, price_mode: e.target.value })}
+              data-testid="bulk-group-price-mode"
+              className="w-full h-11 px-3 bg-[#1A1A1A] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+            >
+              <option value="add">Προσαύξηση (+€ πάνω στη βάση)</option>
+              <option value="replace">Καθορισμός τιμής (αντικαθιστά τη βασική)</option>
+            </select>
           </div>
           {group.options.map((o, oi) => (
             <div key={oi} className="flex items-center gap-2">
@@ -363,13 +377,6 @@ export default function BulkActionsBar({ selected, categories, onDone, onClear }
     }
   };
 
-  const setAvailability = async (available) => {
-    await run(
-      { ids, action: "set_availability", available, note: "" },
-      available ? `Ενεργοποιήθηκαν ${count} προϊόντα` : `Απενεργοποιήθηκαν ${count} προϊόντα`
-    );
-  };
-
   const applyPrice = async (mode, value) => {
     if (mode === "set") return run({ ids, action: "set_price", price: value });
     if (mode === "adjust") return run({ ids, action: "adjust_price", delta: value });
@@ -411,25 +418,11 @@ export default function BulkActionsBar({ selected, categories, onDone, onClear }
             <FolderInput className="w-4 h-4 mr-1" /> Κατηγορία
           </Button>
           <Button
-            onClick={() => setAvailability(true)}
-            data-testid="bulk-btn-available"
-            className="h-10 bg-[#0D0D0D] border border-[#333] hover:border-[#00E676] text-white text-sm"
-          >
-            <ToggleRight className="w-4 h-4 mr-1" /> Διαθέσιμα
-          </Button>
-          <Button
-            onClick={() => setAvailability(false)}
-            data-testid="bulk-btn-unavailable"
-            className="h-10 bg-[#0D0D0D] border border-[#333] hover:border-[#FFB300] text-white text-sm"
-          >
-            <ToggleLeft className="w-4 h-4 mr-1" /> Έλλειψη
-          </Button>
-          <Button
             onClick={() => setGroupOpen(true)}
             data-testid="bulk-btn-group"
             className="h-10 bg-[#0D0D0D] border border-[#333] hover:border-[#FF6B00] text-white text-sm"
           >
-            <ListPlus className="w-4 h-4 mr-1" /> Ομάδα επιλογών
+            <ListPlus className="w-4 h-4 mr-1" /> Προσθέστε επιλογές
           </Button>
           <Button
             onClick={() => setConfirmDelete(true)}
