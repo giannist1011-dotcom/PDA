@@ -60,7 +60,7 @@ const emptyGroup = () => ({
 });
 
 // ---------- Item Modal ----------
-function ItemModal({ open, initial, categories, photos, onClose, onSave }) {
+function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) {
   const [form, setForm] = useState(initial || emptyItem());
   const [busy, setBusy] = useState(false);
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
@@ -581,11 +581,12 @@ export default function MenuManagement() {
   const [confirmCat, setConfirmCat] = useState(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-
+  const [photos, setPhotos] = useState([]);
   const load = async () => {
     try {
       const c = await apiGetMenuConfig();
       setConfig(c);
+      try { setPhotos(await apiListPhotos()); } catch {}
       if (!activeCat && c.categories.length) setActiveCat(c.categories[0].id);
     } catch (e) {
       toast.error(formatApiError(e));
@@ -977,6 +978,7 @@ export default function MenuManagement() {
         open={itemModalOpen}
         initial={editingItem}
         categories={config.categories}
+         photos={photos}
         onClose={() => {
           setItemModalOpen(false);
           setEditingItem(null);
