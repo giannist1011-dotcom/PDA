@@ -977,7 +977,7 @@ async def list_shopping(user: dict = Depends(get_current_user)):
 
 
 @api.post("/shopping/reset")
-async def reset_shopping(user: dict = Depends(require_owner)):
+async def reset_shopping(user: dict = Depends(get_current_user)):
     """Wipe entire shopping list and clear shopping_item_id on all stock items."""
     result = await db.shopping.delete_many({"user_id": user["id"]})
     await db.stock_items.update_many(

@@ -647,10 +647,10 @@ export default function Stock() {
               </div>
               <button
                 onClick={onPrint}
-                disabled={shopping.length === 0 || !isOwner}
+                disabled={shopping.length === 0}
                 data-testid="shopping-print-btn"
                 className="flex items-center gap-1.5 h-9 px-3 rounded-md bg-[#0D0D0D] border border-[#333] text-neutral-200 text-sm font-bold hover:border-[#FF6B00] hover:text-[#FF6B00] disabled:opacity-40 disabled:cursor-not-allowed"
-                title={isOwner ? "Εκτύπωση & μηδενισμός λίστας" : "Μόνο ιδιοκτήτης"}
+                title="Εκτύπωση & μηδενισμός λίστας"
               >
                 <Printer className="w-4 h-4" />
                 Εκτύπωση
@@ -675,7 +675,7 @@ export default function Stock() {
               </form>
             ) : (
               <div className="text-[11px] text-neutral-500 mb-4 uppercase tracking-widest">
-                Προβολή μόνο — χειροκίνητη προσθήκη & εκτύπωση διαθέσιμα σε ιδιοκτήτη
+                Η χειροκίνητη προσθήκη ειδών είναι διαθέσιμη μόνο σε ιδιοκτήτη
               </div>
             )}
 
