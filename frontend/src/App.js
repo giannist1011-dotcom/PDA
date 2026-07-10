@@ -13,6 +13,7 @@ import Schedule from "@/pages/Schedule";
 import ProfileSelect from "@/pages/ProfileSelect";
 import Settings from "@/pages/Settings";
 import Photos from "@/pages/Photos";
+import Expenses from "@/pages/Expenses";
 
 function App() {
   return (
@@ -44,6 +45,14 @@ function App() {
               element={
                 <ProtectedRoute requireOwner>
                   <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/expenses"
+              element={
+                <ProtectedRoute requireOwner>
+                  <Expenses />
                 </ProtectedRoute>
               }
             />

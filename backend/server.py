@@ -768,12 +768,19 @@ async def analytics(
         {"source": s, "count": v["count"], "revenue": round(v["revenue"], 2)}
         for s, v in by_source.items()
     ]
+    exp_docs = await db.expenses.find(
+        {"user_id": user["id"], "date": {"$gte": df, "$lte": dt}},
+        {"_id": 0, "amount": 1},
+    ).to_list(50000)
+    total_expenses = round(sum(d.get("amount", 0) for d in exp_docs), 2)
     return {
         "date_from": df,
         "date_to": dt,
         "total_orders": total_orders,
         "total_revenue": total_revenue,
         "avg_order_value": avg_order,
+        "total_expenses": total_expenses,
+        "net_result": round(total_revenue - total_expenses, 2),
         "by_source": sources_list,
         "popular_items": popular,
         "hourly": hourly_list,
@@ -1134,6 +1141,169 @@ async def delete_shift(
     return {"ok": True, "deleted": r.deleted_count}
 
 
+# ============ EXPENSES ============
+DEFAULT_EXPENSE_CATEGORIES = [
+    "Προμηθευτές",
+    "Μισθοδοσία",
+    "Ενοίκιο",
+    "Λογαριασμοί (ΔΕΗ/νερό/ίντερνετ)",
+    "Εξοπλισμός",
+    "Συσκευασίες",
+    "Λοιπά",
+]
+
+
+class ExpenseCategoryIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    order: int = 0
+
+
+class ExpenseIn(BaseModel):
+    amount: float = Field(gt=0)
+    description: str = Field(default="", max_length=300)
+    category_id: Optional[str] = None
+    date: str  # YYYY-MM-DD
+
+
+def validate_expense_date(s: str):
+    try:
+        datetime.strptime(s, "%Y-%m-%d")
+    except (ValueError, TypeError):
+        raise HTTPException(422, "Μη έγκυρη ημερομηνία (μορφή YYYY-MM-DD)")
+
+
+async def ensure_expense_categories(user_id: str):
+    """Seed the default expense categories the first time an account uses expenses."""
+    count = await db.expense_categories.count_documents({"user_id": user_id})
+    if count == 0:
+        docs = [
+            {"id": str(uuid.uuid4())[:8], "user_id": user_id, "name": n, "order": i}
+            for i, n in enumerate(DEFAULT_EXPENSE_CATEGORIES)
+        ]
+        await db.expense_categories.insert_many(docs)
+
+
+@api.get("/expenses/categories")
+async def list_expense_categories(user: dict = Depends(require_owner)):
+    await ensure_expense_categories(user["id"])
+    return await db.expense_categories.find(
+        {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
+    ).sort("order", 1).to_list(500)
+
+
+@api.post("/expenses/categories")
+async def create_expense_category(body: ExpenseCategoryIn, user: dict = Depends(require_owner)):
+    count = await db.expense_categories.count_documents({"user_id": user["id"]})
+    doc = {
+        "id": str(uuid.uuid4())[:8],
+        "user_id": user["id"],
+        "name": body.name.strip(),
+        "order": body.order if body.order else count,
+    }
+    await db.expense_categories.insert_one(doc)
+    return {k: v for k, v in doc.items() if k not in ("_id", "user_id")}
+
+
+@api.put("/expenses/categories/{cid}")
+async def update_expense_category(cid: str, body: ExpenseCategoryIn, user: dict = Depends(require_owner)):
+    r = await db.expense_categories.update_one(
+        {"id": cid, "user_id": user["id"]},
+        {"$set": {"name": body.name.strip(), "order": body.order}},
+    )
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"id": cid, "name": body.name.strip(), "order": body.order}
+
+
+@api.delete("/expenses/categories/{cid}")
+async def delete_expense_category(cid: str, user: dict = Depends(require_owner)):
+    r = await db.expense_categories.delete_one({"id": cid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    # expenses in this category become uncategorized
+    await db.expenses.update_many(
+        {"user_id": user["id"], "category_id": cid},
+        {"$set": {"category_id": None}},
+    )
+    return {"ok": True}
+
+
+@api.get("/expenses")
+async def list_expenses(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    category_id: Optional[str] = None,
+    user: dict = Depends(require_owner),
+):
+    query = {"user_id": user["id"]}
+    rng = {}
+    if date_from:
+        rng["$gte"] = date_from
+    if date_to:
+        rng["$lte"] = date_to
+    if rng:
+        query["date"] = rng
+    if category_id:
+        query["category_id"] = category_id
+    docs = await db.expenses.find(
+        query, {"_id": 0, "user_id": 0}
+    ).sort([("date", -1), ("created_at", -1)]).to_list(5000)
+    return docs
+
+
+@api.post("/expenses")
+async def create_expense(body: ExpenseIn, user: dict = Depends(require_owner)):
+    validate_expense_date(body.date)
+    if body.category_id:
+        cat = await db.expense_categories.find_one(
+            {"id": body.category_id, "user_id": user["id"]}
+        )
+        if not cat:
+            raise HTTPException(404, "Η κατηγορία δεν βρέθηκε")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "amount": round(float(body.amount), 2),
+        "description": body.description.strip(),
+        "category_id": body.category_id,
+        "date": body.date,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.expenses.insert_one(doc)
+    return {k: v for k, v in doc.items() if k not in ("_id", "user_id")}
+
+
+@api.put("/expenses/{eid}")
+async def update_expense(eid: str, body: ExpenseIn, user: dict = Depends(require_owner)):
+    validate_expense_date(body.date)
+    if body.category_id:
+        cat = await db.expense_categories.find_one(
+            {"id": body.category_id, "user_id": user["id"]}
+        )
+        if not cat:
+            raise HTTPException(404, "Η κατηγορία δεν βρέθηκε")
+    update = {
+        "amount": round(float(body.amount), 2),
+        "description": body.description.strip(),
+        "category_id": body.category_id,
+        "date": body.date,
+    }
+    r = await db.expenses.update_one(
+        {"id": eid, "user_id": user["id"]}, {"$set": update}
+    )
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"id": eid, **update}
+
+
+@api.delete("/expenses/{eid}")
+async def delete_expense(eid: str, user: dict = Depends(require_owner)):
+    r = await db.expenses.delete_one({"id": eid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
 # ============ APP SETUP ============
 app.include_router(api)
 
@@ -1162,6 +1332,8 @@ async def on_startup():
         [("user_id", 1), ("employee_id", 1), ("week_start", 1), ("day", 1)],
         unique=True,
     )
+    await db.expense_categories.create_index([("user_id", 1), ("order", 1)])
+    await db.expenses.create_index([("user_id", 1), ("date", -1)])
     await ensure_demo_account()
 
 

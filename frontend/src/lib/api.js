@@ -97,6 +97,24 @@ export const fetchOrders = (dateFrom, dateTo) =>
 export const fetchAnalytics = (dateFrom, dateTo) =>
   api.get("/analytics", { params: { date_from: dateFrom, date_to: dateTo } }).then((r) => r.data);
 
+// EXPENSES
+export const apiListExpenseCategories = () =>
+  api.get("/expenses/categories").then((r) => r.data);
+export const apiCreateExpenseCategory = (payload) =>
+  api.post("/expenses/categories", payload).then((r) => r.data);
+export const apiUpdateExpenseCategory = (id, payload) =>
+  api.put(`/expenses/categories/${id}`, payload).then((r) => r.data);
+export const apiDeleteExpenseCategory = (id) =>
+  api.delete(`/expenses/categories/${id}`).then((r) => r.data);
+export const apiListExpenses = (params) =>
+  api.get("/expenses", { params }).then((r) => r.data);
+export const apiCreateExpense = (payload) =>
+  api.post("/expenses", payload).then((r) => r.data);
+export const apiUpdateExpense = (id, payload) =>
+  api.put(`/expenses/${id}`, payload).then((r) => r.data);
+export const apiDeleteExpense = (id) =>
+  api.delete(`/expenses/${id}`).then((r) => r.data);
+
 // Error helper
 export function formatApiError(e) {
   const d = e?.response?.data?.detail;

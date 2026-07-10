@@ -7,6 +7,8 @@ import {
   Award,
   RefreshCcw,
   ArrowLeftRight,
+  Wallet,
+  Scale,
   ArrowUp,
   ArrowDown,
   Minus as MinusIcon,
@@ -31,7 +33,7 @@ import { Button } from "@/components/ui/button";
 
 const COLORS = ["#FF6B00", "#00E676", "#FFB300", "#00B0FF", "#FF3B30"];
 
-const StatCard = ({ icon: Icon, label, value, testId, sub }) => (
+const StatCard = ({ icon: Icon, label, value, testId, sub, valueClass = "text-white", iconClass = "text-[#FF6B00]" }) => (
   <div
     className="p-6 bg-[#1A1A1A] border border-[#333] rounded-lg"
     data-testid={testId}
@@ -40,9 +42,9 @@ const StatCard = ({ icon: Icon, label, value, testId, sub }) => (
       <span className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
         {label}
       </span>
-      <Icon className="w-5 h-5 text-[#FF6B00]" />
+      <Icon className={`w-5 h-5 ${iconClass}`} />
     </div>
-    <div className="font-mono text-3xl font-bold text-white mt-3">{value}</div>
+    <div className={`font-mono text-3xl font-bold mt-3 ${valueClass}`}>{value}</div>
     {sub && <div className="text-xs text-neutral-500 mt-1">{sub}</div>}
   </div>
 );
@@ -332,6 +334,22 @@ export default function Analytics() {
                 ? `${data.popular_items[0].quantity} τεμ.`
                 : ""
             }
+          />
+          <StatCard
+            icon={Wallet}
+            label="Έξοδα"
+            value={eur(data?.total_expenses ?? 0)}
+            testId="stat-total-expenses"
+            sub="της περιόδου"
+          />
+          <StatCard
+            icon={Scale}
+            label="Καθαρό αποτέλεσμα"
+            value={eur(data?.net_result ?? 0)}
+            testId="stat-net-result"
+            sub="έσοδα − έξοδα"
+            valueClass={(data?.net_result ?? 0) >= 0 ? "text-[#00E676]" : "text-[#FF6961]"}
+            iconClass={(data?.net_result ?? 0) >= 0 ? "text-[#00E676]" : "text-[#FF6961]"}
           />
         </div>
 

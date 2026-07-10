@@ -15,6 +15,7 @@ import {
   Crown,
   User as UserIcon,
   Image as ImageIcon,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -22,6 +23,7 @@ import { useAuth } from "@/context/AuthContext";
 const NAV_ALL = [
   { to: "/", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", owner: false },
   { to: "/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", owner: true },
+  { to: "/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", owner: true },
   { to: "/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", owner: true },
   { to: "/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", owner: true },
   { to: "/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock", owner: false },
