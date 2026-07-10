@@ -36,16 +36,19 @@ const OptionTile = ({ selected, label, badge, onClick, testId }) => (
   </button>
 );
 
-function LegacyOptions({ item, config, state, setState }) {
-  const breadOptions = config?.bread_options ?? [];
-  const extrasOptions = config?.extras_options ?? [];
-  const saucesOptions = config?.sauces_options ?? [];
-  const doubleMeatPrice = config?.double_meat_price ?? 0;
+// Options may arrive as plain strings (legacy accounts) or {name, price} dicts.
+export const normalizeOption = (x) =>
+  typeof x === "string"
+    ? { name: x, price: 0 }
+    : { name: x?.name || "", price: Number(x?.price || 0) };
 
-  const toggleList = (key, value) => {
+const priceBadge = (price) => (price > 0 ? `+${eur(price)}` : null);
+
+function LegacyOptions({ item, breadOptions, extrasOptions, saucesOptions, doubleMeatPrice, state, setState }) {
+  const toggleList = (key, name) => {
     setState((s) => ({
       ...s,
-      [key]: s[key].includes(value) ? s[key].filter((v) => v !== value) : [...s[key], value],
+      [key]: s[key].includes(name) ? s[key].filter((v) => v !== name) : [...s[key], name],
     }));
   };
 
@@ -57,11 +60,12 @@ function LegacyOptions({ item, config, state, setState }) {
           <div className="grid grid-cols-3 gap-3">
             {breadOptions.map((b) => (
               <OptionTile
-                key={b}
-                selected={state.bread === b}
-                label={b}
-                testId={`bread-${b}`}
-                onClick={() => setState((s) => ({ ...s, bread: b }))}
+                key={b.name}
+                selected={state.bread === b.name}
+                label={b.name}
+                badge={priceBadge(b.price)}
+                testId={`bread-${b.name}`}
+                onClick={() => setState((s) => ({ ...s, bread: b.name }))}
               />
             ))}
           </div>
@@ -69,15 +73,16 @@ function LegacyOptions({ item, config, state, setState }) {
       )}
       {extrasOptions.length > 0 && (
         <section>
-          <h3 className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-3">Extras</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-3">Υλικά</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {extrasOptions.map((e) => (
               <OptionTile
-                key={e}
-                selected={state.extras.includes(e)}
-                label={e}
-                testId={`extra-${e}`}
-                onClick={() => toggleList("extras", e)}
+                key={e.name}
+                selected={state.extras.includes(e.name)}
+                label={e.name}
+                badge={priceBadge(e.price)}
+                testId={`extra-${e.name}`}
+                onClick={() => toggleList("extras", e.name)}
               />
             ))}
           </div>
@@ -85,15 +90,16 @@ function LegacyOptions({ item, config, state, setState }) {
       )}
       {saucesOptions.length > 0 && (
         <section>
-          <h3 className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-3">Σως</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-3">Αλοιφές</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {saucesOptions.map((s) => (
               <OptionTile
-                key={s}
-                selected={state.sauces.includes(s)}
-                label={s}
-                testId={`sauce-${s}`}
-                onClick={() => toggleList("sauces", s)}
+                key={s.name}
+                selected={state.sauces.includes(s.name)}
+                label={s.name}
+                badge={priceBadge(s.price)}
+                testId={`sauce-${s.name}`}
+                onClick={() => toggleList("sauces", s.name)}
               />
             ))}
           </div>
@@ -186,8 +192,12 @@ export default function CustomizationModal({
     !!item?.customizable && (!item?.option_groups || item.option_groups.length === 0);
   const groups = item?.option_groups || [];
 
+  const breadOptions = (config?.bread_options || []).map(normalizeOption);
+  const extrasOptions = (config?.extras_options || []).map(normalizeOption);
+  const saucesOptions = (config?.sauces_options || []).map(normalizeOption);
+
   const [state, setState] = useState({
-    bread: config?.bread_options?.[0] || "",
+    bread: "",
     extras: [],
     sauces: [],
     double_meat: false,
@@ -197,8 +207,9 @@ export default function CustomizationModal({
   useEffect(() => {
     if (!open || !item) return;
     if (legacyMode) {
+      const firstBread = (config?.bread_options || []).map(normalizeOption)[0]?.name || "";
       setState({
-        bread: initialCustomization?.bread || config?.bread_options?.[0] || "",
+        bread: initialCustomization?.bread || firstBread,
         extras: initialCustomization?.extras ? [...initialCustomization.extras] : [],
         sauces: initialCustomization?.sauces ? [...initialCustomization.sauces] : [],
         double_meat: !!initialCustomization?.double_meat,
@@ -219,8 +230,12 @@ export default function CustomizationModal({
   if (!item) return null;
 
   const doubleMeatPrice = config?.double_meat_price ?? 0;
+  const priceOf = (list, name) => list.find((o) => o.name === name)?.price || 0;
   let extra = 0;
   if (legacyMode) {
+    extra += priceOf(breadOptions, state.bread);
+    for (const n of state.extras) extra += priceOf(extrasOptions, n);
+    for (const n of state.sauces) extra += priceOf(saucesOptions, n);
     if (state.double_meat && item.double_meat_eligible) extra += doubleMeatPrice;
   } else {
     for (const g of groups) {
@@ -282,7 +297,15 @@ export default function CustomizationModal({
 
         <div className="px-6 pb-2 max-h-[65vh] overflow-y-auto space-y-6">
           {legacyMode ? (
-            <LegacyOptions item={item} config={config} state={state} setState={setState} />
+            <LegacyOptions
+              item={item}
+              breadOptions={breadOptions}
+              extrasOptions={extrasOptions}
+              saucesOptions={saucesOptions}
+              doubleMeatPrice={doubleMeatPrice}
+              state={state}
+              setState={setState}
+            />
           ) : (
             <GroupsOptions groups={groups} selections={selections} setSelections={setSelections} />
           )}

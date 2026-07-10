@@ -158,7 +158,7 @@ class NamedPricedOption(BaseModel):
 
 
 class CustomizationConfig(BaseModel):
-    bread_options: List[str] = Field(default_factory=list)
+    bread_options: List[NamedPricedOption] = Field(default_factory=list)
     extras_options: List[NamedPricedOption] = Field(default_factory=list)
     sauces_options: List[NamedPricedOption] = Field(default_factory=list)
     double_meat_price: float = Field(ge=0)
@@ -176,15 +176,13 @@ def _coerce_named_priced(items):
 
 
 def _normalize_customization(cust: dict) -> dict:
-    """Ensure stored customization matches new schema (extras/sauces as list of dicts)."""
+    """Ensure stored customization matches new schema (all option lists as {name, price} dicts)."""
     if not cust:
         return cust
     cust = dict(cust)
+    cust["bread_options"] = _coerce_named_priced(cust.get("bread_options"))
     cust["extras_options"] = _coerce_named_priced(cust.get("extras_options"))
     cust["sauces_options"] = _coerce_named_priced(cust.get("sauces_options"))
-    cust["bread_options"] = [
-        (b if isinstance(b, str) else b.get("name", "")) for b in cust.get("bread_options") or []
-    ]
     return cust
 
 

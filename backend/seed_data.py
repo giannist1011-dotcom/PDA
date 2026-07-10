@@ -11,7 +11,11 @@ DEFAULT_CATEGORIES = [
 ]
 
 DEFAULT_CUSTOMIZATION = {
-    "bread_options": ["Πίτα", "Διπλή πίτα", "Ψωμάκι"],
+    "bread_options": [
+        {"name": "Πίτα", "price": 0.0},
+        {"name": "Διπλή πίτα", "price": 0.5},
+        {"name": "Ψωμάκι", "price": 0.0},
+    ],
     "extras_options": [
         {"name": "Πατάτα", "price": 0.0},
         {"name": "Ντομάτα", "price": 0.0},
@@ -20,11 +24,11 @@ DEFAULT_CUSTOMIZATION = {
         {"name": "Μουστάρδα", "price": 0.0},
     ],
     "sauces_options": [
-        {"name": "Ουγγαρέζα", "price": 0.0},
-        {"name": "Ρώσικη", "price": 0.0},
-        {"name": "Σως μουστάρδας", "price": 0.0},
-        {"name": "Τζατζίκι", "price": 0.0},
-        {"name": "Τυροκαυτερή", "price": 0.0},
+        {"name": "Ουγγαρέζα", "price": 0.8},
+        {"name": "Ρώσικη", "price": 0.8},
+        {"name": "Σως μουστάρδας", "price": 0.8},
+        {"name": "Τζατζίκι", "price": 0.8},
+        {"name": "Τυροκαυτερή", "price": 0.8},
     ],
     "double_meat_price": 1.5,
 }
