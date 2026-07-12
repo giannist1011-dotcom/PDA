@@ -95,6 +95,8 @@ export const fetchOrders = (params) =>
 export const apiGetOrder = (id) => api.get(`/orders/${id}`).then((r) => r.data);
 export const apiCancelOrder = (id) =>
   api.post(`/orders/${id}/cancel`).then((r) => r.data);
+export const apiDeleteOrder = (id) =>
+  api.delete(`/orders/${id}`).then((r) => r.data);
 
 // CUSTOMERS
 export const apiListCustomers = () => api.get("/customers").then((r) => r.data);

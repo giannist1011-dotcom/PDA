@@ -756,6 +756,14 @@ async def cancel_order(oid: str, user: dict = Depends(require_owner)):
     return {"ok": True, "id": oid, "cancelled": True}
 
 
+@api.delete("/orders/{oid}")
+async def delete_order(oid: str, user: dict = Depends(require_owner)):
+    r = await db.orders.delete_one({"id": oid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
 @api.get("/customers")
 async def list_customers(user: dict = Depends(require_owner)):
     """Aggregate customers from phone/delivery orders, grouped by phone

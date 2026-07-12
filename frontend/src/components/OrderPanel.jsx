@@ -192,19 +192,16 @@ export default function OrderPanel({
 
       </div>
 
-      {/* Zone 3 — fixed footer: delivery type, total, actions */}
-      <div className="p-6 border-t border-[#333] bg-[#141414] shrink-0">
+      {/* Zone 3 — fixed footer: delivery type, total, actions (compact) */}
+      <div className="px-4 py-3 border-t border-[#333] bg-[#141414] shrink-0">
         {isPhone && (
-          <div className="mb-4 p-3 rounded-md border border-[#FF6B00]/40 bg-[#FF6B00]/5" data-testid="delivery-section">
-            <div className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-2">
-              Τύπος τηλεφωνικής παραγγελίας
-            </div>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="mb-2 p-2 rounded-md border border-[#FF6B00]/40 bg-[#FF6B00]/5" data-testid="delivery-section">
+            <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={() => setDelivery({ delivery_type: "delivery", ...(delivery || {}) })}
                 data-testid="delivery-btn-delivery"
                 data-state={delivery?.delivery_type === "delivery" ? "on" : "off"}
-                className={`h-12 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
+                className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
                   delivery?.delivery_type === "delivery"
                     ? "bg-[#FF6B00] border-[#FF6B00] text-white"
                     : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
@@ -216,7 +213,7 @@ export default function OrderPanel({
                 onClick={() => setDelivery({ delivery_type: "takeaway", ...(delivery || {}) })}
                 data-testid="delivery-btn-takeaway"
                 data-state={delivery?.delivery_type === "takeaway" ? "on" : "off"}
-                className={`h-12 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
+                className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
                   delivery?.delivery_type === "takeaway"
                     ? "bg-[#FF6B00] border-[#FF6B00] text-white"
                     : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
@@ -227,44 +224,40 @@ export default function OrderPanel({
             </div>
 
             {activeFields.length > 0 && (
-              <div className="space-y-2 mt-3 max-h-[28vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-1.5 mt-1.5 max-h-[24vh] overflow-y-auto pr-1">
                 {activeFields.map((f) => (
-                  <div key={f.key}>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-                      {f.label}
-                    </label>
-                    <input
-                      value={delivery?.[f.key] || ""}
-                      onChange={(e) => setField(f.key, e.target.value)}
-                      inputMode={f.inputMode || "text"}
-                      placeholder={f.placeholder}
-                      data-testid={`delivery-input-${f.key}`}
-                      className="w-full h-10 px-3 mt-0.5 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white focus:outline-none focus:border-[#FF6B00]"
-                    />
-                  </div>
+                  <input
+                    key={f.key}
+                    value={delivery?.[f.key] || ""}
+                    onChange={(e) => setField(f.key, e.target.value)}
+                    inputMode={f.inputMode || "text"}
+                    placeholder={f.label + " — " + f.placeholder}
+                    data-testid={`delivery-input-${f.key}`}
+                    className="w-full h-9 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white focus:outline-none focus:border-[#FF6B00]"
+                  />
                 ))}
               </div>
             )}
           </div>
         )}
-        <div className="flex items-baseline justify-between mb-4">
-          <span className="text-sm text-neutral-400 uppercase tracking-widest font-bold">
+        <div className="flex items-baseline justify-between mb-2">
+          <span className="text-[11px] text-neutral-400 uppercase tracking-widest font-bold">
             Σύνολο
           </span>
           <span
-            className="font-mono text-3xl font-bold text-white"
+            className="font-mono text-2xl font-bold text-white"
             data-testid="order-total"
           >
             {eur(subtotal)}
           </span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-1.5">
           <Button
             onClick={onClear}
             disabled={isEmpty}
             data-testid="order-clear-btn"
             variant="ghost"
-            className="col-span-1 h-16 text-sm font-bold text-neutral-300 border border-[#333] hover:bg-[#262626] hover:text-white disabled:opacity-40"
+            className="col-span-1 h-12 text-xs font-bold text-neutral-300 border border-[#333] hover:bg-[#262626] hover:text-white disabled:opacity-40"
           >
             Καθαρισμός
           </Button>
@@ -272,14 +265,14 @@ export default function OrderPanel({
             onClick={onSubmit}
             disabled={!canSubmit || submitting}
             data-testid="order-submit-btn"
-            className="col-span-3 h-16 text-lg font-bold bg-[#FF6B00] hover:bg-[#FF8533] text-white flex items-center justify-center gap-2 disabled:opacity-40"
+            className="col-span-3 h-12 text-base font-bold bg-[#FF6B00] hover:bg-[#FF8533] text-white flex items-center justify-center gap-2 disabled:opacity-40"
           >
-            <Printer className="w-5 h-5" />
+            <Printer className="w-4 h-4" />
             {submitting ? "Αποθήκευση..." : "Εκτύπωση & Αποθήκευση"}
           </Button>
         </div>
         {isPhone && !delivery?.delivery_type && (
-          <div className="mt-2 text-xs text-[#FFB300] text-center">
+          <div className="mt-1.5 text-[11px] text-[#FFB300] text-center">
             Επιλέξτε Παράδοση ή Takeaway για να συνεχίσετε
           </div>
         )}

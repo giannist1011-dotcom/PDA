@@ -5,6 +5,7 @@ import {
   Search,
   Printer,
   Ban,
+  Trash2,
   X,
   Users,
   Receipt as ReceiptIcon,
@@ -17,7 +18,7 @@ import Receipt from "@/components/Receipt";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { ORDER_SOURCES } from "@/data/menu";
-import { fetchOrders, apiGetOrder, apiCancelOrder, apiListCustomers, formatApiError } from "@/lib/api";
+import { fetchOrders, apiGetOrder, apiCancelOrder, apiDeleteOrder, apiListCustomers, formatApiError } from "@/lib/api";
 import { eur, todayISO, formatGRDateTime } from "@/lib/format";
 
 const PAGE_SIZE = 30;
@@ -53,7 +54,7 @@ const sourceBadgeCls = {
 };
 
 // ---------- Order detail modal ----------
-function OrderDetailModal({ order, isOwner, onClose, onReprint, onCancel }) {
+function OrderDetailModal({ order, isOwner, onClose, onReprint, onCancel, onDelete }) {
   if (!order) return null;
   const d = order.delivery;
   return (
@@ -156,6 +157,15 @@ function OrderDetailModal({ order, isOwner, onClose, onReprint, onCancel }) {
         </div>
 
         <div className="p-5 border-t border-[#222] flex flex-wrap gap-2 justify-end">
+          {isOwner && (
+            <Button
+              onClick={() => onDelete(order)}
+              data-testid="order-delete-btn"
+              className="h-11 bg-[#FF3B30] hover:bg-[#FF5A50] text-white font-bold mr-auto"
+            >
+              <Trash2 className="w-4 h-4 mr-2" /> Διαγραφή
+            </Button>
+          )}
           {isOwner && !order.cancelled && (
             <Button
               onClick={() => onCancel(order)}
@@ -353,6 +363,21 @@ export default function History() {
       setOrders((p) => p.map((o) => (o.id === order.id ? { ...o, cancelled: true } : o)));
       setSelectedOrder((s) => (s && s.id === order.id ? { ...s, cancelled: true } : s));
       toast.success("Η παραγγελία ακυρώθηκε");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  };
+
+  const handleDeleteOrder = async (order) => {
+    if (!window.confirm(`Οριστική διαγραφή παραγγελίας #${String(order.order_number).padStart(3, "0")}; Δεν μπορεί να αναιρεθεί.`)) {
+      return;
+    }
+    try {
+      await apiDeleteOrder(order.id);
+      setOrders((p) => p.filter((o) => o.id !== order.id));
+      setSelectedOrder(null);
+      setCustomersLoaded(false); // customer stats must be recomputed
+      toast.success("Η παραγγελία διαγράφηκε οριστικά");
     } catch (e) {
       toast.error(formatApiError(e));
     }
@@ -647,6 +672,7 @@ export default function History() {
         onClose={() => setSelectedOrder(null)}
         onReprint={handleReprint}
         onCancel={handleCancelOrder}
+        onDelete={handleDeleteOrder}
       />
       <CustomerDetailModal
         customer={selectedCustomer}
