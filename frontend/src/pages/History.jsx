@@ -21,6 +21,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ORDER_SOURCES } from "@/data/menu";
 import { fetchOrders, apiGetOrder, apiCancelOrder, apiDeleteOrder, apiListCustomers, formatApiError } from "@/lib/api";
 import { eur, todayISO, formatGRDateTime } from "@/lib/format";
+import { actorLabel } from "@/lib/roles";
 
 const PAGE_SIZE = 30;
 
@@ -69,9 +70,6 @@ const ScheduledBadge = ({ order }) => {
   );
 };
 
-const profileLabel = (p) =>
-  p === "owner" ? "Ιδιοκτήτης" : p === "employee" ? "Υπάλληλος" : p || "—";
-
 const typeLabel = (order) => {
   const t = order.delivery?.delivery_type;
   if (t === "delivery") return "Παράδοση";
@@ -87,7 +85,7 @@ const sourceBadgeCls = {
 };
 
 // ---------- Order detail modal ----------
-function OrderDetailModal({ order, isOwner, onClose, onReprint, onCancel, onDelete }) {
+function OrderDetailModal({ order, canManage, onClose, onReprint, onCancel, onDelete }) {
   if (!order) return null;
   const d = order.delivery;
   return (
@@ -209,20 +207,34 @@ function OrderDetailModal({ order, isOwner, onClose, onReprint, onCancel, onDele
             </div>
           </div>
 
-          {(order.discount?.applied_by || order.cancelled_by) && (
+          {(order.taken_by?.name || order.discount?.applied_by || order.cancelled_by) && (
             <div className="p-3 bg-[#0D0D0D] border border-[#333] rounded-md space-y-1 text-xs text-neutral-400" data-testid="order-audit">
               <div className="font-bold uppercase tracking-widest text-neutral-500 mb-1">
                 Καταγραφή ενεργειών
               </div>
+              {order.taken_by?.name && (
+                <div>
+                  Παραγγελία από:{" "}
+                  <span className="text-white">
+                    {actorLabel(order.taken_by.name, order.taken_by.role)}
+                  </span>
+                </div>
+              )}
               {order.discount?.applied_by && (
                 <div>
-                  Έκπτωση από: <span className="text-white">{profileLabel(order.discount.applied_by)}</span>
+                  Έκπτωση από:{" "}
+                  <span className="text-white">
+                    {actorLabel(order.discount.applied_by, order.discount.applied_by_role)}
+                  </span>
                   {order.discount.applied_at ? ` · ${formatGRDateTime(order.discount.applied_at)}` : ""}
                 </div>
               )}
               {order.cancelled_by && (
                 <div>
-                  Ακύρωση από: <span className="text-[#FF6961]">{profileLabel(order.cancelled_by)}</span>
+                  Ακύρωση από:{" "}
+                  <span className="text-[#FF6961]">
+                    {actorLabel(order.cancelled_by, order.cancelled_by_role)}
+                  </span>
                   {order.cancelled_at ? ` · ${formatGRDateTime(order.cancelled_at)}` : ""}
                 </div>
               )}
@@ -234,7 +246,7 @@ function OrderDetailModal({ order, isOwner, onClose, onReprint, onCancel, onDele
           <Button
             onClick={() => onDelete(order)}
             data-testid="order-delete-btn"
-            title={isOwner ? "" : "Απαιτείται PIN ιδιοκτήτη"}
+            title={canManage ? "" : "Απαιτείται PIN ιδιοκτήτη/υπευθύνου"}
             className="h-11 bg-[#FF3B30] hover:bg-[#FF5A50] text-white font-bold mr-auto"
           >
             <Trash2 className="w-4 h-4 mr-2" /> Διαγραφή
@@ -243,7 +255,7 @@ function OrderDetailModal({ order, isOwner, onClose, onReprint, onCancel, onDele
             <Button
               onClick={() => onCancel(order)}
               data-testid="order-cancel-btn"
-              title={isOwner ? "" : "Απαιτείται PIN ιδιοκτήτη"}
+              title={canManage ? "" : "Απαιτείται PIN ιδιοκτήτη/υπευθύνου"}
               className="h-11 bg-transparent border border-[#FF3B30]/50 text-[#FF6961] hover:bg-[#FF3B30]/10 hover:border-[#FF3B30]"
             >
               <Ban className="w-4 h-4 mr-2" /> Ακύρωση
@@ -380,7 +392,7 @@ function CustomerDetailModal({ customer, onClose, onOpenOrder }) {
 
 // ---------- Main page ----------
 export default function History() {
-  const { user, isOwner } = useAuth();
+  const { user, isOwner, canManage } = useAuth();
   const [tab, setTab] = useState("orders");
 
   // ---- Tab 1: orders ----
@@ -458,7 +470,7 @@ export default function History() {
     if (!window.confirm(`Ακύρωση παραγγελίας #${String(order.order_number).padStart(3, "0")}; Θα εξαιρεθεί από τα στατιστικά.`)) {
       return;
     }
-    if (isOwner) doCancelOrder(order);
+    if (canManage) doCancelOrder(order);
     else setPinGate({ action: "cancel", order });
   };
 
@@ -466,7 +478,7 @@ export default function History() {
     if (!window.confirm(`Οριστική διαγραφή παραγγελίας #${String(order.order_number).padStart(3, "0")}; Δεν μπορεί να αναιρεθεί.`)) {
       return;
     }
-    if (isOwner) doDeleteOrder(order);
+    if (canManage) doDeleteOrder(order);
     else setPinGate({ action: "delete", order });
   };
 
@@ -764,7 +776,7 @@ export default function History() {
 
       <OrderDetailModal
         order={selectedOrder}
-        isOwner={isOwner}
+        canManage={canManage}
         onClose={() => setSelectedOrder(null)}
         onReprint={handleReprint}
         onCancel={handleCancelOrder}
@@ -779,8 +791,8 @@ export default function History() {
         open={!!pinGate}
         title={
           pinGate?.action === "delete"
-            ? "Απαιτείται PIN ιδιοκτήτη για οριστική διαγραφή"
-            : "Απαιτείται PIN ιδιοκτήτη για ακύρωση παραγγελίας"
+            ? "Απαιτείται PIN ιδιοκτήτη/υπευθύνου για οριστική διαγραφή"
+            : "Απαιτείται PIN ιδιοκτήτη/υπευθύνου για ακύρωση παραγγελίας"
         }
         onClose={() => setPinGate(null)}
         onSuccess={handlePinVerified}

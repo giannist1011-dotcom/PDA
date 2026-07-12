@@ -38,12 +38,17 @@ export const apiSetItemAvailability = (id, payload) =>
   api.patch(`/menu/items/${id}/availability`, payload).then((r) => r.data);
 export const apiBulkItems = (payload) => api.post("/menu/items/bulk", payload).then((r) => r.data);
 
-// PROFILE / ROLES
-export const apiSelectProfile = (profile, pin) =>
-  api.post("/profile/select", { profile, pin }).then((r) => r.data);
+// PROFILES / ROLES
+export const apiListProfiles = () => api.get("/profiles").then((r) => r.data);
+export const apiSelectProfile = (profileId, pin) =>
+  api.post("/profile/select", { profile_id: profileId, pin }).then((r) => r.data);
 export const apiExitProfile = () => api.post("/profile/exit").then((r) => r.data);
-export const apiChangePin = (target, new_pin) =>
-  api.put("/profile/pin", { target, new_pin }).then((r) => r.data);
+export const apiCreateProfile = (payload) =>
+  api.post("/profiles", payload).then((r) => r.data);
+export const apiUpdateProfile = (id, payload) =>
+  api.put(`/profiles/${id}`, payload).then((r) => r.data);
+export const apiDeleteProfile = (id) =>
+  api.delete(`/profiles/${id}`).then((r) => r.data);
 
 // SHOPPING
 export const apiListShopping = () => api.get("/shopping").then((r) => r.data);

@@ -20,23 +20,28 @@ import {
   CalendarCheck,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { ROLE_LABELS, ROLE_COLORS } from "@/lib/roles";
 
-// Full nav list. Each entry may require owner.
+// Full nav list. Each entry lists the roles that can see it.
+const ALL_ROLES = ["owner", "manager", "employee", "waiter"];
+const STAFF = ["owner", "manager", "employee"];
+const MANAGERS = ["owner", "manager"];
 const NAV_ALL = [
-  { to: "/", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", owner: false },
-  { to: "/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", owner: false },
-  { to: "/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", owner: false },
-  { to: "/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", owner: true },
-  { to: "/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", owner: true },
-  { to: "/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", owner: true },
-  { to: "/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", owner: true },
-  { to: "/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock", owner: false },
-  { to: "/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule", owner: false },
-  { to: "/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", owner: true },
+  { to: "/", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", roles: ALL_ROLES },
+  { to: "/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", roles: STAFF },
+  { to: "/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: STAFF },
+  { to: "/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"] },
+  { to: "/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", roles: ["owner"] },
+  { to: "/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", roles: MANAGERS },
+  { to: "/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", roles: MANAGERS },
+  { to: "/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock", roles: STAFF },
+  { to: "/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule", roles: STAFF },
+  { to: "/waiters", label: "Σερβιτόροι", icon: UserIcon, testId: "drawer-link-waiters", roles: ["manager"] },
+  { to: "/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", roles: ["owner"] },
 ];
 
 export default function AppShell({ title, children }) {
-  const { user, logout, exitProfile, isOwner } = useAuth();
+  const { user, logout, exitProfile, role, canManage, profileName } = useAuth();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,19 +60,21 @@ export default function AppShell({ title, children }) {
     navigate("/select-profile");
   };
 
-  const nav = NAV_ALL.filter((n) => (n.owner ? isOwner : true)).map((n) => {
-    // For employee, schedule label reads "Πρόγραμμα (προβολή)"
-    if (!isOwner && n.to === "/schedule") return { ...n, label: "Πρόγραμμα (προβολή)" };
+  const nav = NAV_ALL.filter((n) => n.roles.includes(role)).map((n) => {
+    // Non-managers see the schedule read-only
+    if (!canManage && n.to === "/schedule") return { ...n, label: "Πρόγραμμα (προβολή)" };
     return n;
   });
 
-  const profileBadge = user && user !== false && user.profile === "owner" ? (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FF6B00]/15 text-[#FF6B00] text-[10px] font-bold uppercase tracking-widest">
-      <Crown className="w-3 h-3" /> Ιδιοκτήτης
-    </span>
-  ) : user && user !== false && user.profile === "employee" ? (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#00B0FF]/15 text-[#00B0FF] text-[10px] font-bold uppercase tracking-widest">
-      <UserIcon className="w-3 h-3" /> Υπάλληλος
+  const roleColor = ROLE_COLORS[role] || "#888";
+  const profileBadge = role ? (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest"
+      style={{ backgroundColor: `${roleColor}26`, color: roleColor }}
+    >
+      {role === "owner" ? <Crown className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
+      {profileName ? `${profileName} · ` : ""}
+      {ROLE_LABELS[role] || role}
     </span>
   ) : null;
 

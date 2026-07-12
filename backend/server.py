@@ -45,11 +45,23 @@ def verify_password(pw: str, hashed: str) -> bool:
     return bcrypt.checkpw(pw.encode("utf-8"), hashed.encode("utf-8"))
 
 
-def create_token(user_id: str, email: str, profile: Optional[str] = None) -> str:
+PROFILE_ROLES = ["owner", "manager", "employee", "waiter"]
+LEGACY_ROLE_NAMES = {"owner": "Ιδιοκτήτης", "employee": "Υπάλληλος"}
+
+
+def create_token(
+    user_id: str,
+    email: str,
+    profile_id: Optional[str] = None,
+    role: Optional[str] = None,
+    profile_name: Optional[str] = None,
+) -> str:
     payload = {
         "sub": user_id,
         "email": email,
-        "profile": profile,
+        "profile": role,  # legacy claim name — carries the role
+        "profile_id": profile_id,
+        "profile_name": profile_name,
         "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_TTL_HOURS),
         "type": "access",
     }
@@ -69,14 +81,43 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
     if not user:
         raise HTTPException(401, "User not found")
-    user["profile"] = payload.get("profile")
+    role = payload.get("profile")  # legacy tokens carry "owner"/"employee" here
+    profile_id = payload.get("profile_id")
+    profile_name = payload.get("profile_name")
+    if profile_id:
+        prof = await db.profiles.find_one(
+            {"id": profile_id, "user_id": user["id"]}, {"_id": 0}
+        )
+        if prof:
+            role = prof["role"]
+            profile_name = prof["name"]
+        else:
+            # profile deleted while the token was live → force re-selection
+            role = None
+            profile_id = None
+            profile_name = None
+    user["profile"] = role  # legacy key: pages check "owner"
+    user["role"] = role
+    user["profile_id"] = profile_id
+    user["profile_name"] = profile_name
     return user
 
 
 async def require_owner(user: dict = Depends(get_current_user)) -> dict:
-    if user.get("profile") != "owner":
+    if user.get("role") != "owner":
         raise HTTPException(403, "Απαιτείται πρόσβαση ιδιοκτήτη")
     return user
+
+
+async def require_manager(user: dict = Depends(get_current_user)) -> dict:
+    """Owner or manager (Υπεύθυνος)."""
+    if user.get("role") not in ("owner", "manager"):
+        raise HTTPException(403, "Απαιτείται πρόσβαση ιδιοκτήτη ή υπευθύνου")
+    return user
+
+
+def actor_name(user: dict) -> str:
+    return user.get("profile_name") or LEGACY_ROLE_NAMES.get(user.get("role"), "") or "—"
 
 
 def public_user(u: dict) -> dict:
@@ -85,7 +126,10 @@ def public_user(u: dict) -> dict:
         "email": u["email"],
         "restaurant_name": u["restaurant_name"],
         "created_at": u.get("created_at"),
-        "profile": u.get("profile"),
+        "profile": u.get("profile"),  # role (legacy key)
+        "role": u.get("role") or u.get("profile"),
+        "profile_id": u.get("profile_id"),
+        "profile_name": u.get("profile_name"),
         "owner_pin_set": bool(u.get("owner_pin_set", False)),
         "employee_pin_set": bool(u.get("employee_pin_set", False)),
     }
@@ -228,8 +272,16 @@ class DiscountInfo(BaseModel):
     type: Literal["percent", "amount"]
     value: float = Field(ge=0)   # 10 (%) or 2.50 (€)
     amount: float = Field(ge=0)  # computed € discount
-    applied_by: Optional[str] = None  # profile — set server-side
+    applied_by: Optional[str] = None  # profile name — set server-side
+    applied_by_role: Optional[str] = None
     applied_at: Optional[str] = None
+
+
+class TakenBy(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    profile_id: Optional[str] = None
+    name: Optional[str] = None
+    role: Optional[str] = None
 
 
 class OrderCreate(BaseModel):
@@ -251,7 +303,9 @@ class Order(OrderCreate):
     cancelled: bool = False
     status: Literal["active", "scheduled"] = "active"
     cancelled_by: Optional[str] = None
+    cancelled_by_role: Optional[str] = None
     cancelled_at: Optional[str] = None
+    taken_by: Optional[TakenBy] = None
 
 
 # ============ SEEDING ============
@@ -351,6 +405,7 @@ async def login(body: LoginIn):
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(401, "Λάθος email ή κωδικός")
+    await ensure_profiles_migrated(user["id"])
     token = create_token(user["id"], email)
     return {"token": token, "user": public_user(user)}
 
@@ -360,48 +415,144 @@ async def me(user: dict = Depends(get_current_user)):
     return public_user(user)
 
 
-# ============ PROFILE / ROLES ============
+# ============ PROFILES (dynamic, per-account) ============
+async def ensure_profiles_migrated(user_id: str):
+    """Legacy accounts had two fixed PINs — turn them into real profiles once."""
+    count = await db.profiles.count_documents({"user_id": user_id})
+    if count > 0:
+        return
+    u = await db.users.find_one({"id": user_id})
+    if not u:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    await db.profiles.insert_many([
+        {
+            "id": str(uuid.uuid4())[:8],
+            "user_id": user_id,
+            "name": "Ιδιοκτήτης",
+            "role": "owner",
+            "pin_hash": u.get("owner_pin_hash") or hash_password("0000"),
+            "created_at": now,
+        },
+        {
+            "id": str(uuid.uuid4())[:8],
+            "user_id": user_id,
+            "name": "Υπάλληλος",
+            "role": "employee",
+            "pin_hash": u.get("employee_pin_hash") or hash_password("0000"),
+            "created_at": now,
+        },
+    ])
+
+
+def public_profile(p: dict) -> dict:
+    return {k: v for k, v in p.items() if k not in ("_id", "user_id", "pin_hash")}
+
+
+def can_manage_profile(actor_role: str, target_role: str) -> bool:
+    if actor_role == "owner":
+        return True
+    if actor_role == "manager":
+        return target_role == "waiter"
+    return False
+
+
 class ProfileSelectIn(BaseModel):
-    profile: Literal["owner", "employee"]
+    profile_id: str
     pin: str = Field(min_length=4, max_length=4)
 
 
-class ProfilePinIn(BaseModel):
-    target: Literal["owner", "employee"]
-    new_pin: str = Field(min_length=4, max_length=4)
+class ProfileIn(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    role: Literal["owner", "manager", "employee", "waiter"]
+    pin: Optional[str] = None  # 4 digits — required on create, optional on update
+
+
+@api.get("/profiles")
+async def list_profiles(user: dict = Depends(get_current_user)):
+    await ensure_profiles_migrated(user["id"])
+    docs = await db.profiles.find(
+        {"user_id": user["id"]}, {"_id": 0, "user_id": 0, "pin_hash": 0}
+    ).sort("created_at", 1).to_list(100)
+    return docs
+
+
+@api.post("/profiles")
+async def create_profile(body: ProfileIn, user: dict = Depends(require_manager)):
+    if not can_manage_profile(user["role"], body.role):
+        raise HTTPException(403, "Δεν επιτρέπεται η δημιουργία προφίλ αυτού του ρόλου")
+    if not body.pin or not (body.pin.isdigit() and len(body.pin) == 4):
+        raise HTTPException(400, "Απαιτείται 4-ψήφιο PIN")
+    doc = {
+        "id": str(uuid.uuid4())[:8],
+        "user_id": user["id"],
+        "name": body.name.strip(),
+        "role": body.role,
+        "pin_hash": hash_password(body.pin),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.profiles.insert_one(doc)
+    return public_profile(doc)
+
+
+@api.put("/profiles/{pid}")
+async def update_profile(pid: str, body: ProfileIn, user: dict = Depends(require_manager)):
+    target = await db.profiles.find_one({"id": pid, "user_id": user["id"]})
+    if not target:
+        raise HTTPException(404, "Το προφίλ δεν βρέθηκε")
+    if not can_manage_profile(user["role"], target["role"]) or not can_manage_profile(user["role"], body.role):
+        raise HTTPException(403, "Δεν επιτρέπεται η διαχείριση αυτού του προφίλ")
+    if target["role"] == "owner" and body.role != "owner":
+        owners = await db.profiles.count_documents({"user_id": user["id"], "role": "owner"})
+        if owners <= 1:
+            raise HTTPException(400, "Πρέπει να υπάρχει τουλάχιστον ένα προφίλ Ιδιοκτήτη")
+    update = {"name": body.name.strip(), "role": body.role}
+    if body.pin:
+        if not (body.pin.isdigit() and len(body.pin) == 4):
+            raise HTTPException(400, "Ο κωδικός πρέπει να είναι 4 ψηφία")
+        update["pin_hash"] = hash_password(body.pin)
+    await db.profiles.update_one({"id": pid, "user_id": user["id"]}, {"$set": update})
+    return {"id": pid, "name": update["name"], "role": update["role"]}
+
+
+@api.delete("/profiles/{pid}")
+async def delete_profile(pid: str, user: dict = Depends(require_manager)):
+    target = await db.profiles.find_one({"id": pid, "user_id": user["id"]})
+    if not target:
+        raise HTTPException(404, "Το προφίλ δεν βρέθηκε")
+    if not can_manage_profile(user["role"], target["role"]):
+        raise HTTPException(403, "Δεν επιτρέπεται η διαγραφή αυτού του προφίλ")
+    if target["role"] == "owner":
+        owners = await db.profiles.count_documents({"user_id": user["id"], "role": "owner"})
+        if owners <= 1:
+            raise HTTPException(400, "Δεν μπορεί να διαγραφεί το τελευταίο προφίλ Ιδιοκτήτη")
+    if target["id"] == user.get("profile_id"):
+        raise HTTPException(400, "Δεν μπορείτε να διαγράψετε το ενεργό σας προφίλ")
+    await db.profiles.delete_one({"id": pid, "user_id": user["id"]})
+    return {"ok": True}
 
 
 @api.post("/profile/select")
 async def profile_select(body: ProfileSelectIn, user: dict = Depends(get_current_user)):
     if not body.pin.isdigit():
         raise HTTPException(400, "Ο κωδικός πρέπει να είναι 4 ψηφία")
-    full = await db.users.find_one({"id": user["id"]})
-    pin_field = "owner_pin_hash" if body.profile == "owner" else "employee_pin_hash"
-    stored = full.get(pin_field)
-    if not stored or not verify_password(body.pin, stored):
+    prof = await db.profiles.find_one({"id": body.profile_id, "user_id": user["id"]})
+    if not prof:
+        raise HTTPException(404, "Το προφίλ δεν βρέθηκε")
+    if not verify_password(body.pin, prof.get("pin_hash", "")):
         raise HTTPException(401, "Λάθος κωδικός")
-    token = create_token(user["id"], user["email"], profile=body.profile)
-    return {"token": token, "profile": body.profile}
+    token = create_token(
+        user["id"], user["email"],
+        profile_id=prof["id"], role=prof["role"], profile_name=prof["name"],
+    )
+    return {"token": token, "profile": prof["role"], "profile_id": prof["id"], "profile_name": prof["name"]}
 
 
 @api.post("/profile/exit")
 async def profile_exit(user: dict = Depends(get_current_user)):
     """Return a token with profile cleared (used for 'Αλλαγή προφίλ')."""
-    token = create_token(user["id"], user["email"], profile=None)
+    token = create_token(user["id"], user["email"])
     return {"token": token, "profile": None}
-
-
-@api.put("/profile/pin")
-async def change_pin(body: ProfilePinIn, user: dict = Depends(require_owner)):
-    if not body.new_pin.isdigit():
-        raise HTTPException(400, "Ο κωδικός πρέπει να είναι 4 ψηφία")
-    field = "owner_pin_hash" if body.target == "owner" else "employee_pin_hash"
-    set_flag = "owner_pin_set" if body.target == "owner" else "employee_pin_set"
-    await db.users.update_one(
-        {"id": user["id"]},
-        {"$set": {field: hash_password(body.new_pin), set_flag: True}},
-    )
-    return {"ok": True, "target": body.target}
 
 
 # ============ OWNER PIN GATE (sensitive actions) ============
@@ -414,7 +565,7 @@ class PinVerifyIn(BaseModel):
 
 
 async def check_owner_pin(user_id: str, pin: str) -> dict:
-    """Verify the owner PIN with a 5-fail / 5-minute lockout, tracked per account."""
+    """Verify an owner/manager profile PIN with a 5-fail / 5-minute lockout, per account."""
     u = await db.users.find_one({"id": user_id})
     if not u:
         return {"ok": False, "attempts_left": 0}
@@ -427,7 +578,14 @@ async def check_owner_pin(user_id: str, pin: str) -> dict:
             lu = None
         if lu and lu > now:
             return {"ok": False, "locked_for": int((lu - now).total_seconds())}
-    if pin and verify_password(pin, u.get("owner_pin_hash", "")):
+    await ensure_profiles_migrated(user_id)
+    supervisors = await db.profiles.find(
+        {"user_id": user_id, "role": {"$in": ["owner", "manager"]}}
+    ).to_list(100)
+    matched = pin and any(
+        verify_password(pin, p.get("pin_hash", "")) for p in supervisors
+    )
+    if matched:
         await db.users.update_one(
             {"id": user_id}, {"$set": {"pin_fail_count": 0, "pin_lock_until": None}}
         )
@@ -452,14 +610,14 @@ async def verify_owner_pin(body: PinVerifyIn, user: dict = Depends(get_current_u
 
 
 async def require_owner_or_pin(user: dict, pin: Optional[str]):
-    """Allow the action for the owner profile, or for any profile with a valid owner PIN."""
-    if user.get("profile") == "owner":
+    """Owner/manager roles act directly; other roles need a valid owner/manager PIN."""
+    if user.get("role") in ("owner", "manager"):
         return
     res = await check_owner_pin(user["id"], pin or "")
     if not res.get("ok"):
         if res.get("locked_for"):
             raise HTTPException(423, f"Κλειδωμένο για {res['locked_for']} δευτερόλεπτα")
-        raise HTTPException(403, "Απαιτείται PIN ιδιοκτήτη")
+        raise HTTPException(403, "Απαιτείται PIN ιδιοκτήτη ή υπευθύνου")
 
 
 # ============ MENU ROUTES ============
@@ -494,7 +652,7 @@ class CategoryIn(BaseModel):
 
 
 @api.post("/menu/categories")
-async def create_category(body: CategoryIn, user: dict = Depends(require_owner)):
+async def create_category(body: CategoryIn, user: dict = Depends(require_manager)):
     # generate slug-ish id
     cid = str(uuid.uuid4())[:8]
     doc = {"id": cid, "name": body.name.strip(), "order": body.order, "user_id": user["id"]}
@@ -503,7 +661,7 @@ async def create_category(body: CategoryIn, user: dict = Depends(require_owner))
 
 
 @api.put("/menu/categories/{cid}")
-async def update_category(cid: str, body: CategoryIn, user: dict = Depends(get_current_user)):
+async def update_category(cid: str, body: CategoryIn, user: dict = Depends(require_manager)):
     r = await db.categories.update_one(
         {"id": cid, "user_id": user["id"]},
         {"$set": {"name": body.name.strip(), "order": body.order}},
@@ -514,7 +672,7 @@ async def update_category(cid: str, body: CategoryIn, user: dict = Depends(get_c
 
 
 @api.delete("/menu/categories/{cid}")
-async def delete_category(cid: str, user: dict = Depends(require_owner)):
+async def delete_category(cid: str, user: dict = Depends(require_manager)):
     await db.items.delete_many({"user_id": user["id"], "category": cid})
     r = await db.categories.delete_one({"id": cid, "user_id": user["id"]})
     if r.deleted_count == 0:
@@ -523,7 +681,7 @@ async def delete_category(cid: str, user: dict = Depends(require_owner)):
 
 
 @api.post("/menu/items")
-async def create_item(body: MenuItemIn, user: dict = Depends(require_owner)):
+async def create_item(body: MenuItemIn, user: dict = Depends(require_manager)):
     iid = str(uuid.uuid4())
     doc = {
         "id": iid,
@@ -545,7 +703,7 @@ async def create_item(body: MenuItemIn, user: dict = Depends(require_owner)):
 
 
 @api.put("/menu/items/{iid}")
-async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(require_owner)):
+async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(require_manager)):
     update = {
         "name": body.name.strip(),
         "price": float(body.price),
@@ -574,7 +732,7 @@ async def set_item_availability(iid: str, body: AvailabilityIn, user: dict = Dep
     return {"id": iid, "available": body.available, "unavailable_note": body.unavailable_note.strip()}
 
 @api.delete("/menu/items/{iid}")
-async def delete_item(iid: str, user: dict = Depends(require_owner)):
+async def delete_item(iid: str, user: dict = Depends(require_manager)):
     r = await db.items.delete_one({"id": iid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
@@ -603,7 +761,7 @@ class BulkItemsIn(BaseModel):
 
 
 @api.post("/menu/items/bulk")
-async def bulk_items(body: BulkItemsIn, user: dict = Depends(require_owner)):
+async def bulk_items(body: BulkItemsIn, user: dict = Depends(require_manager)):
     q = {"user_id": user["id"], "id": {"$in": body.ids}}
 
     if body.action == "delete":
@@ -684,7 +842,7 @@ async def bulk_items(body: BulkItemsIn, user: dict = Depends(require_owner)):
 
 
 @api.put("/menu/customization")
-async def update_customization(body: CustomizationConfig, user: dict = Depends(require_owner)):
+async def update_customization(body: CustomizationConfig, user: dict = Depends(require_manager)):
     payload = body.model_dump()
     await db.users.update_one(
         {"id": user["id"]},
@@ -708,7 +866,7 @@ async def list_photos(user: dict = Depends(get_current_user)):
 
 
 @api.post("/photos")
-async def create_photo(body: PhotoIn, user: dict = Depends(require_owner)):
+async def create_photo(body: PhotoIn, user: dict = Depends(require_manager)):
     if not body.data_url.startswith("data:image/"):
         raise HTTPException(400, "Δεν είναι εικόνα (data URL)")
     doc = {
@@ -724,7 +882,7 @@ async def create_photo(body: PhotoIn, user: dict = Depends(require_owner)):
 
 
 @api.delete("/photos/{pid}")
-async def delete_photo(pid: str, user: dict = Depends(require_owner)):
+async def delete_photo(pid: str, user: dict = Depends(require_manager)):
     r = await db.photos.delete_one({"id": pid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
@@ -761,10 +919,16 @@ async def create_order(body: OrderCreate, user: dict = Depends(get_current_user)
         "user_id": user["id"],
         "created_at": now.isoformat(),
         "status": "scheduled" if body.scheduled_at else "active",
+        "taken_by": {
+            "profile_id": user.get("profile_id"),
+            "name": actor_name(user),
+            "role": user.get("role"),
+        },
     })
     if doc.get("discount"):
         # audit trail: which profile applied the discount and when
-        doc["discount"]["applied_by"] = user.get("profile")
+        doc["discount"]["applied_by"] = actor_name(user)
+        doc["discount"]["applied_by_role"] = user.get("role")
         doc["discount"]["applied_at"] = now.isoformat()
     await db.orders.insert_one(doc)
     doc.pop("_id", None)
@@ -871,7 +1035,8 @@ async def cancel_order(
         {"id": oid, "user_id": user["id"]},
         {"$set": {
             "cancelled": True,
-            "cancelled_by": user.get("profile"),
+            "cancelled_by": actor_name(user),
+            "cancelled_by_role": user.get("role"),
             "cancelled_at": datetime.now(timezone.utc).isoformat(),
         }},
     )
@@ -1080,7 +1245,7 @@ async def stock_config(user: dict = Depends(get_current_user)):
 
 
 @api.post("/stock/categories")
-async def create_stock_category(body: StockCategoryIn, user: dict = Depends(require_owner)):
+async def create_stock_category(body: StockCategoryIn, user: dict = Depends(require_manager)):
     count = await db.stock_categories.count_documents({"user_id": user["id"]})
     doc = {
         "id": str(uuid.uuid4())[:8],
@@ -1093,7 +1258,7 @@ async def create_stock_category(body: StockCategoryIn, user: dict = Depends(requ
 
 
 @api.put("/stock/categories/{cid}")
-async def update_stock_category(cid: str, body: StockCategoryIn, user: dict = Depends(require_owner)):
+async def update_stock_category(cid: str, body: StockCategoryIn, user: dict = Depends(require_manager)):
     r = await db.stock_categories.update_one(
         {"id": cid, "user_id": user["id"]},
         {"$set": {"name": body.name.strip(), "order": body.order}},
@@ -1104,7 +1269,7 @@ async def update_stock_category(cid: str, body: StockCategoryIn, user: dict = De
 
 
 @api.delete("/stock/categories/{cid}")
-async def delete_stock_category(cid: str, user: dict = Depends(require_owner)):
+async def delete_stock_category(cid: str, user: dict = Depends(require_manager)):
     # cascade: remove shopping entries created from items in this category
     stock_ids = [
         d["id"] async for d in db.stock_items.find(
@@ -1121,7 +1286,7 @@ async def delete_stock_category(cid: str, user: dict = Depends(require_owner)):
 
 
 @api.post("/stock/items")
-async def create_stock_item(body: StockItemIn, user: dict = Depends(require_owner)):
+async def create_stock_item(body: StockItemIn, user: dict = Depends(require_manager)):
     cat = await db.stock_categories.find_one({"id": body.category_id, "user_id": user["id"]})
     if not cat:
         raise HTTPException(404, "Η κατηγορία δεν βρέθηκε")
@@ -1216,7 +1381,7 @@ async def toggle_stock_item_shopping(
 
 
 @api.delete("/stock/items/{iid}")
-async def delete_stock_item(iid: str, user: dict = Depends(require_owner)):
+async def delete_stock_item(iid: str, user: dict = Depends(require_manager)):
     item = await db.stock_items.find_one({"id": iid, "user_id": user["id"]}, {"_id": 0, "shopping_item_id": 1})
     if item and item.get("shopping_item_id"):
         await db.shopping.delete_one({"id": item["shopping_item_id"], "user_id": user["id"]})
@@ -1246,7 +1411,7 @@ async def reset_shopping(user: dict = Depends(get_current_user)):
 
 
 @api.post("/shopping")
-async def add_shopping(body: ShoppingItemIn, user: dict = Depends(require_owner)):
+async def add_shopping(body: ShoppingItemIn, user: dict = Depends(require_manager)):
     doc = {
         "id": str(uuid.uuid4()),
         "user_id": user["id"],
@@ -1264,7 +1429,7 @@ class ShoppingUpdateIn(BaseModel):
 
 
 @api.put("/shopping/{sid}")
-async def update_shopping(sid: str, body: ShoppingUpdateIn, user: dict = Depends(require_owner)):
+async def update_shopping(sid: str, body: ShoppingUpdateIn, user: dict = Depends(require_manager)):
     update = {}
     if body.text is not None:
         update["text"] = body.text.strip()
@@ -1279,7 +1444,7 @@ async def update_shopping(sid: str, body: ShoppingUpdateIn, user: dict = Depends
 
 
 @api.delete("/shopping/{sid}")
-async def delete_shopping(sid: str, user: dict = Depends(require_owner)):
+async def delete_shopping(sid: str, user: dict = Depends(require_manager)):
     r = await db.shopping.delete_one({"id": sid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
@@ -1305,7 +1470,7 @@ async def list_employees(user: dict = Depends(get_current_user)):
 
 
 @api.post("/employees")
-async def create_employee(body: EmployeeIn, user: dict = Depends(require_owner)):
+async def create_employee(body: EmployeeIn, user: dict = Depends(require_manager)):
     count = await db.employees.count_documents({"user_id": user["id"]})
     doc = {
         "id": str(uuid.uuid4()),
@@ -1318,7 +1483,7 @@ async def create_employee(body: EmployeeIn, user: dict = Depends(require_owner))
 
 
 @api.put("/employees/{eid}")
-async def update_employee(eid: str, body: EmployeeIn, user: dict = Depends(require_owner)):
+async def update_employee(eid: str, body: EmployeeIn, user: dict = Depends(require_manager)):
     r = await db.employees.update_one(
         {"id": eid, "user_id": user["id"]},
         {"$set": {"name": body.name.strip()}},
@@ -1329,7 +1494,7 @@ async def update_employee(eid: str, body: EmployeeIn, user: dict = Depends(requi
 
 
 @api.delete("/employees/{eid}")
-async def delete_employee(eid: str, user: dict = Depends(require_owner)):
+async def delete_employee(eid: str, user: dict = Depends(require_manager)):
     await db.shifts.delete_many({"user_id": user["id"], "employee_id": eid})
     r = await db.employees.delete_one({"id": eid, "user_id": user["id"]})
     if r.deleted_count == 0:
@@ -1356,7 +1521,7 @@ async def list_shifts(week_start: str, user: dict = Depends(get_current_user)):
 
 
 @api.put("/shifts")
-async def upsert_shift(body: ShiftIn, user: dict = Depends(require_owner)):
+async def upsert_shift(body: ShiftIn, user: dict = Depends(require_manager)):
     # ensure employee belongs to this user
     emp = await db.employees.find_one({"id": body.employee_id, "user_id": user["id"]})
     if not emp:
@@ -1381,7 +1546,7 @@ async def delete_shift(
     employee_id: str,
     week_start: str,
     day: int,
-    user: dict = Depends(require_owner),
+    user: dict = Depends(require_manager),
 ):
     r = await db.shifts.delete_one({
         "user_id": user["id"],
@@ -1640,7 +1805,7 @@ async def close_day(body: Optional[DayCloseIn] = None, user: dict = Depends(get_
 
 
 @api.get("/reports/day")
-async def list_day_reports(user: dict = Depends(require_owner)):
+async def list_day_reports(user: dict = Depends(require_manager)):
     return await db.day_reports.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
     ).sort("closed_at", -1).to_list(365)
@@ -1677,6 +1842,7 @@ async def on_startup():
     await db.expense_categories.create_index([("user_id", 1), ("order", 1)])
     await db.expenses.create_index([("user_id", 1), ("date", -1)])
     await db.day_reports.create_index([("user_id", 1), ("closed_at", -1)])
+    await db.profiles.create_index([("user_id", 1), ("created_at", 1)])
     await ensure_demo_account()
 
 

@@ -52,8 +52,8 @@ export function AuthProvider({ children }) {
     setUser(false);
   };
 
-  const selectProfile = async (profile, pin) => {
-    const { token } = await apiSelectProfile(profile, pin);
+  const selectProfile = async (profileId, pin) => {
+    const { token } = await apiSelectProfile(profileId, pin);
     setToken(token);
     const me = await apiMe();
     setUser(me);
@@ -74,9 +74,14 @@ export function AuthProvider({ children }) {
     return me;
   };
 
-  const isOwner = user && user !== false && user.profile === "owner";
-  const isEmployee = user && user !== false && user.profile === "employee";
-  const hasProfile = user && user !== false && !!user.profile;
+  const role = user && user !== false ? user.role || user.profile : null;
+  const isOwner = role === "owner";
+  const isManager = role === "manager";
+  const isEmployee = role === "employee";
+  const isWaiter = role === "waiter";
+  const canManage = isOwner || isManager; // owner + Υπεύθυνος
+  const profileName = user && user !== false ? user.profile_name : null;
+  const hasProfile = !!role;
 
   return (
     <AuthCtx.Provider
@@ -89,8 +94,13 @@ export function AuthProvider({ children }) {
         selectProfile,
         exitProfile,
         refreshMe,
+        role,
         isOwner,
+        isManager,
         isEmployee,
+        isWaiter,
+        canManage,
+        profileName,
         hasProfile,
       }}
     >

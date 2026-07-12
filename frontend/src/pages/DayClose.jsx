@@ -128,7 +128,7 @@ const SummaryRow = ({ icon: Icon, label, value, valueClass = "text-white", testI
 );
 
 export default function DayClose() {
-  const { user, isOwner } = useAuth();
+  const { user, canManage } = useAuth();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState(false);
@@ -149,7 +149,7 @@ export default function DayClose() {
   };
 
   const loadReports = async () => {
-    if (!isOwner) return;
+    if (!canManage) return;
     try {
       setReports(await apiListDayReports());
     } catch (e) {
@@ -333,7 +333,7 @@ export default function DayClose() {
         )}
 
         {/* Past reports (owner only) */}
-        {isOwner && (
+        {canManage && (
           <section className="mt-8 p-5 bg-[#1A1A1A] border border-[#333] rounded-lg" data-testid="dayclose-history">
             <h3 className="font-heading text-lg font-bold mb-4">Προηγούμενα κλεισίματα</h3>
             {reports.length === 0 ? (

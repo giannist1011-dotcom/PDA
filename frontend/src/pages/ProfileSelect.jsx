@@ -3,7 +3,8 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Crown, User as UserIcon, Delete, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { formatApiError } from "@/lib/api";
+import { apiListProfiles, formatApiError } from "@/lib/api";
+import { ROLE_LABELS, ROLE_COLORS } from "@/lib/roles";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"];
 
@@ -28,24 +29,28 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pin]);
 
-  const isOwner = profile === "owner";
-  const Icon = isOwner ? Crown : UserIcon;
-  const label = isOwner ? "Ιδιοκτήτης" : "Υπάλληλος";
+  const color = ROLE_COLORS[profile.role] || "#888";
+  const Icon = profile.role === "owner" ? Crown : UserIcon;
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center px-6 py-8">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div
-            className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-3 ${
-              isOwner ? "bg-[#FF6B00]" : "bg-[#00B0FF]"
-            }`}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3"
+            style={{ backgroundColor: color }}
           >
             <Icon className="w-8 h-8 text-white" />
           </div>
           <h1 className="font-heading text-3xl font-bold" data-testid="pin-profile-label">
-            {label}
+            {profile.name}
           </h1>
+          <div
+            className="mt-1 text-[11px] font-bold uppercase tracking-widest"
+            style={{ color }}
+          >
+            {ROLE_LABELS[profile.role] || profile.role}
+          </div>
           <p className="text-sm text-neutral-400 mt-2">Πληκτρολογήστε τον 4-ψήφιο κωδικό</p>
         </div>
 
@@ -113,8 +118,21 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
 export default function ProfileSelect() {
   const { user, hasProfile, selectProfile, logout } = useAuth();
   const navigate = useNavigate();
+  const [profiles, setProfiles] = useState(null); // null = loading
   const [chosen, setChosen] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!user || user === false) return;
+    (async () => {
+      try {
+        setProfiles(await apiListProfiles());
+      } catch (e) {
+        toast.error(formatApiError(e));
+        setProfiles([]);
+      }
+    })();
+  }, [user]);
 
   if (user === null) return null;
   if (user === false) return <Navigate to="/login" replace />;
@@ -123,11 +141,9 @@ export default function ProfileSelect() {
   const handleSubmit = async (pin) => {
     setBusy(true);
     try {
-      await selectProfile(chosen, pin);
-      toast.success(chosen === "owner" ? "Καλωσήρθατε Ιδιοκτήτη" : "Καλωσήρθατε");
+      await selectProfile(chosen.id, pin);
+      toast.success(`Καλωσήρθες, ${chosen.name}`);
       navigate("/");
-    } catch (err) {
-      throw err;
     } finally {
       setBusy(false);
     }
@@ -154,31 +170,45 @@ export default function ProfileSelect() {
           <h1 className="font-heading text-4xl md:text-5xl font-bold">Ποιος συνδέεται;</h1>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button
-            onClick={() => setChosen("owner")}
-            data-testid="profile-owner-card"
-            className="group flex flex-col items-center justify-center gap-4 p-10 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] rounded-2xl transition-all active:scale-[0.98]"
-          >
-            <div className="w-28 h-28 rounded-3xl bg-[#FF6B00] group-hover:scale-105 transition-transform flex items-center justify-center">
-              <Crown className="w-14 h-14 text-white" />
-            </div>
-            <div className="font-heading text-2xl font-bold">Ιδιοκτήτης</div>
-            <div className="text-sm text-neutral-400 text-center">Πλήρη πρόσβαση</div>
-          </button>
-
-          <button
-            onClick={() => setChosen("employee")}
-            data-testid="profile-employee-card"
-            className="group flex flex-col items-center justify-center gap-4 p-10 bg-[#1A1A1A] border border-[#333] hover:border-[#00B0FF] rounded-2xl transition-all active:scale-[0.98]"
-          >
-            <div className="w-28 h-28 rounded-3xl bg-[#00B0FF] group-hover:scale-105 transition-transform flex items-center justify-center">
-              <UserIcon className="w-14 h-14 text-white" />
-            </div>
-            <div className="font-heading text-2xl font-bold">Υπάλληλος</div>
-            <div className="text-sm text-neutral-400 text-center">Παραγγελίες & πρόγραμμα</div>
-          </button>
-        </div>
+        {profiles === null ? (
+          <div className="text-center text-neutral-500 py-12">Φόρτωση προφίλ...</div>
+        ) : profiles.length === 0 ? (
+          <div className="text-center text-neutral-500 py-12">
+            Δεν υπάρχουν προφίλ σε αυτόν τον λογαριασμό
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {profiles.map((p) => {
+              const color = ROLE_COLORS[p.role] || "#888";
+              const Icon = p.role === "owner" ? Crown : UserIcon;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setChosen(p)}
+                  data-testid={`profile-card-${p.id}`}
+                  className="group flex flex-col items-center justify-center gap-3 p-6 bg-[#1A1A1A] border border-[#333] rounded-2xl transition-all active:scale-[0.98] hover:border-[var(--pc)]"
+                  style={{ "--pc": color }}
+                >
+                  <div
+                    className="w-20 h-20 rounded-2xl group-hover:scale-105 transition-transform flex items-center justify-center"
+                    style={{ backgroundColor: color }}
+                  >
+                    <Icon className="w-10 h-10 text-white" />
+                  </div>
+                  <div className="font-heading text-xl font-bold truncate max-w-full">
+                    {p.name}
+                  </div>
+                  <span
+                    className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest"
+                    style={{ backgroundColor: `${color}26`, color }}
+                  >
+                    {ROLE_LABELS[p.role] || p.role}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <div className="text-center mt-10">
           <button
@@ -193,10 +223,10 @@ export default function ProfileSelect() {
           </button>
         </div>
 
-        {(!user.owner_pin_set || !user.employee_pin_set) && (
+        {user && (!user.owner_pin_set || !user.employee_pin_set) && (
           <div className="mt-6 text-center text-xs text-neutral-500">
-            Προεπιλεγμένοι κωδικοί: <span className="font-mono text-neutral-300">0000</span>. Αλλάξτε
-            τους από τις Ρυθμίσεις.
+            Αρχικός κωδικός προφίλ: <span className="font-mono text-neutral-300">0000</span>. Αλλάξτε
+            τον από τις Ρυθμίσεις.
           </div>
         )}
       </div>

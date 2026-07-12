@@ -242,8 +242,8 @@ async function copyToClipboard(text) {
 }
 
 export default function Schedule() {
-  const { user, isOwner } = useAuth();
-  const readOnly = !isOwner;
+  const { user, canManage } = useAuth();
+  const readOnly = !canManage;
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [weekStart, setWeekStart] = useState(isoDate(mondayOf(new Date())));

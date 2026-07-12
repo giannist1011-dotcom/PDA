@@ -261,7 +261,7 @@ function ScheduledOrdersModal({ open, orders, onClose, onPrintNow, onCancel }) {
 }
 
 export default function PDA() {
-  const { user, isOwner } = useAuth();
+  const { user, canManage } = useAuth();
   const [config, setConfig] = useState({ categories: [], items: [], customization: null });
   const [activeCategory, setActiveCategory] = useState(null);
   const [orderNumber, setOrderNumber] = useState(0);
@@ -292,7 +292,7 @@ export default function PDA() {
       : Math.min(discount.value, subtotal);
 
   const handleDiscountClick = () => {
-    if (isOwner) setDiscountOpen(true);
+    if (canManage) setDiscountOpen(true);
     else setPinGateOpen(true); // employee: owner PIN required
   };
 
@@ -644,7 +644,7 @@ export default function PDA() {
       />
       <PinGateModal
         open={pinGateOpen}
-        title="Απαιτείται PIN ιδιοκτήτη για έκπτωση"
+        title="Απαιτείται PIN ιδιοκτήτη/υπευθύνου για έκπτωση"
         onClose={() => setPinGateOpen(false)}
         onSuccess={() => {
           setPinGateOpen(false);

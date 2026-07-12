@@ -80,7 +80,7 @@ export default function PinGateModal({ open, title, onClose, onSuccess }) {
         <div className="flex items-start justify-between mb-1">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-[#FF6B00]" />
-            <h3 className="font-heading text-lg font-bold">PIN ιδιοκτήτη</h3>
+            <h3 className="font-heading text-lg font-bold">PIN ιδιοκτήτη/υπευθύνου</h3>
           </div>
           <button
             onClick={onClose}

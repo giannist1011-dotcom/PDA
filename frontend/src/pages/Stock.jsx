@@ -290,7 +290,7 @@ function escapeHtml(s) {
 
 // ---------- Main page ----------
 export default function Stock() {
-  const { user, isOwner } = useAuth();
+  const { user, canManage } = useAuth();
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [shopping, setShopping] = useState([]);
@@ -505,7 +505,7 @@ export default function Stock() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {isOwner && (
+                {canManage && (
                   <>
                     <Button
                       onClick={() => setCatModal({ open: true, editing: null })}
@@ -578,7 +578,7 @@ export default function Stock() {
                     >
                       {c.name} ({count})
                     </button>
-                    {isOwner && (
+                    {canManage && (
                       <div className="hidden group-hover:flex items-center gap-0.5">
                         <button
                           onClick={() => setCatModal({ open: true, editing: c })}
@@ -609,7 +609,7 @@ export default function Stock() {
               <div className="text-neutral-500 py-12 text-center border border-dashed border-[#333] rounded-lg">
                 <Package className="w-8 h-8 mx-auto mb-3 opacity-50" />
                 <div className="mb-2">Δεν έχετε δημιουργήσει κατηγορίες αποθέματος</div>
-                {isOwner && (
+                {canManage && (
                   <button
                     onClick={() => setCatModal({ open: true, editing: null })}
                     className="text-[#FF6B00] font-bold hover:underline"
@@ -631,7 +631,7 @@ export default function Stock() {
                     item={it}
                     onToggleNeed={handleToggleNeed}
                     onDelete={handleDeleteItem}
-                    canEdit={isOwner}
+                    canEdit={canManage}
                   />
                 ))}
               </div>
@@ -656,7 +656,7 @@ export default function Stock() {
                 Εκτύπωση
               </button>
             </div>
-            {isOwner ? (
+            {canManage ? (
               <form onSubmit={addShopItem} className="flex gap-2 mb-4">
                 <input
                   value={shopText}
@@ -692,8 +692,8 @@ export default function Stock() {
                     className="flex items-center gap-3 p-3 bg-[#0D0D0D] border border-[#333] rounded-md group"
                   >
                     <button
-                      onClick={() => (isOwner ? toggleShopBought(s) : null)}
-                      disabled={!isOwner}
+                      onClick={() => (canManage ? toggleShopBought(s) : null)}
+                      disabled={!canManage}
                       data-testid={`shopping-check-${s.id}`}
                       className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 disabled:cursor-not-allowed ${
                         s.bought
@@ -719,7 +719,7 @@ export default function Stock() {
                         Αποθ.
                       </span>
                     )}
-                    {isOwner && (
+                    {canManage && (
                       <button
                         onClick={() => removeShop(s)}
                         data-testid={`shopping-delete-${s.id}`}
