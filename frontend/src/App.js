@@ -15,6 +15,7 @@ import Settings from "@/pages/Settings";
 import Photos from "@/pages/Photos";
 import Expenses from "@/pages/Expenses";
 import History from "@/pages/History";
+import DayClose from "@/pages/DayClose";
 
 function App() {
   return (
@@ -46,6 +47,14 @@ function App() {
               element={
                 <ProtectedRoute requireOwner>
                   <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/day-close"
+              element={
+                <ProtectedRoute>
+                  <DayClose />
                 </ProtectedRoute>
               }
             />

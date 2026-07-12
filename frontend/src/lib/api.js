@@ -107,6 +107,13 @@ export const apiActivateOrder = (id) =>
 // CUSTOMERS
 export const apiListCustomers = () => api.get("/customers").then((r) => r.data);
 
+// DAY CLOSE (Z-REPORT)
+export const apiDaySummary = (date) =>
+  api.get("/reports/day-summary", { params: date ? { date } : {} }).then((r) => r.data);
+export const apiCloseDay = (date) =>
+  api.post("/reports/day-close", { date: date || null }).then((r) => r.data);
+export const apiListDayReports = () => api.get("/reports/day").then((r) => r.data);
+
 // ANALYTICS
 export const fetchAnalytics = (dateFrom, dateTo) =>
   api.get("/analytics", { params: { date_from: dateFrom, date_to: dateTo } }).then((r) => r.data);
