@@ -20,6 +20,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
 from seed_data import DEFAULT_CATEGORIES, DEFAULT_CUSTOMIZATION, DEFAULT_ITEMS
+from presets import PRESETS, DEFAULT_TABLE_NAMES
 
 logger = logging.getLogger("peinokio")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -133,6 +134,7 @@ def public_user(u: dict) -> dict:
         "owner_pin_set": bool(u.get("owner_pin_set", False)),
         "employee_pin_set": bool(u.get("employee_pin_set", False)),
         "tables_enabled": bool(u.get("tables_enabled", False)),
+        "business_type": u.get("business_type") or "souvlaki",
     }
 
 
@@ -141,6 +143,14 @@ class RegisterIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=4)
     restaurant_name: str = Field(min_length=1, max_length=80)
+    full_name: str = Field(default="", max_length=80)
+    phone: str = Field(default="", max_length=20)
+    city: str = Field(default="", max_length=60)
+    website: str = Field(default="", max_length=120)
+    business_type: Literal["souvlaki", "cafe", "pizzeria", "burger"] = "souvlaki"
+    has_tables: bool = False
+    has_waiters: bool = False
+    owner_pin: Optional[str] = None  # 4 digits — the wizard always sends it
 
 
 class LoginIn(BaseModel):
@@ -311,15 +321,16 @@ class Order(OrderCreate):
 
 
 # ============ SEEDING ============
-async def seed_user_menu(user_id: str):
+async def seed_user_menu(user_id: str, preset: Optional[dict] = None):
     """Create default categories, customization config and menu items for a user."""
     # customization config on user document already; here we insert items & categories.
+    preset = preset or PRESETS["souvlaki"]
     await db.categories.insert_many([
         {"id": c["id"], "name": c["name"], "order": c["order"], "user_id": user_id}
-        for c in DEFAULT_CATEGORIES
+        for c in preset["categories"]
     ])
     docs = []
-    for it in DEFAULT_ITEMS:
+    for it in preset["items"]:
         docs.append({
             "id": str(uuid.uuid4()),
             "user_id": user_id,
@@ -328,10 +339,28 @@ async def seed_user_menu(user_id: str):
             "category": it["category"],
             "customizable": it.get("customizable", False),
             "double_meat_eligible": it.get("double_meat_eligible", False),
+            "option_groups": it.get("option_groups", []),
+            "photo_id": None,
             "available": True,
             "unavailable_note": "",
         })
     await db.items.insert_many(docs)
+
+
+async def seed_account_from_preset(user_id: str, preset: dict, has_tables: bool):
+    """Menu, stock categories and default tables for a freshly registered account."""
+    await seed_user_menu(user_id, preset)
+    stock_names = preset.get("stock_categories") or []
+    if stock_names:
+        await db.stock_categories.insert_many([
+            {"id": str(uuid.uuid4())[:8], "user_id": user_id, "name": n, "order": i}
+            for i, n in enumerate(stock_names)
+        ])
+    if has_tables:
+        await db.tables.insert_many([
+            {"id": str(uuid.uuid4())[:8], "user_id": user_id, "name": n, "order": i}
+            for i, n in enumerate(DEFAULT_TABLE_NAMES)
+        ])
 
 
 async def ensure_demo_account():
@@ -381,22 +410,62 @@ async def register(body: RegisterIn):
     email = body.email.lower()
     if await db.users.find_one({"email": email}):
         raise HTTPException(400, "Το email χρησιμοποιείται ήδη")
+    if body.owner_pin is not None and not (body.owner_pin.isdigit() and len(body.owner_pin) == 4):
+        raise HTTPException(400, "Το PIN ιδιοκτήτη πρέπει να είναι 4 ψηφία")
+    preset = PRESETS.get(body.business_type, PRESETS["souvlaki"])
+    owner_pin = body.owner_pin or "0000"
+    now = datetime.now(timezone.utc).isoformat()
     uid = str(uuid.uuid4())
     doc = {
         "id": uid,
         "email": email,
         "password_hash": hash_password(body.password),
         "restaurant_name": body.restaurant_name.strip(),
-        "customization": DEFAULT_CUSTOMIZATION,
-        "owner_pin_hash": hash_password("0000"),
+        "full_name": body.full_name.strip(),
+        "phone": body.phone.strip(),
+        "city": body.city.strip(),
+        "website": body.website.strip(),
+        "business_type": body.business_type,
+        "tables_enabled": bool(body.has_tables),
+        "customization": preset["customization"],
+        "owner_pin_hash": hash_password(owner_pin),
         "employee_pin_hash": hash_password("0000"),
-        "owner_pin_set": False,
+        "owner_pin_set": bool(body.owner_pin),
         "employee_pin_set": False,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": now,
     }
     await db.users.insert_one(doc)
-    # Seed starter menu (Πεινώκιο template) for convenience
-    await seed_user_menu(uid)
+    # Seed menu + stock categories + default tables from the chosen preset
+    await seed_account_from_preset(uid, preset, body.has_tables)
+    # Profiles: owner with the chosen PIN, a default employee, waiter if requested
+    profiles = [
+        {
+            "id": str(uuid.uuid4())[:8],
+            "user_id": uid,
+            "name": "Ιδιοκτήτης",
+            "role": "owner",
+            "pin_hash": hash_password(owner_pin),
+            "created_at": now,
+        },
+        {
+            "id": str(uuid.uuid4())[:8],
+            "user_id": uid,
+            "name": "Υπάλληλος",
+            "role": "employee",
+            "pin_hash": hash_password("0000"),
+            "created_at": now,
+        },
+    ]
+    if body.has_waiters:
+        profiles.append({
+            "id": str(uuid.uuid4())[:8],
+            "user_id": uid,
+            "name": "Σερβιτόρος",
+            "role": "waiter",
+            "pin_hash": hash_password("0000"),
+            "created_at": now,
+        })
+    await db.profiles.insert_many(profiles)
     token = create_token(uid, email)
     return {"token": token, "user": public_user(doc)}
 
@@ -1847,6 +1916,18 @@ def tab_total(tab: dict) -> float:
         ),
         2,
     )
+
+
+class BusinessTypeIn(BaseModel):
+    business_type: Literal["souvlaki", "cafe", "pizzeria", "burger"]
+
+
+@api.put("/settings/business")
+async def update_business_type(body: BusinessTypeIn, user: dict = Depends(require_owner)):
+    await db.users.update_one(
+        {"id": user["id"]}, {"$set": {"business_type": body.business_type}}
+    )
+    return {"business_type": body.business_type}
 
 
 @api.put("/settings/tables")

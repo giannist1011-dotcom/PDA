@@ -167,7 +167,13 @@ function GroupsOptions({ groups, selections, setSelections }) {
                 key={opt.name}
                 selected={selected}
                 label={opt.name}
-                badge={opt.price > 0 ? `+${eur(opt.price)}` : null}
+                badge={
+                  opt.price > 0
+                    ? g.price_mode === "replace"
+                      ? eur(opt.price)
+                      : `+${eur(opt.price)}`
+                    : null
+                }
                 testId={`opt-${g.id}-${opt.name}`}
                 onClick={() => toggleChoice(gi, opt)}
               />
@@ -231,6 +237,7 @@ export default function CustomizationModal({
 
   const doubleMeatPrice = config?.double_meat_price ?? 0;
   const priceOf = (list, name) => list.find((o) => o.name === name)?.price || 0;
+  let basePrice = Number(item.price);
   let extra = 0;
   if (legacyMode) {
     extra += priceOf(breadOptions, state.bread);
@@ -240,10 +247,15 @@ export default function CustomizationModal({
   } else {
     for (const g of groups) {
       const list = selections[g.id] || [];
-      for (const c of list) extra += Number(c.price || 0);
+      if (g.price_mode === "replace" && list.length > 0) {
+        // e.g. pizza sizes: the chosen option's price REPLACES the base price
+        basePrice = Number(list[0].price || 0);
+      } else {
+        for (const c of list) extra += Number(c.price || 0);
+      }
     }
   }
-  const finalPrice = Number(item.price) + extra;
+  const finalPrice = basePrice + extra;
 
   const missingRequired = !legacyMode
     ? groups.some((g) => g.required && (selections[g.id] || []).length === 0)

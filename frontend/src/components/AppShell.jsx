@@ -6,7 +6,6 @@ import {
   ShoppingCart,
   BarChart3,
   Settings as SettingsIcon,
-  Utensils,
   Calendar,
   LogOut,
   ClipboardList,
@@ -22,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS } from "@/lib/roles";
+import { businessIcon } from "@/lib/business";
 
 // Full nav list. Each entry lists the roles that can see it.
 const ALL_ROLES = ["owner", "manager", "employee", "waiter"];
@@ -70,6 +70,7 @@ export default function AppShell({ title, children }) {
     return n;
   });
 
+  const BizIcon = businessIcon(user && user !== false ? user.business_type : null);
   const roleColor = ROLE_COLORS[role] || "#888";
   const profileBadge = role ? (
     <span
@@ -95,8 +96,11 @@ export default function AppShell({ title, children }) {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-[#FF6B00] flex items-center justify-center">
-              <Utensils className="w-5 h-5 text-white" />
+            <div
+              className="w-9 h-9 rounded-md bg-[#FF6B00] flex items-center justify-center"
+              data-testid="business-icon"
+            >
+              <BizIcon className="w-5 h-5 text-white" />
             </div>
             <div className="flex items-baseline gap-2 flex-wrap">
               <span
@@ -132,7 +136,7 @@ export default function AppShell({ title, children }) {
             <div className="flex items-center justify-between px-5 h-16 border-b border-[#333]">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-md bg-[#FF6B00] flex items-center justify-center">
-                  <Utensils className="w-5 h-5 text-white" />
+                  <BizIcon className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <div className="font-heading text-lg font-bold leading-tight">

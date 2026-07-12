@@ -1,12 +1,63 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, LayoutGrid } from "lucide-react";
+import { Users, LayoutGrid, Store } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ProfilesManager from "@/components/ProfilesManager";
 import TablesEditor from "@/components/TablesEditor";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
-import { apiTablesState, apiToggleTables, formatApiError } from "@/lib/api";
+import {
+  apiTablesState,
+  apiToggleTables,
+  apiUpdateBusinessType,
+  formatApiError,
+} from "@/lib/api";
+import { BUSINESS_TYPES } from "@/lib/business";
+
+function BusinessTypeSettings() {
+  const { user, refreshMe } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const current = user && user !== false ? user.business_type : "souvlaki";
+
+  const change = async (key) => {
+    if (key === current || saving) return;
+    setSaving(true);
+    try {
+      await apiUpdateBusinessType(key);
+      await refreshMe(); // header icon updates
+      toast.success("Ο τύπος επιχείρησης άλλαξε");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      {BUSINESS_TYPES.map((b) => {
+        const Icon = b.icon;
+        const active = current === b.key;
+        return (
+          <button
+            key={b.key}
+            onClick={() => change(b.key)}
+            disabled={saving}
+            data-testid={`biz-type-${b.key}`}
+            className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all active:scale-[0.98] ${
+              active
+                ? "bg-[#FF6B00]/10 border-[#FF6B00] text-white"
+                : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+            }`}
+          >
+            <Icon className={`w-7 h-7 ${active ? "text-[#FF6B00]" : "text-neutral-400"}`} />
+            <span className="text-sm font-bold">{b.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function TablesSettings() {
   const { refreshMe } = useAuth();
@@ -70,6 +121,21 @@ export default function Settings() {
   return (
     <AppShell title="Ρυθμίσεις">
       <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-[900px] mx-auto w-full space-y-8">
+        <section>
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Store className="w-6 h-6 text-[#FF6B00]" />
+              <h2 className="font-heading text-2xl font-bold">Τύπος επιχείρησης</h2>
+            </div>
+            <p className="text-sm text-neutral-400">
+              Καθορίζει το εικονίδιο της επιχείρησης στο header
+            </p>
+          </div>
+          <div className="p-6 bg-[#1A1A1A] border border-[#333] rounded-lg">
+            <BusinessTypeSettings />
+          </div>
+        </section>
+
         <section>
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-1">
