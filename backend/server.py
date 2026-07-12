@@ -223,6 +223,15 @@ class DeliveryInfo(BaseModel):
     floor: Optional[str] = None
 
 
+class DiscountInfo(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    type: Literal["percent", "amount"]
+    value: float = Field(ge=0)   # 10 (%) or 2.50 (€)
+    amount: float = Field(ge=0)  # computed € discount
+    applied_by: Optional[str] = None  # profile — set server-side
+    applied_at: Optional[str] = None
+
+
 class OrderCreate(BaseModel):
     order_number: int
     items: List[OrderItem]
@@ -232,6 +241,7 @@ class OrderCreate(BaseModel):
     note: Optional[str] = None
     delivery: Optional[DeliveryInfo] = None
     scheduled_at: Optional[str] = None  # ISO datetime — order fires later
+    discount: Optional[DiscountInfo] = None
 
 
 class Order(OrderCreate):
@@ -240,6 +250,8 @@ class Order(OrderCreate):
     created_at: datetime
     cancelled: bool = False
     status: Literal["active", "scheduled"] = "active"
+    cancelled_by: Optional[str] = None
+    cancelled_at: Optional[str] = None
 
 
 # ============ SEEDING ============
@@ -390,6 +402,64 @@ async def change_pin(body: ProfilePinIn, user: dict = Depends(require_owner)):
         {"$set": {field: hash_password(body.new_pin), set_flag: True}},
     )
     return {"ok": True, "target": body.target}
+
+
+# ============ OWNER PIN GATE (sensitive actions) ============
+PIN_MAX_FAILS = 5
+PIN_LOCK_SECONDS = 300  # 5 minutes
+
+
+class PinVerifyIn(BaseModel):
+    pin: str = Field(min_length=1, max_length=20)
+
+
+async def check_owner_pin(user_id: str, pin: str) -> dict:
+    """Verify the owner PIN with a 5-fail / 5-minute lockout, tracked per account."""
+    u = await db.users.find_one({"id": user_id})
+    if not u:
+        return {"ok": False, "attempts_left": 0}
+    now = datetime.now(timezone.utc)
+    lock_until = u.get("pin_lock_until")
+    if lock_until:
+        try:
+            lu = datetime.fromisoformat(lock_until)
+        except (ValueError, TypeError):
+            lu = None
+        if lu and lu > now:
+            return {"ok": False, "locked_for": int((lu - now).total_seconds())}
+    if pin and verify_password(pin, u.get("owner_pin_hash", "")):
+        await db.users.update_one(
+            {"id": user_id}, {"$set": {"pin_fail_count": 0, "pin_lock_until": None}}
+        )
+        return {"ok": True}
+    fails = int(u.get("pin_fail_count") or 0) + 1
+    if fails >= PIN_MAX_FAILS:
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "pin_fail_count": 0,
+                "pin_lock_until": (now + timedelta(seconds=PIN_LOCK_SECONDS)).isoformat(),
+            }},
+        )
+        return {"ok": False, "locked_for": PIN_LOCK_SECONDS}
+    await db.users.update_one({"id": user_id}, {"$set": {"pin_fail_count": fails}})
+    return {"ok": False, "attempts_left": PIN_MAX_FAILS - fails}
+
+
+@api.post("/auth/verify-owner-pin")
+async def verify_owner_pin(body: PinVerifyIn, user: dict = Depends(get_current_user)):
+    return await check_owner_pin(user["id"], body.pin)
+
+
+async def require_owner_or_pin(user: dict, pin: Optional[str]):
+    """Allow the action for the owner profile, or for any profile with a valid owner PIN."""
+    if user.get("profile") == "owner":
+        return
+    res = await check_owner_pin(user["id"], pin or "")
+    if not res.get("ok"):
+        if res.get("locked_for"):
+            raise HTTPException(423, f"Κλειδωμένο για {res['locked_for']} δευτερόλεπτα")
+        raise HTTPException(403, "Απαιτείται PIN ιδιοκτήτη")
 
 
 # ============ MENU ROUTES ============
@@ -692,6 +762,10 @@ async def create_order(body: OrderCreate, user: dict = Depends(get_current_user)
         "created_at": now.isoformat(),
         "status": "scheduled" if body.scheduled_at else "active",
     })
+    if doc.get("discount"):
+        # audit trail: which profile applied the discount and when
+        doc["discount"]["applied_by"] = user.get("profile")
+        doc["discount"]["applied_at"] = now.isoformat()
     await db.orders.insert_one(doc)
     doc.pop("_id", None)
     doc["created_at"] = now
@@ -776,22 +850,41 @@ async def activate_order(oid: str, user: dict = Depends(get_current_user)):
     return doc
 
 
+class CancelOrderIn(BaseModel):
+    pin: Optional[str] = None
+
+
 @api.post("/orders/{oid}/cancel")
-async def cancel_order(oid: str, user: dict = Depends(get_current_user)):
+async def cancel_order(
+    oid: str,
+    body: Optional[CancelOrderIn] = None,
+    user: dict = Depends(get_current_user),
+):
     order = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0, "status": 1})
     if not order:
         raise HTTPException(404, "Not found")
-    # scheduled orders may be cancelled by any profile; fired orders only by the owner
-    if order.get("status") != "scheduled" and user.get("profile") != "owner":
-        raise HTTPException(403, "Απαιτείται πρόσβαση ιδιοκτήτη")
+    # scheduled orders may be cancelled by any profile;
+    # fired orders need the owner profile or a valid owner PIN
+    if order.get("status") != "scheduled":
+        await require_owner_or_pin(user, body.pin if body else None)
     await db.orders.update_one(
-        {"id": oid, "user_id": user["id"]}, {"$set": {"cancelled": True}}
+        {"id": oid, "user_id": user["id"]},
+        {"$set": {
+            "cancelled": True,
+            "cancelled_by": user.get("profile"),
+            "cancelled_at": datetime.now(timezone.utc).isoformat(),
+        }},
     )
     return {"ok": True, "id": oid, "cancelled": True}
 
 
 @api.delete("/orders/{oid}")
-async def delete_order(oid: str, user: dict = Depends(require_owner)):
+async def delete_order(
+    oid: str,
+    pin: Optional[str] = None,
+    user: dict = Depends(get_current_user),
+):
+    await require_owner_or_pin(user, pin)
     r = await db.orders.delete_one({"id": oid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")

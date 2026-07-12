@@ -93,10 +93,12 @@ export const submitOrder = (payload) => api.post("/orders", payload).then((r) =>
 export const fetchOrders = (params) =>
   api.get("/orders", { params }).then((r) => r.data);
 export const apiGetOrder = (id) => api.get(`/orders/${id}`).then((r) => r.data);
-export const apiCancelOrder = (id) =>
-  api.post(`/orders/${id}/cancel`).then((r) => r.data);
-export const apiDeleteOrder = (id) =>
-  api.delete(`/orders/${id}`).then((r) => r.data);
+export const apiCancelOrder = (id, pin = null) =>
+  api.post(`/orders/${id}/cancel`, { pin }).then((r) => r.data);
+export const apiDeleteOrder = (id, pin = null) =>
+  api.delete(`/orders/${id}`, { params: pin ? { pin } : {} }).then((r) => r.data);
+export const apiVerifyOwnerPin = (pin) =>
+  api.post("/auth/verify-owner-pin", { pin }).then((r) => r.data);
 export const apiListScheduledOrders = () =>
   api.get("/orders/scheduled").then((r) => r.data);
 export const apiActivateOrder = (id) =>

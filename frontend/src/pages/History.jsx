@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import Receipt from "@/components/Receipt";
+import PinGateModal from "@/components/PinGateModal";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { ORDER_SOURCES } from "@/data/menu";
@@ -67,6 +68,9 @@ const ScheduledBadge = ({ order }) => {
     </span>
   );
 };
+
+const profileLabel = (p) =>
+  p === "owner" ? "Ιδιοκτήτης" : p === "employee" ? "Υπάλληλος" : p || "—";
 
 const typeLabel = (order) => {
   const t = order.delivery?.delivery_type;
@@ -176,30 +180,70 @@ function OrderDetailModal({ order, isOwner, onClose, onReprint, onCancel, onDele
             </ul>
           </div>
 
-          <div className="flex justify-between items-center p-3 bg-[#0D0D0D] border border-[#FF6B00]/40 rounded-md">
-            <span className="text-xs font-bold uppercase tracking-widest text-neutral-400">
-              Σύνολο
-            </span>
-            <span className="font-mono text-xl font-bold text-[#FF6B00]">
-              {eur(order.total)}
-            </span>
+          <div className="p-3 bg-[#0D0D0D] border border-[#FF6B00]/40 rounded-md space-y-1">
+            {order.discount?.amount > 0 && (
+              <>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs uppercase tracking-widest text-neutral-500">
+                    Υποσύνολο
+                  </span>
+                  <span className="font-mono text-sm text-neutral-400">{eur(order.subtotal)}</span>
+                </div>
+                <div className="flex justify-between items-center" data-testid="order-detail-discount">
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#00E676]">
+                    Έκπτωση{order.discount.type === "percent" ? ` ${order.discount.value}%` : ""}
+                  </span>
+                  <span className="font-mono text-sm font-bold text-[#00E676]">
+                    -{eur(order.discount.amount)}
+                  </span>
+                </div>
+              </>
+            )}
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                Σύνολο
+              </span>
+              <span className="font-mono text-xl font-bold text-[#FF6B00]">
+                {eur(order.total)}
+              </span>
+            </div>
           </div>
+
+          {(order.discount?.applied_by || order.cancelled_by) && (
+            <div className="p-3 bg-[#0D0D0D] border border-[#333] rounded-md space-y-1 text-xs text-neutral-400" data-testid="order-audit">
+              <div className="font-bold uppercase tracking-widest text-neutral-500 mb-1">
+                Καταγραφή ενεργειών
+              </div>
+              {order.discount?.applied_by && (
+                <div>
+                  Έκπτωση από: <span className="text-white">{profileLabel(order.discount.applied_by)}</span>
+                  {order.discount.applied_at ? ` · ${formatGRDateTime(order.discount.applied_at)}` : ""}
+                </div>
+              )}
+              {order.cancelled_by && (
+                <div>
+                  Ακύρωση από: <span className="text-[#FF6961]">{profileLabel(order.cancelled_by)}</span>
+                  {order.cancelled_at ? ` · ${formatGRDateTime(order.cancelled_at)}` : ""}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="p-5 border-t border-[#222] flex flex-wrap gap-2 justify-end">
-          {isOwner && (
-            <Button
-              onClick={() => onDelete(order)}
-              data-testid="order-delete-btn"
-              className="h-11 bg-[#FF3B30] hover:bg-[#FF5A50] text-white font-bold mr-auto"
-            >
-              <Trash2 className="w-4 h-4 mr-2" /> Διαγραφή
-            </Button>
-          )}
-          {isOwner && !order.cancelled && (
+          <Button
+            onClick={() => onDelete(order)}
+            data-testid="order-delete-btn"
+            title={isOwner ? "" : "Απαιτείται PIN ιδιοκτήτη"}
+            className="h-11 bg-[#FF3B30] hover:bg-[#FF5A50] text-white font-bold mr-auto"
+          >
+            <Trash2 className="w-4 h-4 mr-2" /> Διαγραφή
+          </Button>
+          {!order.cancelled && (
             <Button
               onClick={() => onCancel(order)}
               data-testid="order-cancel-btn"
+              title={isOwner ? "" : "Απαιτείται PIN ιδιοκτήτη"}
               className="h-11 bg-transparent border border-[#FF3B30]/50 text-[#FF6961] hover:bg-[#FF3B30]/10 hover:border-[#FF3B30]"
             >
               <Ban className="w-4 h-4 mr-2" /> Ακύρωση
@@ -384,12 +428,12 @@ export default function History() {
     setTimeout(() => window.print(), 100);
   };
 
-  const handleCancelOrder = async (order) => {
-    if (!window.confirm(`Ακύρωση παραγγελίας #${String(order.order_number).padStart(3, "0")}; Θα εξαιρεθεί από τα στατιστικά.`)) {
-      return;
-    }
+  // PIN gate state for employee-initiated cancel/delete
+  const [pinGate, setPinGate] = useState(null); // {action: "cancel"|"delete", order}
+
+  const doCancelOrder = async (order, pin = null) => {
     try {
-      await apiCancelOrder(order.id);
+      await apiCancelOrder(order.id, pin);
       setOrders((p) => p.map((o) => (o.id === order.id ? { ...o, cancelled: true } : o)));
       setSelectedOrder((s) => (s && s.id === order.id ? { ...s, cancelled: true } : s));
       toast.success("Η παραγγελία ακυρώθηκε");
@@ -398,12 +442,9 @@ export default function History() {
     }
   };
 
-  const handleDeleteOrder = async (order) => {
-    if (!window.confirm(`Οριστική διαγραφή παραγγελίας #${String(order.order_number).padStart(3, "0")}; Δεν μπορεί να αναιρεθεί.`)) {
-      return;
-    }
+  const doDeleteOrder = async (order, pin = null) => {
     try {
-      await apiDeleteOrder(order.id);
+      await apiDeleteOrder(order.id, pin);
       setOrders((p) => p.filter((o) => o.id !== order.id));
       setSelectedOrder(null);
       setCustomersLoaded(false); // customer stats must be recomputed
@@ -411,6 +452,30 @@ export default function History() {
     } catch (e) {
       toast.error(formatApiError(e));
     }
+  };
+
+  const handleCancelOrder = (order) => {
+    if (!window.confirm(`Ακύρωση παραγγελίας #${String(order.order_number).padStart(3, "0")}; Θα εξαιρεθεί από τα στατιστικά.`)) {
+      return;
+    }
+    if (isOwner) doCancelOrder(order);
+    else setPinGate({ action: "cancel", order });
+  };
+
+  const handleDeleteOrder = (order) => {
+    if (!window.confirm(`Οριστική διαγραφή παραγγελίας #${String(order.order_number).padStart(3, "0")}; Δεν μπορεί να αναιρεθεί.`)) {
+      return;
+    }
+    if (isOwner) doDeleteOrder(order);
+    else setPinGate({ action: "delete", order });
+  };
+
+  const handlePinVerified = (pin) => {
+    const gate = pinGate;
+    setPinGate(null);
+    if (!gate) return;
+    if (gate.action === "cancel") doCancelOrder(gate.order, pin);
+    else doDeleteOrder(gate.order, pin);
   };
 
   // ---- Tab 2: customers ----
@@ -709,6 +774,16 @@ export default function History() {
         customer={selectedCustomer}
         onClose={() => setSelectedCustomer(null)}
         onOpenOrder={openOrderById}
+      />
+      <PinGateModal
+        open={!!pinGate}
+        title={
+          pinGate?.action === "delete"
+            ? "Απαιτείται PIN ιδιοκτήτη για οριστική διαγραφή"
+            : "Απαιτείται PIN ιδιοκτήτη για ακύρωση παραγγελίας"
+        }
+        onClose={() => setPinGate(null)}
+        onSuccess={handlePinVerified}
       />
       <Receipt order={printOrder} />
     </AppShell>

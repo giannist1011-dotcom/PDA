@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock } from "lucide-react";
+import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LineEditModal from "@/components/LineEditModal";
 import { ORDER_SOURCES } from "@/data/menu";
@@ -50,9 +50,13 @@ export default function OrderPanel({
   setDelivery,
   scheduled,
   setScheduled,
+  discount,
+  discountAmount = 0,
+  onDiscountClick,
   onEditOptions,
 }) {
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
+  const total = Math.max(0, subtotal - discountAmount);
   const isEmpty = items.length === 0;
   const isPhone = source === "Τηλέφωνο";
   const [editingLine, setEditingLine] = useState(null);
@@ -289,15 +293,50 @@ export default function OrderPanel({
             )}
           </div>
         )}
+        {discountAmount > 0 && (
+          <>
+            <div className="flex items-baseline justify-between">
+              <span className="text-[11px] text-neutral-500 uppercase tracking-widest font-bold">
+                Υποσύνολο
+              </span>
+              <span className="font-mono text-sm text-neutral-400" data-testid="order-subtotal">
+                {eur(subtotal)}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mb-1">
+              <span className="text-[11px] text-[#00E676] uppercase tracking-widest font-bold">
+                Έκπτωση{discount?.type === "percent" ? ` ${discount.value}%` : ""}
+              </span>
+              <span className="font-mono text-sm font-bold text-[#00E676]" data-testid="order-discount">
+                -{eur(discountAmount)}
+              </span>
+            </div>
+          </>
+        )}
         <div className="flex items-baseline justify-between mb-2">
-          <span className="text-[11px] text-neutral-400 uppercase tracking-widest font-bold">
-            Σύνολο
+          <span className="flex items-center gap-2">
+            <span className="text-[11px] text-neutral-400 uppercase tracking-widest font-bold">
+              Σύνολο
+            </span>
+            <button
+              onClick={onDiscountClick}
+              disabled={isEmpty}
+              data-testid="discount-btn"
+              className={`flex items-center gap-1 h-7 px-2 rounded-md border text-[11px] font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                discountAmount > 0
+                  ? "border-[#00E676]/50 text-[#00E676] bg-[#00E676]/10 hover:bg-[#00E676]/20"
+                  : "border-[#333] text-neutral-300 hover:border-[#00E676] hover:text-[#00E676]"
+              }`}
+            >
+              <Percent className="w-3 h-3" />
+              Έκπτωση
+            </button>
           </span>
           <span
             className="font-mono text-2xl font-bold text-white"
             data-testid="order-total"
           >
-            {eur(subtotal)}
+            {eur(total)}
           </span>
         </div>
         <div className="grid grid-cols-4 gap-1.5">

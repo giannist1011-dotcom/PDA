@@ -54,6 +54,20 @@ export default function Receipt({ order }) {
         </div>
       ))}
       <hr />
+      {order.discount?.amount > 0 && (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Υποσύνολο</span>
+            <span>{eur(order.subtotal)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>
+              Έκπτωση{order.discount.type === "percent" ? ` ${order.discount.value}%` : ""}
+            </span>
+            <span>-{eur(order.discount.amount)}</span>
+          </div>
+        </>
+      )}
       <div
         style={{
           display: "flex",

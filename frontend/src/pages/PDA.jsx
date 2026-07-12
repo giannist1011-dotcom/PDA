@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Clock, X, Printer, Ban, Phone as PhoneIcon } from "lucide-react";
+import { Clock, X, Printer, Ban, Phone as PhoneIcon, Percent } from "lucide-react";
+import PinGateModal from "@/components/PinGateModal";
 import AppShell from "@/components/AppShell";
 import MenuGrid from "@/components/MenuGrid";
 import OrderPanel from "@/components/OrderPanel";
@@ -72,6 +73,109 @@ const playAlert = () => {
     /* audio not available */
   }
 };
+
+// ---------- Discount modal ----------
+const DISCOUNT_PERCENTS = [5, 10, 15, 20];
+
+function DiscountModal({ open, subtotal, current, onApply, onRemove, onClose }) {
+  const [amountText, setAmountText] = useState("");
+
+  useEffect(() => {
+    if (open) setAmountText(current?.type === "amount" ? String(current.value) : "");
+  }, [open, current]);
+
+  if (!open) return null;
+
+  const applyAmount = () => {
+    const v = parseFloat(String(amountText).replace(",", "."));
+    if (!v || v <= 0) {
+      toast.error("Εισάγετε έγκυρο ποσό έκπτωσης");
+      return;
+    }
+    if (v > subtotal) {
+      toast.error("Η έκπτωση δεν μπορεί να υπερβαίνει το σύνολο");
+      return;
+    }
+    onApply({ type: "amount", value: Math.round(v * 100) / 100 });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+      data-testid="discount-modal"
+    >
+      <div className="bg-[#1A1A1A] border border-[#333] rounded-lg w-full max-w-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Percent className="w-5 h-5 text-[#00E676]" />
+            <h3 className="font-heading text-lg font-bold">Έκπτωση</h3>
+          </div>
+          <button
+            onClick={onClose}
+            data-testid="discount-modal-close"
+            className="w-8 h-8 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="text-xs uppercase tracking-widest text-neutral-400 font-bold mb-2">
+          Ποσοστό
+        </div>
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {DISCOUNT_PERCENTS.map((p) => {
+            const active = current?.type === "percent" && current.value === p;
+            return (
+              <button
+                key={p}
+                onClick={() => onApply({ type: "percent", value: p })}
+                data-testid={`discount-percent-${p}`}
+                className={`h-12 rounded-md border font-mono font-bold text-lg transition-colors ${
+                  active
+                    ? "bg-[#00E676] border-[#00E676] text-black"
+                    : "bg-[#0D0D0D] border-[#333] text-white hover:border-[#00E676]"
+                }`}
+              >
+                {p}%
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="text-xs uppercase tracking-widest text-neutral-400 font-bold mb-2">
+          Ή ποσό (€)
+        </div>
+        <div className="flex gap-2 mb-4">
+          <input
+            inputMode="decimal"
+            value={amountText}
+            onChange={(e) => setAmountText(e.target.value)}
+            placeholder="π.χ. 2,00"
+            data-testid="discount-amount-input"
+            className="flex-1 h-12 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white font-mono focus:outline-none focus:border-[#00E676]"
+          />
+          <button
+            onClick={applyAmount}
+            data-testid="discount-amount-apply"
+            className="h-12 px-4 rounded-md bg-[#00E676] hover:bg-[#33EB91] text-black font-bold"
+          >
+            OK
+          </button>
+        </div>
+
+        {current && (
+          <button
+            onClick={onRemove}
+            data-testid="discount-remove-btn"
+            className="w-full h-11 rounded-md border border-[#FF3B30]/50 text-[#FF6961] hover:bg-[#FF3B30]/10 text-sm font-bold"
+          >
+            Αφαίρεση έκπτωσης
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ---------- Scheduled orders modal ----------
 function ScheduledOrdersModal({ open, orders, onClose, onPrintNow, onCancel }) {
@@ -157,7 +261,7 @@ function ScheduledOrdersModal({ open, orders, onClose, onPrintNow, onCancel }) {
 }
 
 export default function PDA() {
-  const { user } = useAuth();
+  const { user, isOwner } = useAuth();
   const [config, setConfig] = useState({ categories: [], items: [], customization: null });
   const [activeCategory, setActiveCategory] = useState(null);
   const [orderNumber, setOrderNumber] = useState(0);
@@ -176,6 +280,21 @@ export default function PDA() {
   const [scheduledOrders, setScheduledOrders] = useState([]);
   const [scheduledOpen, setScheduledOpen] = useState(false);
   const firingRef = useRef(false);
+  const [discount, setDiscount] = useState(null); // {type: "percent"|"amount", value}
+  const [discountOpen, setDiscountOpen] = useState(false);
+  const [pinGateOpen, setPinGateOpen] = useState(false);
+
+  const subtotal = items.reduce((s, it) => s + it.line_total, 0);
+  const discountAmount = !discount
+    ? 0
+    : discount.type === "percent"
+      ? Math.round(subtotal * discount.value) / 100
+      : Math.min(discount.value, subtotal);
+
+  const handleDiscountClick = () => {
+    if (isOwner) setDiscountOpen(true);
+    else setPinGateOpen(true); // employee: owner PIN required
+  };
 
   const loadNext = async () => {
     try {
@@ -361,7 +480,10 @@ export default function PDA() {
   };
 
   const removeLine = (lineId) => setItems((prev) => prev.filter((it) => it.line_id !== lineId));
-  const clearOrder = () => setItems([]);
+  const clearOrder = () => {
+    setItems([]);
+    setDiscount(null);
+  };
 
   const handleSubmit = async () => {
     if (items.length === 0) return;
@@ -376,12 +498,15 @@ export default function PDA() {
       scheduledAt = dt.toISOString();
     }
     setSubmitting(true);
-    const subtotal = items.reduce((s, it) => s + it.line_total, 0);
     const payload = {
       order_number: orderNumber,
       source,
       subtotal,
-      total: subtotal,
+      total: Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100),
+      discount:
+        discount && discountAmount > 0
+          ? { type: discount.type, value: discount.value, amount: discountAmount }
+          : null,
       delivery: source === "Τηλέφωνο" && delivery?.delivery_type ? delivery : null,
       scheduled_at: scheduledAt,
       items: items.map((it) => ({
@@ -412,6 +537,7 @@ export default function PDA() {
       }
       setItems([]);
       setDelivery(null);
+      setDiscount(null);
       setScheduled({ enabled: false, date: "", time: "" });
       await loadNext();
     } catch (e) {
@@ -466,6 +592,9 @@ export default function PDA() {
           setDelivery={setDelivery}
           scheduled={scheduled}
           setScheduled={setScheduled}
+          discount={discount}
+          discountAmount={discountAmount}
+          onDiscountClick={handleDiscountClick}
           onIncrement={(id) => updateQty(id, 1)}
           onDecrement={(id) => updateQty(id, -1)}
           onSetQuantity={setLineQuantity}
@@ -498,6 +627,29 @@ export default function PDA() {
         onClose={() => setScheduledOpen(false)}
         onPrintNow={handlePrintNow}
         onCancel={handleCancelScheduled}
+      />
+      <DiscountModal
+        open={discountOpen}
+        subtotal={subtotal}
+        current={discount}
+        onApply={(d) => {
+          setDiscount(d);
+          setDiscountOpen(false);
+        }}
+        onRemove={() => {
+          setDiscount(null);
+          setDiscountOpen(false);
+        }}
+        onClose={() => setDiscountOpen(false)}
+      />
+      <PinGateModal
+        open={pinGateOpen}
+        title="Απαιτείται PIN ιδιοκτήτη για έκπτωση"
+        onClose={() => setPinGateOpen(false)}
+        onSuccess={() => {
+          setPinGateOpen(false);
+          setDiscountOpen(true);
+        }}
       />
       <Receipt order={printOrder} />
     </AppShell>
