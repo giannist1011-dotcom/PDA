@@ -16,6 +16,14 @@ const summarize = (c) => {
   return parts.join(" · ");
 };
 
+const orderTime = (iso) => {
+  try {
+    return new Date(iso).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+};
+
 export default function Receipt({ order }) {
   if (!order) return null;
   const d = order.delivery;
@@ -35,6 +43,11 @@ export default function Receipt({ order }) {
           <div style={{ fontWeight: 800, fontSize: 13 }}>
             {d.delivery_type === "delivery" ? "★ ΠΑΡΑΔΟΣΗ" : "★ TAKEAWAY"}
           </div>
+          {d.delivery_type === "delivery" && (
+            <div style={{ fontWeight: 800, fontSize: 13 }}>
+              Παραγγέλθηκε: {orderTime(order.created_at || new Date().toISOString())}
+            </div>
+          )}
           {d.name && <div>Όνομα: {d.name}</div>}
           {d.phone && <div>Τηλ.: {d.phone}</div>}
           {d.delivery_type === "delivery" && d.address && <div>Δ/νση: {d.address}</div>}
