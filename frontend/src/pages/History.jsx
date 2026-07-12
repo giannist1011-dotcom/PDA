@@ -74,6 +74,7 @@ const typeLabel = (order) => {
   const t = order.delivery?.delivery_type;
   if (t === "delivery") return "Παράδοση";
   if (t === "takeaway") return "Takeaway";
+  if (order.source === "Τραπέζι") return order.table_name || "Τραπέζι";
   return "—";
 };
 
@@ -82,7 +83,10 @@ const sourceBadgeCls = {
   "Τηλέφωνο": "bg-[#00B0FF]/15 text-[#00B0FF]",
   efood: "bg-[#00E676]/15 text-[#00E676]",
   Box: "bg-[#FFB300]/15 text-[#FFB300]",
+  "Τραπέζι": "bg-[#B388FF]/15 text-[#B388FF]",
 };
+
+const HISTORY_SOURCES = [...ORDER_SOURCES, "Τραπέζι"];
 
 // ---------- Order detail modal ----------
 function OrderDetailModal({ order, canManage, onClose, onReprint, onCancel, onDelete }) {
@@ -599,7 +603,7 @@ export default function History() {
                     className="h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
                   >
                     <option value="all">Όλες</option>
-                    {ORDER_SOURCES.map((s) => (
+                    {HISTORY_SOURCES.map((s) => (
                       <option key={s} value={s}>
                         {s}
                       </option>

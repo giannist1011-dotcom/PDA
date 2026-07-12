@@ -17,6 +17,8 @@ import Expenses from "@/pages/Expenses";
 import History from "@/pages/History";
 import DayClose from "@/pages/DayClose";
 import Waiters from "@/pages/Waiters";
+import Tables from "@/pages/Tables";
+import TableOrder from "@/pages/TableOrder";
 
 function App() {
   return (
@@ -27,12 +29,29 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/select-profile" element={<ProfileSelect />} />
-            {/* All selected profiles (incl. Σερβιτόρος) */}
+            {/* Cash PDA — not for waiters */}
             <Route
               path="/"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute roles={["owner", "manager", "employee"]}>
                   <PDA />
+                </ProtectedRoute>
+              }
+            />
+            {/* Tables — all roles incl. Σερβιτόρος */}
+            <Route
+              path="/tables"
+              element={
+                <ProtectedRoute>
+                  <Tables />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tables/:tableId"
+              element={
+                <ProtectedRoute>
+                  <TableOrder />
                 </ProtectedRoute>
               }
             />

@@ -112,6 +112,27 @@ export const apiActivateOrder = (id) =>
 // CUSTOMERS
 export const apiListCustomers = () => api.get("/customers").then((r) => r.data);
 
+// TABLES (dine-in)
+export const apiTablesState = () => api.get("/tables/state").then((r) => r.data);
+export const apiToggleTables = (enabled) =>
+  api.put("/settings/tables", { enabled }).then((r) => r.data);
+export const apiCreateTable = (name) =>
+  api.post("/tables", { name }).then((r) => r.data);
+export const apiUpdateTable = (id, payload) =>
+  api.put(`/tables/${id}`, payload).then((r) => r.data);
+export const apiDeleteTable = (id) =>
+  api.delete(`/tables/${id}`).then((r) => r.data);
+export const apiReorderTables = (ids) =>
+  api.post("/tables/reorder", { ids }).then((r) => r.data);
+export const apiGetTableTab = (tableId) =>
+  api.get(`/tables/${tableId}/tab`).then((r) => r.data);
+export const apiSendRound = (tableId, items) =>
+  api.post(`/tables/${tableId}/rounds`, { items }).then((r) => r.data);
+export const apiCloseTab = (tabId) =>
+  api.post(`/tabs/${tabId}/close`).then((r) => r.data);
+export const apiTransferTab = (tabId, tableId) =>
+  api.post(`/tabs/${tabId}/transfer`, { table_id: tableId }).then((r) => r.data);
+
 // DAY CLOSE (Z-REPORT)
 export const apiDaySummary = (date) =>
   api.get("/reports/day-summary", { params: date ? { date } : {} }).then((r) => r.data);

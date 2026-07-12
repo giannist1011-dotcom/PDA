@@ -18,6 +18,7 @@ import {
   Wallet,
   History as HistoryIcon,
   CalendarCheck,
+  LayoutGrid,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS } from "@/lib/roles";
@@ -27,7 +28,8 @@ const ALL_ROLES = ["owner", "manager", "employee", "waiter"];
 const STAFF = ["owner", "manager", "employee"];
 const MANAGERS = ["owner", "manager"];
 const NAV_ALL = [
-  { to: "/", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", roles: ALL_ROLES },
+  { to: "/", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", roles: STAFF },
+  { to: "/tables", label: "Τραπέζια", icon: LayoutGrid, testId: "drawer-link-tables", roles: ALL_ROLES, requiresTables: true },
   { to: "/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", roles: STAFF },
   { to: "/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: STAFF },
   { to: "/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"] },
@@ -60,7 +62,9 @@ export default function AppShell({ title, children }) {
     navigate("/select-profile");
   };
 
-  const nav = NAV_ALL.filter((n) => n.roles.includes(role)).map((n) => {
+  const nav = NAV_ALL.filter(
+    (n) => n.roles.includes(role) && (!n.requiresTables || user?.tables_enabled)
+  ).map((n) => {
     // Non-managers see the schedule read-only
     if (!canManage && n.to === "/schedule") return { ...n, label: "Πρόγραμμα (προβολή)" };
     return n;

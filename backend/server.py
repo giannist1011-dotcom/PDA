@@ -132,6 +132,7 @@ def public_user(u: dict) -> dict:
         "profile_name": u.get("profile_name"),
         "owner_pin_set": bool(u.get("owner_pin_set", False)),
         "employee_pin_set": bool(u.get("employee_pin_set", False)),
+        "tables_enabled": bool(u.get("tables_enabled", False)),
     }
 
 
@@ -289,11 +290,12 @@ class OrderCreate(BaseModel):
     items: List[OrderItem]
     subtotal: float
     total: float
-    source: Literal["Ταμείο", "Τηλέφωνο", "efood", "Box"]
+    source: Literal["Ταμείο", "Τηλέφωνο", "efood", "Box", "Τραπέζι"]
     note: Optional[str] = None
     delivery: Optional[DeliveryInfo] = None
     scheduled_at: Optional[str] = None  # ISO datetime — order fires later
     discount: Optional[DiscountInfo] = None
+    table_name: Optional[str] = None  # set when the order came from a closed table tab
 
 
 class Order(OrderCreate):
@@ -895,18 +897,21 @@ async def delete_photo(pid: str, user: dict = Depends(require_manager)):
 
 
 # ============ ORDER ROUTES ============
-@api.get("/orders/next-number")
-async def next_order_number(user: dict = Depends(get_current_user)):
+async def compute_next_order_number(user_id: str) -> int:
     today = datetime.now(timezone.utc).date().isoformat()
     docs = await db.orders.find(
         {
-            "user_id": user["id"],
+            "user_id": user_id,
             "created_at": {"$gte": f"{today}T00:00:00+00:00", "$lte": f"{today}T23:59:59+00:00"},
         },
         {"_id": 0, "order_number": 1},
     ).sort("order_number", -1).limit(1).to_list(1)
-    next_num = (docs[0]["order_number"] + 1) if docs else 1
-    return {"next_order_number": next_num}
+    return (docs[0]["order_number"] + 1) if docs else 1
+
+
+@api.get("/orders/next-number")
+async def next_order_number(user: dict = Depends(get_current_user)):
+    return {"next_order_number": await compute_next_order_number(user["id"])}
 
 
 @api.post("/orders", response_model=Order)
@@ -1811,6 +1816,233 @@ async def list_day_reports(user: dict = Depends(require_manager)):
     ).sort("closed_at", -1).to_list(365)
 
 
+# ============ TABLES (dine-in tabs) ============
+class TableIn(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    order: int = 0
+
+
+class TablesToggleIn(BaseModel):
+    enabled: bool
+
+
+class TablesReorderIn(BaseModel):
+    ids: List[str] = Field(min_length=1)
+
+
+class TabRoundIn(BaseModel):
+    items: List[OrderItem] = Field(min_length=1)
+
+
+class TabTransferIn(BaseModel):
+    table_id: str
+
+
+def tab_total(tab: dict) -> float:
+    return round(
+        sum(
+            it.get("line_total", 0)
+            for r in tab.get("rounds", [])
+            for it in r.get("items", [])
+        ),
+        2,
+    )
+
+
+@api.put("/settings/tables")
+async def toggle_tables(body: TablesToggleIn, user: dict = Depends(require_owner)):
+    await db.users.update_one(
+        {"id": user["id"]}, {"$set": {"tables_enabled": bool(body.enabled)}}
+    )
+    return {"enabled": bool(body.enabled)}
+
+
+@api.get("/tables/state")
+async def tables_state(user: dict = Depends(get_current_user)):
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "tables_enabled": 1})
+    enabled = bool(u.get("tables_enabled", False)) if u else False
+    tables = await db.tables.find(
+        {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
+    ).sort("order", 1).to_list(200)
+    tabs = await db.table_tabs.find(
+        {"user_id": user["id"], "status": "open"}, {"_id": 0, "user_id": 0}
+    ).to_list(200)
+    by_table = {}
+    for t in tabs:
+        by_table[t["table_id"]] = {
+            "tab_id": t["id"],
+            "total": tab_total(t),
+            "rounds_count": len(t.get("rounds", [])),
+            "opened_at": t.get("opened_at"),
+        }
+    for tbl in tables:
+        tbl["tab"] = by_table.get(tbl["id"])
+    return {"enabled": enabled, "tables": tables}
+
+
+@api.post("/tables")
+async def create_table(body: TableIn, user: dict = Depends(require_manager)):
+    count = await db.tables.count_documents({"user_id": user["id"]})
+    doc = {
+        "id": str(uuid.uuid4())[:8],
+        "user_id": user["id"],
+        "name": body.name.strip(),
+        "order": body.order if body.order else count,
+    }
+    await db.tables.insert_one(doc)
+    return {k: v for k, v in doc.items() if k not in ("_id", "user_id")}
+
+
+@api.post("/tables/reorder")
+async def reorder_tables(body: TablesReorderIn, user: dict = Depends(require_manager)):
+    for idx, tid in enumerate(body.ids):
+        await db.tables.update_one(
+            {"id": tid, "user_id": user["id"]}, {"$set": {"order": idx}}
+        )
+    return {"ok": True}
+
+
+@api.put("/tables/{tid}")
+async def update_table(tid: str, body: TableIn, user: dict = Depends(require_manager)):
+    r = await db.tables.update_one(
+        {"id": tid, "user_id": user["id"]},
+        {"$set": {"name": body.name.strip(), "order": body.order}},
+    )
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"id": tid, "name": body.name.strip(), "order": body.order}
+
+
+@api.delete("/tables/{tid}")
+async def delete_table(tid: str, user: dict = Depends(require_manager)):
+    open_tab = await db.table_tabs.find_one(
+        {"user_id": user["id"], "table_id": tid, "status": "open"}
+    )
+    if open_tab:
+        raise HTTPException(400, "Το τραπέζι έχει ανοιχτή καρτέλα — κλείστε την πρώτα")
+    r = await db.tables.delete_one({"id": tid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
+@api.get("/tables/{tid}/tab")
+async def get_table_tab(tid: str, user: dict = Depends(get_current_user)):
+    table = await db.tables.find_one(
+        {"id": tid, "user_id": user["id"]}, {"_id": 0, "user_id": 0}
+    )
+    if not table:
+        raise HTTPException(404, "Το τραπέζι δεν βρέθηκε")
+    tab = await db.table_tabs.find_one(
+        {"user_id": user["id"], "table_id": tid, "status": "open"},
+        {"_id": 0, "user_id": 0},
+    )
+    if tab:
+        tab["total"] = tab_total(tab)
+    return {"table": table, "tab": tab}
+
+
+@api.post("/tables/{tid}/rounds")
+async def send_round(tid: str, body: TabRoundIn, user: dict = Depends(get_current_user)):
+    """Αποστολή: append a round to the table's open tab (create the tab if needed)."""
+    table = await db.tables.find_one({"id": tid, "user_id": user["id"]})
+    if not table:
+        raise HTTPException(404, "Το τραπέζι δεν βρέθηκε")
+    now = datetime.now(timezone.utc).isoformat()
+    tab = await db.table_tabs.find_one(
+        {"user_id": user["id"], "table_id": tid, "status": "open"}
+    )
+    if not tab:
+        tab = {
+            "id": str(uuid.uuid4()),
+            "user_id": user["id"],
+            "table_id": tid,
+            "status": "open",
+            "opened_at": now,
+            "opened_by": {"name": actor_name(user), "role": user.get("role")},
+            "rounds": [],
+        }
+        await db.table_tabs.insert_one(tab)
+    round_doc = {
+        "round_no": len(tab.get("rounds", [])) + 1,
+        "items": [it.model_dump() for it in body.items],
+        "sent_at": now,
+        "sent_by": {"name": actor_name(user), "role": user.get("role")},
+    }
+    await db.table_tabs.update_one(
+        {"id": tab["id"], "user_id": user["id"]}, {"$push": {"rounds": round_doc}}
+    )
+    fresh = await db.table_tabs.find_one(
+        {"id": tab["id"], "user_id": user["id"]}, {"_id": 0, "user_id": 0}
+    )
+    fresh["total"] = tab_total(fresh)
+    return {"tab": fresh, "round": round_doc, "table": {"id": table["id"], "name": table["name"]}}
+
+
+@api.post("/tabs/{tab_id}/close", response_model=Order)
+async def close_tab(tab_id: str, user: dict = Depends(get_current_user)):
+    """Κλείσιμο τραπεζιού: turn the tab into a normal completed order and free the table."""
+    tab = await db.table_tabs.find_one(
+        {"id": tab_id, "user_id": user["id"], "status": "open"}
+    )
+    if not tab:
+        raise HTTPException(404, "Η καρτέλα δεν βρέθηκε")
+    table = await db.tables.find_one({"id": tab["table_id"], "user_id": user["id"]})
+    table_name = table["name"] if table else "Τραπέζι"
+    items = [it for r in tab.get("rounds", []) for it in r.get("items", [])]
+    if not items:
+        raise HTTPException(400, "Η καρτέλα είναι άδεια")
+    total = tab_total(tab)
+    now = datetime.now(timezone.utc)
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "order_number": await compute_next_order_number(user["id"]),
+        "items": items,
+        "subtotal": total,
+        "total": total,
+        "source": "Τραπέζι",
+        "table_name": table_name,
+        "note": None,
+        "delivery": None,
+        "scheduled_at": None,
+        "discount": None,
+        "created_at": now.isoformat(),
+        "status": "active",
+        "taken_by": {
+            "profile_id": user.get("profile_id"),
+            "name": actor_name(user),
+            "role": user.get("role"),
+        },
+    }
+    await db.orders.insert_one(doc)
+    await db.table_tabs.delete_one({"id": tab_id, "user_id": user["id"]})
+    doc.pop("_id", None)
+    doc["created_at"] = now
+    return doc
+
+
+@api.post("/tabs/{tab_id}/transfer")
+async def transfer_tab(tab_id: str, body: TabTransferIn, user: dict = Depends(get_current_user)):
+    tab = await db.table_tabs.find_one(
+        {"id": tab_id, "user_id": user["id"], "status": "open"}
+    )
+    if not tab:
+        raise HTTPException(404, "Η καρτέλα δεν βρέθηκε")
+    target = await db.tables.find_one({"id": body.table_id, "user_id": user["id"]})
+    if not target:
+        raise HTTPException(404, "Το τραπέζι δεν βρέθηκε")
+    occupied = await db.table_tabs.find_one(
+        {"user_id": user["id"], "table_id": body.table_id, "status": "open"}
+    )
+    if occupied:
+        raise HTTPException(400, "Το τραπέζι προορισμού έχει ήδη ανοιχτή καρτέλα")
+    await db.table_tabs.update_one(
+        {"id": tab_id, "user_id": user["id"]}, {"$set": {"table_id": body.table_id}}
+    )
+    return {"ok": True, "table_id": body.table_id, "table_name": target["name"]}
+
+
 # ============ APP SETUP ============
 app.include_router(api)
 
@@ -1843,6 +2075,8 @@ async def on_startup():
     await db.expenses.create_index([("user_id", 1), ("date", -1)])
     await db.day_reports.create_index([("user_id", 1), ("closed_at", -1)])
     await db.profiles.create_index([("user_id", 1), ("created_at", 1)])
+    await db.tables.create_index([("user_id", 1), ("order", 1)])
+    await db.table_tabs.create_index([("user_id", 1), ("table_id", 1), ("status", 1)])
     await ensure_demo_account()
 
 

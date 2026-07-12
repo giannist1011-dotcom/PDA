@@ -36,6 +36,9 @@ export default function Receipt({ order }) {
       <hr />
       <div>Αρ. Παρ.: #{String(order.order_number).padStart(3, "0")}</div>
       <div>Πηγή: {order.source}</div>
+      {order.table_name && (
+        <div style={{ fontWeight: 800, fontSize: 13 }}>Τραπέζι: {order.table_name}</div>
+      )}
       <div>Ημ/νία: {formatGRDateTime(order.created_at || new Date().toISOString())}</div>
       {d && (
         <>

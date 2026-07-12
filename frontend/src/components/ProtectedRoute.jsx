@@ -18,6 +18,9 @@ export default function ProtectedRoute({ children, requireOwner = false, roles =
   if (user === false) return <Navigate to="/login" replace />;
   if (!hasProfile) return <Navigate to="/select-profile" replace />;
   const allowed = requireOwner ? ["owner"] : roles;
-  if (allowed && !allowed.includes(role)) return <Navigate to="/" replace />;
+  if (allowed && !allowed.includes(role)) {
+    // waiters have no access to the cash PDA — their home is the tables page
+    return <Navigate to={role === "waiter" ? "/tables" : "/"} replace />;
+  }
   return children;
 }
