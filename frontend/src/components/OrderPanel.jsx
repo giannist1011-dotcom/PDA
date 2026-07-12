@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag } from "lucide-react";
+import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LineEditModal from "@/components/LineEditModal";
 import { ORDER_SOURCES } from "@/data/menu";
-import { eur } from "@/lib/format";
+import { eur, todayISO } from "@/lib/format";
 
 const summarizeCustomization = (c) => {
   if (!c) return "";
@@ -48,6 +48,8 @@ export default function OrderPanel({
   submitting,
   delivery,
   setDelivery,
+  scheduled,
+  setScheduled,
   onEditOptions,
 }) {
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
@@ -55,15 +57,21 @@ export default function OrderPanel({
   const isPhone = source === "Τηλέφωνο";
   const [editingLine, setEditingLine] = useState(null);
 
-  // Reset delivery when source changes away from phone
+  // Reset delivery & scheduling when source changes away from phone
   useEffect(() => {
-    if (!isPhone && delivery) setDelivery(null);
+    if (!isPhone) {
+      if (delivery) setDelivery(null);
+      if (scheduled?.enabled) setScheduled({ enabled: false, date: "", time: "" });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source]);
 
   const setField = (k, v) => setDelivery((d) => ({ ...(d || {}), [k]: v }));
 
-  const canSubmit = !isEmpty && (!isPhone || !!delivery?.delivery_type);
+  const canSubmit =
+    !isEmpty &&
+    (!isPhone || !!delivery?.delivery_type) &&
+    (!scheduled?.enabled || !!scheduled?.time);
 
   const activeFields = delivery?.delivery_type === "delivery"
     ? DELIVERY_FIELDS
@@ -223,6 +231,47 @@ export default function OrderPanel({
               </button>
             </div>
 
+            {/* Scheduled order toggle */}
+            <div className="mt-1.5">
+              <button
+                onClick={() =>
+                  setScheduled((s) =>
+                    s?.enabled
+                      ? { enabled: false, date: "", time: "" }
+                      : { enabled: true, date: todayISO(), time: "" }
+                  )
+                }
+                data-testid="scheduled-toggle-btn"
+                data-state={scheduled?.enabled ? "on" : "off"}
+                className={`w-full h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
+                  scheduled?.enabled
+                    ? "bg-[#00B0FF] border-[#00B0FF] text-white"
+                    : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#00B0FF]"
+                }`}
+              >
+                <Clock className="w-4 h-4" /> Προγραμματισμένη
+              </button>
+              {scheduled?.enabled && (
+                <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+                  <input
+                    type="time"
+                    value={scheduled.time}
+                    onChange={(e) => setScheduled((s) => ({ ...s, time: e.target.value }))}
+                    data-testid="scheduled-time-input"
+                    className="w-full h-9 px-2 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
+                  />
+                  <input
+                    type="date"
+                    value={scheduled.date}
+                    min={todayISO()}
+                    onChange={(e) => setScheduled((s) => ({ ...s, date: e.target.value }))}
+                    data-testid="scheduled-date-input"
+                    className="w-full h-9 px-2 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
+                  />
+                </div>
+              )}
+            </div>
+
             {activeFields.length > 0 && (
               <div className="grid grid-cols-2 gap-1.5 mt-1.5 max-h-[24vh] overflow-y-auto pr-1">
                 {activeFields.map((f) => (
@@ -267,13 +316,22 @@ export default function OrderPanel({
             data-testid="order-submit-btn"
             className="col-span-3 h-12 text-base font-bold bg-[#FF6B00] hover:bg-[#FF8533] text-white flex items-center justify-center gap-2 disabled:opacity-40"
           >
-            <Printer className="w-4 h-4" />
-            {submitting ? "Αποθήκευση..." : "Εκτύπωση & Αποθήκευση"}
+            {scheduled?.enabled ? <Clock className="w-4 h-4" /> : <Printer className="w-4 h-4" />}
+            {submitting
+              ? "Αποθήκευση..."
+              : scheduled?.enabled
+                ? "Προγραμματισμός"
+                : "Εκτύπωση & Αποθήκευση"}
           </Button>
         </div>
         {isPhone && !delivery?.delivery_type && (
           <div className="mt-1.5 text-[11px] text-[#FFB300] text-center">
             Επιλέξτε Παράδοση ή Takeaway για να συνεχίσετε
+          </div>
+        )}
+        {scheduled?.enabled && !scheduled?.time && (
+          <div className="mt-1.5 text-[11px] text-[#00B0FF] text-center">
+            Ορίστε ώρα για την προγραμματισμένη παραγγελία
           </div>
         )}
       </div>

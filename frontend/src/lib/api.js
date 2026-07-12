@@ -97,6 +97,10 @@ export const apiCancelOrder = (id) =>
   api.post(`/orders/${id}/cancel`).then((r) => r.data);
 export const apiDeleteOrder = (id) =>
   api.delete(`/orders/${id}`).then((r) => r.data);
+export const apiListScheduledOrders = () =>
+  api.get("/orders/scheduled").then((r) => r.data);
+export const apiActivateOrder = (id) =>
+  api.post(`/orders/${id}/activate`).then((r) => r.data);
 
 // CUSTOMERS
 export const apiListCustomers = () => api.get("/customers").then((r) => r.data);

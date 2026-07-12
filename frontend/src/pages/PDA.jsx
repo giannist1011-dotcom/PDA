@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Clock, X, Printer, Ban, Phone as PhoneIcon } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import MenuGrid from "@/components/MenuGrid";
 import OrderPanel from "@/components/OrderPanel";
@@ -11,11 +12,149 @@ import {
   apiGetMenuConfig,
   fetchNextOrderNumber,
   submitOrder,
+  apiListScheduledOrders,
+  apiActivateOrder,
+  apiCancelOrder,
   formatApiError,
 } from "@/lib/api";
+import { eur } from "@/lib/format";
 
 let LINE_SEQ = 1;
 const newLineId = () => `L${Date.now()}-${LINE_SEQ++}`;
+
+const FIRE_AHEAD_MS = 15 * 60 * 1000; // print 15' before the scheduled time
+const POLL_MS = 60 * 1000;
+
+const schedTime = (iso) => {
+  try {
+    return new Date(iso).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+};
+
+const schedDateTime = (iso) => {
+  try {
+    const d = new Date(iso);
+    const today = new Date();
+    const sameDay = d.toDateString() === today.toDateString();
+    const time = d.toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
+    return sameDay
+      ? time
+      : `${d.toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit" })} ${time}`;
+  } catch {
+    return "";
+  }
+};
+
+// Double-beep alert via WebAudio — no asset files needed
+const playAlert = () => {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const beep = (at, freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "square";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + at);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + at + 0.35);
+      osc.start(ctx.currentTime + at);
+      osc.stop(ctx.currentTime + at + 0.4);
+    };
+    beep(0, 880);
+    beep(0.45, 880);
+    beep(0.9, 1175);
+  } catch {
+    /* audio not available */
+  }
+};
+
+// ---------- Scheduled orders modal ----------
+function ScheduledOrdersModal({ open, orders, onClose, onPrintNow, onCancel }) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+      data-testid="scheduled-orders-modal"
+    >
+      <div className="bg-[#1A1A1A] border border-[#333] rounded-lg w-full max-w-lg max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between p-5 border-b border-[#222]">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-[#00B0FF]" />
+            <h3 className="font-heading text-xl font-bold">Προγραμματισμένες παραγγελίες</h3>
+          </div>
+          <button
+            onClick={onClose}
+            data-testid="scheduled-modal-close"
+            className="w-9 h-9 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {orders.length === 0 ? (
+            <div className="text-neutral-500 text-center py-10">
+              Δεν υπάρχουν προγραμματισμένες παραγγελίες
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {orders.map((o) => (
+                <li
+                  key={o.id}
+                  data-testid={`scheduled-order-${o.id}`}
+                  className="p-4 bg-[#0D0D0D] border border-[#00B0FF]/40 rounded-lg"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="font-mono text-xl font-bold text-[#00B0FF] shrink-0">
+                        {schedDateTime(o.scheduled_at)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-white font-semibold text-sm truncate">
+                          #{String(o.order_number).padStart(3, "0")}
+                          {o.delivery?.name ? ` · ${o.delivery.name}` : ""}
+                        </div>
+                        {o.delivery?.phone && (
+                          <div className="flex items-center gap-1 text-xs text-neutral-400">
+                            <PhoneIcon className="w-3 h-3" /> {o.delivery.phone}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="font-mono font-bold text-white shrink-0">{eur(o.total)}</div>
+                  </div>
+                  <div className="text-xs text-neutral-400 mt-2 leading-snug">
+                    {o.items.map((it) => `${it.quantity}x ${it.name}`).join(" · ")}
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => onPrintNow(o)}
+                      data-testid={`scheduled-print-now-${o.id}`}
+                      className="flex-1 h-10 rounded-md bg-[#FF6B00] hover:bg-[#FF8533] text-white text-sm font-bold flex items-center justify-center gap-2"
+                    >
+                      <Printer className="w-4 h-4" /> Τύπωσε τώρα
+                    </button>
+                    <button
+                      onClick={() => onCancel(o)}
+                      data-testid={`scheduled-cancel-${o.id}`}
+                      className="h-10 px-4 rounded-md border border-[#FF3B30]/50 text-[#FF6961] hover:bg-[#FF3B30]/10 text-sm font-bold flex items-center justify-center gap-2"
+                    >
+                      <Ban className="w-4 h-4" /> Ακύρωση
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function PDA() {
   const { user } = useAuth();
@@ -33,6 +172,10 @@ export default function PDA() {
   const [printOrder, setPrintOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [delivery, setDelivery] = useState(null);
+  const [scheduled, setScheduled] = useState({ enabled: false, date: "", time: "" });
+  const [scheduledOrders, setScheduledOrders] = useState([]);
+  const [scheduledOpen, setScheduledOpen] = useState(false);
+  const firingRef = useRef(false);
 
   const loadNext = async () => {
     try {
@@ -61,6 +204,77 @@ export default function PDA() {
     loadNext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ---- scheduled orders: load + poll every 60s, auto-fire 15' before ----
+  const printReceipt = (order) =>
+    new Promise((resolve) => {
+      setPrintOrder({ ...order, restaurant_name: user?.restaurant_name });
+      setTimeout(() => {
+        window.print();
+        resolve();
+      }, 150);
+    });
+
+  const checkScheduled = async () => {
+    if (firingRef.current) return;
+    firingRef.current = true;
+    try {
+      const list = await apiListScheduledOrders();
+      const now = Date.now();
+      const due = list.filter(
+        (o) => o.scheduled_at && new Date(o.scheduled_at).getTime() - now <= FIRE_AHEAD_MS
+      );
+      const pending = list.filter((o) => !due.some((d) => d.id === o.id));
+      setScheduledOrders(pending);
+      for (const o of due) {
+        try {
+          const activated = await apiActivateOrder(o.id);
+          playAlert();
+          toast.warning(
+            `🕒 Ώρα για την προγραμματισμένη #${String(o.order_number).padStart(3, "0")}` +
+              ` (${schedTime(o.scheduled_at)})${o.delivery?.name ? " — " + o.delivery.name : ""}`,
+            { duration: 15000 }
+          );
+          await printReceipt(activated);
+        } catch {
+          // ήδη ενεργοποιημένη από άλλη συσκευή — απλώς προχωράμε
+        }
+      }
+    } catch {
+      // σφάλμα δικτύου — θα ξαναδοκιμάσει στο επόμενο poll
+    } finally {
+      firingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    checkScheduled();
+    const t = setInterval(checkScheduled, POLL_MS);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handlePrintNow = async (order) => {
+    try {
+      const activated = await apiActivateOrder(order.id);
+      setScheduledOrders((p) => p.filter((o) => o.id !== order.id));
+      await printReceipt(activated);
+      toast.success(`Η #${String(order.order_number).padStart(3, "0")} τυπώθηκε`);
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  };
+
+  const handleCancelScheduled = async (order) => {
+    if (!window.confirm(`Ακύρωση προγραμματισμένης #${String(order.order_number).padStart(3, "0")};`)) return;
+    try {
+      await apiCancelOrder(order.id);
+      setScheduledOrders((p) => p.filter((o) => o.id !== order.id));
+      toast.success("Ακυρώθηκε");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  };
 
   const addLine = (item, customization = null, unitPriceOverride = null) => {
     const unit_price = unitPriceOverride ?? item.price;
@@ -151,6 +365,16 @@ export default function PDA() {
 
   const handleSubmit = async () => {
     if (items.length === 0) return;
+    const isScheduled = scheduled.enabled && scheduled.time;
+    let scheduledAt = null;
+    if (isScheduled) {
+      const dt = new Date(`${scheduled.date || new Date().toISOString().slice(0, 10)}T${scheduled.time}:00`);
+      if (Number.isNaN(dt.getTime())) {
+        toast.error("Μη έγκυρη ώρα προγραμματισμού");
+        return;
+      }
+      scheduledAt = dt.toISOString();
+    }
     setSubmitting(true);
     const subtotal = items.reduce((s, it) => s + it.line_total, 0);
     const payload = {
@@ -159,6 +383,7 @@ export default function PDA() {
       subtotal,
       total: subtotal,
       delivery: source === "Τηλέφωνο" && delivery?.delivery_type ? delivery : null,
+      scheduled_at: scheduledAt,
       items: items.map((it) => ({
         item_id: it.item_id,
         name: it.name,
@@ -171,11 +396,23 @@ export default function PDA() {
     };
     try {
       const saved = await submitOrder(payload);
-      setPrintOrder({ ...saved, restaurant_name: user.restaurant_name });
-      setTimeout(() => window.print(), 100);
-      toast.success(`Παραγγελία #${saved.order_number} αποθηκεύτηκε`);
+      if (isScheduled) {
+        toast.success(
+          `Η #${String(saved.order_number).padStart(3, "0")} προγραμματίστηκε για ${schedDateTime(scheduledAt)}`
+        );
+        setScheduledOrders((p) =>
+          [...p, saved].sort(
+            (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+          )
+        );
+      } else {
+        setPrintOrder({ ...saved, restaurant_name: user.restaurant_name });
+        setTimeout(() => window.print(), 100);
+        toast.success(`Παραγγελία #${saved.order_number} αποθηκεύτηκε`);
+      }
       setItems([]);
       setDelivery(null);
+      setScheduled({ enabled: false, date: "", time: "" });
       await loadNext();
     } catch (e) {
       toast.error(formatApiError(e));
@@ -198,6 +435,19 @@ export default function PDA() {
     <AppShell title="Παραγγελίες">
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-y-auto lg:overflow-hidden">
         <section className="p-6 lg:overflow-hidden flex flex-col min-h-0">
+          {scheduledOrders.length > 0 && (
+            <button
+              onClick={() => setScheduledOpen(true)}
+              data-testid="scheduled-badge-btn"
+              className="mb-4 shrink-0 flex items-center gap-2 self-start px-4 h-10 rounded-md border border-[#00B0FF]/50 bg-[#00B0FF]/10 text-[#00B0FF] text-sm font-bold hover:bg-[#00B0FF]/20 transition-colors"
+            >
+              <Clock className="w-4 h-4" />
+              Προγραμματισμένες: {scheduledOrders.length}
+              <span className="text-xs font-normal text-[#00B0FF]/70">
+                · επόμενη {schedDateTime(scheduledOrders[0]?.scheduled_at)}
+              </span>
+            </button>
+          )}
           <MenuGrid
             categories={config.categories}
             items={config.items}
@@ -214,6 +464,8 @@ export default function PDA() {
           onSourceChange={setSource}
           delivery={delivery}
           setDelivery={setDelivery}
+          scheduled={scheduled}
+          setScheduled={setScheduled}
           onIncrement={(id) => updateQty(id, 1)}
           onDecrement={(id) => updateQty(id, -1)}
           onSetQuantity={setLineQuantity}
@@ -239,6 +491,13 @@ export default function PDA() {
           setInitialCustomization(null);
         }}
         onConfirm={handleConfirmCustomization}
+      />
+      <ScheduledOrdersModal
+        open={scheduledOpen}
+        orders={scheduledOrders}
+        onClose={() => setScheduledOpen(false)}
+        onPrintNow={handlePrintNow}
+        onCancel={handleCancelScheduled}
       />
       <Receipt order={printOrder} />
     </AppShell>

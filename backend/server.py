@@ -231,6 +231,7 @@ class OrderCreate(BaseModel):
     source: Literal["Ταμείο", "Τηλέφωνο", "efood", "Box"]
     note: Optional[str] = None
     delivery: Optional[DeliveryInfo] = None
+    scheduled_at: Optional[str] = None  # ISO datetime — order fires later
 
 
 class Order(OrderCreate):
@@ -238,6 +239,7 @@ class Order(OrderCreate):
     user_id: str
     created_at: datetime
     cancelled: bool = False
+    status: Literal["active", "scheduled"] = "active"
 
 
 # ============ SEEDING ============
@@ -688,11 +690,24 @@ async def create_order(body: OrderCreate, user: dict = Depends(get_current_user)
         "id": oid,
         "user_id": user["id"],
         "created_at": now.isoformat(),
+        "status": "scheduled" if body.scheduled_at else "active",
     })
     await db.orders.insert_one(doc)
     doc.pop("_id", None)
     doc["created_at"] = now
     return doc
+
+
+@api.get("/orders/scheduled", response_model=List[Order])
+async def list_scheduled_orders(user: dict = Depends(get_current_user)):
+    docs = await db.orders.find(
+        {"user_id": user["id"], "status": "scheduled", "cancelled": {"$ne": True}},
+        {"_id": 0},
+    ).sort("scheduled_at", 1).to_list(500)
+    for d in docs:
+        if isinstance(d.get("created_at"), str):
+            d["created_at"] = datetime.fromisoformat(d["created_at"])
+    return docs
 
 
 @api.get("/orders", response_model=List[Order])
@@ -746,13 +761,32 @@ async def get_order(oid: str, user: dict = Depends(get_current_user)):
     return doc
 
 
-@api.post("/orders/{oid}/cancel")
-async def cancel_order(oid: str, user: dict = Depends(require_owner)):
+@api.post("/orders/{oid}/activate", response_model=Order)
+async def activate_order(oid: str, user: dict = Depends(get_current_user)):
+    """Move a scheduled order to active (fired / printed)."""
     r = await db.orders.update_one(
-        {"id": oid, "user_id": user["id"]}, {"$set": {"cancelled": True}}
+        {"id": oid, "user_id": user["id"], "status": "scheduled"},
+        {"$set": {"status": "active"}},
     )
     if r.matched_count == 0:
         raise HTTPException(404, "Not found")
+    doc = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})
+    if isinstance(doc.get("created_at"), str):
+        doc["created_at"] = datetime.fromisoformat(doc["created_at"])
+    return doc
+
+
+@api.post("/orders/{oid}/cancel")
+async def cancel_order(oid: str, user: dict = Depends(get_current_user)):
+    order = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0, "status": 1})
+    if not order:
+        raise HTTPException(404, "Not found")
+    # scheduled orders may be cancelled by any profile; fired orders only by the owner
+    if order.get("status") != "scheduled" and user.get("profile") != "owner":
+        raise HTTPException(403, "Απαιτείται πρόσβαση ιδιοκτήτη")
+    await db.orders.update_one(
+        {"id": oid, "user_id": user["id"]}, {"$set": {"cancelled": True}}
+    )
     return {"ok": True, "id": oid, "cancelled": True}
 
 
@@ -773,6 +807,7 @@ async def list_customers(user: dict = Depends(require_owner)):
             "user_id": user["id"],
             "delivery": {"$ne": None},
             "cancelled": {"$ne": True},
+            "status": {"$ne": "scheduled"},
         },
         {"_id": 0, "user_id": 0},
     ).sort("created_at", 1).to_list(50000)
@@ -852,6 +887,7 @@ async def analytics(
         "user_id": user["id"],
         "created_at": {"$gte": f"{df}T00:00:00+00:00", "$lte": f"{dt}T23:59:59+00:00"},
         "cancelled": {"$ne": True},
+        "status": {"$ne": "scheduled"},  # not fired yet → no revenue
     }
     docs = await db.orders.find(query, {"_id": 0}).to_list(50000)
     total_orders = len(docs)

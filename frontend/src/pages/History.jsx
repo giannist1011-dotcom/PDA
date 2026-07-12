@@ -39,6 +39,35 @@ const summarize = (c) => {
   return parts.join(" · ");
 };
 
+const schedLabel = (iso) => {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString("el-GR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+};
+
+const ScheduledBadge = ({ order }) => {
+  if (!order.scheduled_at) return null;
+  const pending = order.status === "scheduled";
+  return (
+    <span
+      className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
+        pending ? "bg-[#00B0FF]/20 text-[#00B0FF]" : "bg-[#00B0FF]/10 text-[#00B0FF]/70"
+      }`}
+      title={pending ? "Δεν έχει τυπωθεί ακόμα" : "Είχε προγραμματιστεί"}
+    >
+      Προγρ. {schedLabel(order.scheduled_at)}
+    </span>
+  );
+};
+
 const typeLabel = (order) => {
   const t = order.delivery?.delivery_type;
   if (t === "delivery") return "Παράδοση";
@@ -81,6 +110,7 @@ function OrderDetailModal({ order, isOwner, onClose, onReprint, onCancel, onDele
                   Ακυρωμένη
                 </span>
               )}
+              <ScheduledBadge order={order} />
             </div>
             <div className="text-sm text-neutral-400 mt-1">
               {formatGRDateTime(order.created_at)} · {typeLabel(order)}
@@ -560,6 +590,7 @@ export default function History() {
                               Ακυρωμένη
                             </span>
                           )}
+                          <ScheduledBadge order={o} />
                         </div>
                         <div className="text-xs text-neutral-500 mt-1">
                           {formatGRDateTime(o.created_at)}
