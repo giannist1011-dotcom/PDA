@@ -70,7 +70,7 @@ export default function AppShell({ title, children }) {
   ) : null;
 
   return (
-    <div className="min-h-screen w-screen flex flex-col bg-[#0D0D0D] text-white">
+    <div className="h-screen w-screen flex flex-col bg-[#0D0D0D] text-white">
       <header className="flex items-center justify-between px-4 md:px-6 h-16 border-b border-[#333] bg-[#0D0D0D] shrink-0">
         <div className="flex items-center gap-3">
           <button

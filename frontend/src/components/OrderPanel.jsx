@@ -76,7 +76,8 @@ export default function OrderPanel({
       className="flex flex-col h-full bg-[#1A1A1A] border-l border-[#333] overflow-hidden"
       data-testid="order-panel"
     >
-      <div className="p-6 border-b border-[#333]">
+      {/* Zone 1 — fixed header: order number + source buttons */}
+      <div className="p-6 border-b border-[#333] shrink-0">
         <div className="flex items-baseline justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-neutral-400">
@@ -116,7 +117,8 @@ export default function OrderPanel({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6" data-testid="order-items">
+      {/* Zone 2 — scrollable: only the order lines */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-6" data-testid="order-items">
         {isEmpty ? (
           <div className="h-full flex flex-col items-center justify-center text-neutral-500 py-16 text-center">
             <div className="text-lg font-heading">Άδεια παραγγελία</div>
@@ -188,13 +190,16 @@ export default function OrderPanel({
           })
         )}
 
-        {/* Phone delivery section */}
+      </div>
+
+      {/* Zone 3 — fixed footer: delivery type, total, actions */}
+      <div className="p-6 border-t border-[#333] bg-[#141414] shrink-0">
         {isPhone && (
-          <div className="mt-4 mb-2 p-3 rounded-md border border-[#FF6B00]/40 bg-[#FF6B00]/5" data-testid="delivery-section">
+          <div className="mb-4 p-3 rounded-md border border-[#FF6B00]/40 bg-[#FF6B00]/5" data-testid="delivery-section">
             <div className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-2">
               Τύπος τηλεφωνικής παραγγελίας
             </div>
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setDelivery({ delivery_type: "delivery", ...(delivery || {}) })}
                 data-testid="delivery-btn-delivery"
@@ -222,7 +227,7 @@ export default function OrderPanel({
             </div>
 
             {activeFields.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-2 mt-3 max-h-[28vh] overflow-y-auto pr-1">
                 {activeFields.map((f) => (
                   <div key={f.key}>
                     <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
@@ -242,9 +247,6 @@ export default function OrderPanel({
             )}
           </div>
         )}
-      </div>
-
-      <div className="p-6 pb-16 border-t border-[#333] bg-[#141414]">
         <div className="flex items-baseline justify-between mb-4">
           <span className="text-sm text-neutral-400 uppercase tracking-widest font-bold">
             Σύνολο

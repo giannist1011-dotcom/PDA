@@ -196,8 +196,8 @@ export default function PDA() {
 
   return (
     <AppShell title="Παραγγελίες">
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-hidden">
-        <section className="p-6 overflow-hidden flex flex-col">
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-y-auto lg:overflow-hidden">
+        <section className="p-6 lg:overflow-hidden flex flex-col min-h-0">
           <MenuGrid
             categories={config.categories}
             items={config.items}

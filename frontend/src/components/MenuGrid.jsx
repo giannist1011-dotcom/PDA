@@ -47,7 +47,7 @@ export default function MenuGrid({
       </div>
 
       <div
-        className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto overflow-x-hidden px-2 pt-2 pr-3 pb-6"
+        className="flex-1 min-h-0 content-start grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto overflow-x-hidden px-2 pt-2 pr-3 pb-6"
         data-testid="menu-items-grid"
       >
         {filtered.map((it) => {
