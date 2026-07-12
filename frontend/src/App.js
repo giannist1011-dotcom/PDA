@@ -14,6 +14,7 @@ import ProfileSelect from "@/pages/ProfileSelect";
 import Settings from "@/pages/Settings";
 import Photos from "@/pages/Photos";
 import Expenses from "@/pages/Expenses";
+import History from "@/pages/History";
 
 function App() {
   return (
@@ -45,6 +46,14 @@ function App() {
               element={
                 <ProtectedRoute requireOwner>
                   <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <ProtectedRoute>
+                  <History />
                 </ProtectedRoute>
               }
             />

@@ -16,12 +16,14 @@ import {
   User as UserIcon,
   Image as ImageIcon,
   Wallet,
+  History as HistoryIcon,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 // Full nav list. Each entry may require owner.
 const NAV_ALL = [
   { to: "/", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", owner: false },
+  { to: "/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", owner: false },
   { to: "/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", owner: true },
   { to: "/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", owner: true },
   { to: "/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", owner: true },

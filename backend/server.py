@@ -5,6 +5,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 import os
+import re
 import uuid
 import logging
 import bcrypt
@@ -236,6 +237,7 @@ class Order(OrderCreate):
     id: str
     user_id: str
     created_at: datetime
+    cancelled: bool = False
 
 
 # ============ SEEDING ============
@@ -697,6 +699,9 @@ async def create_order(body: OrderCreate, user: dict = Depends(get_current_user)
 async def list_orders(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    source: Optional[str] = None,
+    q: Optional[str] = None,
+    skip: int = 0,
     limit: int = 500,
     user: dict = Depends(get_current_user),
 ):
@@ -708,11 +713,121 @@ async def list_orders(
         if date_to:
             rng["$lte"] = f"{date_to}T23:59:59+00:00"
         query["created_at"] = rng
-    docs = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    if source:
+        query["source"] = source
+    if q and q.strip():
+        term = q.strip()
+        ors = [
+            {"delivery.name": {"$regex": re.escape(term), "$options": "i"}},
+            {"delivery.phone": {"$regex": re.escape(term)}},
+        ]
+        if term.isdigit():
+            ors.append({"order_number": int(term)})
+        query["$or"] = ors
+    docs = (
+        await db.orders.find(query, {"_id": 0})
+        .sort("created_at", -1)
+        .skip(max(0, skip))
+        .to_list(min(limit, 500))
+    )
     for d in docs:
         if isinstance(d.get("created_at"), str):
             d["created_at"] = datetime.fromisoformat(d["created_at"])
     return docs
+
+
+@api.get("/orders/{oid}", response_model=Order)
+async def get_order(oid: str, user: dict = Depends(get_current_user)):
+    doc = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Not found")
+    if isinstance(doc.get("created_at"), str):
+        doc["created_at"] = datetime.fromisoformat(doc["created_at"])
+    return doc
+
+
+@api.post("/orders/{oid}/cancel")
+async def cancel_order(oid: str, user: dict = Depends(require_owner)):
+    r = await db.orders.update_one(
+        {"id": oid, "user_id": user["id"]}, {"$set": {"cancelled": True}}
+    )
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True, "id": oid, "cancelled": True}
+
+
+@api.get("/customers")
+async def list_customers(user: dict = Depends(require_owner)):
+    """Aggregate customers from phone/delivery orders, grouped by phone
+    (falling back to name+address when no phone was recorded)."""
+    docs = await db.orders.find(
+        {
+            "user_id": user["id"],
+            "delivery": {"$ne": None},
+            "cancelled": {"$ne": True},
+        },
+        {"_id": 0, "user_id": 0},
+    ).sort("created_at", 1).to_list(50000)
+
+    customers = {}
+    for d in docs:
+        dv = d.get("delivery") or {}
+        phone = (dv.get("phone") or "").strip()
+        name = (dv.get("name") or "").strip()
+        address = (dv.get("address") or "").strip()
+        if phone:
+            key = f"tel:{phone}"
+        elif name or address:
+            key = f"na:{name.lower()}|{address.lower()}"
+        else:
+            continue  # no identifying info at all
+
+        c = customers.setdefault(key, {
+            "key": key,
+            "name": "",
+            "phone": "",
+            "address": "",
+            "floor": "",
+            "orders_count": 0,
+            "total_spent": 0.0,
+            "last_order_at": None,
+            "orders": [],
+            "_items": Counter(),
+        })
+        # keep the latest non-empty contact details (docs are sorted oldest→newest)
+        if name:
+            c["name"] = name
+        if phone:
+            c["phone"] = phone
+        if address:
+            c["address"] = address
+        if (dv.get("floor") or "").strip():
+            c["floor"] = dv["floor"].strip()
+
+        c["orders_count"] += 1
+        c["total_spent"] += d.get("total", 0)
+        c["last_order_at"] = d.get("created_at")
+        c["orders"].append({
+            "id": d["id"],
+            "order_number": d.get("order_number"),
+            "created_at": d.get("created_at"),
+            "total": d.get("total", 0),
+            "delivery_type": dv.get("delivery_type"),
+            "source": d.get("source"),
+        })
+        for it in d.get("items", []):
+            c["_items"][it.get("name", "")] += it.get("quantity", 1)
+
+    out = []
+    for c in customers.values():
+        c["total_spent"] = round(c["total_spent"], 2)
+        c["orders"] = list(reversed(c["orders"]))  # newest first
+        c["top_items"] = [
+            {"name": n, "quantity": q} for n, q in c.pop("_items").most_common(5) if n
+        ]
+        out.append(c)
+    out.sort(key=lambda c: (-c["orders_count"], c["name"].lower()))
+    return out
 
 
 # ============ ANALYTICS ============
@@ -728,6 +843,7 @@ async def analytics(
     query = {
         "user_id": user["id"],
         "created_at": {"$gte": f"{df}T00:00:00+00:00", "$lte": f"{dt}T23:59:59+00:00"},
+        "cancelled": {"$ne": True},
     }
     docs = await db.orders.find(query, {"_id": 0}).to_list(50000)
     total_orders = len(docs)

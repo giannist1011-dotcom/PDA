@@ -90,8 +90,14 @@ export const apiDeleteShift = (employeeId, weekStart, day) =>
 // ORDERS
 export const fetchNextOrderNumber = async () => (await api.get("/orders/next-number")).data.next_order_number;
 export const submitOrder = (payload) => api.post("/orders", payload).then((r) => r.data);
-export const fetchOrders = (dateFrom, dateTo) =>
-  api.get("/orders", { params: { date_from: dateFrom, date_to: dateTo } }).then((r) => r.data);
+export const fetchOrders = (params) =>
+  api.get("/orders", { params }).then((r) => r.data);
+export const apiGetOrder = (id) => api.get(`/orders/${id}`).then((r) => r.data);
+export const apiCancelOrder = (id) =>
+  api.post(`/orders/${id}/cancel`).then((r) => r.data);
+
+// CUSTOMERS
+export const apiListCustomers = () => api.get("/customers").then((r) => r.data);
 
 // ANALYTICS
 export const fetchAnalytics = (dateFrom, dateTo) =>
