@@ -36,7 +36,7 @@ function StockRow({ item, onToggleNeed, onDelete, canEdit }) {
     <label
       className={`p-4 bg-[#1A1A1A] border rounded-lg flex items-center gap-4 group cursor-pointer select-none transition-colors ${
         needs
-          ? "border-[#FF6B00] bg-[#FF6B00]/5"
+          ? "border-flame bg-flame/5"
           : "border-[#333] hover:border-[#555]"
       }`}
       data-testid={`stock-row-${item.id}`}
@@ -52,8 +52,8 @@ function StockRow({ item, onToggleNeed, onDelete, canEdit }) {
         role="checkbox"
         className={`w-7 h-7 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
           needs
-            ? "bg-[#FF6B00] border-[#FF6B00]"
-            : "border-[#555] hover:border-[#FF6B00] bg-[#0D0D0D]"
+            ? "bg-brand border-brand"
+            : "border-[#555] hover:border-flame bg-[#0D0D0D]"
         }`}
       >
         {needs && <Check className="w-5 h-5 text-white" strokeWidth={3} />}
@@ -63,7 +63,7 @@ function StockRow({ item, onToggleNeed, onDelete, canEdit }) {
           {item.name}
         </div>
         {needs && (
-          <div className="text-[11px] font-bold uppercase tracking-widest text-[#FF6B00] mt-0.5">
+          <div className="text-[11px] font-bold uppercase tracking-widest text-flame mt-0.5">
             Στη λίστα αγορών
           </div>
         )}
@@ -125,14 +125,14 @@ function AddItemModal({ open, onClose, categories, defaultCategoryId, onSubmit }
           onChange={(e) => setName(e.target.value)}
           placeholder="π.χ. Χαρτοπετσέτες"
           data-testid="stock-item-name-input"
-          className="w-full h-11 mt-1 mb-4 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+          className="w-full h-11 mt-1 mb-4 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         />
         <label className="text-xs uppercase tracking-wider text-neutral-400">Κατηγορία</label>
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
           data-testid="stock-item-category-select"
-          className="w-full h-11 mt-1 mb-6 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+          className="w-full h-11 mt-1 mb-6 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -152,7 +152,7 @@ function AddItemModal({ open, onClose, categories, defaultCategoryId, onSubmit }
           <Button
             type="submit"
             data-testid="stock-item-save-btn"
-            className="h-10 bg-[#FF6B00] hover:bg-[#FF8533] px-4"
+            className="h-10 bg-brand hover:bg-brand-hover px-4"
           >
             Προσθήκη
           </Button>
@@ -196,7 +196,7 @@ function CategoryModal({ open, onClose, onSubmit, initialName = "", title }) {
           onChange={(e) => setName(e.target.value)}
           placeholder="π.χ. Καθαριστικά"
           data-testid="stock-category-name-input"
-          className="w-full h-11 mt-1 mb-6 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+          className="w-full h-11 mt-1 mb-6 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         />
         <div className="flex justify-end gap-2">
           <button
@@ -210,7 +210,7 @@ function CategoryModal({ open, onClose, onSubmit, initialName = "", title }) {
           <Button
             type="submit"
             data-testid="stock-category-save-btn"
-            className="h-10 bg-[#FF6B00] hover:bg-[#FF8533] px-4"
+            className="h-10 bg-brand hover:bg-brand-hover px-4"
           >
             Αποθήκευση
           </Button>
@@ -497,7 +497,7 @@ export default function Stock() {
             <div className="flex items-start justify-between mb-4 gap-4 flex-wrap">
               <div>
                 <div className="flex items-center gap-2">
-                  <Package className="w-5 h-5 text-[#FF6B00]" />
+                  <Package className="w-5 h-5 text-flame" />
                   <h2 className="font-heading text-2xl font-bold">Απόθεμα καταστήματος</h2>
                 </div>
                 <p className="text-sm text-neutral-400 mt-1">
@@ -510,7 +510,7 @@ export default function Stock() {
                     <Button
                       onClick={() => setCatModal({ open: true, editing: null })}
                       data-testid="stock-add-category-btn"
-                      className="h-10 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white"
+                      className="h-10 bg-[#1A1A1A] border border-[#333] hover:border-flame text-white"
                     >
                       <FolderPlus className="w-4 h-4 mr-2" />
                       Νέα κατηγορία
@@ -519,7 +519,7 @@ export default function Stock() {
                       onClick={() => setItemModal({ open: true })}
                       disabled={categories.length === 0}
                       data-testid="stock-add-item-btn"
-                      className="h-10 bg-[#FF6B00] hover:bg-[#FF8533]"
+                      className="h-10 bg-brand hover:bg-brand-hover"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Νέο προϊόν
@@ -529,7 +529,7 @@ export default function Stock() {
                 <div className="text-sm ml-2">
                   <span className="text-neutral-400">Στη λίστα: </span>
                   <span
-                    className="font-mono font-bold text-[#FF6B00]"
+                    className="font-mono font-bold text-flame"
                     data-testid="needs-count"
                   >
                     {needsCount}
@@ -545,8 +545,8 @@ export default function Stock() {
                 data-testid="stock-filter-all"
                 className={`h-10 px-4 rounded-md text-sm font-bold border ${
                   activeCat === "all"
-                    ? "bg-[#FF6B00] border-[#FF6B00] text-white"
-                    : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+                    ? "bg-brand border-brand text-white"
+                    : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-flame"
                 }`}
               >
                 Όλα ({items.length})
@@ -556,8 +556,8 @@ export default function Stock() {
                 data-testid="stock-filter-needs"
                 className={`h-10 px-4 rounded-md text-sm font-bold border ${
                   activeCat === "needs"
-                    ? "bg-[#FF6B00] border-[#FF6B00] text-white"
-                    : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+                    ? "bg-brand border-brand text-white"
+                    : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-flame"
                 }`}
               >
                 Στη λίστα ({needsCount})
@@ -572,8 +572,8 @@ export default function Stock() {
                       data-testid={`stock-filter-${c.id}`}
                       className={`h-10 px-4 rounded-md text-sm font-bold border ${
                         active
-                          ? "bg-[#FF6B00] border-[#FF6B00] text-white"
-                          : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+                          ? "bg-brand border-brand text-white"
+                          : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-flame"
                       }`}
                     >
                       {c.name} ({count})
@@ -612,7 +612,7 @@ export default function Stock() {
                 {canManage && (
                   <button
                     onClick={() => setCatModal({ open: true, editing: null })}
-                    className="text-[#FF6B00] font-bold hover:underline"
+                    className="text-flame font-bold hover:underline"
                     data-testid="stock-empty-add-category"
                   >
                     Δημιουργήστε την πρώτη κατηγορία
@@ -642,14 +642,14 @@ export default function Stock() {
           <aside className="bg-[#1A1A1A] border border-[#333] rounded-lg p-5 h-fit lg:sticky lg:top-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <ShoppingBasket className="w-5 h-5 text-[#FF6B00]" />
+                <ShoppingBasket className="w-5 h-5 text-flame" />
                 <h2 className="font-heading text-xl font-bold">Λίστα αγορών</h2>
               </div>
               <button
                 onClick={onPrint}
                 disabled={shopping.length === 0}
                 data-testid="shopping-print-btn"
-                className="flex items-center gap-1.5 h-9 px-3 rounded-md bg-[#0D0D0D] border border-[#333] text-neutral-200 text-sm font-bold hover:border-[#FF6B00] hover:text-[#FF6B00] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 h-9 px-3 rounded-md bg-[#0D0D0D] border border-[#333] text-neutral-200 text-sm font-bold hover:border-flame hover:text-flame disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Εκτύπωση & μηδενισμός λίστας"
               >
                 <Printer className="w-4 h-4" />
@@ -663,12 +663,12 @@ export default function Stock() {
                   onChange={(e) => setShopText(e.target.value)}
                   placeholder="π.χ. 5kg πατάτες"
                   data-testid="shopping-input"
-                  className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+                  className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-flame"
                 />
                 <Button
                   type="submit"
                   data-testid="shopping-add-btn"
-                  className="h-11 bg-[#FF6B00] hover:bg-[#FF8533] px-3"
+                  className="h-11 bg-brand hover:bg-brand-hover px-3"
                 >
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -713,7 +713,7 @@ export default function Stock() {
                     </span>
                     {s.source_stock_id && (
                       <span
-                        className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#FF6B00]/20 text-[#FF6B00]"
+                        className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-flame/20 text-flame"
                         title="Από απόθεμα"
                       >
                         Αποθ.

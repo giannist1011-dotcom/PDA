@@ -62,7 +62,7 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
               key={i}
               className={`w-14 h-14 rounded-lg border-2 flex items-center justify-center font-mono text-2xl font-bold ${
                 pin.length > i
-                  ? "border-[#FF6B00] bg-[#FF6B00]/10 text-white"
+                  ? "border-flame bg-flame/10 text-white"
                   : "border-[#333] bg-[#1A1A1A] text-neutral-600"
               }`}
             >
@@ -93,10 +93,10 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
                 data-testid={`pin-key-${k}`}
                 className={`h-20 rounded-xl font-heading text-2xl font-bold transition-all active:scale-95 no-select ${
                   isDigit
-                    ? "bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white"
+                    ? "bg-[#1A1A1A] border border-[#333] hover:border-flame text-white"
                     : k === "clear"
                     ? "bg-[#1A1A1A] border border-[#333] hover:border-[#FF3B30] text-neutral-400 hover:text-[#FF3B30]"
-                    : "bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-neutral-400"
+                    : "bg-[#1A1A1A] border border-[#333] hover:border-flame text-neutral-400"
                 }`}
               >
                 {label}
@@ -108,7 +108,7 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
         <button
           onClick={onCancel}
           data-testid="pin-cancel-btn"
-          className="w-full h-12 rounded-md border border-[#333] hover:border-[#FF6B00] text-neutral-300 hover:text-white font-semibold"
+          className="w-full h-12 rounded-md border border-[#333] hover:border-flame text-neutral-300 hover:text-white font-semibold"
         >
           ← Επιλογή άλλου προφίλ
         </button>

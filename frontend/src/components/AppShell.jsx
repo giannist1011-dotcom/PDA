@@ -91,13 +91,13 @@ export default function AppShell({ title, children }) {
             onClick={() => setOpen(true)}
             data-testid="burger-btn"
             aria-label="Μενού"
-            className="w-11 h-11 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center text-white transition-colors"
+            className="w-11 h-11 rounded-md border border-[#333] hover:border-flame flex items-center justify-center text-white transition-colors"
           >
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-3">
             <div
-              className="w-9 h-9 rounded-md bg-[#FF6B00] flex items-center justify-center"
+              className="w-9 h-9 rounded-md bg-brand flex items-center justify-center"
               data-testid="business-icon"
             >
               <BizIcon className="w-5 h-5 text-white" />
@@ -135,7 +135,7 @@ export default function AppShell({ title, children }) {
           >
             <div className="flex items-center justify-between px-5 h-16 border-b border-[#333]">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-md bg-[#FF6B00] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-md bg-brand flex items-center justify-center">
                   <BizIcon className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -148,7 +148,7 @@ export default function AppShell({ title, children }) {
               <button
                 onClick={() => setOpen(false)}
                 data-testid="drawer-close-btn"
-                className="w-10 h-10 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center"
+                className="w-10 h-10 rounded-md border border-[#333] hover:border-flame flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -165,7 +165,7 @@ export default function AppShell({ title, children }) {
                     data-testid={n.testId}
                     className={`flex items-center gap-3 px-4 py-3 rounded-md mb-1 transition-colors ${
                       active
-                        ? "bg-[#FF6B00]/15 text-[#FF6B00] border border-[#FF6B00]/40"
+                        ? "bg-flame/15 text-flame border border-flame/40"
                         : "text-neutral-200 hover:bg-[#1A1A1A] border border-transparent"
                     }`}
                   >

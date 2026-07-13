@@ -29,7 +29,7 @@ const Field = ({ label, optional, children, hint }) => (
 );
 
 const inputCls =
-  "w-full h-12 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white focus:outline-none focus:border-[#FF6B00]";
+  "w-full h-12 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white focus:outline-none focus:border-flame";
 
 function YesNo({ value, onChange, testId }) {
   return (
@@ -45,8 +45,8 @@ function YesNo({ value, onChange, testId }) {
           data-testid={`${testId}-${o.v ? "yes" : "no"}`}
           className={`h-12 rounded-md border font-bold transition-colors ${
             value === o.v
-              ? "bg-[#FF6B00] border-[#FF6B00] text-white"
-              : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+              ? "bg-brand border-brand text-white"
+              : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-flame"
           }`}
         >
           {o.label}
@@ -150,7 +150,7 @@ export default function Register() {
     <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg">
         <div className="flex items-center gap-3 mb-6 justify-center">
-          <div className="w-11 h-11 rounded-md bg-[#FF6B00] flex items-center justify-center">
+          <div className="w-11 h-11 rounded-md bg-brand flex items-center justify-center">
             <Utensils className="w-6 h-6 text-white" />
           </div>
           <span className="font-heading text-3xl font-bold tracking-tight">OrderDeck</span>
@@ -163,9 +163,9 @@ export default function Register() {
               <div
                 className={`flex items-center gap-1.5 px-2.5 h-8 rounded-full text-xs font-bold ${
                   i === step
-                    ? "bg-[#FF6B00] text-white"
+                    ? "bg-brand text-white"
                     : i < step
-                      ? "bg-[#FF6B00]/15 text-[#FF6B00]"
+                      ? "bg-flame/15 text-flame"
                       : "bg-[#1A1A1A] text-neutral-500 border border-[#333]"
                 }`}
               >
@@ -278,12 +278,12 @@ export default function Register() {
                         data-testid={`register-biz-${b.key}`}
                         className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all active:scale-[0.98] ${
                           active
-                            ? "bg-[#FF6B00]/10 border-[#FF6B00] text-white"
-                            : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+                            ? "bg-flame/10 border-flame text-white"
+                            : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-flame"
                         }`}
                       >
                         <span
-                          className={`w-12 h-12 rounded-md bg-[#FF6B00] flex items-center justify-center ${
+                          className={`w-12 h-12 rounded-md bg-brand flex items-center justify-center ${
                             active ? "" : "opacity-60"
                           }`}
                         >
@@ -307,7 +307,7 @@ export default function Register() {
               <h1 className="font-heading text-2xl font-bold">Πώς λειτουργείτε;</h1>
               <div className="p-4 bg-[#0D0D0D] border border-[#333] rounded-lg">
                 <div className="flex items-center gap-2 font-semibold">
-                  <LayoutGrid className="w-5 h-5 text-[#FF6B00]" /> Έχετε τραπέζια;
+                  <LayoutGrid className="w-5 h-5 text-flame" /> Έχετε τραπέζια;
                 </div>
                 <div className="text-xs text-neutral-500 mt-1 mb-2">
                   Ενεργοποιεί καρτέλες ανά τραπέζι με γύρους για την κουζίνα (8 έτοιμα τραπέζια)
@@ -316,7 +316,7 @@ export default function Register() {
               </div>
               <div className="p-4 bg-[#0D0D0D] border border-[#333] rounded-lg">
                 <div className="flex items-center gap-2 font-semibold">
-                  <Users className="w-5 h-5 text-[#FF6B00]" /> Έχετε σερβιτόρους;
+                  <Users className="w-5 h-5 text-flame" /> Έχετε σερβιτόρους;
                 </div>
                 <div className="text-xs text-neutral-500 mt-1 mb-2">
                   Δημιουργεί έτοιμο προφίλ Σερβιτόρου (πρόσβαση μόνο στα Τραπέζια)
@@ -330,7 +330,7 @@ export default function Register() {
           {step === 3 && (
             <div className="space-y-4">
               <h1 className="font-heading text-2xl font-bold flex items-center gap-2">
-                <KeyRound className="w-6 h-6 text-[#FF6B00]" /> PIN Ιδιοκτήτη
+                <KeyRound className="w-6 h-6 text-flame" /> PIN Ιδιοκτήτη
               </h1>
               <p className="text-sm text-neutral-400">
                 Με αυτό το 4-ψήφιο PIN θα συνδέεστε στο προφίλ Ιδιοκτήτη και θα εγκρίνετε
@@ -390,7 +390,7 @@ export default function Register() {
                 onClick={back}
                 disabled={busy}
                 data-testid="register-back"
-                className="h-12 px-4 bg-[#0D0D0D] border border-[#333] hover:border-[#FF6B00] text-white"
+                className="h-12 px-4 bg-[#0D0D0D] border border-[#333] hover:border-flame text-white"
               >
                 <ArrowLeft className="w-4 h-4" />
               </Button>
@@ -400,7 +400,7 @@ export default function Register() {
                 type="button"
                 onClick={next}
                 data-testid="register-next"
-                className="flex-1 h-12 bg-[#FF6B00] hover:bg-[#FF8533] text-white font-bold"
+                className="flex-1 h-12 bg-brand hover:bg-brand-hover text-white font-bold"
               >
                 Συνέχεια <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -410,7 +410,7 @@ export default function Register() {
                 onClick={submit}
                 disabled={busy}
                 data-testid="register-submit"
-                className="flex-1 h-12 bg-[#FF6B00] hover:bg-[#FF8533] text-white font-bold"
+                className="flex-1 h-12 bg-brand hover:bg-brand-hover text-white font-bold"
               >
                 {busy ? "Δημιουργία..." : "Δημιουργία λογαριασμού"}
               </Button>
@@ -419,7 +419,7 @@ export default function Register() {
 
           <div className="mt-6 text-sm text-neutral-400 text-center">
             Έχετε ήδη λογαριασμό;{" "}
-            <Link to="/login" data-testid="go-login" className="text-[#FF6B00] hover:underline font-semibold">
+            <Link to="/login" data-testid="go-login" className="text-flame hover:underline font-semibold">
               Σύνδεση
             </Link>
           </div>

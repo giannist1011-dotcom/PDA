@@ -79,13 +79,13 @@ export default function PinGateModal({ open, title, onClose, onSuccess }) {
       <div className="bg-[#1A1A1A] border border-[#333] rounded-lg w-full max-w-xs p-5">
         <div className="flex items-start justify-between mb-1">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-[#FF6B00]" />
+            <ShieldCheck className="w-5 h-5 text-flame" />
             <h3 className="font-heading text-lg font-bold">PIN ιδιοκτήτη/υπευθύνου</h3>
           </div>
           <button
             onClick={onClose}
             data-testid="pin-gate-close"
-            className="w-8 h-8 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center"
+            className="w-8 h-8 rounded-md border border-[#333] hover:border-flame flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
@@ -116,7 +116,7 @@ export default function PinGateModal({ open, title, onClose, onSuccess }) {
                 <span
                   key={i}
                   className={`w-3.5 h-3.5 rounded-full border ${
-                    i < pin.length ? "bg-[#FF6B00] border-[#FF6B00]" : "border-[#555]"
+                    i < pin.length ? "bg-brand border-brand" : "border-[#555]"
                   }`}
                 />
               ))}
@@ -134,7 +134,7 @@ export default function PinGateModal({ open, title, onClose, onSuccess }) {
                   key={k}
                   onClick={() => press(k)}
                   data-testid={`pin-key-${k}`}
-                  className="h-14 rounded-md bg-[#0D0D0D] border border-[#333] text-white text-xl font-mono font-bold hover:border-[#FF6B00] active:scale-95 transition-all"
+                  className="h-14 rounded-md bg-[#0D0D0D] border border-[#333] text-white text-xl font-mono font-bold hover:border-flame active:scale-95 transition-all"
                 >
                   {k}
                 </button>
@@ -149,14 +149,14 @@ export default function PinGateModal({ open, title, onClose, onSuccess }) {
               <button
                 onClick={() => press("0")}
                 data-testid="pin-key-0"
-                className="h-14 rounded-md bg-[#0D0D0D] border border-[#333] text-white text-xl font-mono font-bold hover:border-[#FF6B00] active:scale-95"
+                className="h-14 rounded-md bg-[#0D0D0D] border border-[#333] text-white text-xl font-mono font-bold hover:border-flame active:scale-95"
               >
                 0
               </button>
               <button
                 onClick={backspace}
                 data-testid="pin-key-backspace"
-                className="h-14 rounded-md bg-[#0D0D0D] border border-[#333] text-neutral-300 flex items-center justify-center hover:border-[#FF6B00] active:scale-95"
+                className="h-14 rounded-md bg-[#0D0D0D] border border-[#333] text-neutral-300 flex items-center justify-center hover:border-flame active:scale-95"
               >
                 <Delete className="w-5 h-5" />
               </button>
@@ -166,7 +166,7 @@ export default function PinGateModal({ open, title, onClose, onSuccess }) {
               onClick={submit}
               disabled={pin.length < 4 || busy}
               data-testid="pin-gate-submit"
-              className="w-full h-12 mt-3 rounded-md bg-[#FF6B00] hover:bg-[#FF8533] text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full h-12 mt-3 rounded-md bg-brand hover:bg-brand-hover text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {busy ? "Έλεγχος..." : "Επιβεβαίωση"}
             </button>

@@ -9,14 +9,22 @@
   --pk-surface: #1A1A1A;
   --pk-surface-2: #262626;
   --pk-border: #333333;
-  --pk-primary: #FF6B00;
-  --pk-primary-hover: #FF8533;
+  --pk-primary: #8E2434;
+  --pk-primary-hover: #A62B3E;
+  --pk-accent: #F97316;
+  --pk-gold: #D4A017;
   --pk-success: #00E676;
-  --pk-warning: #FFB300;
+  --pk-warning: #D4A017;
   --pk-danger: #FF3B30;
   --pk-text: #FFFFFF;
   --pk-text-2: #A3A3A3;
   --pk-text-3: #737373;
+
+  /* Brand palette ως RGB triplets για Tailwind alpha (bg-brand/15 κλπ.) */
+  --brand: 142 36 52;        /* μπορντό  #8E2434 */
+  --brand-hover: 166 43 62;  /* μπορντό hover #A62B3E */
+  --flame: 249 115 22;       /* πορτοκαλί accent #F97316 */
+  --gold: 212 160 23;        /* βαθύ κίτρινο #D4A017 */
 }
 
 html, body, #root {
@@ -51,19 +59,19 @@ h1, h2, h3, h4, h5, .font-heading {
     --card-foreground: 0 0% 100%;
     --popover: 0 0% 7%;
     --popover-foreground: 0 0% 100%;
-    --primary: 22 100% 50%;
+    --primary: 351 60% 35%;
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 100%;
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 64%;
-    --accent: 22 100% 50%;
+    --accent: 24 95% 53%;
     --accent-foreground: 0 0% 100%;
     --destructive: 4 100% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 20%;
     --input: 0 0% 20%;
-    --ring: 22 100% 50%;
+    --ring: 24 95% 53%;
     --radius: 0.5rem;
   }
 }
@@ -77,7 +85,7 @@ h1, h2, h3, h4, h5, .font-heading {
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: #0D0D0D; }
 ::-webkit-scrollbar-thumb { background: #333333; border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: #FF6B00; }
+::-webkit-scrollbar-thumb:hover { background: var(--pk-accent); }
 
 /* Utility */
 .no-select { user-select: none; -webkit-user-select: none; }
@@ -110,9 +118,9 @@ h1, h2, h3, h4, h5, .font-heading {
 .pk-pop { animation: pk-pop 120ms ease-out; }
 
 @keyframes pk-flash {
-  0% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.5); background-color: rgba(255, 107, 0, 0.15); }
-  60% { background-color: rgba(255, 107, 0, 0.08); }
-  100% { box-shadow: 0 0 0 12px rgba(255, 107, 0, 0); background-color: transparent; }
+  0% { box-shadow: 0 0 0 0 rgb(var(--flame) / 0.5); background-color: rgb(var(--flame) / 0.15); }
+  60% { background-color: rgb(var(--flame) / 0.08); }
+  100% { box-shadow: 0 0 0 12px rgb(var(--flame) / 0); background-color: transparent; }
 }
 .menu-item--pulse {
   animation: pk-flash 220ms ease-out;

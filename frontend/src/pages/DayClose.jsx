@@ -120,7 +120,7 @@ const SummaryRow = ({ icon: Icon, label, value, valueClass = "text-white", testI
     data-testid={testId}
   >
     <span className="flex items-center gap-2 text-sm text-neutral-300">
-      <Icon className="w-4 h-4 text-[#FF6B00]" />
+      <Icon className="w-4 h-4 text-flame" />
       {label}
     </span>
     <span className={`font-mono font-bold ${valueClass}`}>{value}</span>
@@ -195,7 +195,7 @@ export default function DayClose() {
         <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
           <div>
             <h2 className="font-heading text-2xl font-bold flex items-center gap-2">
-              <CalendarCheck className="w-6 h-6 text-[#FF6B00]" />
+              <CalendarCheck className="w-6 h-6 text-flame" />
               Κλείσιμο ημέρας
             </h2>
             <p className="text-sm text-neutral-400 mt-1" data-testid="dayclose-date">
@@ -207,7 +207,7 @@ export default function DayClose() {
               onClick={load}
               disabled={loading}
               data-testid="dayclose-refresh-btn"
-              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white"
+              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-flame text-white"
             >
               <RefreshCcw className="w-4 h-4 mr-2" />
               Ανανέωση
@@ -216,7 +216,7 @@ export default function DayClose() {
               onClick={handleClose}
               disabled={loading || closing || !summary}
               data-testid="dayclose-print-btn"
-              className="h-11 px-5 bg-[#FF6B00] hover:bg-[#FF8533] font-bold"
+              className="h-11 px-5 bg-brand hover:bg-brand-hover font-bold"
             >
               <Printer className="w-4 h-4 mr-2" />
               {closing ? "Κλείσιμο..." : "Εκτύπωση αναφοράς"}
@@ -245,7 +245,7 @@ export default function DayClose() {
                 icon={Euro}
                 label="Τζίρος"
                 value={eur(summary.total_revenue)}
-                valueClass="text-[#FF6B00] text-lg"
+                valueClass="text-gold text-lg"
                 testId="dayclose-revenue"
               />
               <SummaryRow
@@ -266,7 +266,7 @@ export default function DayClose() {
                 icon={Wallet}
                 label="Έξοδα ημέρας"
                 value={`-${eur(summary.total_expenses)}`}
-                valueClass="text-[#FFB300]"
+                valueClass="text-gold"
                 testId="dayclose-expenses"
               />
               <SummaryRow
@@ -318,7 +318,7 @@ export default function DayClose() {
                         data-testid={`dayclose-type-${t.type}`}
                       >
                         <span className="flex items-center gap-2 text-neutral-300">
-                          <Icon className="w-4 h-4 text-[#FF6B00]" />
+                          <Icon className="w-4 h-4 text-flame" />
                           {TYPE_LABELS[t.type] || t.type}{" "}
                           <span className="text-neutral-500">({t.count})</span>
                         </span>
@@ -367,7 +367,7 @@ export default function DayClose() {
                         <td className="py-2.5 px-3 text-right font-mono text-neutral-300">
                           {r.total_orders}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-[#FF6B00]">
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-gold">
                           {eur(r.total_revenue)}
                         </td>
                         <td
@@ -381,7 +381,7 @@ export default function DayClose() {
                           <button
                             onClick={() => printZ(r)}
                             data-testid={`dayreport-print-${r.id}`}
-                            className="p-2 text-neutral-400 hover:text-[#FF6B00]"
+                            className="p-2 text-neutral-400 hover:text-flame"
                             title="Επανεκτύπωση αναφοράς"
                           >
                             <Printer className="w-4 h-4" />

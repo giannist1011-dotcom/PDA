@@ -46,12 +46,12 @@ function BusinessTypeSettings() {
             data-testid={`biz-type-${b.key}`}
             className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all active:scale-[0.98] ${
               active
-                ? "bg-[#FF6B00]/10 border-[#FF6B00] text-white"
-                : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+                ? "bg-flame/10 border-flame text-white"
+                : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-flame"
             }`}
           >
             <span
-              className={`w-11 h-11 rounded-md bg-[#FF6B00] flex items-center justify-center ${
+              className={`w-11 h-11 rounded-md bg-brand flex items-center justify-center ${
                 active ? "" : "opacity-60"
               }`}
             >
@@ -130,7 +130,7 @@ export default function Settings() {
         <section>
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-1">
-              <Store className="w-6 h-6 text-[#FF6B00]" />
+              <Store className="w-6 h-6 text-flame" />
               <h2 className="font-heading text-2xl font-bold">Τύπος επιχείρησης</h2>
             </div>
             <p className="text-sm text-neutral-400">
@@ -145,7 +145,7 @@ export default function Settings() {
         <section>
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-1">
-              <Users className="w-6 h-6 text-[#FF6B00]" />
+              <Users className="w-6 h-6 text-flame" />
               <h2 className="font-heading text-2xl font-bold">Προφίλ προσωπικού</h2>
             </div>
             <p className="text-sm text-neutral-400">
@@ -160,7 +160,7 @@ export default function Settings() {
         <section>
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-1">
-              <LayoutGrid className="w-6 h-6 text-[#FF6B00]" />
+              <LayoutGrid className="w-6 h-6 text-flame" />
               <h2 className="font-heading text-2xl font-bold">Τραπέζια</h2>
             </div>
             <p className="text-sm text-neutral-400">

@@ -31,8 +31,8 @@ export default function MenuGrid({
               data-state={active ? "on" : "off"}
               className={`px-6 h-14 rounded-md text-base md:text-lg font-semibold transition-all no-select active:scale-[0.98] ${
                 active
-                  ? "bg-[#FF6B00] text-white border border-[#FF6B00]"
-                  : "bg-[#1A1A1A] text-neutral-200 border border-[#333] hover:border-[#FF6B00]"
+                  ? "bg-flame text-white border border-flame"
+                  : "bg-[#1A1A1A] text-neutral-200 border border-[#333] hover:border-flame"
               }`}
             >
               {c.name}
@@ -63,7 +63,7 @@ export default function MenuGrid({
               className={`menu-item group flex flex-col justify-between p-4 rounded-lg text-left h-32 no-select relative overflow-hidden will-change-transform ${
                 unavailable
                   ? "bg-[#141414] border border-[#2A2A2A] cursor-not-allowed opacity-50"
-                  : `bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] hover:scale-[1.03] hover:shadow-lg hover:shadow-[#FF6B00]/10 hover:bg-[#1F1F1F] active:scale-[0.96] transition-[transform,box-shadow,background-color,border-color] duration-[130ms] ease-out ${
+                  : `bg-[#1A1A1A] border border-[#333] hover:border-flame hover:scale-[1.03] hover:shadow-lg hover:shadow-gold/20 hover:bg-[#1F1F1F] active:scale-[0.96] transition-[transform,box-shadow,background-color,border-color] duration-[130ms] ease-out ${
                       pulsing ? "menu-item--pulse" : ""
                     }`
               }`}
@@ -72,7 +72,7 @@ export default function MenuGrid({
                 {it.name}
               </span>
               <div className="flex items-end justify-between mt-2 relative z-[1]">
-                <span className="font-mono text-xl font-bold text-[#FF6B00]">{eur(it.price)}</span>
+                <span className="font-mono text-xl font-bold text-gold">{eur(it.price)}</span>
                 {it.customizable && !unavailable && (
                   <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
                     Custom

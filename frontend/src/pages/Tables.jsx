@@ -41,7 +41,7 @@ export default function Tables() {
       <main className="flex-1 overflow-y-auto p-4 md:p-8 max-w-[1200px] mx-auto w-full">
         <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
           <h2 className="font-heading text-2xl font-bold flex items-center gap-2">
-            <LayoutGrid className="w-6 h-6 text-[#FF6B00]" />
+            <LayoutGrid className="w-6 h-6 text-flame" />
             Τραπέζια
           </h2>
           <div className="flex gap-2">
@@ -49,7 +49,7 @@ export default function Tables() {
               onClick={load}
               disabled={loading}
               data-testid="tables-refresh-btn"
-              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white"
+              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-flame text-white"
             >
               <RefreshCcw className="w-4 h-4" />
             </Button>
@@ -57,7 +57,7 @@ export default function Tables() {
               <Button
                 onClick={() => setEditorOpen(true)}
                 data-testid="tables-manage-btn"
-                className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white"
+                className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-flame text-white"
               >
                 <Settings2 className="w-4 h-4 mr-2" />
                 Διαχείριση
@@ -82,7 +82,7 @@ export default function Tables() {
               <div className="mt-3">
                 <button
                   onClick={() => setEditorOpen(true)}
-                  className="text-[#FF6B00] font-bold hover:underline"
+                  className="text-flame font-bold hover:underline"
                 >
                   Προσθέστε το πρώτο τραπέζι
                 </button>
@@ -100,7 +100,7 @@ export default function Tables() {
                   data-testid={`table-card-${t.id}`}
                   className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-1 p-3 transition-all active:scale-[0.97] ${
                     open
-                      ? "bg-[#FF6B00]/15 border-[#FF6B00] text-white"
+                      ? "bg-flame/15 border-flame text-white"
                       : "bg-[#00E676]/10 border-[#00E676]/60 text-white hover:border-[#00E676]"
                   }`}
                 >
@@ -109,10 +109,10 @@ export default function Tables() {
                   </span>
                   {open ? (
                     <>
-                      <span className="font-mono text-lg font-bold text-[#FF6B00]">
+                      <span className="font-mono text-lg font-bold text-gold">
                         {eur(t.tab.total)}
                       </span>
-                      <span className="text-[10px] uppercase tracking-widest text-[#FF6B00]/80">
+                      <span className="text-[10px] uppercase tracking-widest text-flame/80">
                         {t.tab.rounds_count} {t.tab.rounds_count === 1 ? "γύρος" : "γύροι"}
                       </span>
                     </>
@@ -139,7 +139,7 @@ export default function Tables() {
               <button
                 onClick={() => setEditorOpen(false)}
                 data-testid="tables-editor-close"
-                className="w-9 h-9 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center"
+                className="w-9 h-9 rounded-md border border-[#333] hover:border-flame flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>

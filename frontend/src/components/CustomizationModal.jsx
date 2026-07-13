@@ -18,16 +18,16 @@ const OptionTile = ({ selected, label, badge, onClick, testId }) => (
     data-state={selected ? "on" : "off"}
     className={`flex items-center justify-between px-4 py-4 rounded-lg border text-left transition-all no-select active:scale-[0.98] ${
       selected
-        ? "border-[#FF6B00] bg-[#FF6B00]/10 text-white"
+        ? "border-flame bg-flame/10 text-white"
         : "border-[#333] bg-[#1A1A1A] hover:border-[#666] text-neutral-200"
     }`}
   >
     <span className="text-base font-semibold">{label}</span>
     <span className="flex items-center gap-2">
-      {badge && <span className="text-xs font-mono text-[#FF6B00]">{badge}</span>}
+      {badge && <span className="text-xs font-mono text-gold">{badge}</span>}
       <span
         className={`w-6 h-6 rounded-md border flex items-center justify-center ${
-          selected ? "bg-[#FF6B00] border-[#FF6B00]" : "border-[#555]"
+          selected ? "bg-brand border-brand" : "border-[#555]"
         }`}
       >
         {selected && <Check className="w-4 h-4 text-white" />}
@@ -56,7 +56,7 @@ function LegacyOptions({ item, breadOptions, extrasOptions, saucesOptions, doubl
     <>
       {breadOptions.length > 0 && (
         <section>
-          <h3 className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-3">Ψωμί</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-flame mb-3">Ψωμί</h3>
           <div className="grid grid-cols-3 gap-3">
             {breadOptions.map((b) => (
               <OptionTile
@@ -73,7 +73,7 @@ function LegacyOptions({ item, breadOptions, extrasOptions, saucesOptions, doubl
       )}
       {extrasOptions.length > 0 && (
         <section>
-          <h3 className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-3">Υλικά</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-flame mb-3">Υλικά</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {extrasOptions.map((e) => (
               <OptionTile
@@ -90,7 +90,7 @@ function LegacyOptions({ item, breadOptions, extrasOptions, saucesOptions, doubl
       )}
       {saucesOptions.length > 0 && (
         <section>
-          <h3 className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-3">Αλοιφές</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-flame mb-3">Αλοιφές</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {saucesOptions.map((s) => (
               <OptionTile
@@ -107,7 +107,7 @@ function LegacyOptions({ item, breadOptions, extrasOptions, saucesOptions, doubl
       )}
       {item.double_meat_eligible && doubleMeatPrice > 0 && (
         <section>
-          <h3 className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-3">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-flame mb-3">
             Έξτρα κρέας
           </h3>
           <OptionTile
@@ -145,7 +145,7 @@ function GroupsOptions({ groups, selections, setSelections }) {
     const list = selections[g.id] || [];
     return (
       <section key={g.id} data-testid={`group-${g.id}`}>
-        <h3 className="text-xs font-bold uppercase tracking-widest text-[#FF6B00] mb-3">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-flame mb-3">
           {g.name}
           {g.required && <span className="text-[#FF3B30] ml-2">*</span>}
           {g.type === "single" && (
@@ -343,7 +343,7 @@ export default function CustomizationModal({
               onClick={handleConfirm}
               disabled={missingRequired}
               data-testid="customization-confirm"
-              className="h-14 px-8 text-base font-bold bg-[#FF6B00] hover:bg-[#FF8533] text-white disabled:opacity-50"
+              className="h-14 px-8 text-base font-bold bg-brand hover:bg-brand-hover text-white disabled:opacity-50"
             >
               {isEdit ? "Ενημέρωση" : "Προσθήκη"}
             </Button>

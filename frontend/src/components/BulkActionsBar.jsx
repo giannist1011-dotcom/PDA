@@ -58,8 +58,8 @@ function PriceChangeDialog({ open, count, onClose, onApply }) {
       data-testid={`price-mode-${k}`}
       className={`h-12 rounded-md text-sm font-bold border transition-all ${
         mode === k
-          ? "bg-[#FF6B00] border-[#FF6B00] text-white"
-          : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+          ? "bg-brand border-brand text-white"
+          : "bg-[#1A1A1A] border-[#333] text-neutral-300 hover:border-flame"
       }`}
     >
       {label}
@@ -95,7 +95,7 @@ function PriceChangeDialog({ open, count, onClose, onApply }) {
               placeholder={mode === "set" ? "3,50" : mode === "adjust" ? "+0,20 ή -0,50" : "+10 ή -5"}
               data-testid="bulk-price-input"
               required
-              className="w-full h-12 px-3 mt-1 bg-[#1A1A1A] border border-[#333] rounded-md text-white font-mono text-lg focus:outline-none focus:border-[#FF6B00]"
+              className="w-full h-12 px-3 mt-1 bg-[#1A1A1A] border border-[#333] rounded-md text-white font-mono text-lg focus:outline-none focus:border-flame"
             />
             {mode === "pct" && (
               <div className="text-xs text-neutral-500 mt-1">
@@ -111,7 +111,7 @@ function PriceChangeDialog({ open, count, onClose, onApply }) {
               type="submit"
               disabled={busy || !value}
               data-testid="bulk-price-apply"
-              className="bg-[#FF6B00] hover:bg-[#FF8533] font-bold"
+              className="bg-brand hover:bg-brand-hover font-bold"
             >
               Εφαρμογή
             </Button>
@@ -153,7 +153,7 @@ function CategoryDialog({ open, count, categories, onClose, onApply }) {
             value={cid}
             onChange={(e) => setCid(e.target.value)}
             data-testid="bulk-cat-select"
-            className="w-full h-12 px-3 bg-[#1A1A1A] border border-[#333] rounded-md text-white focus:outline-none focus:border-[#FF6B00]"
+            className="w-full h-12 px-3 bg-[#1A1A1A] border border-[#333] rounded-md text-white focus:outline-none focus:border-flame"
           >
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
@@ -169,7 +169,7 @@ function CategoryDialog({ open, count, categories, onClose, onApply }) {
               type="submit"
               disabled={busy}
               data-testid="bulk-cat-apply"
-              className="bg-[#FF6B00] hover:bg-[#FF8533] font-bold"
+              className="bg-brand hover:bg-brand-hover font-bold"
             >
               Μετακίνηση
             </Button>
@@ -247,7 +247,7 @@ function OptionGroupDialog({ open, count, onClose, onApply }) {
               placeholder="Όνομα ομάδας (π.χ. Μέγεθος)"
               data-testid="bulk-group-name"
               required
-              className="flex-1 h-11 px-3 bg-[#1A1A1A] border border-[#333] rounded-md text-white focus:outline-none focus:border-[#FF6B00]"
+              className="flex-1 h-11 px-3 bg-[#1A1A1A] border border-[#333] rounded-md text-white focus:outline-none focus:border-flame"
             />
             <select
               value={group.type}
@@ -276,7 +276,7 @@ function OptionGroupDialog({ open, count, onClose, onApply }) {
               value={group.price_mode}
               onChange={(e) => setGroup({ ...group, price_mode: e.target.value })}
               data-testid="bulk-group-price-mode"
-              className="w-full h-11 px-3 bg-[#1A1A1A] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+              className="w-full h-11 px-3 bg-[#1A1A1A] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-flame"
             >
               <option value="add">Προσαύξηση (+€ πάνω στη βάση)</option>
               <option value="replace">Καθορισμός τιμής (αντικαθιστά τη βασική)</option>
@@ -335,7 +335,7 @@ function OptionGroupDialog({ open, count, onClose, onApply }) {
               setGroup({ ...group, options: [...group.options, { name: "", price: 0 }] })
             }
             data-testid="bulk-add-option-row"
-            className="w-full h-10 bg-transparent border border-dashed border-[#444] hover:border-[#FF6B00] text-neutral-400 hover:text-white text-xs"
+            className="w-full h-10 bg-transparent border border-dashed border-[#444] hover:border-flame text-neutral-400 hover:text-white text-xs"
           >
             <Plus className="w-3 h-3 mr-1" /> Προσθήκη επιλογής
           </Button>
@@ -347,7 +347,7 @@ function OptionGroupDialog({ open, count, onClose, onApply }) {
               type="submit"
               disabled={busy}
               data-testid="bulk-group-apply"
-              className="bg-[#FF6B00] hover:bg-[#FF8533] font-bold"
+              className="bg-brand hover:bg-brand-hover font-bold"
             >
               Ανάθεση
             </Button>
@@ -396,31 +396,31 @@ export default function BulkActionsBar({ selected, categories, onDone, onClear }
   return (
     <>
       <div
-        className="sticky bottom-4 z-30 mt-4 p-3 bg-[#1A1A1A] border border-[#FF6B00]/40 rounded-xl shadow-2xl shadow-black/40 flex flex-wrap items-center gap-2"
+        className="sticky bottom-4 z-30 mt-4 p-3 bg-[#1A1A1A] border border-flame/40 rounded-xl shadow-2xl shadow-black/40 flex flex-wrap items-center gap-2"
         data-testid="bulk-bar"
       >
-        <div className="px-3 py-2 rounded-md bg-[#FF6B00]/15 text-[#FF6B00] font-bold text-sm" data-testid="bulk-count">
+        <div className="px-3 py-2 rounded-md bg-flame/15 text-flame font-bold text-sm" data-testid="bulk-count">
           {count} επιλεγμένα
         </div>
         <div className="flex flex-wrap gap-2 flex-1">
           <Button
             onClick={() => setPriceOpen(true)}
             data-testid="bulk-btn-price"
-            className="h-10 bg-[#0D0D0D] border border-[#333] hover:border-[#FF6B00] text-white text-sm"
+            className="h-10 bg-[#0D0D0D] border border-[#333] hover:border-flame text-white text-sm"
           >
             <Euro className="w-4 h-4 mr-1" /> Τιμή
           </Button>
           <Button
             onClick={() => setCatOpen(true)}
             data-testid="bulk-btn-category"
-            className="h-10 bg-[#0D0D0D] border border-[#333] hover:border-[#FF6B00] text-white text-sm"
+            className="h-10 bg-[#0D0D0D] border border-[#333] hover:border-flame text-white text-sm"
           >
             <FolderInput className="w-4 h-4 mr-1" /> Κατηγορία
           </Button>
           <Button
             onClick={() => setGroupOpen(true)}
             data-testid="bulk-btn-group"
-            className="h-10 bg-[#0D0D0D] border border-[#333] hover:border-[#FF6B00] text-white text-sm"
+            className="h-10 bg-[#0D0D0D] border border-[#333] hover:border-flame text-white text-sm"
           >
             <ListPlus className="w-4 h-4 mr-1" /> Προσθέστε επιλογές
           </Button>

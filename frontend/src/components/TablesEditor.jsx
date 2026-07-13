@@ -73,12 +73,12 @@ export default function TablesEditor({ tables, onChange }) {
           onChange={(e) => setNewName(e.target.value)}
           placeholder='π.χ. "Τ1" ή "Μπαλκόνι 2"'
           data-testid="table-new-name-input"
-          className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+          className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         />
         <Button
           type="submit"
           data-testid="table-add-btn"
-          className="h-11 bg-[#FF6B00] hover:bg-[#FF8533] px-4"
+          className="h-11 bg-brand hover:bg-brand-hover px-4"
         >
           <Plus className="w-4 h-4" />
         </Button>
@@ -121,13 +121,13 @@ export default function TablesEditor({ tables, onChange }) {
                   onBlur={() => saveRename(t)}
                   onKeyDown={(e) => e.key === "Enter" && saveRename(t)}
                   autoFocus
-                  className="flex-1 h-9 px-2 bg-[#1A1A1A] border border-[#FF6B00] rounded text-white text-sm"
+                  className="flex-1 h-9 px-2 bg-[#1A1A1A] border border-flame rounded text-white text-sm"
                 />
               ) : (
                 <span className="flex-1 text-white font-semibold text-sm truncate">
                   {t.name}
                   {t.tab && (
-                    <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-[#FF6B00]">
+                    <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-flame">
                       Ανοιχτό
                     </span>
                   )}

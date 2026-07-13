@@ -118,7 +118,7 @@ export default function OrderPanel({
                 data-state={active ? "on" : "off"}
                 className={`h-11 rounded-md text-xs md:text-sm font-bold transition-all ${
                   active
-                    ? "bg-[#FF6B00] text-white"
+                    ? "bg-brand text-white"
                     : "text-neutral-400 hover:text-white hover:bg-[#1F1F1F]"
                 }`}
               >
@@ -207,7 +207,7 @@ export default function OrderPanel({
       {/* Zone 3 — fixed footer: delivery type, total, actions (compact) */}
       <div className="px-4 py-3 border-t border-[#333] bg-[#141414] shrink-0">
         {isPhone && (
-          <div className="mb-2 p-2 rounded-md border border-[#FF6B00]/40 bg-[#FF6B00]/5" data-testid="delivery-section">
+          <div className="mb-2 p-2 rounded-md border border-flame/40 bg-flame/5" data-testid="delivery-section">
             <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={() => setDelivery({ delivery_type: "delivery", ...(delivery || {}) })}
@@ -215,8 +215,8 @@ export default function OrderPanel({
                 data-state={delivery?.delivery_type === "delivery" ? "on" : "off"}
                 className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
                   delivery?.delivery_type === "delivery"
-                    ? "bg-[#FF6B00] border-[#FF6B00] text-white"
-                    : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+                    ? "bg-brand border-brand text-white"
+                    : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-flame"
                 }`}
               >
                 <Truck className="w-4 h-4" /> Παράδοση
@@ -227,8 +227,8 @@ export default function OrderPanel({
                 data-state={delivery?.delivery_type === "takeaway" ? "on" : "off"}
                 className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
                   delivery?.delivery_type === "takeaway"
-                    ? "bg-[#FF6B00] border-[#FF6B00] text-white"
-                    : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
+                    ? "bg-brand border-brand text-white"
+                    : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-flame"
                 }`}
               >
                 <ShoppingBag className="w-4 h-4" /> Takeaway
@@ -286,7 +286,7 @@ export default function OrderPanel({
                     inputMode={f.inputMode || "text"}
                     placeholder={f.label + " — " + f.placeholder}
                     data-testid={`delivery-input-${f.key}`}
-                    className="w-full h-9 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white focus:outline-none focus:border-[#FF6B00]"
+                    className="w-full h-9 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white focus:outline-none focus:border-flame"
                   />
                 ))}
               </div>
@@ -353,7 +353,7 @@ export default function OrderPanel({
             onClick={onSubmit}
             disabled={!canSubmit || submitting}
             data-testid="order-submit-btn"
-            className="col-span-3 h-12 text-base font-bold bg-[#FF6B00] hover:bg-[#FF8533] text-white flex items-center justify-center gap-2 disabled:opacity-40"
+            className="col-span-3 h-12 text-base font-bold bg-brand hover:bg-brand-hover text-white flex items-center justify-center gap-2 disabled:opacity-40"
           >
             {scheduled?.enabled ? <Clock className="w-4 h-4" /> : <Printer className="w-4 h-4" />}
             {submitting
@@ -364,7 +364,7 @@ export default function OrderPanel({
           </Button>
         </div>
         {isPhone && !delivery?.delivery_type && (
-          <div className="mt-1.5 text-[11px] text-[#FFB300] text-center">
+          <div className="mt-1.5 text-[11px] text-gold text-center">
             Επιλέξτε Παράδοση ή Takeaway για να συνεχίσετε
           </div>
         )}

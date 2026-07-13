@@ -69,7 +69,7 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
           onChange={(e) => setName(e.target.value)}
           placeholder="π.χ. Μαρία"
           data-testid="profile-name-input"
-          className="w-full h-11 mt-1 mb-4 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+          className="w-full h-11 mt-1 mb-4 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         />
 
         <label className="text-xs uppercase tracking-wider text-neutral-400">Ρόλος</label>
@@ -82,7 +82,7 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
             value={role}
             onChange={(e) => setRole(e.target.value)}
             data-testid="profile-role-select"
-            className="w-full h-11 mt-1 mb-4 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+            className="w-full h-11 mt-1 mb-4 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-flame"
           >
             {Object.entries(ROLE_LABELS).map(([r, label]) => (
               <option key={r} value={r}>
@@ -102,7 +102,7 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
           onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
           placeholder="••••"
           data-testid="profile-pin-input"
-          className="w-full h-11 mt-1 mb-6 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white font-mono text-lg tracking-widest text-center focus:outline-none focus:border-[#FF6B00]"
+          className="w-full h-11 mt-1 mb-6 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white font-mono text-lg tracking-widest text-center focus:outline-none focus:border-flame"
         />
 
         <div className="flex justify-end gap-2">
@@ -118,7 +118,7 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
             type="submit"
             disabled={busy}
             data-testid="profile-save-btn"
-            className="h-10 bg-[#FF6B00] hover:bg-[#FF8533] px-4"
+            className="h-10 bg-brand hover:bg-brand-hover px-4"
           >
             Αποθήκευση
           </Button>
@@ -190,7 +190,7 @@ export default function ProfilesManager({ waiterOnly = false }) {
         <Button
           onClick={() => setModal({ open: true, editing: null })}
           data-testid="profiles-add-btn"
-          className="h-10 bg-[#FF6B00] hover:bg-[#FF8533] font-bold"
+          className="h-10 bg-brand hover:bg-brand-hover font-bold"
         >
           <Plus className="w-4 h-4 mr-2" /> Νέο προφίλ
         </Button>

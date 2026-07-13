@@ -35,7 +35,7 @@ export default function Login() {
     <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-11 h-11 rounded-md bg-[#FF6B00] flex items-center justify-center">
+          <div className="w-11 h-11 rounded-md bg-brand flex items-center justify-center">
             <Utensils className="w-6 h-6 text-white" />
           </div>
           <span className="font-heading text-3xl font-bold tracking-tight">OrderDeck</span>
@@ -60,7 +60,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   data-testid="login-email"
-                  className="w-full h-12 pl-10 pr-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white focus:outline-none focus:border-[#FF6B00]"
+                  className="w-full h-12 pl-10 pr-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white focus:outline-none focus:border-flame"
                 />
               </div>
             </div>
@@ -76,7 +76,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   data-testid="login-password"
-                  className="w-full h-12 pl-10 pr-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white focus:outline-none focus:border-[#FF6B00]"
+                  className="w-full h-12 pl-10 pr-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white focus:outline-none focus:border-flame"
                 />
               </div>
             </div>
@@ -94,7 +94,7 @@ export default function Login() {
               type="submit"
               disabled={busy}
               data-testid="login-submit"
-              className="w-full h-13 bg-[#FF6B00] hover:bg-[#FF8533] text-white font-bold text-base h-14"
+              className="w-full h-13 bg-brand hover:bg-brand-hover text-white font-bold text-base h-14"
             >
               {busy ? "Σύνδεση..." : "Σύνδεση"}
             </Button>
@@ -102,7 +102,7 @@ export default function Login() {
 
           <div className="mt-6 text-sm text-neutral-400 text-center">
             Δεν έχετε λογαριασμό;{" "}
-            <Link to="/register" data-testid="go-register" className="text-[#FF6B00] hover:underline font-semibold">
+            <Link to="/register" data-testid="go-register" className="text-flame hover:underline font-semibold">
               Εγγραφή καταστήματος
             </Link>
           </div>

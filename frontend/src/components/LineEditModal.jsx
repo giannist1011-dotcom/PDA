@@ -76,7 +76,7 @@ export default function LineEditModal({
               <button
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 data-testid="line-edit-decrement"
-                className="w-16 h-16 rounded-lg bg-[#0D0D0D] border border-[#333] hover:border-[#FF6B00] text-white flex items-center justify-center active:scale-95 transition-transform"
+                className="w-16 h-16 rounded-lg bg-[#0D0D0D] border border-[#333] hover:border-flame text-white flex items-center justify-center active:scale-95 transition-transform"
               >
                 <Minus className="w-6 h-6" />
               </button>
@@ -89,7 +89,7 @@ export default function LineEditModal({
               <button
                 onClick={() => setQty((q) => q + 1)}
                 data-testid="line-edit-increment"
-                className="w-16 h-16 rounded-lg bg-[#0D0D0D] border border-[#333] hover:border-[#FF6B00] text-white flex items-center justify-center active:scale-95 transition-transform"
+                className="w-16 h-16 rounded-lg bg-[#0D0D0D] border border-[#333] hover:border-flame text-white flex items-center justify-center active:scale-95 transition-transform"
               >
                 <Plus className="w-6 h-6" />
               </button>
@@ -101,7 +101,7 @@ export default function LineEditModal({
               Σύνολο γραμμής
             </span>
             <span
-              className="font-mono text-2xl font-bold text-[#FF6B00]"
+              className="font-mono text-2xl font-bold text-gold"
               data-testid="line-edit-total"
             >
               {eur(lineTotal)}
@@ -112,7 +112,7 @@ export default function LineEditModal({
             <Button
               onClick={() => onEditOptions(line)}
               data-testid="line-edit-options-btn"
-              className="w-full h-12 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white font-bold flex items-center justify-center gap-2"
+              className="w-full h-12 bg-[#1A1A1A] border border-[#333] hover:border-flame text-white font-bold flex items-center justify-center gap-2"
             >
               <SlidersHorizontal className="w-4 h-4" />
               Επεξεργασία επιλογών
@@ -136,7 +136,7 @@ export default function LineEditModal({
           <Button
             onClick={commitAndClose}
             data-testid="line-edit-done-btn"
-            className="w-full h-14 bg-[#FF6B00] hover:bg-[#FF8533] text-white font-bold text-base"
+            className="w-full h-14 bg-brand hover:bg-brand-hover text-white font-bold text-base"
           >
             Ολοκλήρωση
           </Button>

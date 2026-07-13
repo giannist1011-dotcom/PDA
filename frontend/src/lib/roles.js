@@ -8,8 +8,8 @@ export const ROLE_LABELS = {
 };
 
 export const ROLE_COLORS = {
-  owner: "#FF6B00",
-  manager: "#FFB300",
+  owner: "#F97316",
+  manager: "#D4A017",
   employee: "#00B0FF",
   waiter: "#00E676",
 };

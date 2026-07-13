@@ -113,7 +113,7 @@ function DiscountModal({ open, subtotal, current, onApply, onRemove, onClose }) 
           <button
             onClick={onClose}
             data-testid="discount-modal-close"
-            className="w-8 h-8 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center"
+            className="w-8 h-8 rounded-md border border-[#333] hover:border-flame flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
@@ -194,7 +194,7 @@ function ScheduledOrdersModal({ open, orders, onClose, onPrintNow, onCancel }) {
           <button
             onClick={onClose}
             data-testid="scheduled-modal-close"
-            className="w-9 h-9 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center"
+            className="w-9 h-9 rounded-md border border-[#333] hover:border-flame flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
@@ -238,7 +238,7 @@ function ScheduledOrdersModal({ open, orders, onClose, onPrintNow, onCancel }) {
                     <button
                       onClick={() => onPrintNow(o)}
                       data-testid={`scheduled-print-now-${o.id}`}
-                      className="flex-1 h-10 rounded-md bg-[#FF6B00] hover:bg-[#FF8533] text-white text-sm font-bold flex items-center justify-center gap-2"
+                      className="flex-1 h-10 rounded-md bg-brand hover:bg-brand-hover text-white text-sm font-bold flex items-center justify-center gap-2"
                     >
                       <Printer className="w-4 h-4" /> Τύπωσε τώρα
                     </button>

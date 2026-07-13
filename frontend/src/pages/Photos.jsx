@@ -103,7 +103,7 @@ export default function Photos() {
         <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-[#FF6B00]" />
+              <ImageIcon className="w-5 h-5 text-flame" />
               <h2 className="font-heading text-2xl font-bold">Φωτογραφίες προϊόντων</h2>
             </div>
             <p className="text-sm text-neutral-400 mt-1">
@@ -124,7 +124,7 @@ export default function Photos() {
               onClick={() => inputRef.current?.click()}
               disabled={busy}
               data-testid="photo-upload-btn"
-              className="h-11 bg-[#FF6B00] hover:bg-[#FF8533] font-bold"
+              className="h-11 bg-brand hover:bg-brand-hover font-bold"
             >
               <Upload className="w-4 h-4 mr-2" />
               {busy ? "Ανέβασμα..." : "Ανέβασμα φωτογραφιών"}
@@ -140,7 +140,7 @@ export default function Photos() {
             <div className="mb-2">Δεν υπάρχουν φωτογραφίες</div>
             <button
               onClick={() => inputRef.current?.click()}
-              className="text-[#FF6B00] font-bold hover:underline"
+              className="text-flame font-bold hover:underline"
               data-testid="photo-empty-upload"
             >
               Ανεβάστε την πρώτη φωτογραφία
@@ -152,7 +152,7 @@ export default function Photos() {
               <div
                 key={p.id}
                 data-testid={`photo-card-${p.id}`}
-                className="group relative rounded-lg overflow-hidden border border-[#333] bg-[#1A1A1A] hover:border-[#FF6B00] transition-colors"
+                className="group relative rounded-lg overflow-hidden border border-[#333] bg-[#1A1A1A] hover:border-flame transition-colors"
               >
                 <img
                   src={p.data_url}

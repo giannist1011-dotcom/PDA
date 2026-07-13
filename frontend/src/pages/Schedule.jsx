@@ -82,7 +82,7 @@ function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, 
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
                 data-testid="shift-start"
-                className="w-full h-12 px-3 mt-1 bg-[#1A1A1A] border border-[#333] rounded-md text-white font-mono text-lg focus:outline-none focus:border-[#FF6B00]"
+                className="w-full h-12 px-3 mt-1 bg-[#1A1A1A] border border-[#333] rounded-md text-white font-mono text-lg focus:outline-none focus:border-flame"
               />
             </div>
             <div>
@@ -95,7 +95,7 @@ function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, 
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
                 data-testid="shift-end"
-                className="w-full h-12 px-3 mt-1 bg-[#1A1A1A] border border-[#333] rounded-md text-white font-mono text-lg focus:outline-none focus:border-[#FF6B00]"
+                className="w-full h-12 px-3 mt-1 bg-[#1A1A1A] border border-[#333] rounded-md text-white font-mono text-lg focus:outline-none focus:border-flame"
               />
             </div>
           </div>
@@ -119,7 +119,7 @@ function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, 
                 type="submit"
                 disabled={busy}
                 data-testid="shift-save-btn"
-                className="bg-[#FF6B00] hover:bg-[#FF8533] font-bold"
+                className="bg-brand hover:bg-brand-hover font-bold"
               >
                 <Save className="w-4 h-4 mr-2" /> Αποθήκευση
               </Button>
@@ -408,7 +408,7 @@ export default function Schedule() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
           <div>
             <h2 className="font-heading text-2xl font-bold flex items-center gap-2">
-              <CalendarIcon className="w-6 h-6 text-[#FF6B00]" />
+              <CalendarIcon className="w-6 h-6 text-flame" />
               {readOnly ? "Εβδομαδιαίο πρόγραμμα (προβολή)" : "Εβδομαδιαίο πρόγραμμα"}
             </h2>
             <p className="text-sm text-neutral-400 mt-1" data-testid="week-range">
@@ -419,21 +419,21 @@ export default function Schedule() {
             <Button
               onClick={() => changeWeek(-1)}
               data-testid="prev-week-btn"
-              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white"
+              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-flame text-white"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <Button
               onClick={goToday}
               data-testid="today-btn"
-              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white font-bold"
+              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-flame text-white font-bold"
             >
               Τρέχουσα
             </Button>
             <Button
               onClick={() => changeWeek(1)}
               data-testid="next-week-btn"
-              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] text-white"
+              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-flame text-white"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -441,7 +441,7 @@ export default function Schedule() {
               onClick={() => setShareOpen(true)}
               disabled={employees.length === 0}
               data-testid="share-schedule-btn"
-              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-[#FF6B00] hover:text-[#FF6B00] text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-flame hover:text-flame text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed"
               title="Εκτύπωση ή αντιγραφή προγράμματος"
             >
               <Share2 className="w-4 h-4 mr-2" />
@@ -461,12 +461,12 @@ export default function Schedule() {
               onChange={(e) => setNewEmp(e.target.value)}
               placeholder="Όνομα υπαλλήλου..."
               data-testid="new-employee-input"
-              className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-[#FF6B00]"
+              className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-flame"
             />
             <Button
               type="submit"
               data-testid="add-employee-btn"
-              className="h-11 bg-[#FF6B00] hover:bg-[#FF8533] px-5 font-bold"
+              className="h-11 bg-brand hover:bg-brand-hover px-5 font-bold"
             >
               <Plus className="w-4 h-4 mr-1" /> Προσθήκη
             </Button>
@@ -517,7 +517,7 @@ export default function Schedule() {
                             onBlur={() => saveEmployeeName(emp.id)}
                             onKeyDown={(e) => e.key === "Enter" && saveEmployeeName(emp.id)}
                             autoFocus
-                            className="h-9 px-2 bg-[#0D0D0D] border border-[#FF6B00] rounded text-white text-sm w-full"
+                            className="h-9 px-2 bg-[#0D0D0D] border border-flame rounded text-white text-sm w-full"
                           />
                           <button onClick={() => setEditingId(null)} className="p-1 text-neutral-400">
                             <X className="w-4 h-4" />
@@ -529,7 +529,7 @@ export default function Schedule() {
                             setEditingId(emp.id);
                             setEditingName(emp.name);
                           }}
-                          className="text-left font-semibold text-white hover:text-[#FF6B00]"
+                          className="text-left font-semibold text-white hover:text-flame"
                           data-testid={`emp-name-${emp.id}`}
                         >
                           {emp.name}
@@ -545,8 +545,8 @@ export default function Schedule() {
                             data-testid={`cell-${emp.id}-${d.idx}`}
                             className={`w-full h-14 rounded-md border font-mono text-sm transition-all active:scale-[0.98] ${
                               sh
-                                ? "bg-[#FF6B00]/15 border-[#FF6B00]/40 text-[#FF6B00] hover:bg-[#FF6B00]/25 font-bold"
-                                : "bg-[#0D0D0D] border-[#333] text-neutral-600 hover:border-[#FF6B00] hover:text-[#FF6B00]"
+                                ? "bg-flame/15 border-flame/40 text-flame hover:bg-flame/25 font-bold"
+                                : "bg-[#0D0D0D] border-[#333] text-neutral-600 hover:border-flame hover:text-flame"
                             }`}
                           >
                             {sh ? `${sh.start}–${sh.end}` : "+"}
@@ -592,7 +592,7 @@ export default function Schedule() {
             <button
               onClick={handlePrintSchedule}
               data-testid="share-print-btn"
-              className="flex items-center gap-2 h-11 px-4 rounded-md bg-[#1A1A1A] border border-[#333] text-white text-sm font-bold hover:border-[#FF6B00] hover:text-[#FF6B00] transition-colors"
+              className="flex items-center gap-2 h-11 px-4 rounded-md bg-[#1A1A1A] border border-[#333] text-white text-sm font-bold hover:border-flame hover:text-flame transition-colors"
             >
               <Printer className="w-4 h-4" />
               Εκτύπωση προγράμματος
@@ -600,7 +600,7 @@ export default function Schedule() {
             <button
               onClick={handleCopySchedule}
               data-testid="share-copy-btn"
-              className="flex items-center gap-2 h-11 px-4 rounded-md bg-[#1A1A1A] border border-[#333] text-white text-sm font-bold hover:border-[#FF6B00] hover:text-[#FF6B00] transition-colors"
+              className="flex items-center gap-2 h-11 px-4 rounded-md bg-[#1A1A1A] border border-[#333] text-white text-sm font-bold hover:border-flame hover:text-flame transition-colors"
             >
               <Copy className="w-4 h-4" />
               Αντιγραφή για Viber/WhatsApp

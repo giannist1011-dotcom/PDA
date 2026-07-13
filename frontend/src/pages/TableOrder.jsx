@@ -264,7 +264,7 @@ export default function TableOrder() {
             <button
               onClick={() => navigate("/tables")}
               data-testid="table-back-btn"
-              className="w-10 h-10 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center shrink-0"
+              className="w-10 h-10 rounded-md border border-[#333] hover:border-flame flex items-center justify-center shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -298,7 +298,7 @@ export default function TableOrder() {
               >
                 <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
                   <span className="flex items-center gap-1.5 font-bold uppercase tracking-widest">
-                    <Clock className="w-3.5 h-3.5 text-[#FF6B00]" />
+                    <Clock className="w-3.5 h-3.5 text-flame" />
                     Γύρος {r.round_no} · {roundTime(r.sent_at)}
                   </span>
                   <span className="font-mono font-bold text-neutral-300">
@@ -418,7 +418,7 @@ export default function TableOrder() {
                 onClick={handleClose}
                 disabled={!tab || busy}
                 data-testid="tab-close-btn"
-                className="h-12 text-sm font-bold bg-[#FF6B00] hover:bg-[#FF8533] text-white disabled:opacity-40"
+                className="h-12 text-sm font-bold bg-brand hover:bg-brand-hover text-white disabled:opacity-40"
               >
                 <ReceiptText className="w-4 h-4 mr-1.5" />
                 Κλείσιμο
@@ -465,7 +465,7 @@ export default function TableOrder() {
               <button
                 onClick={() => setTransferOpen(false)}
                 data-testid="transfer-close"
-                className="w-9 h-9 rounded-md border border-[#333] hover:border-[#FF6B00] flex items-center justify-center"
+                className="w-9 h-9 rounded-md border border-[#333] hover:border-flame flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
