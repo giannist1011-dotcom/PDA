@@ -85,11 +85,11 @@ export default function OrderPanel({
 
   return (
     <aside
-      className="flex flex-col h-full bg-[#1A1A1A] border-l border-[#333] overflow-hidden"
+      className="flex flex-col h-full bg-[#3D1620] border-l border-[#5E2A3A] overflow-hidden"
       data-testid="order-panel"
     >
       {/* Zone 1 — fixed header: order number + source buttons */}
-      <div className="p-6 border-b border-[#333] shrink-0">
+      <div className="p-6 border-b border-[#5E2A3A] shrink-0">
         <div className="flex items-baseline justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-neutral-400">
@@ -107,7 +107,7 @@ export default function OrderPanel({
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-1 p-1 mt-5 bg-[#0D0D0D] rounded-md" data-testid="source-toggle">
+        <div className="grid grid-cols-4 gap-1 p-1 mt-5 bg-[#2A0E14] rounded-md" data-testid="source-toggle">
           {ORDER_SOURCES.map((s) => {
             const active = source === s;
             return (
@@ -119,7 +119,7 @@ export default function OrderPanel({
                 className={`h-11 rounded-md text-xs md:text-sm font-bold transition-all ${
                   active
                     ? "bg-brand text-white"
-                    : "text-neutral-400 hover:text-white hover:bg-[#1F1F1F]"
+                    : "text-neutral-400 hover:text-white hover:bg-[#451924]"
                 }`}
               >
                 {s}
@@ -143,14 +143,14 @@ export default function OrderPanel({
             return (
             <div
               key={it.line_id}
-              className="py-4 border-b border-[#333] last:border-0"
+              className="py-4 border-b border-[#5E2A3A] last:border-0"
               data-testid={`order-line-${it.line_id}`}
             >
               <button
                 type="button"
                 onClick={() => setEditingLine(it)}
                 data-testid={`order-line-body-${it.line_id}`}
-                className="w-full flex justify-between items-start gap-3 text-left rounded-md hover:bg-[#0F0F0F] active:scale-[0.995] transition-all p-1 -m-1"
+                className="w-full flex justify-between items-start gap-3 text-left rounded-md hover:bg-[#2C0F16] active:scale-[0.995] transition-all p-1 -m-1"
               >
                 <div className="flex-1">
                   <div className="font-semibold text-white text-base leading-tight">
@@ -167,11 +167,11 @@ export default function OrderPanel({
                 </div>
               </button>
               <div className="flex items-center justify-between mt-3">
-                <div className="flex items-center gap-2 bg-[#0D0D0D] rounded-md p-1">
+                <div className="flex items-center gap-2 bg-[#2A0E14] rounded-md p-1">
                   <button
                     onClick={() => onDecrement(it.line_id)}
                     data-testid={`decrement-${it.line_id}`}
-                    className="w-10 h-10 rounded flex items-center justify-center text-white hover:bg-[#262626] active:scale-95"
+                    className="w-10 h-10 rounded flex items-center justify-center text-white hover:bg-[#4A1B27] active:scale-95"
                   >
                     <Minus className="w-4 h-4" />
                   </button>
@@ -184,7 +184,7 @@ export default function OrderPanel({
                   <button
                     onClick={() => onIncrement(it.line_id)}
                     data-testid={`increment-${it.line_id}`}
-                    className="w-10 h-10 rounded flex items-center justify-center text-white hover:bg-[#262626] active:scale-95"
+                    className="w-10 h-10 rounded flex items-center justify-center text-white hover:bg-[#4A1B27] active:scale-95"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -205,7 +205,7 @@ export default function OrderPanel({
       </div>
 
       {/* Zone 3 — fixed footer: delivery type, total, actions (compact) */}
-      <div className="px-4 py-3 border-t border-[#333] bg-[#141414] shrink-0">
+      <div className="px-4 py-3 border-t border-[#5E2A3A] bg-[#33111A] shrink-0">
         {isPhone && (
           <div className="mb-2 p-2 rounded-md border border-flame/40 bg-flame/5" data-testid="delivery-section">
             <div className="grid grid-cols-2 gap-1.5">
@@ -216,7 +216,7 @@ export default function OrderPanel({
                 className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
                   delivery?.delivery_type === "delivery"
                     ? "bg-brand border-brand text-white"
-                    : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-flame"
+                    : "bg-[#2A0E14] border-[#5E2A3A] text-neutral-300 hover:border-flame"
                 }`}
               >
                 <Truck className="w-4 h-4" /> Παράδοση
@@ -228,7 +228,7 @@ export default function OrderPanel({
                 className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
                   delivery?.delivery_type === "takeaway"
                     ? "bg-brand border-brand text-white"
-                    : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-flame"
+                    : "bg-[#2A0E14] border-[#5E2A3A] text-neutral-300 hover:border-flame"
                 }`}
               >
                 <ShoppingBag className="w-4 h-4" /> Takeaway
@@ -250,7 +250,7 @@ export default function OrderPanel({
                 className={`w-full h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
                   scheduled?.enabled
                     ? "bg-[#00B0FF] border-[#00B0FF] text-white"
-                    : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#00B0FF]"
+                    : "bg-[#2A0E14] border-[#5E2A3A] text-neutral-300 hover:border-[#00B0FF]"
                 }`}
               >
                 <Clock className="w-4 h-4" /> Προγραμματισμένη
@@ -262,7 +262,7 @@ export default function OrderPanel({
                     value={scheduled.time}
                     onChange={(e) => setScheduled((s) => ({ ...s, time: e.target.value }))}
                     data-testid="scheduled-time-input"
-                    className="w-full h-9 px-2 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
+                    className="w-full h-9 px-2 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
                   />
                   <input
                     type="date"
@@ -270,7 +270,7 @@ export default function OrderPanel({
                     min={todayISO()}
                     onChange={(e) => setScheduled((s) => ({ ...s, date: e.target.value }))}
                     data-testid="scheduled-date-input"
-                    className="w-full h-9 px-2 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
+                    className="w-full h-9 px-2 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
                   />
                 </div>
               )}
@@ -286,7 +286,7 @@ export default function OrderPanel({
                     inputMode={f.inputMode || "text"}
                     placeholder={f.label + " — " + f.placeholder}
                     data-testid={`delivery-input-${f.key}`}
-                    className="w-full h-9 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-sm text-white focus:outline-none focus:border-flame"
+                    className="w-full h-9 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-sm text-white focus:outline-none focus:border-flame"
                   />
                 ))}
               </div>
@@ -325,7 +325,7 @@ export default function OrderPanel({
               className={`flex items-center gap-1 h-7 px-2 rounded-md border text-[11px] font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                 discountAmount > 0
                   ? "border-[#00E676]/50 text-[#00E676] bg-[#00E676]/10 hover:bg-[#00E676]/20"
-                  : "border-[#333] text-neutral-300 hover:border-[#00E676] hover:text-[#00E676]"
+                  : "border-[#5E2A3A] text-neutral-300 hover:border-[#00E676] hover:text-[#00E676]"
               }`}
             >
               <Percent className="w-3 h-3" />
@@ -345,7 +345,7 @@ export default function OrderPanel({
             disabled={isEmpty}
             data-testid="order-clear-btn"
             variant="ghost"
-            className="col-span-1 h-12 text-xs font-bold text-neutral-300 border border-[#333] hover:bg-[#262626] hover:text-white disabled:opacity-40"
+            className="col-span-1 h-12 text-xs font-bold text-neutral-300 border border-[#5E2A3A] hover:bg-[#4A1B27] hover:text-white disabled:opacity-40"
           >
             Καθαρισμός
           </Button>

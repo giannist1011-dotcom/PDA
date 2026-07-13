@@ -56,7 +56,7 @@ export default function LineEditModal({
     <Dialog open={open} onOpenChange={(v) => !v && commitAndClose()}>
       <DialogContent
         data-testid="line-edit-modal"
-        className="max-w-md bg-[#0D0D0D] border-[#333] text-white"
+        className="max-w-md bg-[#2A0E14] border-[#5E2A3A] text-white"
       >
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl leading-tight">
@@ -68,7 +68,7 @@ export default function LineEditModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="p-4 bg-[#1A1A1A] border border-[#333] rounded-lg">
+          <div className="p-4 bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
             <div className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">
               Ποσότητα
             </div>
@@ -76,7 +76,7 @@ export default function LineEditModal({
               <button
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 data-testid="line-edit-decrement"
-                className="w-16 h-16 rounded-lg bg-[#0D0D0D] border border-[#333] hover:border-flame text-white flex items-center justify-center active:scale-95 transition-transform"
+                className="w-16 h-16 rounded-lg bg-[#2A0E14] border border-[#5E2A3A] hover:border-flame text-white flex items-center justify-center active:scale-95 transition-transform"
               >
                 <Minus className="w-6 h-6" />
               </button>
@@ -89,7 +89,7 @@ export default function LineEditModal({
               <button
                 onClick={() => setQty((q) => q + 1)}
                 data-testid="line-edit-increment"
-                className="w-16 h-16 rounded-lg bg-[#0D0D0D] border border-[#333] hover:border-flame text-white flex items-center justify-center active:scale-95 transition-transform"
+                className="w-16 h-16 rounded-lg bg-[#2A0E14] border border-[#5E2A3A] hover:border-flame text-white flex items-center justify-center active:scale-95 transition-transform"
               >
                 <Plus className="w-6 h-6" />
               </button>
@@ -112,7 +112,7 @@ export default function LineEditModal({
             <Button
               onClick={() => onEditOptions(line)}
               data-testid="line-edit-options-btn"
-              className="w-full h-12 bg-[#1A1A1A] border border-[#333] hover:border-flame text-white font-bold flex items-center justify-center gap-2"
+              className="w-full h-12 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white font-bold flex items-center justify-center gap-2"
             >
               <SlidersHorizontal className="w-4 h-4" />
               Επεξεργασία επιλογών

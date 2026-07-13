@@ -264,7 +264,7 @@ export default function TableOrder() {
             <button
               onClick={() => navigate("/app/tables")}
               data-testid="table-back-btn"
-              className="w-10 h-10 rounded-md border border-[#333] hover:border-flame flex items-center justify-center shrink-0"
+              className="w-10 h-10 rounded-md border border-[#5E2A3A] hover:border-flame flex items-center justify-center shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -287,14 +287,14 @@ export default function TableOrder() {
         </section>
 
         {/* Tab panel */}
-        <aside className="flex flex-col bg-[#1A1A1A] border-t lg:border-t-0 lg:border-l border-[#333] lg:h-full lg:overflow-hidden">
+        <aside className="flex flex-col bg-[#3D1620] border-t lg:border-t-0 lg:border-l border-[#5E2A3A] lg:h-full lg:overflow-hidden">
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
             {/* Existing rounds */}
             {(tab?.rounds || []).map((r) => (
               <div
                 key={r.round_no}
                 data-testid={`tab-round-${r.round_no}`}
-                className="p-3 bg-[#0D0D0D] border border-[#333] rounded-md"
+                className="p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md"
               >
                 <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
                   <span className="flex items-center gap-1.5 font-bold uppercase tracking-widest">
@@ -333,7 +333,7 @@ export default function TableOrder() {
                 Νέος γύρος
               </div>
               {newItems.length === 0 ? (
-                <div className="text-neutral-500 text-sm py-6 text-center border border-dashed border-[#333] rounded-md">
+                <div className="text-neutral-500 text-sm py-6 text-center border border-dashed border-[#5E2A3A] rounded-md">
                   Επιλέξτε προϊόντα από το μενού
                 </div>
               ) : (
@@ -342,7 +342,7 @@ export default function TableOrder() {
                     <div
                       key={it.line_id}
                       data-testid={`new-line-${it.line_id}`}
-                      className="p-2.5 bg-[#0D0D0D] border border-[#00E676]/40 rounded-md"
+                      className="p-2.5 bg-[#2A0E14] border border-[#00E676]/40 rounded-md"
                     >
                       <div className="flex justify-between gap-2 items-start">
                         <div className="min-w-0">
@@ -360,11 +360,11 @@ export default function TableOrder() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-1 bg-[#1A1A1A] rounded-md p-0.5">
+                        <div className="flex items-center gap-1 bg-[#3D1620] rounded-md p-0.5">
                           <button
                             onClick={() => updateQty(it.line_id, -1)}
                             data-testid={`new-dec-${it.line_id}`}
-                            className="w-9 h-9 rounded flex items-center justify-center text-white hover:bg-[#262626] active:scale-95"
+                            className="w-9 h-9 rounded flex items-center justify-center text-white hover:bg-[#4A1B27] active:scale-95"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
@@ -374,7 +374,7 @@ export default function TableOrder() {
                           <button
                             onClick={() => updateQty(it.line_id, 1)}
                             data-testid={`new-inc-${it.line_id}`}
-                            className="w-9 h-9 rounded flex items-center justify-center text-white hover:bg-[#262626] active:scale-95"
+                            className="w-9 h-9 rounded flex items-center justify-center text-white hover:bg-[#4A1B27] active:scale-95"
                           >
                             <Plus className="w-4 h-4" />
                           </button>
@@ -395,7 +395,7 @@ export default function TableOrder() {
           </div>
 
           {/* Fixed action footer */}
-          <div className="px-4 py-3 border-t border-[#333] bg-[#141414] shrink-0 sticky bottom-0">
+          <div className="px-4 py-3 border-t border-[#5E2A3A] bg-[#33111A] shrink-0 sticky bottom-0">
             <div className="flex items-baseline justify-between mb-2">
               <span className="text-[11px] text-neutral-400 uppercase tracking-widest font-bold">
                 Σύνολο καρτέλας
@@ -428,7 +428,7 @@ export default function TableOrder() {
               <button
                 onClick={openTransfer}
                 data-testid="tab-transfer-btn"
-                className="w-full h-9 mt-1.5 rounded-md border border-[#333] text-neutral-300 hover:border-[#00B0FF] hover:text-[#00B0FF] text-xs font-bold flex items-center justify-center gap-1.5"
+                className="w-full h-9 mt-1.5 rounded-md border border-[#5E2A3A] text-neutral-300 hover:border-[#00B0FF] hover:text-[#00B0FF] text-xs font-bold flex items-center justify-center gap-1.5"
               >
                 <ArrowLeftRight className="w-3.5 h-3.5" />
                 Μεταφορά σε άλλο τραπέζι
@@ -459,13 +459,13 @@ export default function TableOrder() {
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
           data-testid="transfer-modal"
         >
-          <div className="bg-[#1A1A1A] border border-[#333] rounded-lg w-full max-w-sm max-h-[80vh] flex flex-col p-5">
+          <div className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg w-full max-w-sm max-h-[80vh] flex flex-col p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-heading text-lg font-bold">Μεταφορά καρτέλας</h3>
               <button
                 onClick={() => setTransferOpen(false)}
                 data-testid="transfer-close"
-                className="w-9 h-9 rounded-md border border-[#333] hover:border-flame flex items-center justify-center"
+                className="w-9 h-9 rounded-md border border-[#5E2A3A] hover:border-flame flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>

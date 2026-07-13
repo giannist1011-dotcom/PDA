@@ -10,7 +10,7 @@ export default function ProtectedRoute({ children, requireOwner = false, roles =
   const { user, hasProfile, role } = useAuth();
   if (user === null) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#0D0D0D] text-neutral-400">
+      <div className="h-screen w-screen flex items-center justify-center bg-[#2A0E14] text-neutral-400">
         Φόρτωση...
       </div>
     );

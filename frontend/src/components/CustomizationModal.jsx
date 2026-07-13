@@ -19,7 +19,7 @@ const OptionTile = ({ selected, label, badge, onClick, testId }) => (
     className={`flex items-center justify-between px-4 py-4 rounded-lg border text-left transition-all no-select active:scale-[0.98] ${
       selected
         ? "border-flame bg-flame/10 text-white"
-        : "border-[#333] bg-[#1A1A1A] hover:border-[#666] text-neutral-200"
+        : "border-[#5E2A3A] bg-[#3D1620] hover:border-[#666] text-neutral-200"
     }`}
   >
     <span className="text-base font-semibold">{label}</span>
@@ -27,7 +27,7 @@ const OptionTile = ({ selected, label, badge, onClick, testId }) => (
       {badge && <span className="text-xs font-mono text-gold">{badge}</span>}
       <span
         className={`w-6 h-6 rounded-md border flex items-center justify-center ${
-          selected ? "bg-brand border-brand" : "border-[#555]"
+          selected ? "bg-brand border-brand" : "border-[#7A3E52]"
         }`}
       >
         {selected && <Check className="w-4 h-4 text-white" />}
@@ -296,7 +296,7 @@ export default function CustomizationModal({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
         data-testid="customization-modal"
-        className="max-w-3xl bg-[#0D0D0D] border-[#333] text-white p-0"
+        className="max-w-3xl bg-[#2A0E14] border-[#5E2A3A] text-white p-0"
       >
         <div className="p-6 pb-2">
           <DialogHeader>
@@ -323,7 +323,7 @@ export default function CustomizationModal({
           )}
         </div>
 
-        <DialogFooter className="p-6 pt-4 border-t border-[#222] flex flex-row items-center justify-between gap-4 sm:justify-between">
+        <DialogFooter className="p-6 pt-4 border-t border-[#431A25] flex flex-row items-center justify-between gap-4 sm:justify-between">
           <div className="text-left">
             <div className="text-xs text-neutral-400 uppercase tracking-widest">
               {isEdit ? "Νέα τιμή" : "Σύνολο"}
@@ -335,7 +335,7 @@ export default function CustomizationModal({
               variant="ghost"
               onClick={onClose}
               data-testid="customization-cancel"
-              className="h-14 px-6 text-base text-neutral-300 hover:text-white hover:bg-[#1A1A1A]"
+              className="h-14 px-6 text-base text-neutral-300 hover:text-white hover:bg-[#3D1620]"
             >
               Άκυρο
             </Button>

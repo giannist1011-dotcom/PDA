@@ -73,7 +73,7 @@ export default function TablesEditor({ tables, onChange }) {
           onChange={(e) => setNewName(e.target.value)}
           placeholder='π.χ. "Τ1" ή "Μπαλκόνι 2"'
           data-testid="table-new-name-input"
-          className="flex-1 h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+          className="flex-1 h-11 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         />
         <Button
           type="submit"
@@ -85,7 +85,7 @@ export default function TablesEditor({ tables, onChange }) {
       </form>
 
       {tables.length === 0 ? (
-        <div className="text-neutral-500 text-sm py-6 text-center border border-dashed border-[#333] rounded-lg">
+        <div className="text-neutral-500 text-sm py-6 text-center border border-dashed border-[#5E2A3A] rounded-lg">
           Δεν έχετε ορίσει τραπέζια ακόμα
         </div>
       ) : (
@@ -94,7 +94,7 @@ export default function TablesEditor({ tables, onChange }) {
             <li
               key={t.id}
               data-testid={`table-editor-row-${t.id}`}
-              className="flex items-center gap-1.5 p-2 bg-[#0D0D0D] border border-[#333] rounded-md"
+              className="flex items-center gap-1.5 p-2 bg-[#2A0E14] border border-[#5E2A3A] rounded-md"
             >
               <div className="flex flex-col">
                 <button
@@ -121,7 +121,7 @@ export default function TablesEditor({ tables, onChange }) {
                   onBlur={() => saveRename(t)}
                   onKeyDown={(e) => e.key === "Enter" && saveRename(t)}
                   autoFocus
-                  className="flex-1 h-9 px-2 bg-[#1A1A1A] border border-flame rounded text-white text-sm"
+                  className="flex-1 h-9 px-2 bg-[#3D1620] border border-flame rounded text-white text-sm"
                 />
               ) : (
                 <span className="flex-1 text-white font-semibold text-sm truncate">

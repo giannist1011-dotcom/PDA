@@ -135,7 +135,7 @@ export default function Photos() {
         {loading ? (
           <div className="text-neutral-500 py-12 text-center">Φόρτωση...</div>
         ) : photos.length === 0 ? (
-          <div className="text-neutral-500 py-16 text-center border border-dashed border-[#333] rounded-lg">
+          <div className="text-neutral-500 py-16 text-center border border-dashed border-[#5E2A3A] rounded-lg">
             <ImagePlus className="w-10 h-10 mx-auto mb-3 opacity-50" />
             <div className="mb-2">Δεν υπάρχουν φωτογραφίες</div>
             <button
@@ -152,7 +152,7 @@ export default function Photos() {
               <div
                 key={p.id}
                 data-testid={`photo-card-${p.id}`}
-                className="group relative rounded-lg overflow-hidden border border-[#333] bg-[#1A1A1A] hover:border-flame transition-colors"
+                className="group relative rounded-lg overflow-hidden border border-[#5E2A3A] bg-[#3D1620] hover:border-flame transition-colors"
               >
                 <img
                   src={p.data_url}

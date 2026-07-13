@@ -5,12 +5,12 @@
 @tailwind utilities;
 
 :root {
-  --pk-bg: #0D0D0D;
-  --pk-surface: #1A1A1A;
-  --pk-surface-2: #262626;
-  --pk-border: #333333;
-  --pk-primary: #8E2434;
-  --pk-primary-hover: #A62B3E;
+  --pk-bg: #2A0E14;
+  --pk-surface: #3D1620;
+  --pk-surface-2: #4A1B27;
+  --pk-border: #5E2A3A;
+  --pk-primary: #F97316;
+  --pk-primary-hover: #FB923C;
   --pk-accent: #F97316;
   --pk-gold: #D4A017;
   --pk-success: #00E676;
@@ -21,8 +21,8 @@
   --pk-text-3: #737373;
 
   /* Brand palette ως RGB triplets για Tailwind alpha (bg-brand/15 κλπ.) */
-  --brand: 142 36 52;        /* μπορντό  #8E2434 */
-  --brand-hover: 166 43 62;  /* μπορντό hover #A62B3E */
+  --brand: 249 115 22;       /* πορτοκαλί primary #F97316 */
+  --brand-hover: 251 146 60; /* πορτοκαλί hover #FB923C */
   --flame: 249 115 22;       /* πορτοκαλί accent #F97316 */
   --gold: 212 160 23;        /* βαθύ κίτρινο #D4A017 */
 }
@@ -53,24 +53,24 @@ h1, h2, h3, h4, h5, .font-heading {
 /* Shadcn CSS vars (dark forced) */
 @layer base {
   :root {
-    --background: 0 0% 5%;
+    --background: 347 50% 11%;
     --foreground: 0 0% 100%;
-    --card: 0 0% 10%;
+    --card: 345 47% 16%;
     --card-foreground: 0 0% 100%;
-    --popover: 0 0% 7%;
+    --popover: 346 50% 13%;
     --popover-foreground: 0 0% 100%;
-    --primary: 351 60% 35%;
+    --primary: 24 95% 53%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 15%;
+    --secondary: 345 47% 20%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 15%;
+    --muted: 345 47% 20%;
     --muted-foreground: 0 0% 64%;
     --accent: 24 95% 53%;
     --accent-foreground: 0 0% 100%;
     --destructive: 4 100% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
+    --border: 345 38% 26%;
+    --input: 345 38% 26%;
     --ring: 24 95% 53%;
     --radius: 0.5rem;
   }
@@ -83,8 +83,8 @@ h1, h2, h3, h4, h5, .font-heading {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: #0D0D0D; }
-::-webkit-scrollbar-thumb { background: #333333; border-radius: 6px; }
+::-webkit-scrollbar-track { background: #2A0E14; }
+::-webkit-scrollbar-thumb { background: #5E2A3A; border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--pk-accent); }
 
 /* Utility */

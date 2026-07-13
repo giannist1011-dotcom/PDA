@@ -17,7 +17,7 @@ export default function Waiters() {
           </p>
         </div>
 
-        <div className="p-6 bg-[#1A1A1A] border border-[#333] rounded-lg">
+        <div className="p-6 bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
           <ProfilesManager waiterOnly />
         </div>
       </main>

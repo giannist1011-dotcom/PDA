@@ -33,7 +33,7 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
   const Icon = profile.role === "owner" ? Crown : UserIcon;
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center px-6 py-8">
+    <div className="min-h-screen bg-[#2A0E14] text-white flex items-center justify-center px-6 py-8">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div
@@ -63,7 +63,7 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
               className={`w-14 h-14 rounded-lg border-2 flex items-center justify-center font-mono text-2xl font-bold ${
                 pin.length > i
                   ? "border-flame bg-flame/10 text-white"
-                  : "border-[#333] bg-[#1A1A1A] text-neutral-600"
+                  : "border-[#5E2A3A] bg-[#3D1620] text-neutral-600"
               }`}
             >
               {pin.length > i ? "•" : ""}
@@ -93,10 +93,10 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
                 data-testid={`pin-key-${k}`}
                 className={`h-20 rounded-xl font-heading text-2xl font-bold transition-all active:scale-95 no-select ${
                   isDigit
-                    ? "bg-[#1A1A1A] border border-[#333] hover:border-flame text-white"
+                    ? "bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white"
                     : k === "clear"
-                    ? "bg-[#1A1A1A] border border-[#333] hover:border-[#FF3B30] text-neutral-400 hover:text-[#FF3B30]"
-                    : "bg-[#1A1A1A] border border-[#333] hover:border-flame text-neutral-400"
+                    ? "bg-[#3D1620] border border-[#5E2A3A] hover:border-[#FF3B30] text-neutral-400 hover:text-[#FF3B30]"
+                    : "bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-neutral-400"
                 }`}
               >
                 {label}
@@ -108,7 +108,7 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
         <button
           onClick={onCancel}
           data-testid="pin-cancel-btn"
-          className="w-full h-12 rounded-md border border-[#333] hover:border-flame text-neutral-300 hover:text-white font-semibold"
+          className="w-full h-12 rounded-md border border-[#5E2A3A] hover:border-flame text-neutral-300 hover:text-white font-semibold"
         >
           ← Επιλογή άλλου προφίλ
         </button>
@@ -163,7 +163,7 @@ export default function ProfileSelect() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center px-6 py-8">
+    <div className="min-h-screen bg-[#2A0E14] text-white flex items-center justify-center px-6 py-8">
       <div className="w-full max-w-4xl">
         <div className="text-center mb-10">
           <div className="text-xs uppercase tracking-widest text-neutral-500 mb-1">
@@ -188,7 +188,7 @@ export default function ProfileSelect() {
                   key={p.id}
                   onClick={() => setChosen(p)}
                   data-testid={`profile-card-${p.id}`}
-                  className="group w-40 sm:w-48 flex flex-col items-center justify-center gap-3 p-6 bg-[#1A1A1A] border border-[#333] rounded-2xl transition-all active:scale-[0.98] hover:border-[var(--pc)]"
+                  className="group w-40 sm:w-48 flex flex-col items-center justify-center gap-3 p-6 bg-[#3D1620] border border-[#5E2A3A] rounded-2xl transition-all active:scale-[0.98] hover:border-[var(--pc)]"
                   style={{ "--pc": color }}
                 >
                   <div
@@ -221,7 +221,7 @@ export default function ProfileSelect() {
               navigate("/app/login");
             }}
             data-testid="profile-full-logout"
-            className="inline-flex items-center gap-2 h-11 px-5 rounded-md border border-[#333] hover:border-[#FF3B30] text-neutral-300 hover:text-[#FF3B30] text-sm font-semibold"
+            className="inline-flex items-center gap-2 h-11 px-5 rounded-md border border-[#5E2A3A] hover:border-[#FF3B30] text-neutral-300 hover:text-[#FF3B30] text-sm font-semibold"
           >
             <LogOut className="w-4 h-4" /> Αποσύνδεση καταστήματος
           </button>

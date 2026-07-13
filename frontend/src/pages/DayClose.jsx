@@ -116,7 +116,7 @@ function ZReportPrint({ report, restaurantName }) {
 
 const SummaryRow = ({ icon: Icon, label, value, valueClass = "text-white", testId }) => (
   <div
-    className="flex items-center justify-between p-3 bg-[#0D0D0D] border border-[#333] rounded-md"
+    className="flex items-center justify-between p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md"
     data-testid={testId}
   >
     <span className="flex items-center gap-2 text-sm text-neutral-300">
@@ -207,7 +207,7 @@ export default function DayClose() {
               onClick={load}
               disabled={loading}
               data-testid="dayclose-refresh-btn"
-              className="h-11 bg-[#1A1A1A] border border-[#333] hover:border-flame text-white"
+              className="h-11 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white"
             >
               <RefreshCcw className="w-4 h-4 mr-2" />
               Ανανέωση
@@ -231,7 +231,7 @@ export default function DayClose() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Totals */}
-            <section className="p-5 bg-[#1A1A1A] border border-[#333] rounded-lg space-y-2">
+            <section className="p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg space-y-2">
               <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">
                 Σύνοψη ημέρας
               </h3>
@@ -279,7 +279,7 @@ export default function DayClose() {
             </section>
 
             {/* Breakdowns */}
-            <section className="p-5 bg-[#1A1A1A] border border-[#333] rounded-lg">
+            <section className="p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
               <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">
                 Ανά πηγή
               </h3>
@@ -334,7 +334,7 @@ export default function DayClose() {
 
         {/* Past reports (owner only) */}
         {canManage && (
-          <section className="mt-8 p-5 bg-[#1A1A1A] border border-[#333] rounded-lg" data-testid="dayclose-history">
+          <section className="mt-8 p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg" data-testid="dayclose-history">
             <h3 className="font-heading text-lg font-bold mb-4">Προηγούμενα κλεισίματα</h3>
             {reports.length === 0 ? (
               <div className="text-neutral-500 text-sm py-4 text-center">
@@ -344,7 +344,7 @@ export default function DayClose() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[560px]">
                   <thead>
-                    <tr className="text-left text-xs uppercase tracking-widest text-neutral-400 border-b border-[#333]">
+                    <tr className="text-left text-xs uppercase tracking-widest text-neutral-400 border-b border-[#5E2A3A]">
                       <th className="py-2 px-3">Ημέρα</th>
                       <th className="py-2 px-3">Ώρα κλεισίματος</th>
                       <th className="py-2 px-3 text-right">Παραγγελίες</th>
@@ -357,7 +357,7 @@ export default function DayClose() {
                     {reports.map((r) => (
                       <tr
                         key={r.id}
-                        className="border-b border-[#222] last:border-0"
+                        className="border-b border-[#431A25] last:border-0"
                         data-testid={`dayreport-row-${r.id}`}
                       >
                         <td className="py-2.5 px-3 font-mono text-white">{r.date}</td>
