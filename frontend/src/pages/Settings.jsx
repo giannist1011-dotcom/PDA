@@ -50,7 +50,13 @@ function BusinessTypeSettings() {
                 : "bg-[#0D0D0D] border-[#333] text-neutral-300 hover:border-[#FF6B00]"
             }`}
           >
-            <Icon className={`w-7 h-7 ${active ? "text-[#FF6B00]" : "text-neutral-400"}`} />
+            <span
+              className={`w-11 h-11 rounded-md bg-[#FF6B00] flex items-center justify-center ${
+                active ? "" : "opacity-60"
+              }`}
+            >
+              <Icon className="w-6 h-6 text-white" />
+            </span>
             <span className="text-sm font-bold">{b.label}</span>
           </button>
         );
