@@ -137,15 +137,15 @@ export default function ProfileSelect() {
   }, [user]);
 
   if (user === null) return null;
-  if (user === false) return <Navigate to="/login" replace />;
-  if (hasProfile) return <Navigate to="/" replace />;
+  if (user === false) return <Navigate to="/app/login" replace />;
+  if (hasProfile) return <Navigate to="/app" replace />;
 
   const handleSubmit = async (pin) => {
     setBusy(true);
     try {
       await selectProfile(chosen.id, pin);
       toast.success(`Καλωσήρθες, ${chosen.name}`);
-      navigate("/");
+      navigate("/app");
     } finally {
       setBusy(false);
     }
@@ -218,7 +218,7 @@ export default function ProfileSelect() {
           <button
             onClick={() => {
               logout();
-              navigate("/login");
+              navigate("/app/login");
             }}
             data-testid="profile-full-logout"
             className="inline-flex items-center gap-2 h-11 px-5 rounded-md border border-[#333] hover:border-[#FF3B30] text-neutral-300 hover:text-[#FF3B30] text-sm font-semibold"

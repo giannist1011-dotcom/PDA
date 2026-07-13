@@ -78,7 +78,7 @@ export default function Register() {
     owner_pin2: "",
   });
 
-  if (user && user !== false) return <Navigate to="/" replace />;
+  if (user && user !== false) return <Navigate to="/app" replace />;
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -138,7 +138,7 @@ export default function Register() {
         owner_pin: form.owner_pin,
       });
       toast.success("Ο λογαριασμός δημιουργήθηκε — καλωσήρθατε!");
-      navigate("/");
+      navigate("/app");
     } catch (e) {
       setError(formatApiError(e));
     } finally {
@@ -419,7 +419,7 @@ export default function Register() {
 
           <div className="mt-6 text-sm text-neutral-400 text-center">
             Έχετε ήδη λογαριασμό;{" "}
-            <Link to="/login" data-testid="go-login" className="text-flame hover:underline font-semibold">
+            <Link to="/app/login" data-testid="go-login" className="text-flame hover:underline font-semibold">
               Σύνδεση
             </Link>
           </div>

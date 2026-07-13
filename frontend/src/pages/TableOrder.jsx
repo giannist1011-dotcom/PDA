@@ -115,7 +115,7 @@ export default function TableOrder() {
       setTab(tt.tab);
     } catch (e) {
       toast.error(formatApiError(e));
-      navigate("/tables");
+      navigate("/app/tables");
     } finally {
       setLoading(false);
     }
@@ -217,7 +217,7 @@ export default function TableOrder() {
       setPrintOrder({ ...order, restaurant_name: user?.restaurant_name });
       setTimeout(() => {
         window.print();
-        navigate("/tables");
+        navigate("/app/tables");
       }, 200);
       toast.success(`Το τραπέζι έκλεισε — παραγγελία #${String(order.order_number).padStart(3, "0")}`);
     } catch (e) {
@@ -241,7 +241,7 @@ export default function TableOrder() {
       const res = await apiTransferTab(tab.id, target.id);
       toast.success(`Η καρτέλα μεταφέρθηκε στο ${res.table_name}`);
       setTransferOpen(false);
-      navigate(`/tables/${target.id}`, { replace: true });
+      navigate(`/app/tables/${target.id}`, { replace: true });
     } catch (e) {
       toast.error(formatApiError(e));
     }
@@ -262,7 +262,7 @@ export default function TableOrder() {
         <section className="p-4 md:p-6 lg:overflow-hidden flex flex-col min-h-[45vh] lg:min-h-0">
           <div className="flex items-center gap-3 mb-4 shrink-0">
             <button
-              onClick={() => navigate("/tables")}
+              onClick={() => navigate("/app/tables")}
               data-testid="table-back-btn"
               className="w-10 h-10 rounded-md border border-[#333] hover:border-flame flex items-center justify-center shrink-0"
             >

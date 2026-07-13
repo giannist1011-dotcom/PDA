@@ -14,7 +14,7 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  if (user && user !== false) return <Navigate to="/" replace />;
+  if (user && user !== false) return <Navigate to="/app" replace />;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -23,7 +23,7 @@ export default function Login() {
     try {
       await login(email, password);
       toast.success("Καλωσήρθατε!");
-      navigate("/");
+      navigate("/app");
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -102,7 +102,7 @@ export default function Login() {
 
           <div className="mt-6 text-sm text-neutral-400 text-center">
             Δεν έχετε λογαριασμό;{" "}
-            <Link to="/register" data-testid="go-register" className="text-flame hover:underline font-semibold">
+            <Link to="/app/register" data-testid="go-register" className="text-flame hover:underline font-semibold">
               Εγγραφή καταστήματος
             </Link>
           </div>

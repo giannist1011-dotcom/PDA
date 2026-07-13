@@ -1,8 +1,9 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import Landing from "@/pages/Landing";
 import PDA from "@/pages/PDA";
 import Analytics from "@/pages/Analytics";
 import Login from "@/pages/Login";
@@ -20,18 +21,46 @@ import Waiters from "@/pages/Waiters";
 import Tables from "@/pages/Tables";
 import TableOrder from "@/pages/TableOrder";
 
+// Old top-level app paths now live under /app — keep old links/bookmarks working.
+const LEGACY_PATHS = [
+  "/login",
+  "/register",
+  "/select-profile",
+  "/tables",
+  "/menu",
+  "/photos",
+  "/waiters",
+  "/day-close",
+  "/history",
+  "/stock",
+  "/schedule",
+  "/analytics",
+  "/expenses",
+  "/settings",
+];
+
+function LegacyRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/app${location.pathname}${location.search}`} replace />;
+}
+
 function App() {
   return (
     <div className="App dark">
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/select-profile" element={<ProfileSelect />} />
+            {/* Public landing page */}
+            <Route path="/" element={<Landing />} />
+
+            {/* Auth */}
+            <Route path="/app/login" element={<Login />} />
+            <Route path="/app/register" element={<Register />} />
+            <Route path="/app/select-profile" element={<ProfileSelect />} />
+
             {/* Cash PDA — not for waiters */}
             <Route
-              path="/"
+              path="/app"
               element={
                 <ProtectedRoute roles={["owner", "manager", "employee"]}>
                   <PDA />
@@ -40,7 +69,7 @@ function App() {
             />
             {/* Tables — all roles incl. Σερβιτόρος */}
             <Route
-              path="/tables"
+              path="/app/tables"
               element={
                 <ProtectedRoute>
                   <Tables />
@@ -48,7 +77,7 @@ function App() {
               }
             />
             <Route
-              path="/tables/:tableId"
+              path="/app/tables/:tableId"
               element={
                 <ProtectedRoute>
                   <TableOrder />
@@ -57,7 +86,7 @@ function App() {
             />
             {/* Owner + Υπεύθυνος */}
             <Route
-              path="/menu"
+              path="/app/menu"
               element={
                 <ProtectedRoute roles={["owner", "manager"]}>
                   <MenuManagement />
@@ -65,7 +94,7 @@ function App() {
               }
             />
             <Route
-              path="/photos"
+              path="/app/photos"
               element={
                 <ProtectedRoute roles={["owner", "manager"]}>
                   <Photos />
@@ -73,7 +102,7 @@ function App() {
               }
             />
             <Route
-              path="/waiters"
+              path="/app/waiters"
               element={
                 <ProtectedRoute roles={["owner", "manager"]}>
                   <Waiters />
@@ -82,7 +111,7 @@ function App() {
             />
             {/* Owner + Υπεύθυνος + Υπάλληλος (όχι Σερβιτόρος) */}
             <Route
-              path="/day-close"
+              path="/app/day-close"
               element={
                 <ProtectedRoute roles={["owner", "manager", "employee"]}>
                   <DayClose />
@@ -90,7 +119,7 @@ function App() {
               }
             />
             <Route
-              path="/history"
+              path="/app/history"
               element={
                 <ProtectedRoute roles={["owner", "manager", "employee"]}>
                   <History />
@@ -98,7 +127,7 @@ function App() {
               }
             />
             <Route
-              path="/stock"
+              path="/app/stock"
               element={
                 <ProtectedRoute roles={["owner", "manager", "employee"]}>
                   <Stock />
@@ -106,7 +135,7 @@ function App() {
               }
             />
             <Route
-              path="/schedule"
+              path="/app/schedule"
               element={
                 <ProtectedRoute roles={["owner", "manager", "employee"]}>
                   <Schedule />
@@ -115,7 +144,7 @@ function App() {
             />
             {/* Owner only */}
             <Route
-              path="/analytics"
+              path="/app/analytics"
               element={
                 <ProtectedRoute requireOwner>
                   <Analytics />
@@ -123,7 +152,7 @@ function App() {
               }
             />
             <Route
-              path="/expenses"
+              path="/app/expenses"
               element={
                 <ProtectedRoute requireOwner>
                   <Expenses />
@@ -131,13 +160,21 @@ function App() {
               }
             />
             <Route
-              path="/settings"
+              path="/app/settings"
               element={
                 <ProtectedRoute requireOwner>
                   <Settings />
                 </ProtectedRoute>
               }
             />
+
+            {/* Legacy top-level paths → /app/... */}
+            {LEGACY_PATHS.map((p) => (
+              <Route key={p} path={p} element={<LegacyRedirect />} />
+            ))}
+            <Route path="/tables/:tableId" element={<LegacyRedirect />} />
+
+            <Route path="/app/*" element={<Navigate to="/app" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>

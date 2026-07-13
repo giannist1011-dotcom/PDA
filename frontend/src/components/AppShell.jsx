@@ -28,18 +28,18 @@ const ALL_ROLES = ["owner", "manager", "employee", "waiter"];
 const STAFF = ["owner", "manager", "employee"];
 const MANAGERS = ["owner", "manager"];
 const NAV_ALL = [
-  { to: "/", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", roles: STAFF },
-  { to: "/tables", label: "Τραπέζια", icon: LayoutGrid, testId: "drawer-link-tables", roles: ALL_ROLES, requiresTables: true },
-  { to: "/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", roles: STAFF },
-  { to: "/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: STAFF },
-  { to: "/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"] },
-  { to: "/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", roles: ["owner"] },
-  { to: "/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", roles: MANAGERS },
-  { to: "/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", roles: MANAGERS },
-  { to: "/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock", roles: STAFF },
-  { to: "/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule", roles: STAFF },
-  { to: "/waiters", label: "Σερβιτόροι", icon: UserIcon, testId: "drawer-link-waiters", roles: ["manager"] },
-  { to: "/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", roles: ["owner"] },
+  { to: "/app", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", roles: STAFF },
+  { to: "/app/tables", label: "Τραπέζια", icon: LayoutGrid, testId: "drawer-link-tables", roles: ALL_ROLES, requiresTables: true },
+  { to: "/app/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", roles: STAFF },
+  { to: "/app/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: STAFF },
+  { to: "/app/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"] },
+  { to: "/app/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", roles: ["owner"] },
+  { to: "/app/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", roles: MANAGERS },
+  { to: "/app/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", roles: MANAGERS },
+  { to: "/app/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock", roles: STAFF },
+  { to: "/app/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule", roles: STAFF },
+  { to: "/app/waiters", label: "Σερβιτόροι", icon: UserIcon, testId: "drawer-link-waiters", roles: ["manager"] },
+  { to: "/app/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", roles: ["owner"] },
 ];
 
 export default function AppShell({ title, children }) {
@@ -50,7 +50,7 @@ export default function AppShell({ title, children }) {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/app/login");
   };
 
   const handleSwitchProfile = async () => {
@@ -59,7 +59,7 @@ export default function AppShell({ title, children }) {
     } catch {
       // even if it fails, navigate anyway
     }
-    navigate("/select-profile");
+    navigate("/app/select-profile");
   };
 
   const nav = NAV_ALL.filter(

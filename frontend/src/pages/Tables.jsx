@@ -96,7 +96,7 @@ export default function Tables() {
               return (
                 <button
                   key={t.id}
-                  onClick={() => navigate(`/tables/${t.id}`)}
+                  onClick={() => navigate(`/app/tables/${t.id}`)}
                   data-testid={`table-card-${t.id}`}
                   className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-1 p-3 transition-all active:scale-[0.97] ${
                     open
