@@ -1,0 +1,339 @@
+"""Παραγγελίες: δημιουργία, scheduled, ιστορικό, ακύρωση, πελάτες."""
+import re
+import uuid
+from collections import Counter
+from datetime import datetime, timezone
+from typing import List, Literal, Optional
+
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, Field, ConfigDict
+
+from core import (
+    db,
+    get_current_user,
+    require_owner,
+    actor_name,
+    require_owner_or_pin,
+)
+from routers.menu import MenuOption
+
+router = APIRouter()
+
+
+# ============ MODELS ============
+class OptionSelection(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    group_id: str
+    group_name: str
+    choices: List[MenuOption] = Field(default_factory=list)
+
+
+class OrderItemCustomization(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    bread: Optional[str] = None
+    extras: List[str] = Field(default_factory=list)
+    sauces: List[str] = Field(default_factory=list)
+    double_meat: bool = False
+    selections: List[OptionSelection] = Field(default_factory=list)
+
+
+class OrderItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    item_id: str
+    name: str
+    category: str
+    unit_price: float
+    quantity: int = 1
+    line_total: float
+    customization: Optional[OrderItemCustomization] = None
+
+
+class DeliveryInfo(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    delivery_type: Literal["delivery", "takeaway"]
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    floor: Optional[str] = None
+
+
+class DiscountInfo(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    type: Literal["percent", "amount"]
+    value: float = Field(ge=0)   # 10 (%) or 2.50 (€)
+    amount: float = Field(ge=0)  # computed € discount
+    applied_by: Optional[str] = None  # profile name — set server-side
+    applied_by_role: Optional[str] = None
+    applied_at: Optional[str] = None
+
+
+class TakenBy(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    profile_id: Optional[str] = None
+    name: Optional[str] = None
+    role: Optional[str] = None
+
+
+class OrderCreate(BaseModel):
+    order_number: int
+    items: List[OrderItem]
+    subtotal: float
+    total: float
+    source: Literal["Ταμείο", "Τηλέφωνο", "efood", "Box", "Τραπέζι"]
+    note: Optional[str] = None
+    delivery: Optional[DeliveryInfo] = None
+    scheduled_at: Optional[str] = None  # ISO datetime — order fires later
+    discount: Optional[DiscountInfo] = None
+    table_name: Optional[str] = None  # set when the order came from a closed table tab
+
+
+class Order(OrderCreate):
+    id: str
+    user_id: str
+    created_at: datetime
+    cancelled: bool = False
+    status: Literal["active", "scheduled"] = "active"
+    cancelled_by: Optional[str] = None
+    cancelled_by_role: Optional[str] = None
+    cancelled_at: Optional[str] = None
+    taken_by: Optional[TakenBy] = None
+
+
+# ============ ORDER ROUTES ============
+async def compute_next_order_number(user_id: str) -> int:
+    today = datetime.now(timezone.utc).date().isoformat()
+    docs = await db.orders.find(
+        {
+            "user_id": user_id,
+            "created_at": {"$gte": f"{today}T00:00:00+00:00", "$lte": f"{today}T23:59:59+00:00"},
+        },
+        {"_id": 0, "order_number": 1},
+    ).sort("order_number", -1).limit(1).to_list(1)
+    return (docs[0]["order_number"] + 1) if docs else 1
+
+
+@router.get("/orders/next-number")
+async def next_order_number(user: dict = Depends(get_current_user)):
+    return {"next_order_number": await compute_next_order_number(user["id"])}
+
+
+@router.post("/orders", response_model=Order)
+async def create_order(body: OrderCreate, user: dict = Depends(get_current_user)):
+    oid = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    doc = body.model_dump()
+    doc.update({
+        "id": oid,
+        "user_id": user["id"],
+        "created_at": now.isoformat(),
+        "status": "scheduled" if body.scheduled_at else "active",
+        "taken_by": {
+            "profile_id": user.get("profile_id"),
+            "name": actor_name(user),
+            "role": user.get("role"),
+        },
+    })
+    if doc.get("discount"):
+        # audit trail: which profile applied the discount and when
+        doc["discount"]["applied_by"] = actor_name(user)
+        doc["discount"]["applied_by_role"] = user.get("role")
+        doc["discount"]["applied_at"] = now.isoformat()
+    await db.orders.insert_one(doc)
+    doc.pop("_id", None)
+    doc["created_at"] = now
+    return doc
+
+
+@router.get("/orders/scheduled", response_model=List[Order])
+async def list_scheduled_orders(user: dict = Depends(get_current_user)):
+    docs = await db.orders.find(
+        {"user_id": user["id"], "status": "scheduled", "cancelled": {"$ne": True}},
+        {"_id": 0},
+    ).sort("scheduled_at", 1).to_list(500)
+    for d in docs:
+        if isinstance(d.get("created_at"), str):
+            d["created_at"] = datetime.fromisoformat(d["created_at"])
+    return docs
+
+
+@router.get("/orders", response_model=List[Order])
+async def list_orders(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    source: Optional[str] = None,
+    q: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 500,
+    user: dict = Depends(get_current_user),
+):
+    query = {"user_id": user["id"]}
+    if date_from or date_to:
+        rng = {}
+        if date_from:
+            rng["$gte"] = f"{date_from}T00:00:00+00:00"
+        if date_to:
+            rng["$lte"] = f"{date_to}T23:59:59+00:00"
+        query["created_at"] = rng
+    if source:
+        query["source"] = source
+    if q and q.strip():
+        term = q.strip()
+        ors = [
+            {"delivery.name": {"$regex": re.escape(term), "$options": "i"}},
+            {"delivery.phone": {"$regex": re.escape(term)}},
+        ]
+        if term.isdigit():
+            ors.append({"order_number": int(term)})
+        query["$or"] = ors
+    docs = (
+        await db.orders.find(query, {"_id": 0})
+        .sort("created_at", -1)
+        .skip(max(0, skip))
+        .to_list(min(limit, 500))
+    )
+    for d in docs:
+        if isinstance(d.get("created_at"), str):
+            d["created_at"] = datetime.fromisoformat(d["created_at"])
+    return docs
+
+
+@router.get("/orders/{oid}", response_model=Order)
+async def get_order(oid: str, user: dict = Depends(get_current_user)):
+    doc = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Not found")
+    if isinstance(doc.get("created_at"), str):
+        doc["created_at"] = datetime.fromisoformat(doc["created_at"])
+    return doc
+
+
+@router.post("/orders/{oid}/activate", response_model=Order)
+async def activate_order(oid: str, user: dict = Depends(get_current_user)):
+    """Move a scheduled order to active (fired / printed)."""
+    r = await db.orders.update_one(
+        {"id": oid, "user_id": user["id"], "status": "scheduled"},
+        {"$set": {"status": "active"}},
+    )
+    if r.matched_count == 0:
+        raise HTTPException(404, "Not found")
+    doc = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})
+    if isinstance(doc.get("created_at"), str):
+        doc["created_at"] = datetime.fromisoformat(doc["created_at"])
+    return doc
+
+
+class CancelOrderIn(BaseModel):
+    pin: Optional[str] = None
+
+
+@router.post("/orders/{oid}/cancel")
+async def cancel_order(
+    oid: str,
+    body: Optional[CancelOrderIn] = None,
+    user: dict = Depends(get_current_user),
+):
+    order = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0, "status": 1})
+    if not order:
+        raise HTTPException(404, "Not found")
+    # scheduled orders may be cancelled by any profile;
+    # fired orders need the owner profile or a valid owner PIN
+    if order.get("status") != "scheduled":
+        await require_owner_or_pin(user, body.pin if body else None)
+    await db.orders.update_one(
+        {"id": oid, "user_id": user["id"]},
+        {"$set": {
+            "cancelled": True,
+            "cancelled_by": actor_name(user),
+            "cancelled_by_role": user.get("role"),
+            "cancelled_at": datetime.now(timezone.utc).isoformat(),
+        }},
+    )
+    return {"ok": True, "id": oid, "cancelled": True}
+
+
+@router.delete("/orders/{oid}")
+async def delete_order(
+    oid: str,
+    pin: Optional[str] = None,
+    user: dict = Depends(get_current_user),
+):
+    await require_owner_or_pin(user, pin)
+    r = await db.orders.delete_one({"id": oid, "user_id": user["id"]})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
+@router.get("/customers")
+async def list_customers(user: dict = Depends(require_owner)):
+    """Aggregate customers from phone/delivery orders, grouped by phone
+    (falling back to name+address when no phone was recorded)."""
+    docs = await db.orders.find(
+        {
+            "user_id": user["id"],
+            "delivery": {"$ne": None},
+            "cancelled": {"$ne": True},
+            "status": {"$ne": "scheduled"},
+        },
+        {"_id": 0, "user_id": 0},
+    ).sort("created_at", 1).to_list(50000)
+
+    customers = {}
+    for d in docs:
+        dv = d.get("delivery") or {}
+        phone = (dv.get("phone") or "").strip()
+        name = (dv.get("name") or "").strip()
+        address = (dv.get("address") or "").strip()
+        if phone:
+            key = f"tel:{phone}"
+        elif name or address:
+            key = f"na:{name.lower()}|{address.lower()}"
+        else:
+            continue  # no identifying info at all
+
+        c = customers.setdefault(key, {
+            "key": key,
+            "name": "",
+            "phone": "",
+            "address": "",
+            "floor": "",
+            "orders_count": 0,
+            "total_spent": 0.0,
+            "last_order_at": None,
+            "orders": [],
+            "_items": Counter(),
+        })
+        # keep the latest non-empty contact details (docs are sorted oldest→newest)
+        if name:
+            c["name"] = name
+        if phone:
+            c["phone"] = phone
+        if address:
+            c["address"] = address
+        if (dv.get("floor") or "").strip():
+            c["floor"] = dv["floor"].strip()
+
+        c["orders_count"] += 1
+        c["total_spent"] += d.get("total", 0)
+        c["last_order_at"] = d.get("created_at")
+        c["orders"].append({
+            "id": d["id"],
+            "order_number": d.get("order_number"),
+            "created_at": d.get("created_at"),
+            "total": d.get("total", 0),
+            "delivery_type": dv.get("delivery_type"),
+            "source": d.get("source"),
+        })
+        for it in d.get("items", []):
+            c["_items"][it.get("name", "")] += it.get("quantity", 1)
+
+    out = []
+    for c in customers.values():
+        c["total_spent"] = round(c["total_spent"], 2)
+        c["orders"] = list(reversed(c["orders"]))  # newest first
+        c["top_items"] = [
+            {"name": n, "quantity": q} for n, q in c.pop("_items").most_common(5) if n
+        ]
+        out.append(c)
+    out.sort(key=lambda c: (-c["orders_count"], c["name"].lower()))
+    return out
