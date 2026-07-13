@@ -10,7 +10,7 @@ import {
   apiDeleteProfile,
   formatApiError,
 } from "@/lib/api";
-import { ROLE_LABELS, ROLE_COLORS } from "@/lib/roles";
+import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
 
 // waiterOnly: manager view — only Σερβιτόρος profiles, role locked.
 function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
@@ -229,12 +229,14 @@ export default function ProfilesManager({ waiterOnly = false }) {
                       </span>
                     )}
                   </div>
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-widest"
-                    style={{ color }}
-                  >
-                    {ROLE_LABELS[p.role] || p.role}
-                  </span>
+                  {!nameMatchesRole(p.name, p.role) && (
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-widest"
+                      style={{ color }}
+                    >
+                      {ROLE_LABELS[p.role] || p.role}
+                    </span>
+                  )}
                 </div>
                 <span className="hidden sm:flex items-center gap-1 text-[10px] text-neutral-600 uppercase tracking-widest">
                   <KeyRound className="w-3 h-3" /> PIN

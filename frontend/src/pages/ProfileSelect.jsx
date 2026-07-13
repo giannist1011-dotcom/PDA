@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Crown, User as UserIcon, Delete, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { apiListProfiles, formatApiError } from "@/lib/api";
-import { ROLE_LABELS, ROLE_COLORS } from "@/lib/roles";
+import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"];
 
@@ -45,12 +45,14 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
           <h1 className="font-heading text-3xl font-bold" data-testid="pin-profile-label">
             {profile.name}
           </h1>
-          <div
-            className="mt-1 text-[11px] font-bold uppercase tracking-widest"
-            style={{ color }}
-          >
-            {ROLE_LABELS[profile.role] || profile.role}
-          </div>
+          {!nameMatchesRole(profile.name, profile.role) && (
+            <div
+              className="mt-1 text-[11px] font-bold uppercase tracking-widest"
+              style={{ color }}
+            >
+              {ROLE_LABELS[profile.role] || profile.role}
+            </div>
+          )}
           <p className="text-sm text-neutral-400 mt-2">Πληκτρολογήστε τον 4-ψήφιο κωδικό</p>
         </div>
 
@@ -177,7 +179,7 @@ export default function ProfileSelect() {
             Δεν υπάρχουν προφίλ σε αυτόν τον λογαριασμό
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             {profiles.map((p) => {
               const color = ROLE_COLORS[p.role] || "#888";
               const Icon = p.role === "owner" ? Crown : UserIcon;
@@ -186,7 +188,7 @@ export default function ProfileSelect() {
                   key={p.id}
                   onClick={() => setChosen(p)}
                   data-testid={`profile-card-${p.id}`}
-                  className="group flex flex-col items-center justify-center gap-3 p-6 bg-[#1A1A1A] border border-[#333] rounded-2xl transition-all active:scale-[0.98] hover:border-[var(--pc)]"
+                  className="group w-40 sm:w-48 flex flex-col items-center justify-center gap-3 p-6 bg-[#1A1A1A] border border-[#333] rounded-2xl transition-all active:scale-[0.98] hover:border-[var(--pc)]"
                   style={{ "--pc": color }}
                 >
                   <div
@@ -198,12 +200,14 @@ export default function ProfileSelect() {
                   <div className="font-heading text-xl font-bold truncate max-w-full">
                     {p.name}
                   </div>
-                  <span
-                    className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest"
-                    style={{ backgroundColor: `${color}26`, color }}
-                  >
-                    {ROLE_LABELS[p.role] || p.role}
-                  </span>
+                  {!nameMatchesRole(p.name, p.role) && (
+                    <span
+                      className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest"
+                      style={{ backgroundColor: `${color}26`, color }}
+                    >
+                      {ROLE_LABELS[p.role] || p.role}
+                    </span>
+                  )}
                 </button>
               );
             })}

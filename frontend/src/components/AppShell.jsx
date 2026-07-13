@@ -20,7 +20,7 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { ROLE_LABELS, ROLE_COLORS } from "@/lib/roles";
+import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
 import { businessIcon } from "@/lib/business";
 
 // Full nav list. Each entry lists the roles that can see it.
@@ -78,7 +78,7 @@ export default function AppShell({ title, children }) {
       style={{ backgroundColor: `${roleColor}26`, color: roleColor }}
     >
       {role === "owner" ? <Crown className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
-      {profileName ? `${profileName} · ` : ""}
+      {profileName && !nameMatchesRole(profileName, role) ? `${profileName} · ` : ""}
       {ROLE_LABELS[role] || role}
     </span>
   ) : null;

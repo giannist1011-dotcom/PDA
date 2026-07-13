@@ -14,6 +14,13 @@ export const ROLE_COLORS = {
   waiter: "#00E676",
 };
 
+// True when a profile's name is just its role label (e.g. "Υπάλληλος"),
+// so UI should show it once instead of "Υπάλληλος · Υπάλληλος".
+export const nameMatchesRole = (name, role) =>
+  !!name &&
+  !!ROLE_LABELS[role] &&
+  name.trim().toLowerCase() === ROLE_LABELS[role].toLowerCase();
+
 // Display an audit actor. Legacy orders stored the raw role ("owner"/"employee")
 // in the name field — map those to labels; new records carry the profile name.
 export const actorLabel = (name, role = null) => {
