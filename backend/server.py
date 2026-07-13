@@ -8,7 +8,7 @@ from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, ensure_demo_account
-from routers import auth, menu, orders, tables, stock, schedule, stats, expenses
+from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo
 
 app = FastAPI(title="OrderDeck")
 
@@ -30,6 +30,7 @@ api.include_router(stock.router)
 api.include_router(schedule.router)
 api.include_router(expenses.router)
 api.include_router(tables.router)
+api.include_router(promo.router)
 
 app.include_router(api)
 
@@ -64,6 +65,8 @@ async def on_startup():
     await db.profiles.create_index([("user_id", 1), ("created_at", 1)])
     await db.tables.create_index([("user_id", 1), ("order", 1)])
     await db.table_tabs.create_index([("user_id", 1), ("table_id", 1), ("status", 1)])
+    await db.promo_codes.create_index("code", unique=True)
+    await db.users.create_index([("promo.code", 1)], sparse=True)
     await ensure_demo_account()
 
 

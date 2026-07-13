@@ -19,6 +19,7 @@ from core import (
     seed_account_from_preset,
 )
 from presets import PRESETS
+from routers.promo import redeem_promo, promo_description
 
 router = APIRouter()
 
@@ -36,6 +37,7 @@ class RegisterIn(BaseModel):
     has_tables: bool = False
     has_waiters: bool = False
     owner_pin: Optional[str] = None  # 4 digits — the wizard always sends it
+    promo_code: Optional[str] = Field(default=None, max_length=40)
 
 
 class LoginIn(BaseModel):
@@ -60,6 +62,19 @@ async def register(body: RegisterIn):
     owner_pin = body.owner_pin or "0000"
     now = datetime.now(timezone.utc).isoformat()
     uid = str(uuid.uuid4())
+    # Εκπτωτικός κωδικός: validate + ατομική δέσμευση χρήσης πριν δημιουργηθεί ο λογαριασμός
+    promo = None
+    billing_note = ""
+    if body.promo_code and body.promo_code.strip():
+        claimed = await redeem_promo(body.promo_code)
+        promo = {
+            "code": claimed["code"],
+            "type": claimed["type"],
+            "value": claimed["value"],
+            "duration": claimed["duration"],
+            "applied_at": now,
+        }
+        billing_note = f"Κωδικός {claimed['code']}: {promo_description(claimed)}"
     doc = {
         "id": uid,
         "email": email,
@@ -76,6 +91,8 @@ async def register(body: RegisterIn):
         "employee_pin_hash": hash_password("0000"),
         "owner_pin_set": bool(body.owner_pin),
         "employee_pin_set": False,
+        "promo": promo,
+        "billing_note": billing_note,
         "created_at": now,
     }
     await db.users.insert_one(doc)

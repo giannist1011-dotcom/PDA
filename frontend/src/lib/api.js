@@ -166,6 +166,22 @@ export const apiUpdateExpense = (id, payload) =>
 export const apiDeleteExpense = (id) =>
   api.delete(`/expenses/${id}`).then((r) => r.data);
 
+// PROMO CODES
+export const apiValidatePromo = (code) =>
+  api.post("/promo/validate", { code }).then((r) => r.data);
+// Admin (ξεχωριστό password μέσω header — όχι JWT μαγαζιού)
+const adminHeaders = (pw) => ({ headers: { "X-Admin-Password": pw } });
+export const apiAdminListPromos = (pw) =>
+  api.get("/admin/promo", adminHeaders(pw)).then((r) => r.data);
+export const apiAdminCreatePromo = (pw, payload) =>
+  api.post("/admin/promo", payload, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminTogglePromo = (pw, id, active) =>
+  api.patch(`/admin/promo/${id}`, { active }, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminDeletePromo = (pw, id) =>
+  api.delete(`/admin/promo/${id}`, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminPromoUses = (pw, id) =>
+  api.get(`/admin/promo/${id}/uses`, adminHeaders(pw)).then((r) => r.data);
+
 // Error helper
 export function formatApiError(e) {
   const d = e?.response?.data?.detail;

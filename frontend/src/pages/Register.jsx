@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Utensils,
@@ -9,9 +9,10 @@ import {
   LayoutGrid,
   Users,
   KeyRound,
+  Ticket,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { formatApiError } from "@/lib/api";
+import { formatApiError, apiValidatePromo } from "@/lib/api";
 import { BUSINESS_TYPES } from "@/lib/business";
 import { Button } from "@/components/ui/button";
 
@@ -59,10 +60,13 @@ function YesNo({ value, onChange, testId }) {
 export default function Register() {
   const { user, register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [promoInfo, setPromoInfo] = useState(null); // επιτυχής validation → {code, description}
   const [form, setForm] = useState({
+    promo_code: (searchParams.get("promo") || "").toUpperCase(),
     email: "",
     password: "",
     password2: "",
@@ -101,11 +105,26 @@ export default function Register() {
     return null;
   };
 
-  const next = () => {
+  const next = async () => {
     const err = validateStep();
     if (err) {
       setError(err);
       return;
+    }
+    // Έλεγχος εκπτωτικού κωδικού πριν προχωρήσουμε από το πρώτο βήμα
+    if (step === 0 && form.promo_code.trim()) {
+      if (!promoInfo || promoInfo.code !== form.promo_code.trim().toUpperCase()) {
+        setBusy(true);
+        try {
+          const info = await apiValidatePromo(form.promo_code.trim());
+          setPromoInfo(info);
+        } catch (e) {
+          setError(formatApiError(e));
+          return;
+        } finally {
+          setBusy(false);
+        }
+      }
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
@@ -136,6 +155,7 @@ export default function Register() {
         has_tables: form.has_tables,
         has_waiters: form.has_waiters,
         owner_pin: form.owner_pin,
+        promo_code: form.promo_code.trim() || null,
       });
       toast.success("Ο λογαριασμός δημιουργήθηκε — καλωσήρθατε!");
       navigate("/app");
@@ -229,6 +249,26 @@ export default function Register() {
                   data-testid="register-phone"
                   className={inputCls}
                 />
+              </Field>
+              <Field label="Εκπτωτικός κωδικός" optional>
+                <div className="relative">
+                  <Ticket className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    value={form.promo_code}
+                    onChange={(e) => {
+                      set("promo_code", e.target.value.toUpperCase());
+                      setPromoInfo(null);
+                    }}
+                    placeholder="π.χ. WELCOME10"
+                    data-testid="register-promo"
+                    className={`${inputCls} pl-9 font-mono tracking-wider`}
+                  />
+                </div>
+                {promoInfo && promoInfo.code === form.promo_code.trim().toUpperCase() && (
+                  <div className="text-xs text-gold mt-1 flex items-center gap-1" data-testid="register-promo-ok">
+                    <Check className="w-3.5 h-3.5" /> {promoInfo.description}
+                  </div>
+                )}
               </Field>
             </div>
           )}
@@ -369,6 +409,13 @@ export default function Register() {
                 </div>
                 <div>Τραπέζια: <span className="text-white">{form.has_tables ? "Ναι (8 έτοιμα)" : "Όχι"}</span></div>
                 <div>Σερβιτόροι: <span className="text-white">{form.has_waiters ? "Ναι" : "Όχι"}</span></div>
+                {form.promo_code.trim() && (
+                  <div>
+                    Εκπτωτικός κωδικός:{" "}
+                    <span className="text-gold font-mono">{form.promo_code.trim().toUpperCase()}</span>
+                    {promoInfo?.description && <span className="text-neutral-400"> — {promoInfo.description}</span>}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -399,6 +446,7 @@ export default function Register() {
               <Button
                 type="button"
                 onClick={next}
+                disabled={busy}
                 data-testid="register-next"
                 className="flex-1 h-12 bg-brand hover:bg-brand-hover text-white font-bold"
               >
