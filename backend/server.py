@@ -1,4 +1,4 @@
-"""FastAPI server for Πεινώκιο multi-tenant POS SaaS — app setup μόνο.
+"""FastAPI server for OrderDeck multi-tenant POS SaaS — app setup μόνο.
 
 Τα endpoints ζουν στα routers/ (ένα ανά feature)· τα κοινά (db, auth, seeding) στο core.py.
 """
@@ -10,14 +10,14 @@ from starlette.middleware.cors import CORSMiddleware
 from core import client, db, ensure_demo_account
 from routers import auth, menu, orders, tables, stock, schedule, stats, expenses
 
-app = FastAPI(title="Peinokio POS SaaS")
+app = FastAPI(title="OrderDeck")
 
 api = APIRouter(prefix="/api")
 
 
 @api.get("/")
 async def root():
-    return {"status": "ok", "service": "Peinokio POS SaaS"}
+    return {"status": "ok", "service": "OrderDeck"}
 
 
 # Route registration order matters for overlapping paths (literal before {param}),

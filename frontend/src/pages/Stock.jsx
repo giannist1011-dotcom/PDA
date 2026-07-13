@@ -267,7 +267,7 @@ function printShoppingList({ restaurantName, items }) {
     <div class="meta">${escapeHtml(restaurantName || "")} · ${dateStr} · ${timeStr}</div>
   </header>
   ${items.length === 0 ? '<div class="empty">Η λίστα είναι άδεια</div>' : `<ul>${rows}</ul>`}
-  <footer>Εκτυπώθηκε από το POS Πεινώκιο</footer>
+  <footer>Εκτυπώθηκε από το OrderDeck</footer>
   <script>window.addEventListener('load', () => setTimeout(() => window.print(), 100));</script>
 </body>
 </html>`;

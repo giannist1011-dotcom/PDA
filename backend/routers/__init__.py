@@ -1,1 +1,1 @@
-"""Πεινώκιο POS — FastAPI routers, ένας ανά feature."""
+"""OrderDeck — FastAPI routers, ένας ανά feature."""

@@ -109,7 +109,7 @@ function ZReportPrint({ report, restaurantName }) {
         <span>{eur(report.net_result)}</span>
       </div>
       <hr />
-      <div style={{ textAlign: "center", fontSize: 10 }}>POS Πεινώκιο — Αναφορά Z</div>
+      <div style={{ textAlign: "center", fontSize: 10 }}>OrderDeck — Αναφορά Z</div>
     </div>
   );
 }

@@ -38,7 +38,7 @@ export default function Login() {
           <div className="w-11 h-11 rounded-md bg-[#FF6B00] flex items-center justify-center">
             <Utensils className="w-6 h-6 text-white" />
           </div>
-          <span className="font-heading text-3xl font-bold tracking-tight">POS Suite</span>
+          <span className="font-heading text-3xl font-bold tracking-tight">OrderDeck</span>
         </div>
 
         <div className="bg-[#1A1A1A] border border-[#333] rounded-lg p-8">

@@ -1,4 +1,4 @@
-"""Backend tests for Peinokio multi-tenant POS SaaS (updated for profile enforcement)."""
+"""Backend tests for OrderDeck multi-tenant POS SaaS (updated for profile enforcement)."""
 import os
 import uuid
 

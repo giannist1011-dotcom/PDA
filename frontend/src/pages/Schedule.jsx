@@ -187,7 +187,7 @@ function printSchedule({ restaurantName, weekStart, employees, shifts, days }) {
   ${employees.length === 0
     ? '<div class="empty">Δεν υπάρχουν υπάλληλοι</div>'
     : `<table><thead><tr><th>Υπάλληλος</th>${headerCells}</tr></thead><tbody>${rows}</tbody></table>`}
-  <footer>Εκτυπώθηκε από το POS Πεινώκιο</footer>
+  <footer>Εκτυπώθηκε από το OrderDeck</footer>
   <script>window.addEventListener('load', () => setTimeout(() => window.print(), 100));</script>
 </body>
 </html>`;

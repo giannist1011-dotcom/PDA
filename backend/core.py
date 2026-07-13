@@ -1,4 +1,4 @@
-"""Shared core for Πεινώκιο POS: db client, auth helpers, common dependencies, seeding."""
+"""Shared core for OrderDeck: db client, auth helpers, common dependencies, seeding."""
 from dotenv import load_dotenv
 from pathlib import Path
 ROOT_DIR = Path(__file__).parent
@@ -18,7 +18,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from seed_data import DEFAULT_CUSTOMIZATION
 from presets import PRESETS, DEFAULT_TABLE_NAMES
 
-logger = logging.getLogger("peinokio")
+logger = logging.getLogger("orderdeck")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 JWT_SECRET = os.environ["JWT_SECRET"]

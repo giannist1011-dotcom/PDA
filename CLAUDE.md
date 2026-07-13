@@ -1,4 +1,6 @@
-# Πεινώκιο POS — Project Guide
+# OrderDeck — Project Guide
+
+> Πρώην "Πεινώκιο POS". Το "Πεινώκιο" παραμένει μόνο ως όνομα του demo μαγαζιού (seed data) — δεν είναι πια το brand.
 
 ## Τι είναι
 Multi-tenant SaaS POS/PDA για ελληνικά καταστήματα εστίασης (takeaway & τραπέζια). Όλο το UI στα ΕΛΛΗΝΙΚΑ, dark mode.
