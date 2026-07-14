@@ -30,7 +30,7 @@ const Field = ({ label, optional, children, hint }) => (
 );
 
 const inputCls =
-  "w-full h-12 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white focus:outline-none focus:border-flame";
+  "w-full h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame";
 
 function YesNo({ value, onChange, testId }) {
   return (
@@ -47,7 +47,7 @@ function YesNo({ value, onChange, testId }) {
           className={`h-12 rounded-md border font-bold transition-colors ${
             value === o.v
               ? "bg-brand border-brand text-white"
-              : "bg-[#2A0E14] border-[#5E2A3A] text-neutral-300 hover:border-flame"
+              : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
           }`}
         >
           {o.label}
@@ -186,18 +186,18 @@ export default function Register() {
                     ? "bg-brand text-white"
                     : i < step
                       ? "bg-flame/15 text-flame"
-                      : "bg-[#3D1620] text-neutral-500 border border-[#5E2A3A]"
+                      : "bg-[#3D1620] text-neutral-500 border border-[#723645]"
                 }`}
               >
                 {i < step ? <Check className="w-3.5 h-3.5" /> : <span>{i + 1}</span>}
                 <span className="hidden sm:inline">{label}</span>
               </div>
-              {i < STEPS.length - 1 && <div className="w-4 h-px bg-[#5E2A3A]" />}
+              {i < STEPS.length - 1 && <div className="w-4 h-px bg-[#723645]" />}
             </div>
           ))}
         </div>
 
-        <div className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg p-6 md:p-8">
+        <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-6 md:p-8">
           {/* STEP 1 — Λογαριασμός */}
           {step === 0 && (
             <div className="space-y-4">
@@ -319,7 +319,7 @@ export default function Register() {
                         className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all active:scale-[0.98] ${
                           active
                             ? "bg-flame/10 border-flame text-white"
-                            : "bg-[#2A0E14] border-[#5E2A3A] text-neutral-300 hover:border-flame"
+                            : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
                         }`}
                       >
                         <span
@@ -345,7 +345,7 @@ export default function Register() {
           {step === 2 && (
             <div className="space-y-5">
               <h1 className="font-heading text-2xl font-bold">Πώς λειτουργείτε;</h1>
-              <div className="p-4 bg-[#2A0E14] border border-[#5E2A3A] rounded-lg">
+              <div className="p-4 bg-[#2A0E14] border border-[#723645] rounded-lg">
                 <div className="flex items-center gap-2 font-semibold">
                   <LayoutGrid className="w-5 h-5 text-flame" /> Έχετε τραπέζια;
                 </div>
@@ -354,7 +354,7 @@ export default function Register() {
                 </div>
                 <YesNo value={form.has_tables} onChange={(v) => set("has_tables", v)} testId="register-tables" />
               </div>
-              <div className="p-4 bg-[#2A0E14] border border-[#5E2A3A] rounded-lg">
+              <div className="p-4 bg-[#2A0E14] border border-[#723645] rounded-lg">
                 <div className="flex items-center gap-2 font-semibold">
                   <Users className="w-5 h-5 text-flame" /> Έχετε σερβιτόρους;
                 </div>
@@ -398,7 +398,7 @@ export default function Register() {
                   />
                 </Field>
               </div>
-              <div className="p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-xs text-neutral-400 space-y-1">
+              <div className="p-3 bg-[#2A0E14] border border-[#723645] rounded-md text-xs text-neutral-400 space-y-1">
                 <div className="font-bold uppercase tracking-widest text-neutral-500 mb-1">Σύνοψη</div>
                 <div>Επιχείρηση: <span className="text-white">{form.restaurant_name}</span></div>
                 <div>
@@ -437,7 +437,7 @@ export default function Register() {
                 onClick={back}
                 disabled={busy}
                 data-testid="register-back"
-                className="h-12 px-4 bg-[#2A0E14] border border-[#5E2A3A] hover:border-flame text-white"
+                className="h-12 px-4 bg-[#2A0E14] border border-[#723645] hover:border-flame text-white"
               >
                 <ArrowLeft className="w-4 h-4" />
               </Button>

@@ -61,7 +61,7 @@ function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, 
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md bg-[#2A0E14] border-[#5E2A3A] text-white" data-testid="shift-modal">
+      <DialogContent className="max-w-md bg-[#2A0E14] border-[#723645] text-white" data-testid="shift-modal">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">
             Βάρδια — {employee.name}
@@ -82,7 +82,7 @@ function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, 
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
                 data-testid="shift-start"
-                className="w-full h-12 px-3 mt-1 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white font-mono text-lg focus:outline-none focus:border-flame"
+                className="w-full h-12 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono text-lg focus:outline-none focus:border-flame"
               />
             </div>
             <div>
@@ -95,7 +95,7 @@ function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, 
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
                 data-testid="shift-end"
-                className="w-full h-12 px-3 mt-1 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white font-mono text-lg focus:outline-none focus:border-flame"
+                className="w-full h-12 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono text-lg focus:outline-none focus:border-flame"
               />
             </div>
           </div>
@@ -419,21 +419,21 @@ export default function Schedule() {
             <Button
               onClick={() => changeWeek(-1)}
               data-testid="prev-week-btn"
-              className="h-11 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white"
+              className="h-11 bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <Button
               onClick={goToday}
               data-testid="today-btn"
-              className="h-11 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white font-bold"
+              className="h-11 bg-[#3D1620] border border-[#723645] hover:border-flame text-white font-bold"
             >
               Τρέχουσα
             </Button>
             <Button
               onClick={() => changeWeek(1)}
               data-testid="next-week-btn"
-              className="h-11 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white"
+              className="h-11 bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -441,7 +441,7 @@ export default function Schedule() {
               onClick={() => setShareOpen(true)}
               disabled={employees.length === 0}
               data-testid="share-schedule-btn"
-              className="h-11 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame hover:text-flame text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+              className="h-11 bg-[#3D1620] border border-[#723645] hover:border-flame hover:text-flame text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed"
               title="Εκτύπωση ή αντιγραφή προγράμματος"
             >
               <Share2 className="w-4 h-4 mr-2" />
@@ -454,14 +454,14 @@ export default function Schedule() {
         {!readOnly && (
           <form
             onSubmit={addEmployee}
-            className="flex gap-2 mb-5 p-4 bg-[#3D1620] border border-[#5E2A3A] rounded-lg"
+            className="flex gap-2 mb-5 p-4 bg-[#3D1620] border border-[#723645] rounded-lg"
           >
             <input
               value={newEmp}
               onChange={(e) => setNewEmp(e.target.value)}
               placeholder="Όνομα υπαλλήλου..."
               data-testid="new-employee-input"
-              className="flex-1 h-11 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+              className="flex-1 h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
             />
             <Button
               type="submit"
@@ -476,14 +476,14 @@ export default function Schedule() {
         {loading ? (
           <div className="text-neutral-500 py-12 text-center">Φόρτωση...</div>
         ) : employees.length === 0 ? (
-          <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
+          <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#723645] rounded-lg">
             Δεν έχετε προσθέσει υπαλλήλους ακόμα
           </div>
         ) : (
-          <div className="overflow-x-auto bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
+          <div className="overflow-x-auto bg-[#3D1620] border border-[#723645] rounded-lg">
             <table className="w-full min-w-[900px]">
               <thead>
-                <tr className="border-b border-[#5E2A3A]">
+                <tr className="border-b border-[#723645]">
                   <th className="text-left px-4 py-3 text-xs uppercase tracking-widest text-neutral-400 font-bold w-48">
                     Υπάλληλος
                   </th>
@@ -546,7 +546,7 @@ export default function Schedule() {
                             className={`w-full h-14 rounded-md border font-mono text-sm transition-all active:scale-[0.98] ${
                               sh
                                 ? "bg-flame/15 border-flame/40 text-flame hover:bg-flame/25 font-bold"
-                                : "bg-[#2A0E14] border-[#5E2A3A] text-neutral-600 hover:border-flame hover:text-flame"
+                                : "bg-[#2A0E14] border-[#723645] text-neutral-600 hover:border-flame hover:text-flame"
                             }`}
                           >
                             {sh ? `${sh.start}–${sh.end}` : "+"}
@@ -583,7 +583,7 @@ export default function Schedule() {
       />
 
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>
-        <DialogContent className="max-w-sm bg-[#2A0E14] border-[#5E2A3A] text-white" data-testid="share-schedule-modal">
+        <DialogContent className="max-w-sm bg-[#2A0E14] border-[#723645] text-white" data-testid="share-schedule-modal">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl">Κοινοποίηση προγράμματος</DialogTitle>
             <p className="text-sm text-neutral-400 mt-1">Εβδομάδα {formatWeekRange(weekStart)}</p>
@@ -592,7 +592,7 @@ export default function Schedule() {
             <button
               onClick={handlePrintSchedule}
               data-testid="share-print-btn"
-              className="flex items-center gap-2 h-11 px-4 rounded-md bg-[#3D1620] border border-[#5E2A3A] text-white text-sm font-bold hover:border-flame hover:text-flame transition-colors"
+              className="flex items-center gap-2 h-11 px-4 rounded-md bg-[#3D1620] border border-[#723645] text-white text-sm font-bold hover:border-flame hover:text-flame transition-colors"
             >
               <Printer className="w-4 h-4" />
               Εκτύπωση προγράμματος
@@ -600,7 +600,7 @@ export default function Schedule() {
             <button
               onClick={handleCopySchedule}
               data-testid="share-copy-btn"
-              className="flex items-center gap-2 h-11 px-4 rounded-md bg-[#3D1620] border border-[#5E2A3A] text-white text-sm font-bold hover:border-flame hover:text-flame transition-colors"
+              className="flex items-center gap-2 h-11 px-4 rounded-md bg-[#3D1620] border border-[#723645] text-white text-sm font-bold hover:border-flame hover:text-flame transition-colors"
             >
               <Copy className="w-4 h-4" />
               Αντιγραφή για Viber/WhatsApp

@@ -149,7 +149,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#2A0E14] border-[#5E2A3A] text-white" data-testid="item-modal">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#2A0E14] border-[#723645] text-white" data-testid="item-modal">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">
             {form.id ? "Επεξεργασία προϊόντος" : "Νέο προϊόν"}
@@ -165,7 +165,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               data-testid="item-name-input"
-              className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white focus:outline-none focus:border-flame"
+              className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -181,7 +181,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
                 data-testid="item-price-input"
-                className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
               />
             </div>
             <div>
@@ -192,7 +192,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
                 data-testid="item-category-select"
-                className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white focus:outline-none focus:border-flame"
+                className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame"
               >
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -202,16 +202,16 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
               </select>
             </div>
           </div>
-          <div className="flex items-center justify-between px-4 py-3 bg-[#3D1620] border border-[#5E2A3A] rounded-md">
+          <div className="flex items-center justify-between px-4 py-3 bg-[#3D1620] border border-[#723645] rounded-md">
             <div className="flex items-center gap-3 min-w-0">
               {selectedPhoto ? (
                 <img
                   src={selectedPhoto.data_url}
                   alt=""
-                  className="w-14 h-14 rounded-md object-cover shrink-0 border border-[#5E2A3A]"
+                  className="w-14 h-14 rounded-md object-cover shrink-0 border border-[#723645]"
                 />
               ) : (
-                <div className="w-14 h-14 rounded-md bg-[#2A0E14] border border-dashed border-[#5E2A3A] flex items-center justify-center shrink-0">
+                <div className="w-14 h-14 rounded-md bg-[#2A0E14] border border-dashed border-[#723645] flex items-center justify-center shrink-0">
                   <ImageOff className="w-5 h-5 text-neutral-600" />
                 </div>
               )}
@@ -238,7 +238,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                 onClick={() => setPhotoPickerOpen(true)}
                 data-testid="item-photo-pick-btn"
                 disabled={photos.length === 0}
-                className="h-9 bg-[#2A0E14] border border-[#5E2A3A] hover:border-flame text-white text-xs"
+                className="h-9 bg-[#2A0E14] border border-[#723645] hover:border-flame text-white text-xs"
                 title={photos.length === 0 ? "Ανεβάστε πρώτα φωτογραφίες" : "Επιλογή"}
               >
                 {form.photo_id ? "Αλλαγή" : "Επιλογή"}
@@ -246,7 +246,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-4 py-3 bg-[#3D1620] border border-[#5E2A3A] rounded-md">
+          <div className="flex items-center justify-between px-4 py-3 bg-[#3D1620] border border-[#723645] rounded-md">
             <div>
               <div className="font-semibold text-sm">Παραμετροποιήσιμο (σάντουιτς)</div>
               <div className="text-xs text-neutral-500">Χρησιμοποιεί επιλογές ψωμί/extras/σως</div>
@@ -258,7 +258,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
             />
           </div>
           {form.customizable && (
-            <div className="flex items-center justify-between px-4 py-3 bg-[#3D1620] border border-[#5E2A3A] rounded-md">
+            <div className="flex items-center justify-between px-4 py-3 bg-[#3D1620] border border-[#723645] rounded-md">
               <div>
                 <div className="font-semibold text-sm">Επιδέχεται διπλή μερίδα κρέας</div>
                 <div className="text-xs text-neutral-500">Επιπλέον χρέωση διπλού κρέατος</div>
@@ -284,7 +284,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                 type="button"
                 onClick={addGroup}
                 data-testid="add-option-group-btn"
-                className="h-9 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white text-sm"
+                className="h-9 bg-[#3D1620] border border-[#723645] hover:border-flame text-white text-sm"
               >
                 <Plus className="w-4 h-4 mr-1" /> Ομάδα
               </Button>
@@ -294,7 +294,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
               <div
                 key={g.id}
                 data-testid={`option-group-${gi}`}
-                className="mt-3 p-3 bg-[#3D1620] border border-[#5E2A3A] rounded-md space-y-2"
+                className="mt-3 p-3 bg-[#3D1620] border border-[#723645] rounded-md space-y-2"
               >
                 <div className="flex items-center gap-2">
                   <input
@@ -302,13 +302,13 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                     onChange={(e) => updateGroup(gi, { name: e.target.value })}
                     placeholder="Όνομα ομάδας (π.χ. Μέγεθος)"
                     data-testid={`group-name-${gi}`}
-                    className="flex-1 h-10 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+                    className="flex-1 h-10 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
                   />
                   <select
                     value={g.type}
                     onChange={(e) => updateGroup(gi, { type: e.target.value })}
                     data-testid={`group-type-${gi}`}
-                    className="h-10 px-2 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none"
+                    className="h-10 px-2 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none"
                   >
                     <option value="single">Μία</option>
                     <option value="multi">Πολλές</option>
@@ -339,7 +339,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                     value={g.price_mode || "add"}
                     onChange={(e) => updateGroup(gi, { price_mode: e.target.value })}
                     data-testid={`group-price-mode-${gi}`}
-                    className="flex-1 h-9 px-2 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-xs focus:outline-none focus:border-flame"
+                    className="flex-1 h-9 px-2 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-xs focus:outline-none focus:border-flame"
                   >
                     <option value="add">Προσαύξηση (+€ πάνω στη βάση)</option>
                     <option value="replace">Καθορισμός τιμής (αντικαθιστά τη βασική)</option>
@@ -352,7 +352,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                       onChange={(e) => updateOption(gi, oi, { name: e.target.value })}
                       placeholder="Επιλογή"
                       data-testid={`option-name-${gi}-${oi}`}
-                      className="flex-1 h-9 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+                      className="flex-1 h-9 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
                     />
                     <input
                       type="number"
@@ -362,7 +362,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                       onChange={(e) => updateOption(gi, oi, { price: e.target.value })}
                       placeholder="+€"
                       data-testid={`option-price-${gi}-${oi}`}
-                      className="w-24 h-9 px-2 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm font-mono focus:outline-none focus:border-flame"
+                      className="w-24 h-9 px-2 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm font-mono focus:outline-none focus:border-flame"
                     />
                     <button
                       type="button"
@@ -407,13 +407,13 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
             className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4"
             data-testid="item-photo-picker"
           >
-            <div className="bg-[#2A0E14] border border-[#5E2A3A] rounded-lg p-5 w-full max-w-3xl max-h-[85vh] overflow-y-auto">
+            <div className="bg-[#2A0E14] border border-[#723645] rounded-lg p-5 w-full max-w-3xl max-h-[85vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-heading text-xl font-bold">Επιλογή φωτογραφίας</h3>
                 <button
                   onClick={() => setPhotoPickerOpen(false)}
                   data-testid="item-photo-picker-close"
-                  className="w-9 h-9 rounded-md border border-[#5E2A3A] hover:border-flame flex items-center justify-center"
+                  className="w-9 h-9 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -438,7 +438,7 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                         className={`rounded-lg overflow-hidden border-2 transition-colors ${
                           active
                             ? "border-flame ring-2 ring-flame/40"
-                            : "border-[#5E2A3A] hover:border-flame"
+                            : "border-[#723645] hover:border-flame"
                         }`}
                       >
                         <img
@@ -489,7 +489,7 @@ function PricedOptionList({ label, hint, rows, setRows, testPrefix }) {
               onChange={(e) => update(i, { name: e.target.value })}
               placeholder="Όνομα επιλογής"
               data-testid={`${testPrefix}-name-${i}`}
-              className="flex-1 h-10 px-3 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+              className="flex-1 h-10 px-3 bg-[#3D1620] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
             />
             <input
               type="number"
@@ -500,7 +500,7 @@ function PricedOptionList({ label, hint, rows, setRows, testPrefix }) {
               placeholder="+€"
               title="Επιπλέον χρέωση (0 = δωρεάν)"
               data-testid={`${testPrefix}-price-${i}`}
-              className="w-24 h-10 px-2 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white text-sm font-mono focus:outline-none focus:border-flame"
+              className="w-24 h-10 px-2 bg-[#3D1620] border border-[#723645] rounded-md text-white text-sm font-mono focus:outline-none focus:border-flame"
             />
             <button
               type="button"
@@ -568,7 +568,7 @@ function CustomizationConfigModal({ open, config, onClose, onSave }) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
-        className="max-w-lg max-h-[90vh] overflow-y-auto bg-[#2A0E14] border-[#5E2A3A] text-white"
+        className="max-w-lg max-h-[90vh] overflow-y-auto bg-[#2A0E14] border-[#723645] text-white"
         data-testid="cust-config-modal"
       >
         <DialogHeader>
@@ -612,7 +612,7 @@ function CustomizationConfigModal({ open, config, onClose, onSave }) {
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               data-testid="cust-price-input"
-              className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+              className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
             />
           </div>
           <DialogFooter className="pt-2">
@@ -802,7 +802,7 @@ export default function MenuManagement() {
           className={`h-11 ${
             bulkMode
               ? "bg-brand hover:bg-brand-hover text-white"
-              : "bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white"
+              : "bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
           }`}
         >
           {bulkMode ? (
@@ -818,7 +818,7 @@ export default function MenuManagement() {
         <Button
           onClick={() => setCustModalOpen(true)}
           data-testid="open-customization-config-btn"
-          className="bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white h-11"
+          className="bg-[#3D1620] border border-[#723645] hover:border-flame text-white h-11"
         >
           Επιλογές παραμετροποίησης
         </Button>
@@ -826,7 +826,7 @@ export default function MenuManagement() {
 
       <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
         {/* Categories */}
-        <aside className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg p-4">
+        <aside className="bg-[#3D1620] border border-[#723645] rounded-lg p-4">
           <h2 className="font-heading text-lg font-semibold mb-4">Κατηγορίες</h2>
           <div className="flex gap-2 mb-4">
             <input
@@ -835,7 +835,7 @@ export default function MenuManagement() {
               onKeyDown={(e) => e.key === "Enter" && addCategory()}
               placeholder="Νέα κατηγορία"
               data-testid="new-category-input"
-              className="flex-1 h-10 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+              className="flex-1 h-10 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
             />
             <Button
               onClick={addCategory}
@@ -905,7 +905,7 @@ export default function MenuManagement() {
         </aside>
 
         {/* Items */}
-        <section className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg p-4">
+        <section className="bg-[#3D1620] border border-[#723645] rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-heading text-lg font-semibold">
               {config.categories.find((c) => c.id === activeCat)?.name || "Προϊόντα"}
@@ -931,7 +931,7 @@ export default function MenuManagement() {
                 className={`inline-flex items-center gap-2 h-10 px-4 rounded-md text-sm font-bold border transition-colors ${
                   allSelected
                     ? "bg-flame/15 border-flame text-flame"
-                    : "bg-[#3D1620] border-[#5E2A3A] text-neutral-300 hover:border-flame"
+                    : "bg-[#3D1620] border-[#723645] text-neutral-300 hover:border-flame"
                 }`}
               >
                 {allSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
@@ -958,7 +958,7 @@ export default function MenuManagement() {
                   } ${
                     checked
                       ? "border-flame bg-flame/5"
-                      : "border-[#5E2A3A] hover:border-[#6B3345]"
+                      : "border-[#723645] hover:border-[#6B3345]"
                   }`}
                 >
                   {bulkMode && (
@@ -1061,7 +1061,7 @@ export default function MenuManagement() {
       />
 
       <AlertDialog open={!!confirmItem} onOpenChange={(v) => !v && setConfirmItem(null)}>
-        <AlertDialogContent className="bg-[#2A0E14] border-[#5E2A3A] text-white" data-testid="delete-item-dialog">
+        <AlertDialogContent className="bg-[#2A0E14] border-[#723645] text-white" data-testid="delete-item-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-heading text-xl">Διαγραφή προϊόντος;</AlertDialogTitle>
             <AlertDialogDescription className="text-neutral-400">
@@ -1071,7 +1071,7 @@ export default function MenuManagement() {
           <AlertDialogFooter>
             <AlertDialogCancel
               data-testid="delete-item-cancel"
-              className="bg-[#3D1620] border-[#5E2A3A] text-neutral-300 hover:bg-[#431A25] hover:text-white"
+              className="bg-[#3D1620] border-[#723645] text-neutral-300 hover:bg-[#431A25] hover:text-white"
             >
               Άκυρο
             </AlertDialogCancel>
@@ -1087,7 +1087,7 @@ export default function MenuManagement() {
       </AlertDialog>
 
       <AlertDialog open={!!confirmCat} onOpenChange={(v) => !v && setConfirmCat(null)}>
-        <AlertDialogContent className="bg-[#2A0E14] border-[#5E2A3A] text-white" data-testid="delete-cat-dialog">
+        <AlertDialogContent className="bg-[#2A0E14] border-[#723645] text-white" data-testid="delete-cat-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-heading text-xl">Διαγραφή κατηγορίας;</AlertDialogTitle>
             <AlertDialogDescription className="text-neutral-400">
@@ -1097,7 +1097,7 @@ export default function MenuManagement() {
           <AlertDialogFooter>
             <AlertDialogCancel
               data-testid="delete-cat-cancel"
-              className="bg-[#3D1620] border-[#5E2A3A] text-neutral-300 hover:bg-[#431A25] hover:text-white"
+              className="bg-[#3D1620] border-[#723645] text-neutral-300 hover:bg-[#431A25] hover:text-white"
             >
               Άκυρο
             </AlertDialogCancel>

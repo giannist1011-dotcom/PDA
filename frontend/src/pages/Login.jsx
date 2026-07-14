@@ -41,7 +41,7 @@ export default function Login() {
           <span className="font-heading text-3xl font-bold tracking-tight">OrderDeck</span>
         </div>
 
-        <div className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg p-8">
+        <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-8">
           <h1 className="font-heading text-2xl font-bold mb-1">Σύνδεση</h1>
           <p className="text-sm text-neutral-400 mb-6">
             Συνδεθείτε στον λογαριασμό του καταστήματός σας
@@ -60,7 +60,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   data-testid="login-email"
-                  className="w-full h-12 pl-10 pr-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white focus:outline-none focus:border-flame"
+                  className="w-full h-12 pl-10 pr-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame"
                 />
               </div>
             </div>
@@ -76,7 +76,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   data-testid="login-password"
-                  className="w-full h-12 pl-10 pr-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white focus:outline-none focus:border-flame"
+                  className="w-full h-12 pl-10 pr-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame"
                 />
               </div>
             </div>

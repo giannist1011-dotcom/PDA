@@ -104,7 +104,7 @@ function DiscountModal({ open, subtotal, current, onApply, onRemove, onClose }) 
       className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
       data-testid="discount-modal"
     >
-      <div className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg w-full max-w-sm p-5">
+      <div className="bg-[#3D1620] border border-[#723645] rounded-lg w-full max-w-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Percent className="w-5 h-5 text-[#00E676]" />
@@ -113,7 +113,7 @@ function DiscountModal({ open, subtotal, current, onApply, onRemove, onClose }) 
           <button
             onClick={onClose}
             data-testid="discount-modal-close"
-            className="w-8 h-8 rounded-md border border-[#5E2A3A] hover:border-flame flex items-center justify-center"
+            className="w-8 h-8 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
@@ -133,7 +133,7 @@ function DiscountModal({ open, subtotal, current, onApply, onRemove, onClose }) 
                 className={`h-12 rounded-md border font-mono font-bold text-lg transition-colors ${
                   active
                     ? "bg-[#00E676] border-[#00E676] text-black"
-                    : "bg-[#2A0E14] border-[#5E2A3A] text-white hover:border-[#00E676]"
+                    : "bg-[#2A0E14] border-[#723645] text-white hover:border-[#00E676]"
                 }`}
               >
                 {p}%
@@ -152,7 +152,7 @@ function DiscountModal({ open, subtotal, current, onApply, onRemove, onClose }) 
             onChange={(e) => setAmountText(e.target.value)}
             placeholder="π.χ. 2,00"
             data-testid="discount-amount-input"
-            className="flex-1 h-12 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-[#00E676]"
+            className="flex-1 h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-[#00E676]"
           />
           <button
             onClick={applyAmount}
@@ -185,7 +185,7 @@ function ScheduledOrdersModal({ open, orders, onClose, onPrintNow, onCancel }) {
       className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
       data-testid="scheduled-orders-modal"
     >
-      <div className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg w-full max-w-lg max-h-[85vh] flex flex-col">
+      <div className="bg-[#3D1620] border border-[#723645] rounded-lg w-full max-w-lg max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between p-5 border-b border-[#431A25]">
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-[#00B0FF]" />
@@ -194,7 +194,7 @@ function ScheduledOrdersModal({ open, orders, onClose, onPrintNow, onCancel }) {
           <button
             onClick={onClose}
             data-testid="scheduled-modal-close"
-            className="w-9 h-9 rounded-md border border-[#5E2A3A] hover:border-flame flex items-center justify-center"
+            className="w-9 h-9 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>

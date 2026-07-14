@@ -94,7 +94,7 @@ function ExpenseModal({ open, onClose, categories, initial, onSubmit }) {
     >
       <form
         onSubmit={submit}
-        className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg p-6 w-full max-w-md"
+        className="bg-[#3D1620] border border-[#723645] rounded-lg p-6 w-full max-w-md"
       >
         <h3 className="font-heading text-xl font-bold mb-4">
           {initial ? "Επεξεργασία εξόδου" : "Νέο έξοδο"}
@@ -112,7 +112,7 @@ function ExpenseModal({ open, onClose, categories, initial, onSubmit }) {
               onChange={(e) => setAmount(e.target.value)}
               placeholder="π.χ. 45,50"
               data-testid="expense-amount-input"
-              className="w-full h-11 mt-1 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white font-mono text-sm focus:outline-none focus:border-flame"
+              className="w-full h-11 mt-1 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono text-sm focus:outline-none focus:border-flame"
             />
           </div>
           <div>
@@ -124,7 +124,7 @@ function ExpenseModal({ open, onClose, categories, initial, onSubmit }) {
               value={date}
               onChange={(e) => setDate(e.target.value)}
               data-testid="expense-date-input"
-              className="w-full h-11 mt-1 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white font-mono text-sm focus:outline-none focus:border-flame"
+              className="w-full h-11 mt-1 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono text-sm focus:outline-none focus:border-flame"
             />
           </div>
         </div>
@@ -137,7 +137,7 @@ function ExpenseModal({ open, onClose, categories, initial, onSubmit }) {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="π.χ. Παραγγελία κρέατος"
           data-testid="expense-description-input"
-          className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+          className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         />
 
         <label className="text-xs uppercase tracking-wider text-neutral-400">
@@ -147,7 +147,7 @@ function ExpenseModal({ open, onClose, categories, initial, onSubmit }) {
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
           data-testid="expense-category-select"
-          className="w-full h-11 mt-1 mb-6 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+          className="w-full h-11 mt-1 mb-6 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -161,7 +161,7 @@ function ExpenseModal({ open, onClose, categories, initial, onSubmit }) {
             type="button"
             onClick={onClose}
             data-testid="expense-cancel-btn"
-            className="h-10 px-4 rounded-md bg-[#4F202D] text-neutral-300 text-sm font-bold hover:bg-[#5E2A3A]"
+            className="h-10 px-4 rounded-md bg-[#4F202D] text-neutral-300 text-sm font-bold hover:bg-[#723645]"
           >
             Άκυρο
           </button>
@@ -213,7 +213,7 @@ function CategoryManagerModal({ open, onClose, categories, onCreate, onRename, o
       className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
       data-testid="expense-categories-modal"
     >
-      <div className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg p-6 w-full max-w-md max-h-[85vh] flex flex-col">
+      <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-6 w-full max-w-md max-h-[85vh] flex flex-col">
         <h3 className="font-heading text-xl font-bold mb-4">Κατηγορίες εξόδων</h3>
 
         <form onSubmit={addCategory} className="flex gap-2 mb-4">
@@ -222,7 +222,7 @@ function CategoryManagerModal({ open, onClose, categories, onCreate, onRename, o
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Νέα κατηγορία..."
             data-testid="expense-new-category-input"
-            className="flex-1 h-11 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+            className="flex-1 h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
           />
           <Button
             type="submit"
@@ -238,7 +238,7 @@ function CategoryManagerModal({ open, onClose, categories, onCreate, onRename, o
             <div
               key={c.id}
               data-testid={`expense-cat-row-${c.id}`}
-              className="flex items-center gap-2 p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md group"
+              className="flex items-center gap-2 p-3 bg-[#2A0E14] border border-[#723645] rounded-md group"
             >
               {editingId === c.id ? (
                 <input
@@ -279,7 +279,7 @@ function CategoryManagerModal({ open, onClose, categories, onCreate, onRename, o
           <button
             onClick={onClose}
             data-testid="expense-categories-close-btn"
-            className="h-10 px-4 rounded-md bg-[#4F202D] text-neutral-300 text-sm font-bold hover:bg-[#5E2A3A]"
+            className="h-10 px-4 rounded-md bg-[#4F202D] text-neutral-300 text-sm font-bold hover:bg-[#723645]"
           >
             Κλείσιμο
           </button>
@@ -447,7 +447,7 @@ export default function Expenses() {
             <Button
               onClick={() => setCatModalOpen(true)}
               data-testid="expenses-manage-categories-btn"
-              className="h-11 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white"
+              className="h-11 bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
             >
               <FolderCog className="w-4 h-4 mr-2" />
               Κατηγορίες
@@ -464,7 +464,7 @@ export default function Expenses() {
         </div>
 
         {/* Filters */}
-        <div className="p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg mb-6">
+        <div className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg mb-6">
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
@@ -475,7 +475,7 @@ export default function Expenses() {
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
                 data-testid="expenses-date-from"
-                className="h-12 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                className="h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -487,7 +487,7 @@ export default function Expenses() {
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 data-testid="expenses-date-to"
-                className="h-12 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                className="h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -498,7 +498,7 @@ export default function Expenses() {
                 value={filterCat}
                 onChange={(e) => setFilterCat(e.target.value)}
                 data-testid="expenses-category-filter"
-                className="h-12 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+                className="h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
               >
                 <option value="all">Όλες</option>
                 {categories.map((c) => (
@@ -524,7 +524,7 @@ export default function Expenses() {
         {/* Totals */}
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 mb-6">
           <div
-            className="p-6 bg-[#3D1620] border border-[#5E2A3A] rounded-lg"
+            className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg"
             data-testid="expenses-period-total"
           >
             <div className="flex items-center justify-between">
@@ -542,7 +542,7 @@ export default function Expenses() {
           </div>
 
           <div
-            className="p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg"
+            className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg"
             data-testid="expenses-breakdown"
           >
             <div className="text-xs uppercase tracking-widest text-neutral-400 font-bold mb-3">
@@ -558,7 +558,7 @@ export default function Expenses() {
                   <div
                     key={c.key}
                     data-testid={`expenses-breakdown-${c.key}`}
-                    className="px-3 py-2 bg-[#2A0E14] border border-[#5E2A3A] rounded-md"
+                    className="px-3 py-2 bg-[#2A0E14] border border-[#723645] rounded-md"
                   >
                     <div className="text-[10px] uppercase tracking-widest text-neutral-500">
                       {c.name}
@@ -574,7 +574,7 @@ export default function Expenses() {
         </div>
 
         {/* Expense list */}
-        <div className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg" data-testid="expenses-list">
+        <div className="bg-[#3D1620] border border-[#723645] rounded-lg" data-testid="expenses-list">
           {loading ? (
             <div className="text-neutral-500 py-12 text-center">Φόρτωση...</div>
           ) : filtered.length === 0 ? (
@@ -585,7 +585,7 @@ export default function Expenses() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px]">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-widest text-neutral-400 border-b border-[#5E2A3A]">
+                  <tr className="text-left text-xs uppercase tracking-widest text-neutral-400 border-b border-[#723645]">
                     <th className="py-3 px-4">Ημερομηνία</th>
                     <th className="py-3 px-4">Περιγραφή</th>
                     <th className="py-3 px-4">Κατηγορία</th>

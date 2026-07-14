@@ -32,7 +32,7 @@ export default function MenuGrid({
               className={`px-6 h-14 rounded-md text-base md:text-lg font-semibold transition-all no-select active:scale-[0.98] ${
                 active
                   ? "bg-flame text-white border border-flame"
-                  : "bg-[#3D1620] text-neutral-200 border border-[#5E2A3A] hover:border-flame"
+                  : "bg-[#4A1B27] text-neutral-200 border border-[#723645] hover:border-flame"
               }`}
             >
               {c.name}
@@ -63,7 +63,7 @@ export default function MenuGrid({
               className={`menu-item group flex flex-col justify-between p-4 rounded-lg text-left h-32 no-select relative overflow-hidden will-change-transform ${
                 unavailable
                   ? "bg-[#33111A] border border-[#4F202D] cursor-not-allowed opacity-50"
-                  : `bg-[#3D1620] border border-[#5E2A3A] hover:border-flame hover:scale-[1.03] hover:shadow-lg hover:shadow-gold/20 hover:bg-[#451924] active:scale-[0.96] transition-[transform,box-shadow,background-color,border-color] duration-[130ms] ease-out ${
+                  : `bg-[#4A1B27] border border-[#723645] hover:border-flame hover:scale-[1.03] hover:shadow-lg hover:shadow-gold/20 hover:bg-[#582233] active:scale-[0.96] transition-[transform,box-shadow,background-color,border-color] duration-[130ms] ease-out ${
                       pulsing ? "menu-item--pulse" : ""
                     }`
               }`}

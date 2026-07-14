@@ -97,7 +97,7 @@ function OrderDetailModal({ order, canManage, onClose, onReprint, onCancel, onDe
       className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
       data-testid="order-detail-modal"
     >
-      <div className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg w-full max-w-lg max-h-[88vh] flex flex-col">
+      <div className="bg-[#3D1620] border border-[#723645] rounded-lg w-full max-w-lg max-h-[88vh] flex flex-col">
         <div className="flex items-start justify-between p-5 border-b border-[#431A25]">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -106,7 +106,7 @@ function OrderDetailModal({ order, canManage, onClose, onReprint, onCancel, onDe
               </h3>
               <span
                 className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
-                  sourceBadgeCls[order.source] || "bg-[#5E2A3A] text-neutral-300"
+                  sourceBadgeCls[order.source] || "bg-[#723645] text-neutral-300"
                 }`}
               >
                 {order.source}
@@ -125,7 +125,7 @@ function OrderDetailModal({ order, canManage, onClose, onReprint, onCancel, onDe
           <button
             onClick={onClose}
             data-testid="order-detail-close"
-            className="w-9 h-9 rounded-md border border-[#5E2A3A] hover:border-flame flex items-center justify-center shrink-0"
+            className="w-9 h-9 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -133,7 +133,7 @@ function OrderDetailModal({ order, canManage, onClose, onReprint, onCancel, onDe
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {d && (d.name || d.phone || d.address) && (
-            <div className="p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md space-y-1 text-sm">
+            <div className="p-3 bg-[#2A0E14] border border-[#723645] rounded-md space-y-1 text-sm">
               <div className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1">
                 Στοιχεία πελάτη
               </div>
@@ -161,7 +161,7 @@ function OrderDetailModal({ order, canManage, onClose, onReprint, onCancel, onDe
               {order.items.map((it, idx) => (
                 <li
                   key={idx}
-                  className="p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md"
+                  className="p-3 bg-[#2A0E14] border border-[#723645] rounded-md"
                   data-testid={`order-detail-item-${idx}`}
                 >
                   <div className="flex justify-between gap-3">
@@ -212,7 +212,7 @@ function OrderDetailModal({ order, canManage, onClose, onReprint, onCancel, onDe
           </div>
 
           {(order.taken_by?.name || order.discount?.applied_by || order.cancelled_by) && (
-            <div className="p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md space-y-1 text-xs text-neutral-400" data-testid="order-audit">
+            <div className="p-3 bg-[#2A0E14] border border-[#723645] rounded-md space-y-1 text-xs text-neutral-400" data-testid="order-audit">
               <div className="font-bold uppercase tracking-widest text-neutral-500 mb-1">
                 Καταγραφή ενεργειών
               </div>
@@ -286,7 +286,7 @@ function CustomerDetailModal({ customer, onClose, onOpenOrder }) {
       className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
       data-testid="customer-detail-modal"
     >
-      <div className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg w-full max-w-lg max-h-[88vh] flex flex-col">
+      <div className="bg-[#3D1620] border border-[#723645] rounded-lg w-full max-w-lg max-h-[88vh] flex flex-col">
         <div className="flex items-start justify-between p-5 border-b border-[#431A25]">
           <div>
             <h3 className="font-heading text-xl font-bold">
@@ -310,7 +310,7 @@ function CustomerDetailModal({ customer, onClose, onOpenOrder }) {
           <button
             onClick={onClose}
             data-testid="customer-detail-close"
-            className="w-9 h-9 rounded-md border border-[#5E2A3A] hover:border-flame flex items-center justify-center shrink-0"
+            className="w-9 h-9 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -318,7 +318,7 @@ function CustomerDetailModal({ customer, onClose, onOpenOrder }) {
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md">
+            <div className="p-3 bg-[#2A0E14] border border-[#723645] rounded-md">
               <div className="text-[10px] uppercase tracking-widest text-neutral-500">
                 Παραγγελίες
               </div>
@@ -326,7 +326,7 @@ function CustomerDetailModal({ customer, onClose, onOpenOrder }) {
                 {customer.orders_count}
               </div>
             </div>
-            <div className="p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md">
+            <div className="p-3 bg-[#2A0E14] border border-[#723645] rounded-md">
               <div className="text-[10px] uppercase tracking-widest text-neutral-500">
                 Συνολικά έσοδα
               </div>
@@ -345,7 +345,7 @@ function CustomerDetailModal({ customer, onClose, onOpenOrder }) {
                 {customer.top_items.map((it) => (
                   <span
                     key={it.name}
-                    className="px-3 py-1.5 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-sm"
+                    className="px-3 py-1.5 bg-[#2A0E14] border border-[#723645] rounded-md text-sm"
                   >
                     <span className="text-white">{it.name}</span>
                     <span className="font-mono text-gold font-bold ml-2">
@@ -367,7 +367,7 @@ function CustomerDetailModal({ customer, onClose, onOpenOrder }) {
                   <button
                     onClick={() => onOpenOrder(o.id)}
                     data-testid={`customer-order-${o.id}`}
-                    className="w-full flex items-center justify-between gap-3 p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md hover:border-flame text-left transition-colors"
+                    className="w-full flex items-center justify-between gap-3 p-3 bg-[#2A0E14] border border-[#723645] rounded-md hover:border-flame text-left transition-colors"
                   >
                     <div>
                       <div className="text-white font-semibold text-sm">
@@ -578,7 +578,7 @@ export default function History() {
         {tab === "orders" ? (
           <>
             {/* Filters */}
-            <div className="p-4 bg-[#3D1620] border border-[#5E2A3A] rounded-lg mb-5">
+            <div className="p-4 bg-[#3D1620] border border-[#723645] rounded-lg mb-5">
               <form onSubmit={submitSearch} className="flex flex-wrap items-end gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
@@ -589,7 +589,7 @@ export default function History() {
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     data-testid="history-date-input"
-                    className="h-11 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                    className="h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -600,7 +600,7 @@ export default function History() {
                     value={source}
                     onChange={(e) => setSource(e.target.value)}
                     data-testid="history-source-select"
-                    className="h-11 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+                    className="h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
                   >
                     <option value="all">Όλες</option>
                     {HISTORY_SOURCES.map((s) => (
@@ -620,7 +620,7 @@ export default function History() {
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Αρ. παραγγελίας, τηλέφωνο ή όνομα..."
                       data-testid="history-search-input"
-                      className="flex-1 h-11 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+                      className="flex-1 h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
                     />
                     <Button
                       type="submit"
@@ -638,7 +638,7 @@ export default function History() {
             {loading && orders.length === 0 ? (
               <div className="text-neutral-500 py-12 text-center">Φόρτωση...</div>
             ) : orders.length === 0 ? (
-              <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
+              <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#723645] rounded-lg">
                 Δεν βρέθηκαν παραγγελίες
               </div>
             ) : (
@@ -650,7 +650,7 @@ export default function History() {
                       onClick={() => setSelectedOrder(o)}
                       data-testid={`history-order-${o.id}`}
                       className={`w-full flex items-center gap-4 p-4 bg-[#3D1620] border rounded-lg text-left transition-colors hover:border-flame ${
-                        o.cancelled ? "border-[#FF3B30]/40 opacity-70" : "border-[#5E2A3A]"
+                        o.cancelled ? "border-[#FF3B30]/40 opacity-70" : "border-[#723645]"
                       }`}
                     >
                       <div className="font-mono font-bold text-lg text-white w-16 shrink-0">
@@ -660,7 +660,7 @@ export default function History() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
                             className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
-                              sourceBadgeCls[o.source] || "bg-[#5E2A3A] text-neutral-300"
+                              sourceBadgeCls[o.source] || "bg-[#723645] text-neutral-300"
                             }`}
                           >
                             {o.source}
@@ -695,7 +695,7 @@ export default function History() {
                       onClick={() => loadOrders({ append: true, skip: orders.length })}
                       disabled={loading}
                       data-testid="history-load-more"
-                      className="h-11 px-6 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white font-bold"
+                      className="h-11 px-6 bg-[#3D1620] border border-[#723645] hover:border-flame text-white font-bold"
                     >
                       <ChevronDown className="w-4 h-4 mr-2" />
                       {loading ? "Φόρτωση..." : "Περισσότερες"}
@@ -708,7 +708,7 @@ export default function History() {
         ) : (
           <>
             {/* Customers tab */}
-            <div className="p-4 bg-[#3D1620] border border-[#5E2A3A] rounded-lg mb-5">
+            <div className="p-4 bg-[#3D1620] border border-[#723645] rounded-lg mb-5">
               <div className="relative">
                 <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
@@ -716,7 +716,7 @@ export default function History() {
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   placeholder="Αναζήτηση με όνομα, τηλέφωνο ή διεύθυνση..."
                   data-testid="customer-search-input"
-                  className="w-full h-11 pl-10 pr-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+                  className="w-full h-11 pl-10 pr-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
                 />
               </div>
             </div>
@@ -724,16 +724,16 @@ export default function History() {
             {customersLoading ? (
               <div className="text-neutral-500 py-12 text-center">Φόρτωση...</div>
             ) : filteredCustomers.length === 0 ? (
-              <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
+              <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#723645] rounded-lg">
                 {customers.length === 0
                   ? "Δεν υπάρχουν πελάτες ακόμα — καταγράφονται αυτόματα από τις τηλεφωνικές παραγγελίες"
                   : "Δεν βρέθηκαν πελάτες"}
               </div>
             ) : (
-              <div className="overflow-x-auto bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
+              <div className="overflow-x-auto bg-[#3D1620] border border-[#723645] rounded-lg">
                 <table className="w-full min-w-[760px]">
                   <thead>
-                    <tr className="text-left text-xs uppercase tracking-widest text-neutral-400 border-b border-[#5E2A3A]">
+                    <tr className="text-left text-xs uppercase tracking-widest text-neutral-400 border-b border-[#723645]">
                       <th className="py-3 px-4">Πελάτης</th>
                       <th className="py-3 px-4">Τηλέφωνο</th>
                       <th className="py-3 px-4">Διεύθυνση</th>

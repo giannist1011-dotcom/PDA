@@ -19,7 +19,7 @@ const OptionTile = ({ selected, label, badge, onClick, testId }) => (
     className={`flex items-center justify-between px-4 py-4 rounded-lg border text-left transition-all no-select active:scale-[0.98] ${
       selected
         ? "border-flame bg-flame/10 text-white"
-        : "border-[#5E2A3A] bg-[#3D1620] hover:border-[#666] text-neutral-200"
+        : "border-[#723645] bg-[#3D1620] hover:border-[#666] text-neutral-200"
     }`}
   >
     <span className="text-base font-semibold">{label}</span>
@@ -296,7 +296,7 @@ export default function CustomizationModal({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
         data-testid="customization-modal"
-        className="max-w-3xl bg-[#2A0E14] border-[#5E2A3A] text-white p-0"
+        className="max-w-3xl bg-[#2A0E14] border-[#723645] text-white p-0"
       >
         <div className="p-6 pb-2">
           <DialogHeader>

@@ -63,7 +63,7 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
               className={`w-14 h-14 rounded-lg border-2 flex items-center justify-center font-mono text-2xl font-bold ${
                 pin.length > i
                   ? "border-flame bg-flame/10 text-white"
-                  : "border-[#5E2A3A] bg-[#3D1620] text-neutral-600"
+                  : "border-[#723645] bg-[#3D1620] text-neutral-600"
               }`}
             >
               {pin.length > i ? "•" : ""}
@@ -93,10 +93,10 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
                 data-testid={`pin-key-${k}`}
                 className={`h-20 rounded-xl font-heading text-2xl font-bold transition-all active:scale-95 no-select ${
                   isDigit
-                    ? "bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white"
+                    ? "bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
                     : k === "clear"
-                    ? "bg-[#3D1620] border border-[#5E2A3A] hover:border-[#FF3B30] text-neutral-400 hover:text-[#FF3B30]"
-                    : "bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-neutral-400"
+                    ? "bg-[#3D1620] border border-[#723645] hover:border-[#FF3B30] text-neutral-400 hover:text-[#FF3B30]"
+                    : "bg-[#3D1620] border border-[#723645] hover:border-flame text-neutral-400"
                 }`}
               >
                 {label}
@@ -108,7 +108,7 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
         <button
           onClick={onCancel}
           data-testid="pin-cancel-btn"
-          className="w-full h-12 rounded-md border border-[#5E2A3A] hover:border-flame text-neutral-300 hover:text-white font-semibold"
+          className="w-full h-12 rounded-md bg-[#4A1B27] border border-[#723645] hover:border-flame text-neutral-200 hover:text-white font-semibold"
         >
           ← Επιλογή άλλου προφίλ
         </button>
@@ -188,7 +188,7 @@ export default function ProfileSelect() {
                   key={p.id}
                   onClick={() => setChosen(p)}
                   data-testid={`profile-card-${p.id}`}
-                  className="group w-40 sm:w-48 flex flex-col items-center justify-center gap-3 p-6 bg-[#3D1620] border border-[#5E2A3A] rounded-2xl transition-all active:scale-[0.98] hover:border-[var(--pc)]"
+                  className="group w-40 sm:w-48 flex flex-col items-center justify-center gap-3 p-6 bg-[#3D1620] border border-[#723645] rounded-2xl transition-all active:scale-[0.98] hover:border-[var(--pc)]"
                   style={{ "--pc": color }}
                 >
                   <div
@@ -221,7 +221,7 @@ export default function ProfileSelect() {
               navigate("/app/login");
             }}
             data-testid="profile-full-logout"
-            className="inline-flex items-center gap-2 h-11 px-5 rounded-md border border-[#5E2A3A] hover:border-[#FF3B30] text-neutral-300 hover:text-[#FF3B30] text-sm font-semibold"
+            className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-[#4A1B27] border border-[#723645] hover:border-[#FF3B30] text-neutral-200 hover:text-[#FF3B30] text-sm font-semibold"
           >
             <LogOut className="w-4 h-4" /> Αποσύνδεση καταστήματος
           </button>

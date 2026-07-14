@@ -85,13 +85,13 @@ export default function AppShell({ title, children }) {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-[#2A0E14] text-white">
-      <header className="flex items-center justify-between px-4 md:px-6 h-16 border-b border-[#5E2A3A] bg-[#2A0E14] shrink-0">
+      <header className="flex items-center justify-between px-4 md:px-6 h-16 border-b border-[#723645] bg-[#2A0E14] shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setOpen(true)}
             data-testid="burger-btn"
             aria-label="Μενού"
-            className="w-11 h-11 rounded-md border border-[#5E2A3A] hover:border-flame flex items-center justify-center text-white transition-colors"
+            className="w-11 h-11 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center text-white transition-colors"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -130,10 +130,10 @@ export default function AppShell({ title, children }) {
             data-testid="drawer-backdrop"
           />
           <aside
-            className="fixed left-0 top-0 bottom-0 z-50 w-[320px] bg-[#2A0E14] border-r border-[#5E2A3A] flex flex-col"
+            className="fixed left-0 top-0 bottom-0 z-50 w-[320px] bg-[#2A0E14] border-r border-[#723645] flex flex-col"
             data-testid="drawer"
           >
-            <div className="flex items-center justify-between px-5 h-16 border-b border-[#5E2A3A]">
+            <div className="flex items-center justify-between px-5 h-16 border-b border-[#723645]">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-md bg-brand flex items-center justify-center">
                   <BizIcon className="w-5 h-5 text-white" />
@@ -148,7 +148,7 @@ export default function AppShell({ title, children }) {
               <button
                 onClick={() => setOpen(false)}
                 data-testid="drawer-close-btn"
-                className="w-10 h-10 rounded-md border border-[#5E2A3A] hover:border-flame flex items-center justify-center"
+                className="w-10 h-10 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -186,11 +186,11 @@ export default function AppShell({ title, children }) {
                 <span className="font-semibold">Αλλαγή προφίλ</span>
               </button>
             </nav>
-            <div className="p-3 border-t border-[#5E2A3A]">
+            <div className="p-3 border-t border-[#723645]">
               <button
                 onClick={handleLogout}
                 data-testid="drawer-logout-btn"
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-neutral-300 hover:bg-[#FF3B30]/10 hover:text-[#FF3B30] border border-[#5E2A3A] hover:border-[#FF3B30] transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-neutral-300 hover:bg-[#FF3B30]/10 hover:text-[#FF3B30] border border-[#723645] hover:border-[#FF3B30] transition-colors"
               >
                 <LogOut className="w-5 h-5" />
                 <span className="font-semibold">Αποσύνδεση</span>

@@ -47,7 +47,7 @@ function BusinessTypeSettings() {
             className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all active:scale-[0.98] ${
               active
                 ? "bg-flame/10 border-flame text-white"
-                : "bg-[#2A0E14] border-[#5E2A3A] text-neutral-300 hover:border-flame"
+                : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
             }`}
           >
             <span
@@ -98,7 +98,7 @@ function TablesSettings() {
 
   return (
     <div>
-      <div className="flex items-center justify-between px-4 py-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md mb-4">
+      <div className="flex items-center justify-between px-4 py-3 bg-[#2A0E14] border border-[#723645] rounded-md mb-4">
         <div>
           <div className="font-semibold text-sm">Λειτουργία τραπεζιών</div>
           <div className="text-xs text-neutral-500">
@@ -137,7 +137,7 @@ export default function Settings() {
               Καθορίζει το εικονίδιο της επιχείρησης στο header
             </p>
           </div>
-          <div className="p-6 bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
+          <div className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg">
             <BusinessTypeSettings />
           </div>
         </section>
@@ -152,7 +152,7 @@ export default function Settings() {
               Δημιουργήστε προφίλ με όνομα, ρόλο και PIN — Ιδιοκτήτης, Υπεύθυνος, Υπάλληλος, Σερβιτόρος
             </p>
           </div>
-          <div className="p-6 bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
+          <div className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg">
             <ProfilesManager />
           </div>
         </section>
@@ -167,7 +167,7 @@ export default function Settings() {
               Ενεργοποιήστε τη λειτουργία και ορίστε τα τραπέζια του καταστήματος
             </p>
           </div>
-          <div className="p-6 bg-[#3D1620] border border-[#5E2A3A] rounded-lg">
+          <div className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg">
             <TablesSettings />
           </div>
         </section>

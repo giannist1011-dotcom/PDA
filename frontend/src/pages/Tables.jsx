@@ -49,7 +49,7 @@ export default function Tables() {
               onClick={load}
               disabled={loading}
               data-testid="tables-refresh-btn"
-              className="h-11 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white"
+              className="h-11 bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
             >
               <RefreshCcw className="w-4 h-4" />
             </Button>
@@ -57,7 +57,7 @@ export default function Tables() {
               <Button
                 onClick={() => setEditorOpen(true)}
                 data-testid="tables-manage-btn"
-                className="h-11 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white"
+                className="h-11 bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
               >
                 <Settings2 className="w-4 h-4 mr-2" />
                 Διαχείριση
@@ -69,14 +69,14 @@ export default function Tables() {
         {loading && !state ? (
           <div className="text-neutral-500 py-16 text-center">Φόρτωση...</div>
         ) : state && !state.enabled ? (
-          <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#5E2A3A] rounded-lg px-6">
+          <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#723645] rounded-lg px-6">
             Η λειτουργία τραπεζιών είναι απενεργοποιημένη.
             <div className="text-xs mt-2">
               Ο ιδιοκτήτης μπορεί να την ενεργοποιήσει από τις Ρυθμίσεις.
             </div>
           </div>
         ) : tables.length === 0 ? (
-          <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#5E2A3A] rounded-lg px-6">
+          <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#723645] rounded-lg px-6">
             Δεν έχουν οριστεί τραπέζια ακόμα
             {canManage && (
               <div className="mt-3">
@@ -133,13 +133,13 @@ export default function Tables() {
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
           data-testid="tables-editor-modal"
         >
-          <div className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg w-full max-w-md max-h-[85vh] flex flex-col p-5">
+          <div className="bg-[#3D1620] border border-[#723645] rounded-lg w-full max-w-md max-h-[85vh] flex flex-col p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-heading text-xl font-bold">Διαχείριση τραπεζιών</h3>
               <button
                 onClick={() => setEditorOpen(false)}
                 data-testid="tables-editor-close"
-                className="w-9 h-9 rounded-md border border-[#5E2A3A] hover:border-flame flex items-center justify-center"
+                className="w-9 h-9 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>

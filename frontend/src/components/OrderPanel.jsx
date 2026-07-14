@@ -85,11 +85,11 @@ export default function OrderPanel({
 
   return (
     <aside
-      className="flex flex-col h-full bg-[#3D1620] border-l border-[#5E2A3A] overflow-hidden"
+      className="flex flex-col h-full bg-[#3D1620] border-l border-[#723645] overflow-hidden"
       data-testid="order-panel"
     >
       {/* Zone 1 — fixed header: order number + source buttons */}
-      <div className="p-6 border-b border-[#5E2A3A] shrink-0">
+      <div className="p-6 border-b border-[#723645] shrink-0">
         <div className="flex items-baseline justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-neutral-400">
@@ -143,7 +143,7 @@ export default function OrderPanel({
             return (
             <div
               key={it.line_id}
-              className="py-4 border-b border-[#5E2A3A] last:border-0"
+              className="py-4 border-b border-[#723645] last:border-0"
               data-testid={`order-line-${it.line_id}`}
             >
               <button
@@ -205,7 +205,7 @@ export default function OrderPanel({
       </div>
 
       {/* Zone 3 — fixed footer: delivery type, total, actions (compact) */}
-      <div className="px-4 py-3 border-t border-[#5E2A3A] bg-[#33111A] shrink-0">
+      <div className="px-4 py-3 border-t border-[#723645] bg-[#33111A] shrink-0">
         {isPhone && (
           <div className="mb-2 p-2 rounded-md border border-flame/40 bg-flame/5" data-testid="delivery-section">
             <div className="grid grid-cols-2 gap-1.5">
@@ -216,7 +216,7 @@ export default function OrderPanel({
                 className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
                   delivery?.delivery_type === "delivery"
                     ? "bg-brand border-brand text-white"
-                    : "bg-[#2A0E14] border-[#5E2A3A] text-neutral-300 hover:border-flame"
+                    : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
                 }`}
               >
                 <Truck className="w-4 h-4" /> Παράδοση
@@ -228,7 +228,7 @@ export default function OrderPanel({
                 className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
                   delivery?.delivery_type === "takeaway"
                     ? "bg-brand border-brand text-white"
-                    : "bg-[#2A0E14] border-[#5E2A3A] text-neutral-300 hover:border-flame"
+                    : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
                 }`}
               >
                 <ShoppingBag className="w-4 h-4" /> Takeaway
@@ -250,7 +250,7 @@ export default function OrderPanel({
                 className={`w-full h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
                   scheduled?.enabled
                     ? "bg-[#00B0FF] border-[#00B0FF] text-white"
-                    : "bg-[#2A0E14] border-[#5E2A3A] text-neutral-300 hover:border-[#00B0FF]"
+                    : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-[#00B0FF]"
                 }`}
               >
                 <Clock className="w-4 h-4" /> Προγραμματισμένη
@@ -262,7 +262,7 @@ export default function OrderPanel({
                     value={scheduled.time}
                     onChange={(e) => setScheduled((s) => ({ ...s, time: e.target.value }))}
                     data-testid="scheduled-time-input"
-                    className="w-full h-9 px-2 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
+                    className="w-full h-9 px-2 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
                   />
                   <input
                     type="date"
@@ -270,7 +270,7 @@ export default function OrderPanel({
                     min={todayISO()}
                     onChange={(e) => setScheduled((s) => ({ ...s, date: e.target.value }))}
                     data-testid="scheduled-date-input"
-                    className="w-full h-9 px-2 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
+                    className="w-full h-9 px-2 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
                   />
                 </div>
               )}
@@ -286,7 +286,7 @@ export default function OrderPanel({
                     inputMode={f.inputMode || "text"}
                     placeholder={f.label + " — " + f.placeholder}
                     data-testid={`delivery-input-${f.key}`}
-                    className="w-full h-9 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-sm text-white focus:outline-none focus:border-flame"
+                    className="w-full h-9 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame"
                   />
                 ))}
               </div>
@@ -325,7 +325,7 @@ export default function OrderPanel({
               className={`flex items-center gap-1 h-7 px-2 rounded-md border text-[11px] font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                 discountAmount > 0
                   ? "border-[#00E676]/50 text-[#00E676] bg-[#00E676]/10 hover:bg-[#00E676]/20"
-                  : "border-[#5E2A3A] text-neutral-300 hover:border-[#00E676] hover:text-[#00E676]"
+                  : "border-[#723645] text-neutral-300 hover:border-[#00E676] hover:text-[#00E676]"
               }`}
             >
               <Percent className="w-3 h-3" />
@@ -345,7 +345,7 @@ export default function OrderPanel({
             disabled={isEmpty}
             data-testid="order-clear-btn"
             variant="ghost"
-            className="col-span-1 h-12 text-xs font-bold text-neutral-300 border border-[#5E2A3A] hover:bg-[#4A1B27] hover:text-white disabled:opacity-40"
+            className="col-span-1 h-12 text-xs font-bold text-neutral-100 bg-[#4A1B27] border border-[#7E3B50] hover:bg-[#582233] hover:text-white disabled:opacity-40"
           >
             Καθαρισμός
           </Button>

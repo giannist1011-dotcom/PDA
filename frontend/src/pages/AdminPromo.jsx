@@ -40,7 +40,7 @@ const DURATION_LABELS = {
 };
 
 const inputCls =
-  "w-full h-11 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white focus:outline-none focus:border-flame";
+  "w-full h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame";
 
 const fmtEur = (v) => `${Number(v).toFixed(2).replace(".", ",")} €`;
 
@@ -198,7 +198,7 @@ export default function AdminPromo() {
   if (!authed) {
     return (
       <div className="min-h-screen bg-[#2A0E14] text-white flex items-center justify-center px-4">
-        <form onSubmit={login} className="w-full max-w-sm bg-[#3D1620] border border-[#5E2A3A] rounded-lg p-6 space-y-4">
+        <form onSubmit={login} className="w-full max-w-sm bg-[#3D1620] border border-[#723645] rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-flame" />
             <h1 className="font-heading text-xl font-bold">Διαχείριση εκπτωτικών κωδικών</h1>
@@ -247,7 +247,7 @@ export default function AdminPromo() {
             <Button
               type="button"
               onClick={refresh}
-              className="h-10 px-3 bg-[#3D1620] border border-[#5E2A3A] hover:border-flame text-white"
+              className="h-10 px-3 bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
               data-testid="admin-refresh"
             >
               <RefreshCw className="w-4 h-4" />
@@ -265,7 +265,7 @@ export default function AdminPromo() {
 
         {/* CREATE FORM */}
         {showCreate && (
-          <form onSubmit={create} className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg p-5 mb-6 space-y-4">
+          <form onSubmit={create} className="bg-[#3D1620] border border-[#723645] rounded-lg p-5 mb-6 space-y-4">
             <h2 className="font-heading text-lg font-bold">Νέος εκπτωτικός κωδικός</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Κωδικός" optional>
@@ -353,7 +353,7 @@ export default function AdminPromo() {
               <Button
                 type="button"
                 onClick={() => setShowCreate(false)}
-                className="h-11 bg-[#2A0E14] border border-[#5E2A3A] hover:border-flame text-white"
+                className="h-11 bg-[#2A0E14] border border-[#723645] hover:border-flame text-white"
               >
                 Άκυρο
               </Button>
@@ -363,7 +363,7 @@ export default function AdminPromo() {
 
         {/* LIST */}
         {codes.length === 0 ? (
-          <div className="text-center text-neutral-500 py-16 border border-dashed border-[#5E2A3A] rounded-lg">
+          <div className="text-center text-neutral-500 py-16 border border-dashed border-[#723645] rounded-lg">
             Δεν υπάρχουν εκπτωτικοί κωδικοί ακόμα.
           </div>
         ) : (
@@ -372,7 +372,7 @@ export default function AdminPromo() {
               <div
                 key={p.id}
                 className={`bg-[#3D1620] border rounded-lg p-4 ${
-                  p.active ? "border-[#5E2A3A]" : "border-[#5E2A3A] opacity-60"
+                  p.active ? "border-[#723645]" : "border-[#723645] opacity-60"
                 }`}
               >
                 <div className="flex flex-wrap items-center gap-3">
@@ -394,7 +394,7 @@ export default function AdminPromo() {
                       data-testid={`promo-toggle-${p.code}`}
                       className={`h-9 px-3 border text-xs font-bold ${
                         p.active
-                          ? "bg-[#2A0E14] border-[#5E2A3A] hover:border-flame text-neutral-300"
+                          ? "bg-[#2A0E14] border-[#723645] hover:border-flame text-neutral-300"
                           : "bg-brand border-brand hover:bg-brand-hover text-white"
                       }`}
                     >
@@ -406,7 +406,7 @@ export default function AdminPromo() {
                       onClick={() => remove(p)}
                       title="Διαγραφή"
                       data-testid={`promo-delete-${p.code}`}
-                      className="h-9 px-3 bg-[#2A0E14] border border-[#5E2A3A] hover:border-[#FF3B30] text-[#FF6961]"
+                      className="h-9 px-3 bg-[#2A0E14] border border-[#723645] hover:border-[#FF3B30] text-[#FF6961]"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -438,7 +438,7 @@ export default function AdminPromo() {
                   </button>
                 </div>
                 {expanded === p.id && (
-                  <div className="mt-3 border-t border-[#5E2A3A] pt-3">
+                  <div className="mt-3 border-t border-[#723645] pt-3">
                     {!uses[p.id] ? (
                       <div className="text-xs text-neutral-500">Φόρτωση...</div>
                     ) : uses[p.id].length === 0 ? (

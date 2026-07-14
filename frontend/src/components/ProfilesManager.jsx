@@ -56,7 +56,7 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
     >
       <form
         onSubmit={submit}
-        className="bg-[#3D1620] border border-[#5E2A3A] rounded-lg p-6 w-full max-w-md"
+        className="bg-[#3D1620] border border-[#723645] rounded-lg p-6 w-full max-w-md"
       >
         <h3 className="font-heading text-xl font-bold mb-4">
           {initial ? "Επεξεργασία προφίλ" : "Νέο προφίλ"}
@@ -69,12 +69,12 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
           onChange={(e) => setName(e.target.value)}
           placeholder="π.χ. Μαρία"
           data-testid="profile-name-input"
-          className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+          className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         />
 
         <label className="text-xs uppercase tracking-wider text-neutral-400">Ρόλος</label>
         {waiterOnly ? (
-          <div className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-sm flex items-center text-[#00E676] font-bold">
+          <div className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm flex items-center text-[#00E676] font-bold">
             Σερβιτόρος
           </div>
         ) : (
@@ -82,7 +82,7 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
             value={role}
             onChange={(e) => setRole(e.target.value)}
             data-testid="profile-role-select"
-            className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+            className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
           >
             {Object.entries(ROLE_LABELS).map(([r, label]) => (
               <option key={r} value={r}>
@@ -102,7 +102,7 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
           onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
           placeholder="••••"
           data-testid="profile-pin-input"
-          className="w-full h-11 mt-1 mb-6 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white font-mono text-lg tracking-widest text-center focus:outline-none focus:border-flame"
+          className="w-full h-11 mt-1 mb-6 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono text-lg tracking-widest text-center focus:outline-none focus:border-flame"
         />
 
         <div className="flex justify-end gap-2">
@@ -110,7 +110,7 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
             type="button"
             onClick={onClose}
             data-testid="profile-cancel-btn"
-            className="h-10 px-4 rounded-md bg-[#4F202D] text-neutral-300 text-sm font-bold hover:bg-[#5E2A3A]"
+            className="h-10 px-4 rounded-md bg-[#4F202D] text-neutral-300 text-sm font-bold hover:bg-[#723645]"
           >
             Άκυρο
           </button>
@@ -199,7 +199,7 @@ export default function ProfilesManager({ waiterOnly = false }) {
       {loading ? (
         <div className="text-neutral-500 py-8 text-center">Φόρτωση...</div>
       ) : profiles.length === 0 ? (
-        <div className="text-neutral-500 py-10 text-center border border-dashed border-[#5E2A3A] rounded-lg">
+        <div className="text-neutral-500 py-10 text-center border border-dashed border-[#723645] rounded-lg">
           Δεν υπάρχουν προφίλ{waiterOnly ? " σερβιτόρων" : ""} ακόμα
         </div>
       ) : (
@@ -212,7 +212,7 @@ export default function ProfilesManager({ waiterOnly = false }) {
               <div
                 key={p.id}
                 data-testid={`profile-row-${p.id}`}
-                className="flex items-center gap-3 p-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-lg"
+                className="flex items-center gap-3 p-3 bg-[#2A0E14] border border-[#723645] rounded-lg"
               >
                 <div
                   className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"

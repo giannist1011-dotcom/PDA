@@ -35,7 +35,7 @@ const COLORS = ["#F97316", "#00E676", "#D4A017", "#00B0FF", "#FF3B30"];
 
 const StatCard = ({ icon: Icon, label, value, testId, sub, valueClass = "text-white", iconClass = "text-flame" }) => (
   <div
-    className="p-6 bg-[#3D1620] border border-[#5E2A3A] rounded-lg"
+    className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg"
     data-testid={testId}
   >
     <div className="flex items-center justify-between">
@@ -81,7 +81,7 @@ const ChangeBadge = ({ value, testId }) => {
       ? "text-[#00E676] bg-[#00E676]/10 border-[#00E676]/40"
       : rounded < 0
         ? "text-[#FF6961] bg-[#FF3B30]/10 border-[#FF3B30]/40"
-        : "text-neutral-400 bg-[#3D1620] border-[#5E2A3A]";
+        : "text-neutral-400 bg-[#3D1620] border-[#723645]";
   const Icon = rounded > 0 ? ArrowUp : rounded < 0 ? ArrowDown : MinusIcon;
   return (
     <span
@@ -99,7 +99,7 @@ const CompareCard = ({ label, valueA, valueB, format, testId }) => {
   const change = pct(valueB, valueA);
   return (
     <div
-      className="p-4 md:p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg"
+      className="p-4 md:p-5 bg-[#3D1620] border border-[#723645] rounded-lg"
       data-testid={testId}
     >
       <div className="text-xs uppercase tracking-widest text-neutral-400 font-bold mb-3">
@@ -243,7 +243,7 @@ export default function Analytics() {
     <AppShell title="Στατιστικά">
       <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-[1600px] mx-auto w-full">
         {/* Filters */}
-        <div className="p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg mb-6">
+        <div className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg mb-6">
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
@@ -254,7 +254,7 @@ export default function Analytics() {
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
                 data-testid="date-from-input"
-                className="h-12 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                className="h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -266,7 +266,7 @@ export default function Analytics() {
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 data-testid="date-to-input"
-                className="h-12 px-3 bg-[#2A0E14] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                className="h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
               />
             </div>
             <Button
@@ -288,7 +288,7 @@ export default function Analytics() {
                   key={p.k}
                   onClick={() => setPreset(p.k)}
                   data-testid={`preset-${p.k}`}
-                  className="h-10 px-4 rounded-md text-sm font-bold border border-[#5E2A3A] text-neutral-300 hover:border-flame hover:text-white"
+                  className="h-10 px-4 rounded-md text-sm font-bold bg-[#4A1B27] border border-[#723645] text-neutral-200 hover:border-flame hover:text-white"
                 >
                   {p.label}
                 </button>
@@ -356,7 +356,7 @@ export default function Analytics() {
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Hourly */}
-          <div className="lg:col-span-2 p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg" data-testid="hourly-chart">
+          <div className="lg:col-span-2 p-5 bg-[#3D1620] border border-[#723645] rounded-lg" data-testid="hourly-chart">
             <div className="flex items-center gap-2 mb-4">
               <Clock className="w-4 h-4 text-flame" />
               <h2 className="font-heading font-semibold text-lg">
@@ -376,7 +376,7 @@ export default function Analytics() {
                   <Tooltip
                     contentStyle={{
                       background: "#2A0E14",
-                      border: "1px solid #5E2A3A",
+                      border: "1px solid #723645",
                       borderRadius: 6,
                       color: "#fff",
                     }}
@@ -388,7 +388,7 @@ export default function Analytics() {
           </div>
 
           {/* By source */}
-          <div className="p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg" data-testid="source-chart">
+          <div className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg" data-testid="source-chart">
             <h2 className="font-heading font-semibold text-lg mb-4">
               Ανά πηγή
             </h2>
@@ -417,7 +417,7 @@ export default function Analytics() {
                     <Tooltip
                       contentStyle={{
                         background: "#2A0E14",
-                        border: "1px solid #5E2A3A",
+                        border: "1px solid #723645",
                         borderRadius: 6,
                         color: "#fff",
                       }}
@@ -451,7 +451,7 @@ export default function Analytics() {
         </div>
 
         {/* Popular items */}
-        <div className="p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg" data-testid="popular-items">
+        <div className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg" data-testid="popular-items">
           <h2 className="font-heading font-semibold text-lg mb-4">
             Δημοφιλέστερα προϊόντα
           </h2>
@@ -463,7 +463,7 @@ export default function Analytics() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-widest text-neutral-400 border-b border-[#5E2A3A]">
+                  <tr className="text-left text-xs uppercase tracking-widest text-neutral-400 border-b border-[#723645]">
                     <th className="py-3">#</th>
                     <th className="py-3">Προϊόν</th>
                     <th className="py-3 text-right">Τεμάχια</th>
@@ -496,7 +496,7 @@ export default function Analytics() {
         </div>
 
         {/* ---------- COMPARISON SECTION ---------- */}
-        <div className="mt-8 p-5 bg-[#3D1620] border border-[#5E2A3A] rounded-lg" data-testid="compare-section">
+        <div className="mt-8 p-5 bg-[#3D1620] border border-[#723645] rounded-lg" data-testid="compare-section">
           <div className="flex items-center gap-2 mb-2">
             <ArrowLeftRight className="w-5 h-5 text-flame" />
             <h2 className="font-heading text-xl font-semibold">Σύγκριση περιόδων</h2>
@@ -506,7 +506,7 @@ export default function Analytics() {
           </p>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-4">
-            <div className="p-4 bg-[#2A0E14] border border-[#5E2A3A] rounded-md">
+            <div className="p-4 bg-[#2A0E14] border border-[#723645] rounded-md">
               <div className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-3">
                 Περίοδος Α (προηγούμενη)
               </div>
@@ -518,7 +518,7 @@ export default function Analytics() {
                     value={cmpFromA}
                     onChange={(e) => setCmpFromA(e.target.value)}
                     data-testid="compare-from-a"
-                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
                   />
                 </div>
                 <div>
@@ -528,7 +528,7 @@ export default function Analytics() {
                     value={cmpToA}
                     onChange={(e) => setCmpToA(e.target.value)}
                     data-testid="compare-to-a"
-                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
                   />
                 </div>
               </div>
@@ -545,7 +545,7 @@ export default function Analytics() {
                     value={cmpFromB}
                     onChange={(e) => setCmpFromB(e.target.value)}
                     data-testid="compare-from-b"
-                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
                   />
                 </div>
                 <div>
@@ -555,7 +555,7 @@ export default function Analytics() {
                     value={cmpToB}
                     onChange={(e) => setCmpToB(e.target.value)}
                     data-testid="compare-to-b"
-                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#5E2A3A] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
                   />
                 </div>
               </div>
@@ -581,7 +581,7 @@ export default function Analytics() {
                 key={p.k}
                 onClick={() => applyComparePreset(p.k)}
                 data-testid={`compare-preset-${p.k}`}
-                className="h-11 px-4 rounded-md text-sm font-bold border border-[#5E2A3A] text-neutral-300 hover:border-flame hover:text-white"
+                className="h-11 px-4 rounded-md text-sm font-bold bg-[#4A1B27] border border-[#723645] text-neutral-200 hover:border-flame hover:text-white"
               >
                 {p.label}
               </button>
@@ -620,7 +620,7 @@ export default function Analytics() {
                 />
               </div>
 
-              <div className="p-4 bg-[#2A0E14] border border-[#5E2A3A] rounded-md" data-testid="cmp-by-source-table">
+              <div className="p-4 bg-[#2A0E14] border border-[#723645] rounded-md" data-testid="cmp-by-source-table">
                 <div className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">
                   Παραγγελίες ανά πηγή
                 </div>
