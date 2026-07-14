@@ -283,8 +283,11 @@ export default function PDA() {
   const [discount, setDiscount] = useState(null); // {type: "percent"|"amount", value}
   const [discountOpen, setDiscountOpen] = useState(false);
   const [pinGateOpen, setPinGateOpen] = useState(false);
+  // Tablet-portrait / mobile: switch between menu and order panel (two-column on lg+)
+  const [mobileTab, setMobileTab] = useState("menu");
 
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
+  const orderCount = items.reduce((s, it) => s + it.quantity, 0);
   const discountAmount = !discount
     ? 0
     : discount.type === "percent"
@@ -559,17 +562,54 @@ export default function PDA() {
 
   return (
     <AppShell title="Παραγγελίες">
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-y-auto lg:overflow-hidden">
-        <section className="p-6 lg:overflow-hidden flex flex-col min-h-0">
+      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-hidden">
+        {/* Μενού / Παραγγελία εναλλαγή — μόνο σε tablet-portrait & κινητό */}
+        <div className="lg:hidden shrink-0 flex gap-1.5 p-2 border-b border-[#723645] bg-[#2A0E14]">
+          <button
+            onClick={() => setMobileTab("menu")}
+            data-testid="pda-tab-menu"
+            data-state={mobileTab === "menu" ? "on" : "off"}
+            className={`flex-1 h-12 rounded-md text-sm font-bold transition-colors ${
+              mobileTab === "menu"
+                ? "bg-brand text-white"
+                : "bg-[#3D1620] border border-[#723645] text-neutral-300"
+            }`}
+          >
+            Μενού
+          </button>
+          <button
+            onClick={() => setMobileTab("order")}
+            data-testid="pda-tab-order"
+            data-state={mobileTab === "order" ? "on" : "off"}
+            className={`flex-1 h-12 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
+              mobileTab === "order"
+                ? "bg-brand text-white"
+                : "bg-[#3D1620] border border-[#723645] text-neutral-300"
+            }`}
+          >
+            Παραγγελία
+            {orderCount > 0 && (
+              <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-flame text-white text-xs font-bold flex items-center justify-center">
+                {orderCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <section
+          className={`p-4 md:p-6 overflow-hidden flex-col min-h-0 flex-1 lg:flex-none ${
+            mobileTab === "menu" ? "flex" : "hidden"
+          } lg:flex`}
+        >
           {scheduledOrders.length > 0 && (
             <button
               onClick={() => setScheduledOpen(true)}
               data-testid="scheduled-badge-btn"
-              className="mb-4 shrink-0 flex items-center gap-2 self-start px-4 h-10 rounded-md border border-[#00B0FF]/50 bg-[#00B0FF]/10 text-[#00B0FF] text-sm font-bold hover:bg-[#00B0FF]/20 transition-colors"
+              className="mb-4 shrink-0 flex items-center gap-2 self-start max-w-full px-4 h-10 rounded-md border border-[#00B0FF]/50 bg-[#00B0FF]/10 text-[#00B0FF] text-sm font-bold hover:bg-[#00B0FF]/20 transition-colors"
             >
-              <Clock className="w-4 h-4" />
-              Προγραμματισμένες: {scheduledOrders.length}
-              <span className="text-xs font-normal text-[#00B0FF]/70">
+              <Clock className="w-4 h-4 shrink-0" />
+              <span className="truncate">Προγραμματισμένες: {scheduledOrders.length}</span>
+              <span className="text-xs font-normal text-[#00B0FF]/70 hidden sm:inline shrink-0">
                 · επόμενη {schedDateTime(scheduledOrders[0]?.scheduled_at)}
               </span>
             </button>
@@ -582,6 +622,11 @@ export default function PDA() {
             onItemClick={handleItemClick}
           />
         </section>
+        <div
+          className={`min-h-0 overflow-hidden flex-1 lg:flex-none flex-col ${
+            mobileTab === "order" ? "flex" : "hidden"
+          } lg:flex`}
+        >
         <OrderPanel
           orderNumber={orderNumber}
           items={items}
@@ -604,6 +649,7 @@ export default function PDA() {
           onEditOptions={handleEditLineOptions}
           submitting={submitting}
         />
+        </div>
       </main>
 
       <CustomizationModal

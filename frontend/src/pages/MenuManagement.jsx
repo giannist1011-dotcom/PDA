@@ -795,7 +795,7 @@ export default function MenuManagement() {
 
   return (
     <AppShell title="Διαχείριση Μενού">
-      <div className="flex items-center justify-between gap-2 px-6 py-3 border-b border-[#431A25]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 md:px-6 py-3 border-b border-[#431A25]">
         <Button
           onClick={() => (bulkMode ? exitBulk() : setBulkMode(true))}
           data-testid="toggle-bulk-mode-btn"
@@ -824,7 +824,7 @@ export default function MenuManagement() {
         </Button>
       </div>
 
-      <main className="flex-1 overflow-y-auto p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 md:gap-6">
         {/* Categories */}
         <aside className="bg-[#3D1620] border border-[#723645] rounded-lg p-4">
           <h2 className="font-heading text-lg font-semibold mb-4">Κατηγορίες</h2>
@@ -875,7 +875,7 @@ export default function MenuManagement() {
                     data-testid={`cat-item-${c.id}`}
                   >
                     <span className="font-semibold text-sm">{c.name}</span>
-                    <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                    <span className="flex items-center gap-1 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

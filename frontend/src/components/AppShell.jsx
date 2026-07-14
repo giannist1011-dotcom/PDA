@@ -85,39 +85,39 @@ export default function AppShell({ title, children }) {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-[#2A0E14] text-white">
-      <header className="flex items-center justify-between px-4 md:px-6 h-16 border-b border-[#723645] bg-[#2A0E14] shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between gap-2 px-4 md:px-6 h-16 border-b border-[#723645] bg-[#2A0E14] shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={() => setOpen(true)}
             data-testid="burger-btn"
             aria-label="Μενού"
-            className="w-11 h-11 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center text-white transition-colors"
+            className="w-11 h-11 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center text-white transition-colors shrink-0"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div
-              className="w-9 h-9 rounded-md bg-brand flex items-center justify-center"
+              className="w-9 h-9 rounded-md bg-brand flex items-center justify-center shrink-0"
               data-testid="business-icon"
             >
               <BizIcon className="w-5 h-5 text-white" />
             </div>
-            <div className="flex items-baseline gap-2 flex-wrap">
+            <div className="flex items-baseline gap-2 min-w-0">
               <span
-                className="font-heading text-xl md:text-2xl font-bold tracking-tight"
+                className="font-heading text-lg sm:text-xl md:text-2xl font-bold tracking-tight truncate"
                 data-testid="restaurant-name"
               >
                 {user?.restaurant_name || "POS"}
               </span>
               {title && (
-                <span className="text-xs uppercase tracking-widest text-neutral-500 hidden sm:inline">
+                <span className="text-xs uppercase tracking-widest text-neutral-500 hidden sm:inline shrink-0">
                   · {title}
                 </span>
               )}
             </div>
           </div>
         </div>
-        <div className="hidden sm:block" data-testid="profile-badge">
+        <div className="hidden sm:block shrink-0" data-testid="profile-badge">
           {profileBadge}
         </div>
       </header>

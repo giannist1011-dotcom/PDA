@@ -166,7 +166,7 @@ export default function Photos() {
                 <button
                   onClick={() => handleDelete(p)}
                   data-testid={`photo-delete-${p.id}`}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 w-9 h-9 rounded-md bg-black/70 border border-[#FF3B30]/40 text-[#FF6961] hover:bg-[#FF3B30]/20 flex items-center justify-center transition-opacity"
+                  className="absolute top-2 right-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 w-9 h-9 rounded-md bg-black/70 border border-[#FF3B30]/40 text-[#FF6961] hover:bg-[#FF3B30]/20 flex items-center justify-center transition-opacity"
                   title="Διαγραφή"
                 >
                   <Trash2 className="w-4 h-4" />

@@ -77,7 +77,7 @@ function StockRow({ item, onToggleNeed, onDelete, canEdit }) {
             onDelete(item);
           }}
           data-testid={`stock-delete-${item.id}`}
-          className="opacity-0 group-hover:opacity-100 p-1.5 text-neutral-400 hover:text-[#FF3B30]"
+          className="opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 p-1.5 text-neutral-400 hover:text-[#FF3B30]"
           title="Διαγραφή"
         >
           <Trash2 className="w-4 h-4" />
@@ -504,7 +504,7 @@ export default function Stock() {
                   Τσεκάρετε ό,τι τελειώνει και προστίθεται αυτόματα στη λίστα αγορών →
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {canManage && (
                   <>
                     <Button
@@ -579,7 +579,7 @@ export default function Stock() {
                       {c.name} ({count})
                     </button>
                     {canManage && (
-                      <div className="hidden group-hover:flex items-center gap-0.5">
+                      <div className="flex [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:flex items-center gap-0.5">
                         <button
                           onClick={() => setCatModal({ open: true, editing: c })}
                           data-testid={`stock-cat-edit-${c.id}`}
@@ -723,7 +723,7 @@ export default function Stock() {
                       <button
                         onClick={() => removeShop(s)}
                         data-testid={`shopping-delete-${s.id}`}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-[#FF3B30]"
+                        className="opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 p-1 text-neutral-400 hover:text-[#FF3B30]"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
