@@ -105,6 +105,8 @@ export default function TableOrder() {
   const [printOrder, setPrintOrder] = useState(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const [freeTables, setFreeTables] = useState([]);
+  // Mobile (<sm): switch between menu and the tab (order) view
+  const [mobileTab, setMobileTab] = useState("menu");
 
   const load = async () => {
     try {
@@ -173,6 +175,13 @@ export default function TableOrder() {
   );
   const newTotal = newItems.reduce((s, it) => s + it.line_total, 0);
   const grandTotal = roundsTotal + newTotal;
+  // Πλήθος ειδών στην καρτέλα (σταλμένοι γύροι + νέος γύρος) — δείκτης στο tab «Παραγγελία»
+  const roundsQty = (tab?.rounds || []).reduce(
+    (s, r) => s + r.items.reduce((a, it) => a + (it.quantity || 0), 0),
+    0
+  );
+  const newQty = newItems.reduce((s, it) => s + it.quantity, 0);
+  const orderCount = roundsQty + newQty;
 
   // ---- actions ----
   const handleSend = async () => {
@@ -257,10 +266,67 @@ export default function TableOrder() {
 
   return (
     <AppShell title={`Τραπέζι ${table?.name || ""}`}>
-      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] overflow-y-auto lg:overflow-hidden">
+      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] overflow-hidden sm:overflow-y-auto lg:overflow-hidden">
+        {/* Κινητό (<sm): τίτλος τραπεζιού + tabs Μενού / Παραγγελία */}
+        <div className="sm:hidden shrink-0 border-b border-[#723645] bg-[#2A0E14]">
+          <div className="flex items-center gap-3 px-4 pt-3 pb-2">
+            <button
+              onClick={() => navigate("/app/tables")}
+              data-testid="table-back-btn-mobile"
+              className="w-10 h-10 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="min-w-0">
+              <div className="font-heading text-lg font-bold truncate">Τραπέζι {table?.name}</div>
+              <div className="text-xs text-neutral-500">
+                {tab ? `Ανοιχτή καρτέλα · ${tab.rounds?.length || 0} γύροι` : "Ελεύθερο"}
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-1.5 px-2 pb-2">
+            <button
+              onClick={() => setMobileTab("menu")}
+              data-testid="table-tab-menu"
+              data-state={mobileTab === "menu" ? "on" : "off"}
+              className={`flex-1 h-11 rounded-md text-sm font-bold transition-colors ${
+                mobileTab === "menu"
+                  ? "bg-brand text-white"
+                  : "bg-[#3D1620] border border-[#723645] text-neutral-300"
+              }`}
+            >
+              Μενού
+            </button>
+            <button
+              onClick={() => setMobileTab("order")}
+              data-testid="table-tab-order"
+              data-state={mobileTab === "order" ? "on" : "off"}
+              className={`flex-1 h-11 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
+                mobileTab === "order"
+                  ? "bg-brand text-white"
+                  : "bg-[#3D1620] border border-[#723645] text-neutral-300"
+              }`}
+            >
+              Παραγγελία
+              {orderCount > 0 && (
+                <span
+                  key={orderCount}
+                  className="pk-pop min-w-[22px] h-[22px] px-1.5 rounded-full bg-flame text-white text-xs font-bold flex items-center justify-center"
+                >
+                  {orderCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Menu */}
-        <section className="p-4 md:p-6 lg:overflow-hidden flex flex-col min-h-[45vh] lg:min-h-0">
-          <div className="flex items-center gap-3 mb-4 shrink-0">
+        <section
+          className={`p-4 md:p-6 flex-col min-h-0 sm:min-h-[45vh] lg:min-h-0 flex-1 sm:flex-none overflow-hidden sm:overflow-visible lg:overflow-hidden ${
+            mobileTab === "menu" ? "flex" : "hidden"
+          } sm:flex`}
+        >
+          <div className="hidden sm:flex items-center gap-3 mb-4 shrink-0">
             <button
               onClick={() => navigate("/app/tables")}
               data-testid="table-back-btn"
@@ -287,7 +353,11 @@ export default function TableOrder() {
         </section>
 
         {/* Tab panel */}
-        <aside className="flex flex-col bg-[#3D1620] border-t lg:border-t-0 lg:border-l border-[#723645] lg:h-full lg:overflow-hidden">
+        <aside
+          className={`flex-col bg-[#3D1620] border-t lg:border-t-0 lg:border-l border-[#723645] flex-1 sm:flex-none min-h-0 overflow-hidden sm:overflow-visible lg:overflow-hidden lg:h-full ${
+            mobileTab === "order" ? "flex" : "hidden"
+          } sm:flex`}
+        >
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
             {/* Existing rounds */}
             {(tab?.rounds || []).map((r) => (

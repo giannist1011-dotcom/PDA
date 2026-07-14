@@ -589,7 +589,10 @@ export default function PDA() {
           >
             Παραγγελία
             {orderCount > 0 && (
-              <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-flame text-white text-xs font-bold flex items-center justify-center">
+              <span
+                key={orderCount}
+                className="pk-pop min-w-[22px] h-[22px] px-1.5 rounded-full bg-flame text-white text-xs font-bold flex items-center justify-center"
+              >
                 {orderCount}
               </span>
             )}
