@@ -56,42 +56,82 @@ export default function MenuGrid({
         {filtered.map((it) => {
           const unavailable = it.available === false;
           const pulsing = pulsedId === it.id;
+          const hasPhoto = !!it.photo_url;
+
+          const stateClasses = unavailable
+            ? "bg-[#33111A] border border-[#4F202D] cursor-not-allowed opacity-50"
+            : `bg-[#4A1B27] border border-[#723645] hover:border-flame hover:scale-[1.03] hover:shadow-lg hover:shadow-gold/20 hover:bg-[#582233] active:scale-[0.96] transition-[transform,box-shadow,background-color,border-color] duration-[130ms] ease-out ${
+                pulsing ? "menu-item--pulse" : ""
+              }`;
+
+          const nameEl = (
+            <span className="font-heading text-lg font-semibold leading-tight text-white line-clamp-2 relative z-[1]">
+              {it.name}
+            </span>
+          );
+
+          const priceRow = (
+            <div className="flex items-end justify-between mt-2 relative z-[1]">
+              <span className="font-mono text-xl font-bold text-gold">{eur(it.price)}</span>
+              {it.customizable && !unavailable && (
+                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                  Custom
+                </span>
+              )}
+              {!it.customizable && (it.option_groups || []).length > 0 && !unavailable && (
+                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                  Επιλογές
+                </span>
+              )}
+            </div>
+          );
+
+          const unavailableBadge = unavailable && (
+            <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-[#FF3B30]/20 text-[#FF6961] text-[10px] font-bold uppercase tracking-widest">
+              Έλλειψη
+            </div>
+          );
+
+          const commonProps = {
+            onClick: () => handleClick(it),
+            disabled: unavailable,
+            "data-testid": `menu-item-${it.id}`,
+            "data-available": unavailable ? "false" : "true",
+          };
+
+          // Κάρτα ΜΕ φωτογραφία: εικόνα (πάνω, συμπαγής) → όνομα → τιμή
+          if (hasPhoto) {
+            return (
+              <button
+                key={it.id}
+                {...commonProps}
+                className={`menu-item group flex flex-col rounded-lg text-left no-select relative overflow-hidden will-change-transform ${stateClasses}`}
+              >
+                <img
+                  src={it.photo_url}
+                  alt=""
+                  loading="lazy"
+                  className="w-full h-24 sm:h-28 object-cover bg-[#2A0E14] relative z-[1]"
+                />
+                <div className="flex flex-col justify-between flex-1 p-3 relative z-[1]">
+                  {nameEl}
+                  {priceRow}
+                </div>
+                {unavailableBadge}
+              </button>
+            );
+          }
+
+          // Κάρτα ΧΩΡΙΣ φωτογραφία: ακριβώς όπως πριν (μόνο όνομα + τιμή)
           return (
             <button
               key={it.id}
-              onClick={() => handleClick(it)}
-              disabled={unavailable}
-              data-testid={`menu-item-${it.id}`}
-              data-available={unavailable ? "false" : "true"}
-              className={`menu-item group flex flex-col justify-between p-4 rounded-lg text-left h-32 no-select relative overflow-hidden will-change-transform ${
-                unavailable
-                  ? "bg-[#33111A] border border-[#4F202D] cursor-not-allowed opacity-50"
-                  : `bg-[#4A1B27] border border-[#723645] hover:border-flame hover:scale-[1.03] hover:shadow-lg hover:shadow-gold/20 hover:bg-[#582233] active:scale-[0.96] transition-[transform,box-shadow,background-color,border-color] duration-[130ms] ease-out ${
-                      pulsing ? "menu-item--pulse" : ""
-                    }`
-              }`}
+              {...commonProps}
+              className={`menu-item group flex flex-col justify-between p-4 rounded-lg text-left h-32 no-select relative overflow-hidden will-change-transform ${stateClasses}`}
             >
-              <span className="font-heading text-lg font-semibold leading-tight text-white line-clamp-2 relative z-[1]">
-                {it.name}
-              </span>
-              <div className="flex items-end justify-between mt-2 relative z-[1]">
-                <span className="font-mono text-xl font-bold text-gold">{eur(it.price)}</span>
-                {it.customizable && !unavailable && (
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-                    Custom
-                  </span>
-                )}
-                {!it.customizable && (it.option_groups || []).length > 0 && !unavailable && (
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-                    Επιλογές
-                  </span>
-                )}
-              </div>
-              {unavailable && (
-                <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-[#FF3B30]/20 text-[#FF6961] text-[10px] font-bold uppercase tracking-widest">
-                  Έλλειψη
-                </div>
-              )}
+              {nameEl}
+              {priceRow}
+              {unavailableBadge}
             </button>
           );
         })}
