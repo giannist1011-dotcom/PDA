@@ -129,10 +129,10 @@ export default function OrderPanel({
         </div>
       </div>
 
-      {/* Zone 2 — scrollable: only the order lines */}
+      {/* Zone 2 — scrollable: order lines + στοιχεία παράδοσης (ό,τι μπορεί να μεγαλώσει) */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6" data-testid="order-items">
         {isEmpty ? (
-          <div className="h-full flex flex-col items-center justify-center text-neutral-500 py-16 text-center">
+          <div className={`flex flex-col items-center justify-center text-neutral-500 py-16 text-center ${isPhone ? "" : "h-full"}`}>
             <div className="text-lg font-heading">Άδεια παραγγελία</div>
             <div className="text-sm mt-1">Επιλέξτε προϊόντα από το μενού</div>
           </div>
@@ -202,12 +202,10 @@ export default function OrderPanel({
           })
         )}
 
-      </div>
-
-      {/* Zone 3 — fixed footer: delivery type, total, actions (compact) */}
-      <div className="px-4 py-3 border-t border-[#723645] bg-[#33111A] shrink-0">
+        {/* Στοιχεία παράδοσης (Τηλέφωνο) — ΜΕΣΑ στη scrollable ζώνη ώστε να ΜΗΝ σπρώχνουν
+            το footer (Σύνολο/Εκτύπωση) εκτός οθόνης σε tablet */}
         {isPhone && (
-          <div className="mb-2 p-2 rounded-md border border-flame/40 bg-flame/5" data-testid="delivery-section">
+          <div className="mt-3 mb-1 p-2 rounded-md border border-flame/40 bg-flame/5" data-testid="delivery-section">
             <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={() => setDelivery({ delivery_type: "delivery", ...(delivery || {}) })}
@@ -277,7 +275,7 @@ export default function OrderPanel({
             </div>
 
             {activeFields.length > 0 && (
-              <div className="grid grid-cols-2 gap-1.5 mt-1.5 max-h-[24vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-1.5 mt-1.5">
                 {activeFields.map((f) => (
                   <input
                     key={f.key}
@@ -293,6 +291,11 @@ export default function OrderPanel({
             )}
           </div>
         )}
+
+      </div>
+
+      {/* Zone 3 — fixed footer: total + actions (ΠΑΝΤΑ ορατό, δεν μεγαλώνει ποτέ) */}
+      <div className="px-4 py-3 border-t border-[#723645] bg-[#33111A] shrink-0">
         {discountAmount > 0 && (
           <>
             <div className="flex items-baseline justify-between">
