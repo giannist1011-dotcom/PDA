@@ -63,6 +63,12 @@ export const apiListPhotos = () => api.get("/photos").then((r) => r.data);
 export const apiCreatePhoto = (payload) => api.post("/photos", payload).then((r) => r.data);
 export const apiDeletePhoto = (id) => api.delete(`/photos/${id}`).then((r) => r.data);
 
+// STOCK PHOTO LIBRARY (κοινή βιβλιοθήκη OrderDeck)
+// Μαγαζιά: μόνο οι stock φωτογραφίες του δικού τους business_type + εισαγωγή ως προσωπικό αντίγραφο
+export const apiListStockPhotos = () => api.get("/stock-photos").then((r) => r.data);
+export const apiImportStockPhoto = (stockId) =>
+  api.post(`/photos/import-stock/${stockId}`).then((r) => r.data);
+
 // STOCK (independent custom inventory)
 export const apiGetStockConfig = () => api.get("/stock/config").then((r) => r.data);
 export const apiCreateStockCategory = (payload) =>
@@ -197,6 +203,19 @@ export const apiAdminDeletePromo = (pw, id) =>
   api.delete(`/admin/promo/${id}`, adminHeaders(pw)).then((r) => r.data);
 export const apiAdminPromoUses = (pw, id) =>
   api.get(`/admin/promo/${id}/uses`, adminHeaders(pw)).then((r) => r.data);
+
+// STOCK PHOTOS — admin (ίδιο admin password με τους εκπτωτικούς κωδικούς)
+export const apiAdminListStockPhotos = (pw, businessType) =>
+  api
+    .get("/admin/stock-photos", {
+      ...adminHeaders(pw),
+      params: businessType ? { business_type: businessType } : {},
+    })
+    .then((r) => r.data);
+export const apiAdminCreateStockPhoto = (pw, payload) =>
+  api.post("/admin/stock-photos", payload, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminDeleteStockPhoto = (pw, id) =>
+  api.delete(`/admin/stock-photos/${id}`, adminHeaders(pw)).then((r) => r.data);
 
 // Error helper
 export function formatApiError(e) {

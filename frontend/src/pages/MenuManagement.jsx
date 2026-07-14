@@ -32,6 +32,8 @@ import {
   apiDeleteItem,
   apiUpdateCustomization,
   apiListPhotos,
+  apiListStockPhotos,
+  apiImportStockPhoto,
   formatApiError,
 } from "@/lib/api";
 import { eur } from "@/lib/format";
@@ -60,10 +62,21 @@ const emptyGroup = () => ({
 });
 
 // ---------- Item Modal ----------
-function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) {
+function ItemModal({
+  open,
+  initial,
+  categories,
+  photos = [],
+  stockPhotos = [],
+  onImportStock,
+  onClose,
+  onSave,
+}) {
   const [form, setForm] = useState(initial || emptyItem());
   const [busy, setBusy] = useState(false);
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
+  const [pickerTab, setPickerTab] = useState("mine"); // "mine" | "stock"
+  const [importingId, setImportingId] = useState(null);
 
   useEffect(() => {
     const base = initial || emptyItem(categories[0]?.id || "");
@@ -74,7 +87,30 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
     });
   }, [initial, open, categories]);
 
+  // Ξεκίνα πάντα στο σωστό tab: αν δεν έχει προσωπικές αλλά έχει βιβλιοθήκη
+  useEffect(() => {
+    if (photoPickerOpen) {
+      setPickerTab(photos.length === 0 && stockPhotos.length > 0 ? "stock" : "mine");
+    }
+  }, [photoPickerOpen, photos.length, stockPhotos.length]);
+
   const selectedPhoto = photos.find((p) => p.id === form.photo_id);
+
+  const pickStock = async (sp) => {
+    if (importingId) return;
+    setImportingId(sp.id);
+    try {
+      const personal = await onImportStock(sp.id);
+      if (personal?.id) {
+        setForm((f) => ({ ...f, photo_id: personal.id }));
+        setPhotoPickerOpen(false);
+      }
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setImportingId(null);
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -237,9 +273,13 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                 type="button"
                 onClick={() => setPhotoPickerOpen(true)}
                 data-testid="item-photo-pick-btn"
-                disabled={photos.length === 0}
+                disabled={photos.length === 0 && stockPhotos.length === 0}
                 className="h-9 bg-[#2A0E14] border border-[#723645] hover:border-flame text-white text-xs"
-                title={photos.length === 0 ? "Ανεβάστε πρώτα φωτογραφίες" : "Επιλογή"}
+                title={
+                  photos.length === 0 && stockPhotos.length === 0
+                    ? "Ανεβάστε πρώτα φωτογραφίες"
+                    : "Επιλογή"
+                }
               >
                 {form.photo_id ? "Αλλαγή" : "Επιλογή"}
               </Button>
@@ -418,38 +458,104 @@ function ItemModal({ open, initial, categories, photos = [], onClose, onSave }) 
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              {photos.length === 0 ? (
+
+              {/* Tabs: προσωπικές vs κοινή βιβλιοθήκη OrderDeck */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setPickerTab("mine")}
+                  data-testid="item-photo-tab-mine"
+                  className={`h-9 px-4 rounded-full text-sm font-bold border transition-colors ${
+                    pickerTab === "mine"
+                      ? "bg-brand border-brand text-white"
+                      : "bg-[#3D1620] border-[#723645] text-neutral-300 hover:border-flame"
+                  }`}
+                >
+                  Οι φωτογραφίες μου ({photos.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPickerTab("stock")}
+                  data-testid="item-photo-tab-stock"
+                  className={`h-9 px-4 rounded-full text-sm font-bold border transition-colors ${
+                    pickerTab === "stock"
+                      ? "bg-brand border-brand text-white"
+                      : "bg-[#3D1620] border-[#723645] text-neutral-300 hover:border-flame"
+                  }`}
+                >
+                  Βιβλιοθήκη OrderDeck ({stockPhotos.length})
+                </button>
+              </div>
+
+              {pickerTab === "mine" ? (
+                photos.length === 0 ? (
+                  <div className="text-neutral-500 py-12 text-center">
+                    Δεν υπάρχουν προσωπικές φωτογραφίες. Ανεβάστε από «Βιβλιοθήκη φωτογραφιών» ή
+                    διαλέξτε από τη Βιβλιοθήκη OrderDeck.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                    {photos.map((p) => {
+                      const active = p.id === form.photo_id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setForm({ ...form, photo_id: p.id });
+                            setPhotoPickerOpen(false);
+                          }}
+                          data-testid={`item-photo-option-${p.id}`}
+                          className={`rounded-lg overflow-hidden border-2 transition-colors ${
+                            active
+                              ? "border-flame ring-2 ring-flame/40"
+                              : "border-[#723645] hover:border-flame"
+                          }`}
+                        >
+                          <img
+                            src={p.data_url}
+                            alt={p.filename}
+                            className="w-full aspect-square object-cover"
+                            loading="lazy"
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )
+              ) : stockPhotos.length === 0 ? (
                 <div className="text-neutral-500 py-12 text-center">
-                  Δεν υπάρχουν φωτογραφίες. Ανεβάστε από «Βιβλιοθήκη φωτογραφιών».
+                  Δεν υπάρχουν ακόμα φωτογραφίες OrderDeck για τον τύπο του καταστήματός σας.
                 </div>
               ) : (
                 <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                  {photos.map((p) => {
-                    const active = p.id === form.photo_id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setForm({ ...form, photo_id: p.id });
-                          setPhotoPickerOpen(false);
-                        }}
-                        data-testid={`item-photo-option-${p.id}`}
-                        className={`rounded-lg overflow-hidden border-2 transition-colors ${
-                          active
-                            ? "border-flame ring-2 ring-flame/40"
-                            : "border-[#723645] hover:border-flame"
-                        }`}
-                      >
+                  {stockPhotos.map((sp) => (
+                    <button
+                      key={sp.id}
+                      type="button"
+                      onClick={() => pickStock(sp)}
+                      disabled={!!importingId}
+                      data-testid={`item-photo-stock-${sp.id}`}
+                      className="rounded-lg overflow-hidden border-2 border-[#723645] hover:border-flame transition-colors disabled:opacity-50 text-left"
+                    >
+                      <div className="relative">
                         <img
-                          src={p.data_url}
-                          alt={p.filename}
+                          src={sp.data_url}
+                          alt={sp.product_label}
                           className="w-full aspect-square object-cover"
                           loading="lazy"
                         />
-                      </button>
-                    );
-                  })}
+                        {importingId === sp.id && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-xs font-bold">
+                            Προσθήκη...
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-2 py-1.5 text-xs text-neutral-300 truncate" title={sp.product_label}>
+                        {sp.product_label}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -649,15 +755,25 @@ export default function MenuManagement() {
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [photos, setPhotos] = useState([]);
+  const [stockPhotos, setStockPhotos] = useState([]);
   const load = async () => {
     try {
       const c = await apiGetMenuConfig();
       setConfig(c);
       try { setPhotos(await apiListPhotos()); } catch {}
+      // Κοινή βιβλιοθήκη OrderDeck — μόνο του τύπου του καταστήματος (φιλτράρεται στον server)
+      try { setStockPhotos(await apiListStockPhotos()); } catch {}
       if (!activeCat && c.categories.length) setActiveCat(c.categories[0].id);
     } catch (e) {
       toast.error(formatApiError(e));
     }
+  };
+
+  // Εισαγωγή stock φωτογραφίας → προσωπικό αντίγραφο (idempotent στον server)
+  const importStock = async (stockId) => {
+    const personal = await apiImportStockPhoto(stockId);
+    setPhotos((prev) => (prev.some((p) => p.id === personal.id) ? prev : [personal, ...prev]));
+    return personal;
   };
 
   useEffect(() => {
@@ -1045,7 +1161,9 @@ export default function MenuManagement() {
         open={itemModalOpen}
         initial={editingItem}
         categories={config.categories}
-         photos={photos}
+        photos={photos}
+        stockPhotos={stockPhotos}
+        onImportStock={importStock}
         onClose={() => {
           setItemModalOpen(false);
           setEditingItem(null);

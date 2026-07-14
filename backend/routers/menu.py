@@ -353,6 +353,35 @@ async def create_photo(body: PhotoIn, user: dict = Depends(require_manager)):
     return {k: v for k, v in doc.items() if k not in ("_id", "user_id")}
 
 
+@router.post("/photos/import-stock/{stock_id}")
+async def import_stock_photo(stock_id: str, user: dict = Depends(require_manager)):
+    """Επιλογή stock φωτογραφίας από τη βιβλιοθήκη OrderDeck → προσωπικό αντίγραφο.
+
+    Δημιουργεί ένα φυσιολογικό photo doc του μαγαζιού ώστε η αντιστοίχιση σε προϊόν
+    (photo_id) και η ανάλυση σε photo_url να δουλεύουν χωρίς αλλαγές. Idempotent:
+    αν έχει ήδη εισαχθεί η ίδια stock φωτογραφία, επιστρέφει το υπάρχον αντίγραφο.
+    """
+    stock = await db.stock_photos.find_one({"id": stock_id}, {"_id": 0})
+    if not stock:
+        raise HTTPException(404, "Η φωτογραφία δεν βρέθηκε")
+    existing = await db.photos.find_one(
+        {"user_id": user["id"], "source_stock_id": stock_id}, {"_id": 0, "user_id": 0}
+    )
+    if existing:
+        return existing
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "filename": stock.get("product_label") or "OrderDeck",
+        "data_url": stock["data_url"],
+        "size_bytes": len(stock["data_url"]),
+        "source_stock_id": stock_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.photos.insert_one(doc)
+    return {k: v for k, v in doc.items() if k not in ("_id", "user_id")}
+
+
 @router.delete("/photos/{pid}")
 async def delete_photo(pid: str, user: dict = Depends(require_manager)):
     r = await db.photos.delete_one({"id": pid, "user_id": user["id"]})

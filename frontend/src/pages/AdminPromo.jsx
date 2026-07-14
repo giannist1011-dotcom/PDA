@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Ticket,
@@ -10,6 +11,7 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
+  Images,
 } from "lucide-react";
 import {
   apiAdminListPromos,
@@ -244,6 +246,12 @@ export default function AdminPromo() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Link
+              to="/admin/stock-photos"
+              className="h-10 px-3 rounded-md bg-[#3D1620] border border-[#723645] hover:border-flame text-white text-sm font-semibold inline-flex items-center gap-2"
+            >
+              <Images className="w-4 h-4" /> Φωτογραφίες
+            </Link>
             <Button
               type="button"
               onClick={refresh}
