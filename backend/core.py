@@ -73,7 +73,10 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
         raise HTTPException(401, "Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(401, "Invalid token")
-    user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+    # store_logo can be a ~2MB base64 blob — never load it on every authed request
+    user = await db.users.find_one(
+        {"id": payload["sub"]}, {"_id": 0, "password_hash": 0, "store_logo": 0}
+    )
     if not user:
         raise HTTPException(401, "User not found")
     role = payload.get("profile")  # legacy tokens carry "owner"/"employee" here

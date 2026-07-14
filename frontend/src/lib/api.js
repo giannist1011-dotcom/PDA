@@ -166,6 +166,21 @@ export const apiUpdateExpense = (id, payload) =>
 export const apiDeleteExpense = (id) =>
   api.delete(`/expenses/${id}`).then((r) => r.data);
 
+// PUBLIC MENU (δημόσιος κατάλογος)
+export const apiGetPublicMenuSettings = () =>
+  api.get("/settings/public-menu").then((r) => r.data);
+export const apiTogglePublicMenu = (enabled) =>
+  api.put("/settings/public-menu", { enabled }).then((r) => r.data);
+export const apiUpdatePublicSlug = (slug) =>
+  api.put("/settings/public-menu/slug", { slug }).then((r) => r.data);
+export const apiSetStoreLogo = (data_url) =>
+  api.put("/settings/public-menu/logo", { data_url }).then((r) => r.data);
+export const apiRemoveStoreLogo = () =>
+  api.delete("/settings/public-menu/logo").then((r) => r.data);
+// Public — χωρίς login
+export const apiGetPublicMenu = (slug) =>
+  api.get(`/public/menu/${encodeURIComponent(slug)}`).then((r) => r.data);
+
 // PROMO CODES
 export const apiValidatePromo = (code) =>
   api.post("/promo/validate", { code }).then((r) => r.data);

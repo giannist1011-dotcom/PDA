@@ -21,6 +21,7 @@ import Waiters from "@/pages/Waiters";
 import Tables from "@/pages/Tables";
 import TableOrder from "@/pages/TableOrder";
 import AdminPromo from "@/pages/AdminPromo";
+import PublicMenu from "@/pages/PublicMenu";
 
 // Old top-level app paths now live under /app — keep old links/bookmarks working.
 const LEGACY_PATHS = [
@@ -53,6 +54,9 @@ function App() {
           <Routes>
             {/* Public landing page */}
             <Route path="/" element={<Landing />} />
+
+            {/* Δημόσιος κατάλογος μενού ανά κατάστημα — χωρίς login */}
+            <Route path="/menu/:slug" element={<PublicMenu />} />
 
             {/* OrderDeck admin — δικό του password gate, εκτός λογαριασμών μαγαζιών */}
             <Route path="/admin/promo" element={<AdminPromo />} />

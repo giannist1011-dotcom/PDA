@@ -90,6 +90,8 @@ h1, h2, h3, h4, h5, .font-heading {
 /* Utility */
 .no-select { user-select: none; -webkit-user-select: none; }
 .tap-target { min-height: 64px; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 /* Print styles for receipts */
 @media print {

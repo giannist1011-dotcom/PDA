@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, LayoutGrid, Store } from "lucide-react";
+import { Users, LayoutGrid, Store, Globe } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ProfilesManager from "@/components/ProfilesManager";
 import TablesEditor from "@/components/TablesEditor";
+import PublicMenuSettings from "@/components/PublicMenuSettings";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -169,6 +170,21 @@ export default function Settings() {
           </div>
           <div className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg">
             <TablesSettings />
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Globe className="w-6 h-6 text-flame" />
+              <h2 className="font-heading text-2xl font-bold">Δημόσιος κατάλογος</h2>
+            </div>
+            <p className="text-sm text-neutral-400">
+              Δημόσια σελίδα μενού με λογότυπο, σύνδεσμο και QR κώδικα για τους πελάτες σας
+            </p>
+          </div>
+          <div className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg">
+            <PublicMenuSettings />
           </div>
         </section>
       </main>
