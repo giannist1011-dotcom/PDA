@@ -1,0 +1,37 @@
+name: Demo cleanup
+
+# Διαγράφει τους ληγμένους δοκιμαστικούς (demo) λογαριασμούς κάθε 30 λεπτά.
+# Απαιτεί δύο repo secrets:
+#   BACKEND_URL            → το URL του Render backend, π.χ. https://orderdeck.onrender.com (χωρίς / στο τέλος)
+#   PROMO_ADMIN_PASSWORD   → ίδιο με το env του backend (χρησιμοποιείται ως X-Admin-Password)
+# Σημείωση: υπάρχει και best-effort καθάρισμα κάθε φορά που δημιουργείται νέο demo,
+# οπότε ακόμη κι αν λείπει το cron, οι ληγμένοι λογαριασμοί καθαρίζονται τελικά.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # κάθε 30 λεπτά
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge expired demo accounts
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          ADMIN_PASSWORD: ${{ secrets.PROMO_ADMIN_PASSWORD }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$ADMIN_PASSWORD" ]; then
+            echo "Λείπουν τα secrets BACKEND_URL ή PROMO_ADMIN_PASSWORD — παρακάμπτεται."
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" -X POST \
+            "$BACKEND_URL/api/admin/demo/cleanup" \
+            -H "X-Admin-Password: $ADMIN_PASSWORD")
+          echo "HTTP $code"
+          cat /tmp/resp.json 2>/dev/null || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "Ο καθαρισμός demo απέτυχε (HTTP $code)"
+            exit 1
+          fi

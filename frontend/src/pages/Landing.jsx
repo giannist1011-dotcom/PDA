@@ -18,8 +18,12 @@ import {
   ArrowRight,
   Sparkles,
   Tag,
+  Clapperboard,
+  X,
 } from "lucide-react";
 import { BUSINESS_TYPES } from "@/lib/business";
+import { useAuth } from "@/context/AuthContext";
+import { formatApiError } from "@/lib/api";
 
 /* ---------- Data ---------- */
 
@@ -194,11 +198,154 @@ function PlaceholderStats() {
   );
 }
 
+/* ---------- Demo modal ---------- */
+
+function DemoModal({ open, onClose }) {
+  const navigate = useNavigate();
+  const { startDemo } = useAuth();
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [type, setType] = useState("souvlaki");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  if (!open) return null;
+
+  const inputCls =
+    "mt-1 w-full h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:border-flame";
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (!/\S+@\S+\.\S+/.test(email)) return setError("Εισάγετε έγκυρο email");
+    if (!name.trim()) return setError("Εισάγετε όνομα επιχείρησης");
+    setBusy(true);
+    try {
+      await startDemo({ email: email.trim(), business_name: name.trim(), business_type: type });
+      navigate("/app");
+    } catch (err) {
+      setError(formatApiError(err));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      data-testid="demo-modal"
+    >
+      <div className="w-full max-w-md bg-[#141414] border border-[#333] rounded-2xl p-6 max-h-[92dvh] overflow-y-auto">
+        <div className="flex items-start justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-flame/15 border border-flame/30 flex items-center justify-center shrink-0">
+              <Clapperboard className="w-5 h-5 text-flame" />
+            </div>
+            <div>
+              <h3 className="font-heading text-xl font-extrabold leading-tight">Δοκιμαστικό demo</h3>
+              <p className="text-xs text-neutral-500 mt-0.5">Μπες κατευθείαν — χωρίς εγγραφή, χωρίς κωδικό</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            data-testid="demo-modal-close"
+            className="w-9 h-9 rounded-lg border border-[#333] hover:border-flame flex items-center justify-center text-neutral-400 shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="text-xs uppercase tracking-widest font-bold text-neutral-400">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@email.com"
+              data-testid="demo-email"
+              autoFocus
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest font-bold text-neutral-400">
+              Όνομα επιχείρησης
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="π.χ. Ο Λευτέρης"
+              data-testid="demo-business-name"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest font-bold text-neutral-400">
+              Τύπος επιχείρησης
+            </label>
+            <div className="grid grid-cols-2 gap-2 mt-1.5">
+              {BUSINESS_TYPES.map((b) => {
+                const Icon = b.icon;
+                const active = type === b.key;
+                return (
+                  <button
+                    type="button"
+                    key={b.key}
+                    onClick={() => setType(b.key)}
+                    data-testid={`demo-biz-${b.key}`}
+                    className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all active:scale-[0.98] ${
+                      active
+                        ? "bg-flame/10 border-flame text-white"
+                        : "bg-[#1b1b1b] border-[#333] text-neutral-300 hover:border-flame"
+                    }`}
+                  >
+                    <span
+                      className={`w-9 h-9 rounded-lg bg-flame/15 flex items-center justify-center shrink-0 ${
+                        active ? "" : "opacity-70"
+                      }`}
+                    >
+                      <Icon className="w-5 h-5 text-flame" />
+                    </span>
+                    <span className="text-sm font-bold">{b.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {error && (
+            <div
+              className="text-sm text-[#FF6961] bg-[#FF3B30]/10 border border-[#FF3B30]/40 rounded-lg p-3"
+              data-testid="demo-error"
+            >
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            data-testid="demo-submit"
+            className="w-full h-14 rounded-xl bg-flame hover:bg-[#EA580C] text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-flame/25 transition-all disabled:opacity-50"
+          >
+            {busy ? "Δημιουργία demo..." : (<>Ξεκίνα το demo <ArrowRight className="w-5 h-5" /></>)}
+          </button>
+
+          <p className="text-xs text-center text-neutral-500 leading-relaxed" data-testid="demo-warning">
+            🎬 Ο δοκιμαστικός λογαριασμός διαγράφεται αυτόματα μετά από 3 ώρες.
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Page ---------- */
 
 export default function Landing() {
   const navigate = useNavigate();
   const [promo, setPromo] = useState("");
+  const [demoOpen, setDemoOpen] = useState(false);
 
   const goRegister = () => {
     const code = promo.trim();
@@ -253,7 +400,7 @@ export default function Landing() {
             POS ταμείου, παραγγελίες, τραπέζια και στατιστικά — ένα σύστημα φτιαγμένο για την ελληνική
             εστίαση, από σουβλατζίδικο μέχρι καφετέρια.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
             <button
               onClick={goRegister}
               data-testid="landing-hero-cta"
@@ -261,6 +408,14 @@ export default function Landing() {
             >
               Δοκίμασε δωρεάν 1 μήνα
               <ArrowRight className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setDemoOpen(true)}
+              data-testid="landing-hero-demo"
+              className="w-full sm:w-auto h-14 px-8 rounded-xl bg-[#1b1b1b] border border-gold/50 hover:border-gold text-gold font-bold text-lg flex items-center justify-center gap-2 transition-colors"
+            >
+              <Clapperboard className="w-5 h-5" />
+              Δοκίμασε το demo
             </button>
             <button
               onClick={scrollToFeatures}
@@ -271,7 +426,7 @@ export default function Landing() {
             </button>
           </div>
           <div className="mt-4 text-xs md:text-sm text-neutral-500">
-            Χωρίς κάρτα · Χωρίς δέσμευση · Έτοιμο μενού σε 2 λεπτά
+            Χωρίς κάρτα · Χωρίς δέσμευση · Έτοιμο μενού σε 2 λεπτά · Το demo σβήνει σε 3 ώρες
           </div>
         </div>
       </section>
@@ -425,6 +580,14 @@ export default function Landing() {
               Ξεκίνα δωρεάν
               <ArrowRight className="w-5 h-5" />
             </button>
+            <button
+              onClick={() => setDemoOpen(true)}
+              data-testid="landing-pricing-demo"
+              className="mt-3 w-full h-12 rounded-xl border border-gold/40 hover:border-gold text-gold font-bold flex items-center justify-center gap-2 transition-colors"
+            >
+              <Clapperboard className="w-4 h-4" />
+              Ή δοκίμασε το demo χωρίς εγγραφή
+            </button>
             <div className="mt-3 text-center text-xs text-white/50">
               Χωρίς κάρτα για τον δωρεάν μήνα · Ακύρωση όποτε θες
             </div>
@@ -456,6 +619,8 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </div>
   );
 }

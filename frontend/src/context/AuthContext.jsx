@@ -3,6 +3,7 @@ import {
   apiLogin,
   apiMe,
   apiRegister,
+  apiStartDemo,
   apiSelectProfile,
   apiExitProfile,
   setToken,
@@ -43,6 +44,14 @@ export function AuthProvider({ children }) {
     setError(null);
     const { token, user: u } = await apiRegister(payload);
     setToken(token);
+    setUser(u);
+    return u;
+  };
+
+  const startDemo = async (payload) => {
+    setError(null);
+    const { token, user: u } = await apiStartDemo(payload);
+    setToken(token); // token already carries the Ιδιοκτήτης profile → straight into the app
     setUser(u);
     return u;
   };
@@ -90,6 +99,7 @@ export function AuthProvider({ children }) {
         error,
         login,
         register,
+        startDemo,
         logout,
         selectProfile,
         exitProfile,

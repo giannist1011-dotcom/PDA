@@ -23,6 +23,7 @@ export const getToken = () => localStorage.getItem(TOKEN_KEY);
 // AUTH
 export const apiRegister = (payload) => api.post("/auth/register", payload).then((r) => r.data);
 export const apiLogin = (payload) => api.post("/auth/login", payload).then((r) => r.data);
+export const apiStartDemo = (payload) => api.post("/auth/demo", payload).then((r) => r.data);
 export const apiMe = () => api.get("/auth/me").then((r) => r.data);
 
 // MENU

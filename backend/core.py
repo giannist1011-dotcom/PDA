@@ -132,6 +132,8 @@ def public_user(u: dict) -> dict:
         "employee_pin_set": bool(u.get("employee_pin_set", False)),
         "tables_enabled": bool(u.get("tables_enabled", False)),
         "business_type": u.get("business_type") or "souvlaki",
+        "is_demo": bool(u.get("is_demo", False)),
+        "demo_expires_at": u.get("demo_expires_at"),
     }
 
 
@@ -303,3 +305,35 @@ async def ensure_demo_account():
     await db.users.insert_one(user_doc)
     await seed_user_menu(uid)
     logger.info("Seeded demo Πεινώκιο account: %s", demo_email)
+
+
+# ============ DEMO ACCOUNTS (per-visitor, auto-expiring) ============
+DEMO_TTL_HOURS = 3
+
+# Όλες οι per-user collections — για ΠΛΗΡΗ διαγραφή ενός λογαριασμού.
+# (Το promo_codes είναι global, το demo_leads κρατιέται σκόπιμα για follow-up.)
+PER_USER_COLLECTIONS = [
+    "profiles", "categories", "items", "orders", "shopping",
+    "stock_categories", "stock_items", "photos", "employees", "shifts",
+    "expense_categories", "expenses", "day_reports", "tables", "table_tabs",
+]
+
+
+async def purge_user_data(user_id: str) -> None:
+    """Διαγράφει ΟΛΑ τα δεδομένα ενός λογαριασμού από όλα τα collections + τον ίδιο τον χρήστη."""
+    for coll in PER_USER_COLLECTIONS:
+        await db[coll].delete_many({"user_id": user_id})
+    await db.users.delete_one({"id": user_id})
+
+
+async def cleanup_expired_demos() -> int:
+    """Βρίσκει demo λογαριασμούς με demo_expires_at < τώρα και τους διαγράφει ολοκληρωτικά."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    expired = await db.users.find(
+        {"is_demo": True, "demo_expires_at": {"$lt": now_iso}}, {"id": 1}
+    ).to_list(1000)
+    for u in expired:
+        await purge_user_data(u["id"])
+    if expired:
+        logger.info("Purged %d expired demo account(s)", len(expired))
+    return len(expired)

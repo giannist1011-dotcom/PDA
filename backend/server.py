@@ -69,6 +69,9 @@ async def on_startup():
     await db.promo_codes.create_index("code", unique=True)
     await db.users.create_index([("promo.code", 1)], sparse=True)
     await db.users.create_index("public_slug", unique=True, sparse=True)
+    # Demo λογαριασμοί: γρήγορο εντοπισμό ληγμένων για το auto-cleanup
+    await db.users.create_index([("is_demo", 1), ("demo_expires_at", 1)], sparse=True)
+    await db.demo_leads.create_index([("created_at", -1)])
     await ensure_demo_account()
 
 

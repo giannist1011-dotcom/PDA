@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
@@ -18,6 +18,8 @@ import {
   History as HistoryIcon,
   CalendarCheck,
   LayoutGrid,
+  Clapperboard,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
@@ -41,6 +43,64 @@ const NAV_ALL = [
   { to: "/app/waiters", label: "Σερβιτόροι", icon: UserIcon, testId: "drawer-link-waiters", roles: ["manager"] },
   { to: "/app/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", roles: ["owner"] },
 ];
+
+// ---------- Demo banner (κάτω από το header όταν ο λογαριασμός είναι δοκιμαστικός) ----------
+const remainingMs = (iso) => {
+  const t = new Date(iso).getTime() - Date.now();
+  return Number.isFinite(t) ? t : 0;
+};
+
+const fmtCountdown = (ms) => {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${h}:${pad(m)}:${pad(sec)}`;
+};
+
+function DemoBanner({ expiresAt }) {
+  const navigate = useNavigate();
+  const [remaining, setRemaining] = useState(() => remainingMs(expiresAt));
+
+  useEffect(() => {
+    setRemaining(remainingMs(expiresAt));
+    const t = setInterval(() => setRemaining(remainingMs(expiresAt)), 1000);
+    return () => clearInterval(t);
+  }, [expiresAt]);
+
+  const expired = remaining <= 0;
+  return (
+    <div
+      className="shrink-0 flex items-center justify-between gap-2 px-3 sm:px-4 h-11 bg-gold/15 border-b border-gold/40 text-gold"
+      data-testid="demo-banner"
+    >
+      <div className="flex items-center gap-2 min-w-0 text-xs sm:text-sm font-bold">
+        <Clapperboard className="w-4 h-4 shrink-0" />
+        <span className="truncate">
+          {expired ? (
+            "ΔΟΚΙΜΑΣΤΙΚΟΣ ΛΟΓΑΡΙΑΣΜΟΣ — έληξε"
+          ) : (
+            <>
+              <span className="hidden sm:inline">ΔΟΚΙΜΑΣΤΙΚΟΣ ΛΟΓΑΡΙΑΣΜΟΣ — λήγει σε </span>
+              <span className="sm:hidden">Demo · </span>
+              <span className="font-mono" data-testid="demo-countdown">{fmtCountdown(remaining)}</span>
+            </>
+          )}
+        </span>
+      </div>
+      <button
+        onClick={() => navigate("/app/register")}
+        data-testid="demo-banner-register"
+        className="shrink-0 h-8 px-2.5 sm:px-3 rounded-md bg-gold text-black text-xs font-extrabold hover:bg-[#E3B23C] flex items-center gap-1.5 transition-colors"
+      >
+        <span className="hidden sm:inline">Κάνε πλήρη εγγραφή</span>
+        <span className="sm:hidden">Εγγραφή</span>
+        <ArrowRight className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
 
 export default function AppShell({ title, children }) {
   const { user, logout, exitProfile, role, canManage, profileName } = useAuth();
@@ -121,6 +181,10 @@ export default function AppShell({ title, children }) {
           {profileBadge}
         </div>
       </header>
+
+      {user && user !== false && user.is_demo && user.demo_expires_at && (
+        <DemoBanner expiresAt={user.demo_expires_at} />
+      )}
 
       {open && (
         <>

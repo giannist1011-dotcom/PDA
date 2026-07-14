@@ -82,7 +82,8 @@ export default function Register() {
     owner_pin2: "",
   });
 
-  if (user && user !== false) return <Navigate to="/app" replace />;
+  // Οι δοκιμαστικοί (demo) χρήστες επιτρέπεται να περάσουν στο wizard για πλήρη εγγραφή
+  if (user && user !== false && !user.is_demo) return <Navigate to="/app" replace />;
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 

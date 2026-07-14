@@ -1,9 +1,9 @@
-"""Auth: register/login, προφίλ, επιλογή προφίλ με PIN, owner-PIN gate."""
+"""Auth: register/login, προφίλ, επιλογή προφίλ με PIN, owner-PIN gate, demo mode."""
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel, Field, EmailStr
 
 from core import (
@@ -17,9 +17,11 @@ from core import (
     ensure_profiles_migrated,
     check_owner_pin,
     seed_account_from_preset,
+    cleanup_expired_demos,
+    DEMO_TTL_HOURS,
 )
 from presets import PRESETS
-from routers.promo import redeem_promo, promo_description
+from routers.promo import redeem_promo, promo_description, require_admin
 
 router = APIRouter()
 
@@ -43,6 +45,12 @@ class RegisterIn(BaseModel):
 class LoginIn(BaseModel):
     email: EmailStr
     password: str
+
+
+class DemoIn(BaseModel):
+    email: EmailStr
+    business_name: str = Field(min_length=1, max_length=80)
+    business_type: Literal["souvlaki", "cafe", "pizzeria", "burger"] = "souvlaki"
 
 
 class TokenOut(BaseModel):
@@ -140,6 +148,83 @@ async def login(body: LoginIn):
     await ensure_profiles_migrated(user["id"])
     token = create_token(user["id"], email)
     return {"token": token, "user": public_user(user)}
+
+
+# ============ DEMO MODE (per-visitor, auto-expiring, auto-login) ============
+@router.post("/auth/demo", response_model=TokenOut)
+async def start_demo(body: DemoIn):
+    """Δημιουργεί δοκιμαστικό λογαριασμό που λήγει σε 3 ώρες και επιστρέφει JWT
+    με ήδη επιλεγμένο προφίλ Ιδιοκτήτη → ο επισκέπτης μπαίνει κατευθείαν, χωρίς login/PIN."""
+    # Ευκαιριακό καθάρισμα τυχόν ληγμένων demo (best-effort — δεν μπλοκάρει το request)
+    try:
+        await cleanup_expired_demos()
+    except Exception:  # pragma: no cover
+        pass
+
+    preset = PRESETS.get(body.business_type, PRESETS["souvlaki"])
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    expires_iso = (now + timedelta(hours=DEMO_TTL_HOURS)).isoformat()
+    uid = str(uuid.uuid4())
+    # Συνθετικό μοναδικό email στον χρήστη (unique index) — το πραγματικό μένει στα demo_leads
+    account_email = f"demo-{uid}@demo.orderdeck"
+    owner_id = str(uuid.uuid4())[:8]
+    doc = {
+        "id": uid,
+        "email": account_email,
+        "password_hash": hash_password(uuid.uuid4().hex),  # μη-χρησιμοποιήσιμος κωδικός
+        "restaurant_name": body.business_name.strip(),
+        "full_name": "",
+        "phone": "",
+        "city": "",
+        "website": "",
+        "business_type": body.business_type,
+        "tables_enabled": True,
+        "customization": preset["customization"],
+        "owner_pin_hash": hash_password("0000"),
+        "employee_pin_hash": hash_password("0000"),
+        "owner_pin_set": False,
+        "employee_pin_set": False,
+        "is_demo": True,
+        "demo_expires_at": expires_iso,
+        "created_at": now_iso,
+    }
+    await db.users.insert_one(doc)
+    # Seed μενού + ελλείψεις + default τραπέζια από το preset
+    await seed_account_from_preset(uid, preset, has_tables=True)
+    # Έτοιμα προφίλ (όλα με PIN 0000 — δεν χρειάζεται αλλαγή σε demo)
+    await db.profiles.insert_many([
+        {"id": owner_id, "user_id": uid, "name": "Ιδιοκτήτης", "role": "owner",
+         "pin_hash": hash_password("0000"), "created_at": now_iso},
+        {"id": str(uuid.uuid4())[:8], "user_id": uid, "name": "Υπάλληλος", "role": "employee",
+         "pin_hash": hash_password("0000"), "created_at": now_iso},
+        {"id": str(uuid.uuid4())[:8], "user_id": uid, "name": "Σερβιτόρος", "role": "waiter",
+         "pin_hash": hash_password("0000"), "created_at": now_iso},
+    ])
+    # Lead capture — ξεχωριστό collection, διατηρείται και μετά τη διαγραφή του demo
+    await db.demo_leads.insert_one({
+        "id": str(uuid.uuid4()),
+        "email": body.email.lower(),
+        "business_name": body.business_name.strip(),
+        "business_type": body.business_type,
+        "created_at": now_iso,
+    })
+    # Auto-login: token με επιλεγμένο προφίλ Ιδιοκτήτη
+    token = create_token(
+        uid, account_email, profile_id=owner_id, role="owner", profile_name="Ιδιοκτήτης",
+    )
+    doc["role"] = "owner"
+    doc["profile_id"] = owner_id
+    doc["profile_name"] = "Ιδιοκτήτης"
+    return {"token": token, "user": public_user(doc)}
+
+
+@router.post("/admin/demo/cleanup")
+async def admin_demo_cleanup(x_admin_password: Optional[str] = Header(None)):
+    """Καθαρισμός ληγμένων demo λογαριασμών — καλείται από cron (GitHub Actions) κάθε 30'."""
+    require_admin(x_admin_password)
+    deleted = await cleanup_expired_demos()
+    return {"deleted": deleted}
 
 
 @router.get("/auth/me")
