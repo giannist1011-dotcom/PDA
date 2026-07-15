@@ -20,6 +20,8 @@ import {
   LayoutGrid,
   Clapperboard,
   ArrowRight,
+  Store,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
@@ -33,16 +35,23 @@ const NAV_ALL = [
   { to: "/app", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", roles: STAFF },
   { to: "/app/tables", label: "Τραπέζια", icon: LayoutGrid, testId: "drawer-link-tables", roles: ALL_ROLES, requiresTables: true },
   { to: "/app/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", roles: STAFF },
-  { to: "/app/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: STAFF },
-  { to: "/app/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"] },
-  { to: "/app/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", roles: ["owner"] },
   { to: "/app/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", roles: MANAGERS },
-  { to: "/app/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", roles: MANAGERS },
   { to: "/app/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock", roles: STAFF },
   { to: "/app/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule", roles: STAFF },
   { to: "/app/waiters", label: "Σερβιτόροι", icon: UserIcon, testId: "drawer-link-waiters", roles: ["manager"] },
+];
+
+// Ομάδα "Κατάστημα" — collapsible στο drawer. Εμφανίζεται μόνο αν ο ρόλος
+// βλέπει τουλάχιστον ένα από τα περιεχόμενά της.
+const NAV_STORE = [
+  { to: "/app/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"] },
+  { to: "/app/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: STAFF },
+  { to: "/app/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", roles: ["owner"] },
+  { to: "/app/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", roles: MANAGERS },
   { to: "/app/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", roles: ["owner"] },
 ];
+
+const STORE_GROUP_KEY = "orderdeck-nav-store-open";
 
 // ---------- Demo banner (κάτω από το header όταν ο λογαριασμός είναι δοκιμαστικός) ----------
 const remainingMs = (iso) => {
@@ -122,6 +131,25 @@ export default function AppShell({ title, children }) {
     navigate("/app/select-profile");
   };
 
+  const [storeOpen, setStoreOpen] = useState(() => {
+    try {
+      return localStorage.getItem(STORE_GROUP_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleStore = () => {
+    setStoreOpen((v) => {
+      try {
+        localStorage.setItem(STORE_GROUP_KEY, v ? "0" : "1");
+      } catch {
+        // localStorage unavailable — just toggle in-memory
+      }
+      return !v;
+    });
+  };
+
   const nav = NAV_ALL.filter(
     (n) => n.roles.includes(role) && (!n.requiresTables || user?.tables_enabled)
   ).map((n) => {
@@ -129,6 +157,30 @@ export default function AppShell({ title, children }) {
     if (!canManage && n.to === "/schedule") return { ...n, label: "Πρόγραμμα (προβολή)" };
     return n;
   });
+
+  const storeNav = NAV_STORE.filter((n) => n.roles.includes(role));
+  const storeActive = storeNav.some((n) => location.pathname === n.to);
+
+  const renderNavLink = (n) => {
+    const Icon = n.icon;
+    const active = location.pathname === n.to;
+    return (
+      <Link
+        key={n.to}
+        to={n.to}
+        onClick={() => setOpen(false)}
+        data-testid={n.testId}
+        className={`flex items-center gap-3 px-4 py-3 rounded-md mb-1 transition-colors ${
+          active
+            ? "bg-flame/15 text-flame border border-flame/40"
+            : "text-neutral-200 hover:bg-[#3D1620] border border-transparent"
+        }`}
+      >
+        <Icon className="w-5 h-5" />
+        <span className="font-semibold">{n.label}</span>
+      </Link>
+    );
+  };
 
   const BizIcon = businessIcon(user && user !== false ? user.business_type : null);
   const roleColor = ROLE_COLORS[role] || "#888";
@@ -218,26 +270,32 @@ export default function AppShell({ title, children }) {
               </button>
             </div>
             <nav className="flex-1 p-3 overflow-y-auto">
-              {nav.map((n) => {
-                const Icon = n.icon;
-                const active = location.pathname === n.to;
-                return (
-                  <Link
-                    key={n.to}
-                    to={n.to}
-                    onClick={() => setOpen(false)}
-                    data-testid={n.testId}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-md mb-1 transition-colors ${
-                      active
-                        ? "bg-flame/15 text-flame border border-flame/40"
-                        : "text-neutral-200 hover:bg-[#3D1620] border border-transparent"
+              {nav.map((n) => renderNavLink(n))}
+              {storeNav.length > 0 && (
+                <div className="mb-1">
+                  <button
+                    onClick={toggleStore}
+                    data-testid="drawer-group-store"
+                    aria-expanded={storeOpen}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors border border-transparent ${
+                      storeActive && !storeOpen
+                        ? "text-flame hover:bg-[#3D1620]"
+                        : "text-neutral-200 hover:bg-[#3D1620]"
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="font-semibold">{n.label}</span>
-                  </Link>
-                );
-              })}
+                    <Store className="w-5 h-5" />
+                    <span className="font-semibold flex-1 text-left">Κατάστημα</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${storeOpen ? "" : "-rotate-90"}`}
+                    />
+                  </button>
+                  {storeOpen && (
+                    <div className="ml-4 pl-3 border-l border-[#723645]">
+                      {storeNav.map((n) => renderNavLink(n))}
+                    </div>
+                  )}
+                </div>
+              )}
               <button
                 onClick={() => {
                   setOpen(false);

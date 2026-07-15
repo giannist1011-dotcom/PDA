@@ -117,10 +117,6 @@ export const apiActivateOrder = (id) =>
 // CUSTOMERS
 export const apiListCustomers = () => api.get("/customers").then((r) => r.data);
 
-// BUSINESS TYPE
-export const apiUpdateBusinessType = (business_type) =>
-  api.put("/settings/business", { business_type }).then((r) => r.data);
-
 // TABLES (dine-in)
 export const apiTablesState = () => api.get("/tables/state").then((r) => r.data);
 export const apiToggleTables = (enabled) =>
