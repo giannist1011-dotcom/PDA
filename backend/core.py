@@ -114,6 +114,13 @@ async def require_manager(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 
+async def require_staff(user: dict = Depends(get_current_user)) -> dict:
+    """Όλοι εκτός σερβιτόρου (ο σερβιτόρος έχει μόνο Τραπέζια)."""
+    if user.get("role") not in ("owner", "manager", "employee"):
+        raise HTTPException(403, "Δεν επιτρέπεται για αυτόν τον ρόλο")
+    return user
+
+
 def actor_name(user: dict) -> str:
     return user.get("profile_name") or LEGACY_ROLE_NAMES.get(user.get("role"), "") or "—"
 

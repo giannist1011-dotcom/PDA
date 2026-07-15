@@ -14,7 +14,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from core import db, get_current_user
+from core import db, require_manager
 from routers.promo import require_admin
 
 router = APIRouter()
@@ -89,7 +89,7 @@ async def admin_delete_stock_photo(
 
 # ============ ΜΑΓΑΖΙΑ (read-only, φιλτραρισμένες στον τύπο τους) ============
 @router.get("/stock-photos")
-async def list_stock_photos_for_shop(user: dict = Depends(get_current_user)):
+async def list_stock_photos_for_shop(user: dict = Depends(require_manager)):
     bt = user.get("business_type") or "souvlaki"
     docs = (
         await db.stock_photos.find({"business_type": bt}, {"_id": 0})

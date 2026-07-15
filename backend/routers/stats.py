@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from core import db, get_current_user, require_owner, require_manager
+from core import db, require_staff, require_owner, require_manager
 
 router = APIRouter()
 
@@ -144,7 +144,7 @@ async def compute_day_summary(user_id: str, day: str) -> dict:
 
 
 @router.get("/reports/day-summary")
-async def day_summary(date: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def day_summary(date: Optional[str] = None, user: dict = Depends(require_staff)):
     day = date or datetime.now(timezone.utc).date().isoformat()
     return await compute_day_summary(user["id"], day)
 
@@ -154,7 +154,7 @@ class DayCloseIn(BaseModel):
 
 
 @router.post("/reports/day-close")
-async def close_day(body: Optional[DayCloseIn] = None, user: dict = Depends(get_current_user)):
+async def close_day(body: Optional[DayCloseIn] = None, user: dict = Depends(require_staff)):
     day = (body.date if body and body.date else None) or datetime.now(timezone.utc).date().isoformat()
     summary = await compute_day_summary(user["id"], day)
     doc = {

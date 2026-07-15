@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-export const API = `${BACKEND_URL}/api`;
+const API = `${BACKEND_URL}/api`;
 const TOKEN_KEY = "peinokio_token";
 
 export const api = axios.create({ baseURL: API });
@@ -35,8 +35,6 @@ export const apiCreateItem = (payload) => api.post("/menu/items", payload).then(
 export const apiUpdateItem = (id, payload) => api.put(`/menu/items/${id}`, payload).then((r) => r.data);
 export const apiDeleteItem = (id) => api.delete(`/menu/items/${id}`).then((r) => r.data);
 export const apiUpdateCustomization = (payload) => api.put("/menu/customization", payload).then((r) => r.data);
-export const apiSetItemAvailability = (id, payload) =>
-  api.patch(`/menu/items/${id}/availability`, payload).then((r) => r.data);
 export const apiBulkItems = (payload) => api.post("/menu/items/bulk", payload).then((r) => r.data);
 
 // PROFILES / ROLES
@@ -79,8 +77,6 @@ export const apiDeleteStockCategory = (id) =>
   api.delete(`/stock/categories/${id}`).then((r) => r.data);
 export const apiCreateStockItem = (payload) =>
   api.post("/stock/items", payload).then((r) => r.data);
-export const apiUpdateStockItem = (id, payload) =>
-  api.patch(`/stock/items/${id}`, payload).then((r) => r.data);
 export const apiToggleStockItemShopping = (id, needs) =>
   api.post(`/stock/items/${id}/shopping`, { needs }).then((r) => r.data);
 export const apiDeleteStockItem = (id) =>

@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from core import db, get_current_user, require_manager
+from core import db, require_staff, require_manager
 
 router = APIRouter()
 
@@ -37,7 +37,7 @@ class StockItemPatchIn(BaseModel):
 
 
 @router.get("/stock/config")
-async def stock_config(user: dict = Depends(get_current_user)):
+async def stock_config(user: dict = Depends(require_staff)):
     cats = await db.stock_categories.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
     ).sort("order", 1).to_list(500)
@@ -108,7 +108,7 @@ async def create_stock_item(body: StockItemIn, user: dict = Depends(require_mana
 
 
 @router.patch("/stock/items/{iid}")
-async def update_stock_item(iid: str, body: StockItemPatchIn, user: dict = Depends(get_current_user)):
+async def update_stock_item(iid: str, body: StockItemPatchIn, user: dict = Depends(require_staff)):
     update = {}
     if body.name is not None:
         update["name"] = body.name.strip()
@@ -144,7 +144,7 @@ class StockShoppingIn(BaseModel):
 
 @router.post("/stock/items/{iid}/shopping")
 async def toggle_stock_item_shopping(
-    iid: str, body: StockShoppingIn, user: dict = Depends(get_current_user)
+    iid: str, body: StockShoppingIn, user: dict = Depends(require_staff)
 ):
     item = await db.stock_items.find_one({"id": iid, "user_id": user["id"]})
     if not item:
@@ -195,7 +195,7 @@ async def delete_stock_item(iid: str, user: dict = Depends(require_manager)):
 
 
 @router.get("/shopping")
-async def list_shopping(user: dict = Depends(get_current_user)):
+async def list_shopping(user: dict = Depends(require_staff)):
     docs = await db.shopping.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
     ).sort("created_at", 1).to_list(1000)
@@ -203,7 +203,7 @@ async def list_shopping(user: dict = Depends(get_current_user)):
 
 
 @router.post("/shopping/reset")
-async def reset_shopping(user: dict = Depends(get_current_user)):
+async def reset_shopping(user: dict = Depends(require_manager)):
     """Wipe entire shopping list and clear shopping_item_id on all stock items."""
     result = await db.shopping.delete_many({"user_id": user["id"]})
     await db.stock_items.update_many(

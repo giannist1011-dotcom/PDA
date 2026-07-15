@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from core import db, get_current_user, require_manager
+from core import db, require_staff, require_manager
 
 router = APIRouter()
 
@@ -15,7 +15,7 @@ class EmployeeIn(BaseModel):
 
 
 @router.get("/employees")
-async def list_employees(user: dict = Depends(get_current_user)):
+async def list_employees(user: dict = Depends(require_staff)):
     docs = await db.employees.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
     ).sort("order", 1).to_list(500)
@@ -65,7 +65,7 @@ class ShiftIn(BaseModel):
 
 
 @router.get("/shifts")
-async def list_shifts(week_start: str, user: dict = Depends(get_current_user)):
+async def list_shifts(week_start: str, user: dict = Depends(require_staff)):
     docs = await db.shifts.find(
         {"user_id": user["id"], "week_start": week_start},
         {"_id": 0, "user_id": 0},

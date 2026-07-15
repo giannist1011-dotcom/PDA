@@ -6,20 +6,13 @@ from typing import List, Literal, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field, ConfigDict
 
-from core import db, get_current_user, require_manager
+from core import db, get_current_user, require_manager, require_staff
 from seed_data import DEFAULT_CUSTOMIZATION
 
 router = APIRouter()
 
 
 # ============ MODELS ============
-class Category(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str
-    name: str
-    order: int = 0
-
-
 class MenuOption(BaseModel):
     model_config = ConfigDict(extra="ignore")
     name: str
@@ -46,10 +39,6 @@ class MenuItemIn(BaseModel):
     unavailable_note: str = ""
     option_groups: List[MenuOptionGroup] = Field(default_factory=list)
     photo_id: Optional[str] = None
-
-
-class MenuItem(MenuItemIn):
-    id: str
 
 
 class AvailabilityIn(BaseModel):
@@ -194,7 +183,7 @@ async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(require_m
 
 
 @router.patch("/menu/items/{iid}/availability")
-async def set_item_availability(iid: str, body: AvailabilityIn, user: dict = Depends(get_current_user)):
+async def set_item_availability(iid: str, body: AvailabilityIn, user: dict = Depends(require_staff)):
     r = await db.items.update_one(
         {"id": iid, "user_id": user["id"]},
         {"$set": {"available": bool(body.available), "unavailable_note": body.unavailable_note.strip()}},
@@ -330,7 +319,7 @@ class PhotoIn(BaseModel):
 
 
 @router.get("/photos")
-async def list_photos(user: dict = Depends(get_current_user)):
+async def list_photos(user: dict = Depends(require_manager)):
     docs = await db.photos.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
     ).sort("created_at", -1).to_list(500)

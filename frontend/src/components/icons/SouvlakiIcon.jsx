@@ -1,5 +1,3 @@
-import React from "react";
-
 // Line-art σουβλάκι (καλαμάκι): διαγώνια σούβλα με τρία κομμάτια κρέας.
 // Ίδια συμπεριφορά με τα lucide icons — currentColor, props size/className.
 // Πηγή artwork: frontend/src/assets/souvlaki_icon.svg

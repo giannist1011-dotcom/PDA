@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 from core import (
     db,
-    get_current_user,
+    require_staff,
     require_owner,
     actor_name,
     require_owner_or_pin,
@@ -113,12 +113,12 @@ async def compute_next_order_number(user_id: str) -> int:
 
 
 @router.get("/orders/next-number")
-async def next_order_number(user: dict = Depends(get_current_user)):
+async def next_order_number(user: dict = Depends(require_staff)):
     return {"next_order_number": await compute_next_order_number(user["id"])}
 
 
 @router.post("/orders", response_model=Order)
-async def create_order(body: OrderCreate, user: dict = Depends(get_current_user)):
+async def create_order(body: OrderCreate, user: dict = Depends(require_staff)):
     oid = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
     doc = body.model_dump()
@@ -145,7 +145,7 @@ async def create_order(body: OrderCreate, user: dict = Depends(get_current_user)
 
 
 @router.get("/orders/scheduled", response_model=List[Order])
-async def list_scheduled_orders(user: dict = Depends(get_current_user)):
+async def list_scheduled_orders(user: dict = Depends(require_staff)):
     docs = await db.orders.find(
         {"user_id": user["id"], "status": "scheduled", "cancelled": {"$ne": True}},
         {"_id": 0},
@@ -164,7 +164,7 @@ async def list_orders(
     q: Optional[str] = None,
     skip: int = 0,
     limit: int = 500,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_staff),
 ):
     query = {"user_id": user["id"]}
     if date_from or date_to:
@@ -198,7 +198,7 @@ async def list_orders(
 
 
 @router.get("/orders/{oid}", response_model=Order)
-async def get_order(oid: str, user: dict = Depends(get_current_user)):
+async def get_order(oid: str, user: dict = Depends(require_staff)):
     doc = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Not found")
@@ -208,7 +208,7 @@ async def get_order(oid: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/orders/{oid}/activate", response_model=Order)
-async def activate_order(oid: str, user: dict = Depends(get_current_user)):
+async def activate_order(oid: str, user: dict = Depends(require_staff)):
     """Move a scheduled order to active (fired / printed)."""
     r = await db.orders.update_one(
         {"id": oid, "user_id": user["id"], "status": "scheduled"},
@@ -230,7 +230,7 @@ class CancelOrderIn(BaseModel):
 async def cancel_order(
     oid: str,
     body: Optional[CancelOrderIn] = None,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_staff),
 ):
     order = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0, "status": 1})
     if not order:
@@ -255,7 +255,7 @@ async def cancel_order(
 async def delete_order(
     oid: str,
     pin: Optional[str] = None,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_staff),
 ):
     await require_owner_or_pin(user, pin)
     r = await db.orders.delete_one({"id": oid, "user_id": user["id"]})
