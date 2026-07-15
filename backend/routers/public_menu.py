@@ -158,7 +158,7 @@ async def public_menu(slug: str):
     items = await db.items.find(
         {"user_id": uid, "available": True},
         {"_id": 0, "id": 1, "name": 1, "price": 1, "category": 1, "photo_id": 1, "description": 1},
-    ).to_list(2000)
+    ).sort("sort_order", 1).to_list(2000)
     # φωτογραφίες προϊόντων
     photo_ids = list({i.get("photo_id") for i in items if i.get("photo_id")})
     photo_map = {}

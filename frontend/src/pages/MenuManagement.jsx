@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Save, X, CheckSquare, Square, ImageOff } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Save,
+  X,
+  CheckSquare,
+  Square,
+  ImageOff,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import BulkActionsBar from "@/components/BulkActionsBar";
@@ -31,6 +43,8 @@ import {
   apiUpdateItem,
   apiDeleteItem,
   apiUpdateCustomization,
+  apiReorderCategories,
+  apiReorderItems,
   apiListPhotos,
   apiListStockPhotos,
   apiImportStockPhoto,
@@ -756,6 +770,8 @@ export default function MenuManagement() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [stockPhotos, setStockPhotos] = useState([]);
+  const [dragCatId, setDragCatId] = useState(null);
+  const [dragItemId, setDragItemId] = useState(null);
   const load = async () => {
     try {
       const c = await apiGetMenuConfig();
@@ -822,6 +838,7 @@ export default function MenuManagement() {
         customizable: !!form.customizable,
         double_meat_eligible: !!form.double_meat_eligible,
         option_groups: form.option_groups || [],
+        photo_id: form.photo_id || null,
       };
       if (form.id) {
         const upd = await apiUpdateItem(form.id, payload);
@@ -884,6 +901,68 @@ export default function MenuManagement() {
   };
 
   const filteredItems = config.items.filter((i) => i.category === activeCat);
+
+  // ---------- Αναδιάταξη (optimistic UI + αυτόματη αποθήκευση) ----------
+  const persistCategoryOrder = async (newCats) => {
+    setConfig((p) => ({ ...p, categories: newCats }));
+    try {
+      await apiReorderCategories(newCats.map((c) => c.id));
+    } catch (e) {
+      toast.error(formatApiError(e));
+      load();
+    }
+  };
+
+  const moveCategory = (idx, dir) => {
+    const to = idx + dir;
+    if (to < 0 || to >= config.categories.length) return;
+    const arr = [...config.categories];
+    [arr[idx], arr[to]] = [arr[to], arr[idx]];
+    persistCategoryOrder(arr);
+  };
+
+  const dropCategory = (targetId) => {
+    if (!dragCatId || dragCatId === targetId) return;
+    const arr = [...config.categories];
+    const from = arr.findIndex((c) => c.id === dragCatId);
+    const to = arr.findIndex((c) => c.id === targetId);
+    if (from < 0 || to < 0) return;
+    const [moved] = arr.splice(from, 1);
+    arr.splice(to, 0, moved);
+    persistCategoryOrder(arr);
+  };
+
+  const persistItemOrder = async (newList) => {
+    setConfig((p) => ({
+      ...p,
+      items: [...p.items.filter((i) => i.category !== activeCat), ...newList],
+    }));
+    try {
+      await apiReorderItems(newList.map((i) => i.id));
+    } catch (e) {
+      toast.error(formatApiError(e));
+      load();
+    }
+  };
+
+  const moveItem = (idx, dir) => {
+    const to = idx + dir;
+    if (to < 0 || to >= filteredItems.length) return;
+    const arr = [...filteredItems];
+    [arr[idx], arr[to]] = [arr[to], arr[idx]];
+    persistItemOrder(arr);
+  };
+
+  const dropItem = (targetId) => {
+    if (!dragItemId || dragItemId === targetId) return;
+    const arr = [...filteredItems];
+    const from = arr.findIndex((i) => i.id === dragItemId);
+    const to = arr.findIndex((i) => i.id === targetId);
+    if (from < 0 || to < 0) return;
+    const [moved] = arr.splice(from, 1);
+    arr.splice(to, 0, moved);
+    persistItemOrder(arr);
+  };
   const selectedInView = filteredItems.filter((i) => selectedIds.includes(i.id));
   const allSelected = filteredItems.length > 0 && selectedInView.length === filteredItems.length;
 
@@ -962,7 +1041,7 @@ export default function MenuManagement() {
             </Button>
           </div>
           <ul className="space-y-1">
-            {config.categories.map((c) => (
+            {config.categories.map((c, ci) => (
               <li key={c.id}>
                 {editingCat === c.id ? (
                   <div className="flex items-center gap-2">
@@ -986,12 +1065,51 @@ export default function MenuManagement() {
                   <div
                     className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer group ${
                       activeCat === c.id ? "bg-flame/10 border border-flame" : "hover:bg-[#2A0E14]"
-                    }`}
+                    } ${dragCatId === c.id ? "opacity-40" : ""}`}
                     onClick={() => setActiveCat(c.id)}
+                    draggable
+                    onDragStart={(e) => {
+                      setDragCatId(c.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      dropCategory(c.id);
+                      setDragCatId(null);
+                    }}
+                    onDragEnd={() => setDragCatId(null)}
                     data-testid={`cat-item-${c.id}`}
                   >
-                    <span className="font-semibold text-sm">{c.name}</span>
-                    <span className="flex items-center gap-1 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <GripVertical className="w-3.5 h-3.5 text-neutral-600 shrink-0 cursor-grab" />
+                      <span className="font-semibold text-sm truncate">{c.name}</span>
+                    </span>
+                    <span className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveCategory(ci, -1);
+                        }}
+                        disabled={ci === 0}
+                        data-testid={`cat-up-${c.id}`}
+                        className="p-1 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
+                        title="Πάνω"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveCategory(ci, 1);
+                        }}
+                        disabled={ci === config.categories.length - 1}
+                        data-testid={`cat-down-${c.id}`}
+                        className="p-1 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
+                        title="Κάτω"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1062,16 +1180,30 @@ export default function MenuManagement() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filteredItems.map((it) => {
+              {filteredItems.map((it, ii) => {
                 const checked = selectedIds.includes(it.id);
                 return (
                 <div
                   key={it.id}
                   data-testid={`mgmt-item-${it.id}`}
                   onClick={() => bulkMode && toggleSelect(it.id)}
+                  draggable={!bulkMode}
+                  onDragStart={(e) => {
+                    if (bulkMode) return;
+                    setDragItemId(it.id);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragOver={(e) => !bulkMode && e.preventDefault()}
+                  onDrop={(e) => {
+                    if (bulkMode) return;
+                    e.preventDefault();
+                    dropItem(it.id);
+                    setDragItemId(null);
+                  }}
+                  onDragEnd={() => setDragItemId(null)}
                   className={`p-4 bg-[#2A0E14] border rounded-lg flex justify-between items-start transition-colors ${
                     bulkMode ? "cursor-pointer" : ""
-                  } ${
+                  } ${dragItemId === it.id ? "opacity-40" : ""} ${
                     checked
                       ? "border-flame bg-flame/5"
                       : "border-[#723645] hover:border-[#6B3345]"
@@ -1115,6 +1247,32 @@ export default function MenuManagement() {
                   </div>
                   {!bulkMode && (
                     <div className="flex flex-col gap-1 ml-2">
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveItem(ii, -1);
+                          }}
+                          disabled={ii === 0}
+                          data-testid={`item-up-${it.id}`}
+                          className="p-1.5 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
+                          title="Πάνω"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveItem(ii, 1);
+                          }}
+                          disabled={ii === filteredItems.length - 1}
+                          data-testid={`item-down-${it.id}`}
+                          className="p-1.5 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
+                          title="Κάτω"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

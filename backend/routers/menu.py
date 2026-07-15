@@ -85,7 +85,7 @@ def _normalize_customization(cust: dict) -> dict:
 @router.get("/menu/config")
 async def get_menu_config(user: dict = Depends(get_current_user)):
     cats = await db.categories.find({"user_id": user["id"]}, {"_id": 0, "user_id": 0}).sort("order", 1).to_list(500)
-    items = await db.items.find({"user_id": user["id"]}, {"_id": 0, "user_id": 0}).to_list(2000)
+    items = await db.items.find({"user_id": user["id"]}, {"_id": 0, "user_id": 0}).sort("sort_order", 1).to_list(2000)
     # attach photo_url for items with photo_id
     photo_ids = list({i.get("photo_id") for i in items if i.get("photo_id")})
     photo_map = {}
@@ -121,6 +121,30 @@ async def create_category(body: CategoryIn, user: dict = Depends(require_manager
     return {"id": cid, "name": body.name.strip(), "order": body.order}
 
 
+class ReorderIn(BaseModel):
+    ids: List[str] = Field(min_length=1)
+
+
+@router.post("/menu/categories/reorder")
+async def reorder_categories(body: ReorderIn, user: dict = Depends(require_manager)):
+    """Νέα σειρά κατηγοριών: η θέση στη λίστα ids γίνεται το order."""
+    for idx, cid in enumerate(body.ids):
+        await db.categories.update_one(
+            {"id": cid, "user_id": user["id"]}, {"$set": {"order": idx}}
+        )
+    return {"ok": True}
+
+
+@router.post("/menu/items/reorder")
+async def reorder_items(body: ReorderIn, user: dict = Depends(require_manager)):
+    """Νέα σειρά προϊόντων (μέσα σε μία κατηγορία): η θέση στη λίστα ids γίνεται το sort_order."""
+    for idx, iid in enumerate(body.ids):
+        await db.items.update_one(
+            {"id": iid, "user_id": user["id"]}, {"$set": {"sort_order": idx}}
+        )
+    return {"ok": True}
+
+
 @router.put("/menu/categories/{cid}")
 async def update_category(cid: str, body: CategoryIn, user: dict = Depends(require_manager)):
     r = await db.categories.update_one(
@@ -144,6 +168,8 @@ async def delete_category(cid: str, user: dict = Depends(require_manager)):
 @router.post("/menu/items")
 async def create_item(body: MenuItemIn, user: dict = Depends(require_manager)):
     iid = str(uuid.uuid4())
+    # Νέο προϊόν μπαίνει στο τέλος της κατηγορίας του
+    sort_order = await db.items.count_documents({"user_id": user["id"], "category": body.category})
     doc = {
         "id": iid,
         "user_id": user["id"],
@@ -156,6 +182,7 @@ async def create_item(body: MenuItemIn, user: dict = Depends(require_manager)):
         "unavailable_note": body.unavailable_note.strip(),
         "option_groups": [g.model_dump() for g in body.option_groups],
         "photo_id": body.photo_id,
+        "sort_order": sort_order,
     }
     await db.items.insert_one(doc)
     doc.pop("user_id", None)

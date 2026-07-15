@@ -230,6 +230,22 @@ async def require_owner_or_pin(user: dict, pin: Optional[str]):
         raise HTTPException(403, "Απαιτείται PIN ιδιοκτήτη ή υπευθύνου")
 
 
+# ============ MIGRATIONS ============
+async def migrate_items_sort_order():
+    """Backfill sort_order σε υπάρχοντα προϊόντα: σειρά εισαγωγής ανά (χρήστη, κατηγορία).
+
+    Idempotent — αγγίζει μόνο docs χωρίς sort_order· μετά το πρώτο deploy δεν κάνει τίποτα.
+    """
+    counters = {}
+    async for it in db.items.find(
+        {"sort_order": {"$exists": False}}, {"_id": 1, "user_id": 1, "category": 1}
+    ).sort("_id", 1):
+        key = (it["user_id"], it.get("category"))
+        order = counters.get(key, 0)
+        counters[key] = order + 1
+        await db.items.update_one({"_id": it["_id"]}, {"$set": {"sort_order": order}})
+
+
 # ============ SEEDING ============
 async def seed_user_menu(user_id: str, preset: Optional[dict] = None):
     """Create default categories, customization config and menu items for a user."""
@@ -240,7 +256,10 @@ async def seed_user_menu(user_id: str, preset: Optional[dict] = None):
         for c in preset["categories"]
     ])
     docs = []
+    cat_counters = {}  # sort_order ανά κατηγορία, με τη σειρά του preset
     for it in preset["items"]:
+        order = cat_counters.get(it["category"], 0)
+        cat_counters[it["category"]] = order + 1
         docs.append({
             "id": str(uuid.uuid4()),
             "user_id": user_id,
@@ -253,6 +272,7 @@ async def seed_user_menu(user_id: str, preset: Optional[dict] = None):
             "photo_id": None,
             "available": True,
             "unavailable_note": "",
+            "sort_order": order,
         })
     await db.items.insert_many(docs)
 

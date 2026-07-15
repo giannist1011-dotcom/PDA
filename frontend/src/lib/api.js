@@ -31,6 +31,8 @@ export const apiGetMenuConfig = () => api.get("/menu/config").then((r) => r.data
 export const apiCreateCategory = (payload) => api.post("/menu/categories", payload).then((r) => r.data);
 export const apiUpdateCategory = (id, payload) => api.put(`/menu/categories/${id}`, payload).then((r) => r.data);
 export const apiDeleteCategory = (id) => api.delete(`/menu/categories/${id}`).then((r) => r.data);
+export const apiReorderCategories = (ids) => api.post("/menu/categories/reorder", { ids }).then((r) => r.data);
+export const apiReorderItems = (ids) => api.post("/menu/items/reorder", { ids }).then((r) => r.data);
 export const apiCreateItem = (payload) => api.post("/menu/items", payload).then((r) => r.data);
 export const apiUpdateItem = (id, payload) => api.put(`/menu/items/${id}`, payload).then((r) => r.data);
 export const apiDeleteItem = (id) => api.delete(`/menu/items/${id}`).then((r) => r.data);
