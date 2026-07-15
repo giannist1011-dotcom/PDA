@@ -766,7 +766,7 @@ export default function MenuManagement() {
   const [custModalOpen, setCustModalOpen] = useState(false);
   const [confirmItem, setConfirmItem] = useState(null);
   const [confirmCat, setConfirmCat] = useState(null);
-  const [bulkMode, setBulkMode] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [stockPhotos, setStockPhotos] = useState([]);
@@ -979,8 +979,8 @@ export default function MenuManagement() {
   };
 
   const clearSelection = () => setSelectedIds([]);
-  const exitBulk = () => {
-    setBulkMode(false);
+  const exitEdit = () => {
+    setEditMode(false);
     clearSelection();
   };
   const refreshAfterBulk = async () => {
@@ -992,21 +992,21 @@ export default function MenuManagement() {
     <AppShell title="Διαχείριση Μενού">
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 md:px-6 py-3 border-b border-[#431A25]">
         <Button
-          onClick={() => (bulkMode ? exitBulk() : setBulkMode(true))}
-          data-testid="toggle-bulk-mode-btn"
+          onClick={() => (editMode ? exitEdit() : setEditMode(true))}
+          data-testid="toggle-edit-mode-btn"
           className={`h-11 ${
-            bulkMode
+            editMode
               ? "bg-brand hover:bg-brand-hover text-white"
               : "bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
           }`}
         >
-          {bulkMode ? (
+          {editMode ? (
             <>
-              <X className="w-4 h-4 mr-2" /> Έξοδος μαζικής
+              <X className="w-4 h-4 mr-2" /> Τέλος
             </>
           ) : (
             <>
-              <CheckSquare className="w-4 h-4 mr-2" /> Μαζική επεξεργασία
+              <Pencil className="w-4 h-4 mr-2" /> Επεξεργασία
             </>
           )}
         </Button>
@@ -1067,13 +1067,15 @@ export default function MenuManagement() {
                       activeCat === c.id ? "bg-flame/10 border border-flame" : "hover:bg-[#2A0E14]"
                     } ${dragCatId === c.id ? "opacity-40" : ""}`}
                     onClick={() => setActiveCat(c.id)}
-                    draggable
+                    draggable={editMode}
                     onDragStart={(e) => {
+                      if (!editMode) return;
                       setDragCatId(c.id);
                       e.dataTransfer.effectAllowed = "move";
                     }}
-                    onDragOver={(e) => e.preventDefault()}
+                    onDragOver={(e) => editMode && e.preventDefault()}
                     onDrop={(e) => {
+                      if (!editMode) return;
                       e.preventDefault();
                       dropCategory(c.id);
                       setDragCatId(null);
@@ -1082,34 +1084,40 @@ export default function MenuManagement() {
                     data-testid={`cat-item-${c.id}`}
                   >
                     <span className="flex items-center gap-1.5 min-w-0">
-                      <GripVertical className="w-3.5 h-3.5 text-neutral-600 shrink-0 cursor-grab" />
+                      {editMode && (
+                        <GripVertical className="w-4 h-4 text-neutral-500 shrink-0 cursor-grab touch-none" />
+                      )}
                       <span className="font-semibold text-sm truncate">{c.name}</span>
                     </span>
-                    <span className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          moveCategory(ci, -1);
-                        }}
-                        disabled={ci === 0}
-                        data-testid={`cat-up-${c.id}`}
-                        className="p-1 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
-                        title="Πάνω"
-                      >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          moveCategory(ci, 1);
-                        }}
-                        disabled={ci === config.categories.length - 1}
-                        data-testid={`cat-down-${c.id}`}
-                        className="p-1 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
-                        title="Κάτω"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
+                    <span className="flex items-center gap-0.5 shrink-0">
+                      {editMode && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveCategory(ci, -1);
+                            }}
+                            disabled={ci === 0}
+                            data-testid={`cat-up-${c.id}`}
+                            className="p-2 -my-1 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
+                            title="Πάνω"
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveCategory(ci, 1);
+                            }}
+                            disabled={ci === config.categories.length - 1}
+                            data-testid={`cat-down-${c.id}`}
+                            className="p-2 -my-1 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
+                            title="Κάτω"
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1149,7 +1157,7 @@ export default function MenuManagement() {
                 setEditingItem(emptyItem(activeCat));
                 setItemModalOpen(true);
               }}
-              disabled={!activeCat || bulkMode}
+              disabled={!activeCat || editMode}
               data-testid="add-item-btn"
               className="bg-brand hover:bg-brand-hover font-bold"
             >
@@ -1157,7 +1165,7 @@ export default function MenuManagement() {
             </Button>
           </div>
 
-          {bulkMode && filteredItems.length > 0 && (
+          {editMode && filteredItems.length > 0 && (
             <div className="mb-3">
               <button
                 onClick={toggleSelectAll}
@@ -1186,37 +1194,40 @@ export default function MenuManagement() {
                 <div
                   key={it.id}
                   data-testid={`mgmt-item-${it.id}`}
-                  onClick={() => bulkMode && toggleSelect(it.id)}
-                  draggable={!bulkMode}
+                  onClick={() => editMode && toggleSelect(it.id)}
+                  draggable={editMode}
                   onDragStart={(e) => {
-                    if (bulkMode) return;
+                    if (!editMode) return;
                     setDragItemId(it.id);
                     e.dataTransfer.effectAllowed = "move";
                   }}
-                  onDragOver={(e) => !bulkMode && e.preventDefault()}
+                  onDragOver={(e) => editMode && e.preventDefault()}
                   onDrop={(e) => {
-                    if (bulkMode) return;
+                    if (!editMode) return;
                     e.preventDefault();
                     dropItem(it.id);
                     setDragItemId(null);
                   }}
                   onDragEnd={() => setDragItemId(null)}
                   className={`p-4 bg-[#2A0E14] border rounded-lg flex justify-between items-start transition-colors ${
-                    bulkMode ? "cursor-pointer" : ""
+                    editMode ? "cursor-pointer" : ""
                   } ${dragItemId === it.id ? "opacity-40" : ""} ${
                     checked
                       ? "border-flame bg-flame/5"
                       : "border-[#723645] hover:border-[#6B3345]"
                   }`}
                 >
-                  {bulkMode && (
-                    <div
-                      className={`w-6 h-6 mt-0.5 mr-3 rounded-md border flex items-center justify-center shrink-0 ${
-                        checked ? "bg-brand border-brand" : "border-[#7A3E52]"
-                      }`}
-                      data-testid={`select-item-${it.id}`}
-                    >
-                      {checked && <CheckSquare className="w-4 h-4 text-white" />}
+                  {editMode && (
+                    <div className="flex flex-col items-center gap-2 mr-3 shrink-0">
+                      <div
+                        className={`w-6 h-6 mt-0.5 rounded-md border flex items-center justify-center ${
+                          checked ? "bg-brand border-brand" : "border-[#7A3E52]"
+                        }`}
+                        data-testid={`select-item-${it.id}`}
+                      >
+                        {checked && <CheckSquare className="w-4 h-4 text-white" />}
+                      </div>
+                      <GripVertical className="w-5 h-5 text-neutral-500 cursor-grab touch-none" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
@@ -1245,34 +1256,35 @@ export default function MenuManagement() {
                       )}
                     </div>
                   </div>
-                  {!bulkMode && (
-                    <div className="flex flex-col gap-1 ml-2">
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveItem(ii, -1);
-                          }}
-                          disabled={ii === 0}
-                          data-testid={`item-up-${it.id}`}
-                          className="p-1.5 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
-                          title="Πάνω"
-                        >
-                          <ChevronUp className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveItem(ii, 1);
-                          }}
-                          disabled={ii === filteredItems.length - 1}
-                          data-testid={`item-down-${it.id}`}
-                          className="p-1.5 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
-                          title="Κάτω"
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                      </div>
+                  {editMode ? (
+                    <div className="flex flex-col gap-1 ml-2 shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveItem(ii, -1);
+                        }}
+                        disabled={ii === 0}
+                        data-testid={`item-up-${it.id}`}
+                        className="p-2.5 rounded-md border border-[#723645] text-neutral-300 hover:text-white hover:border-flame disabled:opacity-30 disabled:hover:text-neutral-300 disabled:hover:border-[#723645]"
+                        title="Πάνω"
+                      >
+                        <ChevronUp className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveItem(ii, 1);
+                        }}
+                        disabled={ii === filteredItems.length - 1}
+                        data-testid={`item-down-${it.id}`}
+                        className="p-2.5 rounded-md border border-[#723645] text-neutral-300 hover:text-white hover:border-flame disabled:opacity-30 disabled:hover:text-neutral-300 disabled:hover:border-[#723645]"
+                        title="Κάτω"
+                      >
+                        <ChevronDown className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1 ml-2 shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1304,7 +1316,7 @@ export default function MenuManagement() {
         </section>
       </main>
 
-      {bulkMode && (
+      {editMode && (
         <div className="px-6 pb-6 max-w-[1400px] mx-auto w-full">
           <BulkActionsBar
             selected={selectedIds}
