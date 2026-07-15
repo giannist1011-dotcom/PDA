@@ -102,14 +102,14 @@ export default function OrderPanel({
       data-testid="order-panel"
     >
       {/* Zone 1 — fixed header: order number + source buttons */}
-      <div className="p-6 border-b border-[#723645] shrink-0">
+      <div className="p-4 lg:p-5 border-b border-[#723645] shrink-0">
         <div className="flex items-baseline justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-neutral-400">
               Παραγγελία
             </div>
             <div
-              className="font-mono text-3xl font-bold text-white mt-1"
+              className="font-mono text-2xl lg:text-3xl font-bold text-white mt-1"
               data-testid="order-number"
             >
               #{String(orderNumber || 0).padStart(3, "0")}
@@ -120,7 +120,7 @@ export default function OrderPanel({
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-1 p-1 mt-5 bg-[#2A0E14] rounded-md" data-testid="source-toggle">
+        <div className="grid grid-cols-4 gap-1 p-1 mt-3 lg:mt-4 bg-[#2A0E14] rounded-md" data-testid="source-toggle">
           {ORDER_SOURCES.map((s) => {
             const active = source === s;
             return (
@@ -129,7 +129,7 @@ export default function OrderPanel({
                 onClick={() => onSourceChange(s)}
                 data-testid={`source-btn-${s}`}
                 data-state={active ? "on" : "off"}
-                className={`h-11 rounded-md text-xs md:text-sm font-bold transition-all ${
+                className={`h-10 rounded-md text-xs lg:text-sm font-bold transition-all ${
                   active
                     ? "bg-brand text-white"
                     : "text-neutral-400 hover:text-white hover:bg-[#451924]"
@@ -143,7 +143,7 @@ export default function OrderPanel({
       </div>
 
       {/* Zone 2 — scrollable: order lines + στοιχεία παράδοσης (ό,τι μπορεί να μεγαλώσει) */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-6" data-testid="order-items">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 lg:px-5" data-testid="order-items">
         {isEmpty ? (
           <div className={`flex flex-col items-center justify-center text-neutral-500 py-16 text-center ${isPhone ? "" : "h-full"}`}>
             <div className="text-lg font-heading">Άδεια παραγγελία</div>

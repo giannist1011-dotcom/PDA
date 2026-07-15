@@ -197,7 +197,7 @@ export default function AppShell({ title, children }) {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-[#2A0E14] text-white">
-      <header className="flex items-center justify-between gap-2 px-4 md:px-6 h-16 border-b border-[#723645] bg-[#2A0E14] shrink-0">
+      <header className="flex items-center justify-between gap-2 px-4 md:px-6 h-14 lg:h-16 border-b border-[#723645] bg-[#2A0E14] shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={() => setOpen(true)}
@@ -216,7 +216,7 @@ export default function AppShell({ title, children }) {
             </div>
             <div className="flex items-baseline gap-2 min-w-0">
               <span
-                className="font-heading text-lg sm:text-xl md:text-2xl font-bold tracking-tight truncate"
+                className="font-heading text-lg lg:text-xl xl:text-2xl font-bold tracking-tight truncate"
                 data-testid="restaurant-name"
               >
                 {user?.restaurant_name || "POS"}

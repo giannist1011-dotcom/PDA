@@ -552,9 +552,13 @@ export default function PDA() {
 
   return (
     <AppShell title="Παραγγελίες">
-      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-hidden">
-        {/* Μενού / Παραγγελία εναλλαγή — μόνο σε tablet-portrait & κινητό */}
-        <div className="lg:hidden shrink-0 flex gap-1.5 p-2 border-b border-[#723645] bg-[#2A0E14]">
+      {/* Δίστηλο από sm (640px) και πάνω — tablet portrait/landscape & desktop.
+          Το breakpoint βασίζεται σε CSS viewport width (Tailwind media queries),
+          όχι σε user-agent/touch. Android tablets 1280x800 με DPR ~1.33 δίνουν
+          ~960 CSS px, γι' αυτό το παλιό lg: (1024px) τα έριχνε σε mobile layout. */}
+      <main className="flex-1 flex flex-col sm:grid sm:grid-cols-[1fr_300px] md:grid-cols-[1fr_340px] lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-hidden">
+        {/* Μενού / Παραγγελία εναλλαγή — μόνο σε κινητό (<640px) */}
+        <div className="sm:hidden shrink-0 flex gap-1.5 p-2 border-b border-[#723645] bg-[#2A0E14]">
           <button
             onClick={() => setMobileTab("menu")}
             data-testid="pda-tab-menu"
@@ -590,9 +594,9 @@ export default function PDA() {
         </div>
 
         <section
-          className={`p-4 md:p-6 overflow-hidden flex-col min-h-0 flex-1 lg:flex-none ${
+          className={`p-3 md:p-4 xl:p-6 overflow-hidden flex-col min-h-0 flex-1 sm:flex-none ${
             mobileTab === "menu" ? "flex" : "hidden"
-          } lg:flex`}
+          } sm:flex`}
         >
           {scheduledOrders.length > 0 && (
             <button
@@ -616,9 +620,9 @@ export default function PDA() {
           />
         </section>
         <div
-          className={`min-h-0 overflow-hidden flex-1 lg:flex-none flex-col ${
+          className={`min-h-0 overflow-hidden flex-1 sm:flex-none flex-col ${
             mobileTab === "order" ? "flex" : "hidden"
-          } lg:flex`}
+          } sm:flex`}
         >
         <OrderPanel
           orderNumber={orderNumber}

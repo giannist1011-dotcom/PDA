@@ -21,7 +21,7 @@ export default function MenuGrid({
   return (
     <div className="flex flex-col h-full">
       <div
-        className="flex sm:flex-wrap gap-2 sm:gap-3 mb-4 sm:mb-6 overflow-x-auto sm:overflow-visible no-scrollbar"
+        className="flex sm:flex-wrap gap-2 mb-3 lg:mb-4 overflow-x-auto sm:overflow-visible no-scrollbar"
         data-testid="category-bar"
       >
         {categories.map((c) => {
@@ -32,7 +32,7 @@ export default function MenuGrid({
               onClick={() => onCategoryChange(c.id)}
               data-testid={`category-btn-${c.id}`}
               data-state={active ? "on" : "off"}
-              className={`shrink-0 whitespace-nowrap px-3.5 sm:px-6 h-10 sm:h-14 rounded-full sm:rounded-md text-sm sm:text-base md:text-lg font-semibold transition-all no-select active:scale-[0.98] ${
+              className={`shrink-0 whitespace-nowrap px-3.5 sm:px-4 lg:px-5 h-10 sm:h-11 lg:h-12 rounded-full sm:rounded-md text-sm sm:text-base font-semibold transition-all no-select active:scale-[0.98] ${
                 active
                   ? "bg-flame text-white border border-flame"
                   : "bg-[#4A1B27] text-neutral-200 border border-[#723645] hover:border-flame"
@@ -50,7 +50,7 @@ export default function MenuGrid({
       </div>
 
       <div
-        className="flex-1 min-h-0 content-start grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto overflow-x-hidden px-2 pt-2 pr-3 pb-6"
+        className="flex-1 min-h-0 content-start grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 overflow-y-auto overflow-x-hidden px-2 pt-2 pr-3 pb-6"
         data-testid="menu-items-grid"
       >
         {filtered.map((it) => {
