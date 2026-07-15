@@ -30,6 +30,7 @@ import {
 import { fetchAnalytics } from "@/lib/api";
 import { eur, todayISO } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import DatePicker from "@/components/DatePicker";
 
 const COLORS = ["#F97316", "#00E676", "#D4A017", "#00B0FF", "#FF3B30"];
 
@@ -249,24 +250,22 @@ export default function Analytics() {
               <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
                 Από
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                data-testid="date-from-input"
-                className="h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                onChange={setFrom}
+                testId="date-from-input"
+                className="h-12 px-3"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
                 Έως
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={to}
-                onChange={(e) => setTo(e.target.value)}
-                data-testid="date-to-input"
-                className="h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                onChange={setTo}
+                testId="date-to-input"
+                className="h-12 px-3"
               />
             </div>
             <Button
@@ -513,22 +512,20 @@ export default function Analytics() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] uppercase tracking-widest text-neutral-500">Από</label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={cmpFromA}
-                    onChange={(e) => setCmpFromA(e.target.value)}
-                    data-testid="compare-from-a"
-                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                    onChange={setCmpFromA}
+                    testId="compare-from-a"
+                    className="w-full h-11 mt-1 bg-[#3D1620]"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase tracking-widest text-neutral-500">Έως</label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={cmpToA}
-                    onChange={(e) => setCmpToA(e.target.value)}
-                    data-testid="compare-to-a"
-                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                    onChange={setCmpToA}
+                    testId="compare-to-a"
+                    className="w-full h-11 mt-1 bg-[#3D1620]"
                   />
                 </div>
               </div>
@@ -540,22 +537,20 @@ export default function Analytics() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] uppercase tracking-widest text-neutral-500">Από</label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={cmpFromB}
-                    onChange={(e) => setCmpFromB(e.target.value)}
-                    data-testid="compare-from-b"
-                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                    onChange={setCmpFromB}
+                    testId="compare-from-b"
+                    className="w-full h-11 mt-1 bg-[#3D1620]"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase tracking-widest text-neutral-500">Έως</label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={cmpToB}
-                    onChange={(e) => setCmpToB(e.target.value)}
-                    data-testid="compare-to-b"
-                    className="w-full h-11 mt-1 px-3 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                    onChange={setCmpToB}
+                    testId="compare-to-b"
+                    className="w-full h-11 mt-1 bg-[#3D1620]"
                   />
                 </div>
               </div>

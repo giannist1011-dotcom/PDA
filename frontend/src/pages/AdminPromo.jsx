@@ -22,6 +22,8 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import DatePicker from "@/components/DatePicker";
+import { formatGRDate } from "@/lib/format";
 
 const PW_KEY = "orderdeck_admin_pw";
 
@@ -55,9 +57,7 @@ function promoValueLabel(p) {
 
 function fmtDate(iso) {
   if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d)) return iso;
-  return d.toLocaleDateString("el-GR");
+  return formatGRDate(iso);
 }
 
 const Field = ({ label, optional, children }) => (
@@ -340,12 +340,13 @@ export default function AdminPromo() {
                 />
               </Field>
               <Field label="Λήξη κωδικού" optional>
-                <input
-                  type="date"
+                <DatePicker
                   value={form.expires_at}
-                  onChange={(e) => set("expires_at", e.target.value)}
-                  data-testid="promo-expires"
-                  className={inputCls}
+                  onChange={(v) => set("expires_at", v)}
+                  clearable
+                  placeholder="Χωρίς λήξη"
+                  testId="promo-expires"
+                  className="w-full h-11 px-3"
                 />
               </Field>
             </div>

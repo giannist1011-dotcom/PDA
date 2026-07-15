@@ -13,6 +13,7 @@ import {
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import { formatGRTime } from "@/lib/format";
 import {
   apiGetStockConfig,
   apiCreateStockCategory,
@@ -229,7 +230,7 @@ function printShoppingList({ restaurantName, items }) {
     month: "long",
     year: "numeric",
   });
-  const timeStr = now.toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
+  const timeStr = formatGRTime(now);
 
   const rows = items
     .map(

@@ -22,25 +22,14 @@ import {
   apiDeleteExpense,
   formatApiError,
 } from "@/lib/api";
-import { eur, todayISO } from "@/lib/format";
+import { eur, todayISO, formatGRDate } from "@/lib/format";
+import DatePicker from "@/components/DatePicker";
 
 const firstOfMonthISO = () => {
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   return `${y}-${m}-01`;
-};
-
-const formatGRDate = (iso) => {
-  try {
-    return new Date(iso + "T00:00:00").toLocaleDateString("el-GR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return iso;
-  }
 };
 
 // ---------- Expense create/edit modal ----------
@@ -119,12 +108,11 @@ function ExpenseModal({ open, onClose, categories, initial, onSubmit }) {
             <label className="text-xs uppercase tracking-wider text-neutral-400">
               Ημερομηνία
             </label>
-            <input
-              type="date"
+            <DatePicker
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              data-testid="expense-date-input"
-              className="w-full h-11 mt-1 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono text-sm focus:outline-none focus:border-flame"
+              onChange={setDate}
+              testId="expense-date-input"
+              className="w-full h-11 mt-1"
             />
           </div>
         </div>
@@ -470,24 +458,22 @@ export default function Expenses() {
               <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
                 Από
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                data-testid="expenses-date-from"
-                className="h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                onChange={setFrom}
+                testId="expenses-date-from"
+                className="h-12 px-3"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
                 Έως
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={to}
-                onChange={(e) => setTo(e.target.value)}
-                data-testid="expenses-date-to"
-                className="h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                onChange={setTo}
+                testId="expenses-date-to"
+                className="h-12 px-3"
               />
             </div>
             <div className="flex flex-col gap-1">

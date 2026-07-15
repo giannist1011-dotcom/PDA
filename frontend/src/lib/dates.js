@@ -30,6 +30,6 @@ export const formatWeekRange = (mondayIso) => {
   const mon = new Date(mondayIso + "T00:00:00");
   const sun = addDays(mon, 6);
   const fmt = (dt) =>
-    dt.toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit" });
+    `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}`;
   return `${fmt(mon)} — ${fmt(sun)}`;
 };

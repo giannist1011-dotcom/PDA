@@ -18,7 +18,7 @@ import {
   apiCancelOrder,
   formatApiError,
 } from "@/lib/api";
-import { eur } from "@/lib/format";
+import { eur, formatGRTime, formatGRDayMonthTime } from "@/lib/format";
 
 let LINE_SEQ = 1;
 const newLineId = () => `L${Date.now()}-${LINE_SEQ++}`;
@@ -26,23 +26,13 @@ const newLineId = () => `L${Date.now()}-${LINE_SEQ++}`;
 const FIRE_AHEAD_MS = 15 * 60 * 1000; // print 15' before the scheduled time
 const POLL_MS = 60 * 1000;
 
-const schedTime = (iso) => {
-  try {
-    return new Date(iso).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return "";
-  }
-};
+const schedTime = (iso) => formatGRTime(iso);
 
 const schedDateTime = (iso) => {
   try {
     const d = new Date(iso);
-    const today = new Date();
-    const sameDay = d.toDateString() === today.toDateString();
-    const time = d.toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
-    return sameDay
-      ? time
-      : `${d.toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit" })} ${time}`;
+    const sameDay = d.toDateString() === new Date().toDateString();
+    return sameDay ? formatGRTime(d) : formatGRDayMonthTime(d);
   } catch {
     return "";
   }

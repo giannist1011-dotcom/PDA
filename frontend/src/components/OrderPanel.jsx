@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LineEditModal from "@/components/LineEditModal";
+import TimePicker from "@/components/TimePicker";
+import DatePicker from "@/components/DatePicker";
 import { ORDER_SOURCES } from "@/data/menu";
 import { eur, todayISO } from "@/lib/format";
 
@@ -266,20 +268,18 @@ export default function OrderPanel({
               </button>
               {scheduled?.enabled && (
                 <div className="grid grid-cols-2 gap-1.5 mt-1.5">
-                  <input
-                    type="time"
+                  <TimePicker
                     value={scheduled.time}
-                    onChange={(e) => setScheduled((s) => ({ ...s, time: e.target.value }))}
-                    data-testid="scheduled-time-input"
-                    className="w-full h-9 px-2 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
+                    onChange={(time) => setScheduled((s) => ({ ...s, time }))}
+                    testId="scheduled-time-input"
+                    className="w-full focus:border-[#00B0FF]"
                   />
-                  <input
-                    type="date"
+                  <DatePicker
                     value={scheduled.date}
                     min={todayISO()}
-                    onChange={(e) => setScheduled((s) => ({ ...s, date: e.target.value }))}
-                    data-testid="scheduled-date-input"
-                    className="w-full h-9 px-2 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white font-mono focus:outline-none focus:border-[#00B0FF]"
+                    onChange={(date) => setScheduled((s) => ({ ...s, date }))}
+                    testId="scheduled-date-input"
+                    className="w-full focus:border-[#00B0FF]"
                   />
                 </div>
               )}

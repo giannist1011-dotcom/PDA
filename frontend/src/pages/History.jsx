@@ -20,7 +20,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { ORDER_SOURCES } from "@/data/menu";
 import { fetchOrders, apiGetOrder, apiCancelOrder, apiDeleteOrder, apiListCustomers, formatApiError } from "@/lib/api";
-import { eur, todayISO, formatGRDateTime } from "@/lib/format";
+import { eur, todayISO, formatGRDateTime, formatGRDayMonthTime } from "@/lib/format";
+import DatePicker from "@/components/DatePicker";
 import { actorLabel } from "@/lib/roles";
 
 const PAGE_SIZE = 30;
@@ -41,19 +42,7 @@ const summarize = (c) => {
   return parts.join(" · ");
 };
 
-const schedLabel = (iso) => {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString("el-GR", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "";
-  }
-};
+const schedLabel = (iso) => formatGRDayMonthTime(iso);
 
 const ScheduledBadge = ({ order }) => {
   if (!order.scheduled_at) return null;
@@ -584,12 +573,11 @@ export default function History() {
                   <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
                     Ημερομηνία
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    data-testid="history-date-input"
-                    className="h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+                    onChange={setDate}
+                    testId="history-date-input"
+                    className="h-11 px-3"
                   />
                 </div>
                 <div className="flex flex-col gap-1">

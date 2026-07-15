@@ -1,4 +1,4 @@
-import { eur, formatGRDateTime } from "@/lib/format";
+import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
 
 const summarize = (c) => {
   if (!c) return null;
@@ -16,13 +16,7 @@ const summarize = (c) => {
   return parts.join(" · ");
 };
 
-const orderTime = (iso) => {
-  try {
-    return new Date(iso).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return "";
-  }
-};
+const orderTime = (iso) => formatGRTime(iso);
 
 export default function Receipt({ order }) {
   if (!order) return null;

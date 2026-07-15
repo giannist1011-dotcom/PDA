@@ -27,7 +27,7 @@ import {
   apiTablesState,
   formatApiError,
 } from "@/lib/api";
-import { eur } from "@/lib/format";
+import { eur, formatGRTime } from "@/lib/format";
 
 let LINE_SEQ = 1;
 const newLineId = () => `TL${Date.now()}-${LINE_SEQ++}`;
@@ -48,13 +48,7 @@ const summarize = (c) => {
   return parts.join(" · ");
 };
 
-const roundTime = (iso) => {
-  try {
-    return new Date(iso).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return "";
-  }
-};
+const roundTime = (iso) => formatGRTime(iso);
 
 // Kitchen slip: prints ONLY the just-sent round (80mm print CSS)
 function KitchenSlip({ slip }) {

@@ -32,6 +32,8 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { DAY_LABELS, DAY_SHORT, isoDate, mondayOf, addDays, formatWeekRange } from "@/lib/dates";
+import { formatGRDayMonth } from "@/lib/format";
+import TimePicker from "@/components/TimePicker";
 import { useAuth } from "@/context/AuthContext";
 
 // Shift editor modal
@@ -51,6 +53,10 @@ function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, 
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!start || !end) {
+      toast.error("Επιλέξτε ώρα έναρξης και λήξης");
+      return;
+    }
     setBusy(true);
     try {
       await onSave({ start, end });
@@ -76,26 +82,22 @@ function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, 
               <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
                 Έναρξη
               </label>
-              <input
-                type="time"
-                required
+              <TimePicker
                 value={start}
-                onChange={(e) => setStart(e.target.value)}
-                data-testid="shift-start"
-                className="w-full h-12 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono text-lg focus:outline-none focus:border-flame"
+                onChange={setStart}
+                testId="shift-start"
+                className="w-full h-12 mt-1 bg-[#3D1620] text-lg"
               />
             </div>
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
                 Λήξη
               </label>
-              <input
-                type="time"
-                required
+              <TimePicker
                 value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                data-testid="shift-end"
-                className="w-full h-12 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono text-lg focus:outline-none focus:border-flame"
+                onChange={setEnd}
+                testId="shift-end"
+                className="w-full h-12 mt-1 bg-[#3D1620] text-lg"
               />
             </div>
           </div>
@@ -143,7 +145,7 @@ function printSchedule({ restaurantName, weekStart, employees, shifts, days }) {
     shifts.find((s) => s.employee_id === employeeId && s.day === dayIdx);
 
   const headerCells = days
-    .map((d) => `<th>${escapeHtml(d.short)}<br/><span class="sub">${d.date.toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit" })}</span></th>`)
+    .map((d) => `<th>${escapeHtml(d.short)}<br/><span class="sub">${formatGRDayMonth(d.date)}</span></th>`)
     .join("");
 
   const rows = employees
@@ -494,7 +496,7 @@ export default function Schedule() {
                     >
                       <div>{d.short}</div>
                       <div className="font-mono text-[10px] text-neutral-600 font-normal">
-                        {d.date.toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit" })}
+                        {formatGRDayMonth(d.date)}
                       </div>
                     </th>
                   ))}
