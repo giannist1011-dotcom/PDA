@@ -72,6 +72,17 @@ export default function OrderPanel({
 
   const setField = (k, v) => setDelivery((d) => ({ ...(d || {}), [k]: v }));
 
+  // Παράδοση/Takeaway: εναλλαγή μεταξύ τους, δεύτερο πάτημα στο ίδιο = αποεπιλογή.
+  // Τα συμπληρωμένα στοιχεία (όνομα/τηλέφωνο/διεύθυνση) διατηρούνται στην εναλλαγή.
+  const toggleDeliveryType = (type) =>
+    setDelivery((d) => {
+      const { delivery_type, ...fields } = d || {};
+      if (delivery_type === type) {
+        return Object.values(fields).some(Boolean) ? fields : null;
+      }
+      return { ...fields, delivery_type: type };
+    });
+
   const canSubmit =
     !isEmpty &&
     (!isPhone || !!delivery?.delivery_type) &&
@@ -208,7 +219,7 @@ export default function OrderPanel({
           <div className="mt-3 mb-1 p-2 rounded-md border border-flame/40 bg-flame/5" data-testid="delivery-section">
             <div className="grid grid-cols-2 gap-1.5">
               <button
-                onClick={() => setDelivery({ delivery_type: "delivery", ...(delivery || {}) })}
+                onClick={() => toggleDeliveryType("delivery")}
                 data-testid="delivery-btn-delivery"
                 data-state={delivery?.delivery_type === "delivery" ? "on" : "off"}
                 className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
@@ -220,7 +231,7 @@ export default function OrderPanel({
                 <Truck className="w-4 h-4" /> Παράδοση
               </button>
               <button
-                onClick={() => setDelivery({ delivery_type: "takeaway", ...(delivery || {}) })}
+                onClick={() => toggleDeliveryType("takeaway")}
                 data-testid="delivery-btn-takeaway"
                 data-state={delivery?.delivery_type === "takeaway" ? "on" : "off"}
                 className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${

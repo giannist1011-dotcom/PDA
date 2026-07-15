@@ -16,21 +16,21 @@ const OptionTile = ({ selected, label, badge, onClick, testId }) => (
     onClick={onClick}
     data-testid={testId}
     data-state={selected ? "on" : "off"}
-    className={`flex items-center justify-between px-4 py-4 rounded-lg border text-left transition-all no-select active:scale-[0.98] ${
+    className={`flex items-center justify-between gap-2 px-2.5 py-3 sm:px-4 sm:py-4 rounded-lg border text-left transition-all no-select active:scale-[0.98] ${
       selected
         ? "border-flame bg-flame/10 text-white"
         : "border-[#723645] bg-[#3D1620] hover:border-[#666] text-neutral-200"
     }`}
   >
-    <span className="text-base font-semibold">{label}</span>
-    <span className="flex items-center gap-2">
-      {badge && <span className="text-xs font-mono text-gold">{badge}</span>}
+    <span className="text-sm sm:text-base font-semibold min-w-0 flex-1 truncate">{label}</span>
+    <span className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      {badge && <span className="text-[11px] sm:text-xs font-mono text-gold whitespace-nowrap">{badge}</span>}
       <span
-        className={`w-6 h-6 rounded-md border flex items-center justify-center ${
+        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border flex items-center justify-center ${
           selected ? "bg-brand border-brand" : "border-[#7A3E52]"
         }`}
       >
-        {selected && <Check className="w-4 h-4 text-white" />}
+        {selected && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />}
       </span>
     </span>
   </button>
