@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { UtensilsCrossed } from "lucide-react";
 import { apiGetPublicMenu, formatApiError } from "@/lib/api";
 import { eur } from "@/lib/format";
+import { setFavicon, resetFavicon } from "@/lib/favicon";
 
 export default function PublicMenu() {
   const { slug } = useParams();
@@ -20,6 +21,7 @@ export default function PublicMenu() {
         if (!alive) return;
         setData(d);
         document.title = `${d.restaurant_name} — Κατάλογος`;
+        if (d.logo) setFavicon(d.logo);
       } catch (e) {
         if (!alive) return;
         setError(formatApiError(e));
@@ -29,6 +31,7 @@ export default function PublicMenu() {
     })();
     return () => {
       alive = false;
+      resetFavicon();
     };
   }, [slug]);
 

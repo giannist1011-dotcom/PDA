@@ -6,15 +6,41 @@ import {
   apiStartDemo,
   apiSelectProfile,
   apiExitProfile,
+  apiGetBranding,
   setToken,
   getToken,
 } from "@/lib/api";
+import { setFavicon, resetFavicon } from "@/lib/favicon";
 
 const AuthCtx = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null); // null=checking, false=guest, obj=authed
   const [error, setError] = useState(null);
+  const [storeLogo, setStoreLogo] = useState(null); // custom λογότυπο μαγαζιού (data URL) ή null
+
+  // Το store_logo δεν έρχεται με το /auth/me (μεγάλο blob) — το φέρνουμε μία φορά ανά λογαριασμό
+  const userId = user && user !== false ? user.id : null;
+  useEffect(() => {
+    if (!userId) {
+      setStoreLogo(null);
+      return;
+    }
+    let alive = true;
+    apiGetBranding()
+      .then((b) => alive && setStoreLogo(b.logo || null))
+      .catch(() => alive && setStoreLogo(null));
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
+  // Dynamic favicon: λογότυπο μαγαζιού όσο υπάρχει, OrderDeck default αλλιώς/στο logout
+  useEffect(() => {
+    if (!storeLogo) return undefined;
+    setFavicon(storeLogo);
+    return () => resetFavicon();
+  }, [storeLogo]);
 
   useEffect(() => {
     (async () => {
@@ -112,6 +138,8 @@ export function AuthProvider({ children }) {
         canManage,
         profileName,
         hasProfile,
+        storeLogo,
+        setStoreLogo,
       }}
     >
       {children}

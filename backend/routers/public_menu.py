@@ -8,7 +8,7 @@ import re
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from core import db, require_owner
+from core import db, get_current_user, require_owner
 
 router = APIRouter()
 
@@ -130,6 +130,15 @@ async def set_store_logo(body: LogoIn, user: dict = Depends(require_owner)):
 async def remove_store_logo(user: dict = Depends(require_owner)):
     await db.users.update_one({"id": user["id"]}, {"$unset": {"store_logo": ""}})
     return {"ok": True}
+
+
+# ============ BRANDING (κάθε συνδεδεμένο προφίλ) ============
+# Το /auth/me αποκλείει σκόπιμα το store_logo (μεγάλο base64 blob σε κάθε request).
+# Εδώ το φέρνουμε μία φορά, on demand, για header + dynamic favicon.
+@router.get("/branding")
+async def get_branding(user: dict = Depends(get_current_user)):
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "store_logo": 1})
+    return {"logo": (u or {}).get("store_logo")}
 
 
 # ============ PUBLIC (ΧΩΡΙΣ login) ============

@@ -21,6 +21,7 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { readFileAsDataUrl, shrinkDataUrl } from "@/lib/image";
+import { useAuth } from "@/context/AuthContext";
 
 const MAX_BYTES = 2 * 1024 * 1024; // ~2MB raw αρχείο
 
@@ -32,6 +33,7 @@ export default function PublicMenuSettings() {
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef(null);
   const qrRef = useRef(null);
+  const { setStoreLogo } = useAuth(); // header + favicon ενημερώνονται αμέσως
 
   useEffect(() => {
     (async () => {
@@ -96,6 +98,7 @@ export default function PublicMenuSettings() {
       const shrunk = await shrinkDataUrl(raw);
       const r = await apiSetStoreLogo(shrunk);
       setState((s) => ({ ...s, logo: r.logo }));
+      setStoreLogo(r.logo);
       toast.success("Το λογότυπο ανέβηκε");
     } catch (e) {
       toast.error(formatApiError(e));
@@ -110,6 +113,7 @@ export default function PublicMenuSettings() {
     try {
       await apiRemoveStoreLogo();
       setState((s) => ({ ...s, logo: null }));
+      setStoreLogo(null);
       toast.success("Το λογότυπο αφαιρέθηκε");
     } catch (e) {
       toast.error(formatApiError(e));

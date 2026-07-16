@@ -30,6 +30,7 @@ import {
 import DeckPilotChat from "@/components/DeckPilotChat";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
+import { businessIcon } from "@/lib/business";
 
 // Full nav list. Each entry lists the roles that can see it.
 const ALL_ROLES = ["owner", "manager", "employee", "waiter"];
@@ -129,7 +130,8 @@ function DemoBanner({ expiresAt }) {
 }
 
 export default function AppShell({ title, children }) {
-  const { user, logout, exitProfile, role, canManage, profileName } = useAuth();
+  const { user, logout, exitProfile, role, canManage, profileName, storeLogo } = useAuth();
+  const BizIcon = businessIcon(user && user !== false ? user.business_type : null);
   const [open, setOpen] = useState(false);
   const [pilotOpen, setPilotOpen] = useState(false);
   const navigate = useNavigate();
@@ -253,12 +255,21 @@ export default function AppShell({ title, children }) {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <img
-              src="/icon.svg"
-              alt="OrderDeck"
-              className="w-9 h-9 rounded-md shrink-0"
-              data-testid="business-icon"
-            />
+            {storeLogo ? (
+              <img
+                src={storeLogo}
+                alt={user?.restaurant_name || "Λογότυπο"}
+                className="w-9 h-9 rounded-md object-contain bg-white/5 shrink-0"
+                data-testid="business-icon"
+              />
+            ) : (
+              <div
+                className="w-9 h-9 rounded-md bg-brand flex items-center justify-center shrink-0"
+                data-testid="business-icon"
+              >
+                <BizIcon className="w-5 h-5 text-white" />
+              </div>
+            )}
             <div className="flex items-baseline gap-2 min-w-0">
               <span
                 className="font-heading text-lg lg:text-xl xl:text-2xl font-bold tracking-tight truncate"
@@ -296,9 +307,17 @@ export default function AppShell({ title, children }) {
           >
             <div className="flex items-center justify-between px-5 h-16 border-b border-[#723645]">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-md bg-brand flex items-center justify-center">
-                  <BizIcon className="w-5 h-5 text-white" />
-                </div>
+                {storeLogo ? (
+                  <img
+                    src={storeLogo}
+                    alt={user?.restaurant_name || "Λογότυπο"}
+                    className="w-9 h-9 rounded-md object-contain bg-white/5"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-md bg-brand flex items-center justify-center">
+                    <BizIcon className="w-5 h-5 text-white" />
+                  </div>
+                )}
                 <div>
                   <div className="font-heading text-lg font-bold leading-tight">
                     {user?.restaurant_name || "POS"}
