@@ -132,6 +132,13 @@ export default function Analytics() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Δημοφιλέστερα προϊόντα — δικό τους date range (ανεξάρτητο από το κύριο φίλτρο)
+  const [popFrom, setPopFrom] = useState(todayISO());
+  const [popTo, setPopTo] = useState(todayISO());
+  const [popItems, setPopItems] = useState(null); // null → χρήση του κύριου range
+  const [popLoading, setPopLoading] = useState(false);
+  const [popError, setPopError] = useState(null);
+
   // Comparison state
   const [cmpFromA, setCmpFromA] = useState(isoNDaysBack(13));
   const [cmpToA, setCmpToA] = useState(isoNDaysBack(7));
@@ -182,7 +189,29 @@ export default function Analytics() {
     setTimeout(load, 0);
   };
 
-  const hourly = (data?.hourly || []).filter((h) => h.orders > 0);
+  // Μία μπάρα ανά ώρα — κρατάμε το συνεχόμενο παράθυρο από την πρώτη έως την
+  // τελευταία ώρα με παραγγελίες (οι ενδιάμεσες νεκρές ώρες φαίνονται ως κενές).
+  const hourly = (() => {
+    const all = data?.hourly || [];
+    const first = all.findIndex((h) => h.orders > 0);
+    if (first === -1) return [];
+    let last = all.length - 1;
+    while (last > first && all[last].orders === 0) last--;
+    return all.slice(first, last + 1);
+  })();
+
+  const loadPopular = async () => {
+    setPopLoading(true);
+    setPopError(null);
+    try {
+      const d = await fetchAnalytics(popFrom, popTo);
+      setPopItems(d.popular_items || []);
+    } catch (e) {
+      setPopError("Σφάλμα φόρτωσης");
+    } finally {
+      setPopLoading(false);
+    }
+  };
 
   const loadCompare = async () => {
     setCmpLoading(true);
@@ -359,7 +388,7 @@ export default function Analytics() {
             <div className="flex items-center gap-2 mb-4">
               <Clock className="w-4 h-4 text-flame" />
               <h2 className="font-heading font-semibold text-lg">
-                Παραγγελίες ανά ώρα
+                Διάγραμμα ωρών
               </h2>
             </div>
             {hourly.length === 0 ? (
@@ -371,13 +400,20 @@ export default function Analytics() {
                 <BarChart data={hourly}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#4A1B27" />
                   <XAxis dataKey="label" stroke="#A3A3A3" fontSize={12} />
-                  <YAxis stroke="#A3A3A3" fontSize={12} />
+                  <YAxis stroke="#A3A3A3" fontSize={12} allowDecimals={false} />
                   <Tooltip
-                    contentStyle={{
-                      background: "#2A0E14",
-                      border: "1px solid #723645",
-                      borderRadius: 6,
-                      color: "#fff",
+                    cursor={{ fill: "#4A1B27", opacity: 0.5 }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const p = payload[0].payload;
+                      return (
+                        <div className="px-3 py-2 rounded-md border border-[#723645] bg-[#2A0E14] text-sm">
+                          <div className="text-neutral-400 font-mono mb-1">{p.label}</div>
+                          <div className="text-white font-mono">
+                            Παραγγελίες: {p.orders} | Έσοδα: {eur(p.revenue)}
+                          </div>
+                        </div>
+                      );
                     }}
                   />
                   <Bar dataKey="orders" fill="#F97316" radius={[4, 4, 0, 0]} />
@@ -451,10 +487,49 @@ export default function Analytics() {
 
         {/* Popular items */}
         <div className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg" data-testid="popular-items">
-          <h2 className="font-heading font-semibold text-lg mb-4">
-            Δημοφιλέστερα προϊόντα
-          </h2>
-          {(!data?.popular_items || data.popular_items.length === 0) ? (
+          <div className="flex flex-wrap items-end gap-4 mb-4">
+            <h2 className="font-heading font-semibold text-lg mr-auto">
+              Δημοφιλέστερα προϊόντα
+            </h2>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-widest text-neutral-500">
+                Από
+              </label>
+              <DatePicker
+                value={popFrom}
+                onChange={setPopFrom}
+                testId="popular-date-from"
+                className="h-11 px-3 bg-[#2A0E14]"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-widest text-neutral-500">
+                Έως
+              </label>
+              <DatePicker
+                value={popTo}
+                onChange={setPopTo}
+                testId="popular-date-to"
+                className="h-11 px-3 bg-[#2A0E14]"
+              />
+            </div>
+            <Button
+              onClick={loadPopular}
+              disabled={popLoading}
+              data-testid="popular-apply-btn"
+              className="h-11 px-5 bg-brand hover:bg-brand-hover text-white font-bold"
+            >
+              {popLoading ? "Φόρτωση..." : "Εφαρμογή"}
+            </Button>
+          </div>
+          {popError && (
+            <div className="p-3 mb-4 border border-[#FF3B30] bg-[#FF3B30]/10 rounded-md text-[#FF6961] text-sm">
+              {popError}
+            </div>
+          )}
+          {(() => {
+            const items = popItems ?? data?.popular_items ?? [];
+            return items.length === 0 ? (
             <div className="py-8 text-center text-neutral-500">
               Δεν υπάρχουν δεδομένα για αυτό το διάστημα
             </div>
@@ -470,7 +545,7 @@ export default function Analytics() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.popular_items.map((it, i) => (
+                  {items.map((it, i) => (
                     <tr
                       key={it.name}
                       className="border-b border-[#431A25] last:border-0"
@@ -491,7 +566,8 @@ export default function Analytics() {
                 </tbody>
               </table>
             </div>
-          )}
+          );
+          })()}
         </div>
 
         {/* ---------- COMPARISON SECTION ---------- */}

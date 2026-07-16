@@ -17,6 +17,7 @@ import Photos from "@/pages/Photos";
 import Expenses from "@/pages/Expenses";
 import History from "@/pages/History";
 import DayClose from "@/pages/DayClose";
+import DeckView from "@/pages/DeckView";
 import Waiters from "@/pages/Waiters";
 import Tables from "@/pages/Tables";
 import TableOrder from "@/pages/TableOrder";
@@ -153,6 +154,14 @@ function App() {
               }
             />
             {/* Owner only */}
+            <Route
+              path="/app/deck"
+              element={
+                <ProtectedRoute requireOwner>
+                  <DeckView />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/app/analytics"
               element={

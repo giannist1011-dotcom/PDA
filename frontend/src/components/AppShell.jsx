@@ -22,6 +22,7 @@ import {
   ArrowRight,
   Store,
   ChevronDown,
+  Gauge,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
@@ -39,6 +40,7 @@ const NAV_ALL = [
   { to: "/app/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock", roles: STAFF },
   { to: "/app/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule", roles: STAFF },
   { to: "/app/waiters", label: "Σερβιτόροι", icon: UserIcon, testId: "drawer-link-waiters", roles: ["manager"] },
+  { to: "/app/deck", label: "Deck View", icon: Gauge, testId: "drawer-link-deck", roles: ["owner"] },
 ];
 
 // Ομάδα "Κατάστημα" — collapsible στο drawer. Εμφανίζεται μόνο αν ο ρόλος

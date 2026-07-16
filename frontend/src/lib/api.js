@@ -149,6 +149,9 @@ export const apiListDayReports = () => api.get("/reports/day").then((r) => r.dat
 export const fetchAnalytics = (dateFrom, dateTo) =>
   api.get("/analytics", { params: { date_from: dateFrom, date_to: dateTo } }).then((r) => r.data);
 
+// DECK VIEW (live overview ημέρας)
+export const fetchDeckOverview = () => api.get("/deck/overview").then((r) => r.data);
+
 // EXPENSES
 export const apiListExpenseCategories = () =>
   api.get("/expenses/categories").then((r) => r.data);
