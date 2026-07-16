@@ -166,6 +166,7 @@ export default function ProfileSelect() {
     <div className="min-h-screen bg-[#2A0E14] text-white flex items-center justify-center px-6 py-8">
       <div className="w-full max-w-4xl">
         <div className="text-center mb-10">
+          <img src="/logo-dark.svg" alt="OrderDeck" className="h-10 mx-auto mb-4" />
           <div className="text-xs uppercase tracking-widest text-neutral-500 mb-1">
             {user.restaurant_name}
           </div>

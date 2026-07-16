@@ -1,0 +1,6 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#F97316"/>
+  <g transform="skewX(-9)">
+    <path d="M181 132 L181 380 L287 380 Q423 380 423 256 Q423 132 287 132 Z" fill="#FFFFFF"/>
+  </g>
+</svg>

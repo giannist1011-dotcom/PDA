@@ -30,7 +30,6 @@ import {
 import DeckPilotChat from "@/components/DeckPilotChat";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
-import { businessIcon } from "@/lib/business";
 
 // Full nav list. Each entry lists the roles that can see it.
 const ALL_ROLES = ["owner", "manager", "employee", "waiter"];
@@ -229,7 +228,6 @@ export default function AppShell({ title, children }) {
     );
   };
 
-  const BizIcon = businessIcon(user && user !== false ? user.business_type : null);
   const roleColor = ROLE_COLORS[role] || "#888";
   const profileBadge = role ? (
     <span
@@ -255,12 +253,12 @@ export default function AppShell({ title, children }) {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div
-              className="w-9 h-9 rounded-md bg-brand flex items-center justify-center shrink-0"
+            <img
+              src="/icon.svg"
+              alt="OrderDeck"
+              className="w-9 h-9 rounded-md shrink-0"
               data-testid="business-icon"
-            >
-              <BizIcon className="w-5 h-5 text-white" />
-            </div>
+            />
             <div className="flex items-baseline gap-2 min-w-0">
               <span
                 className="font-heading text-lg lg:text-xl xl:text-2xl font-bold tracking-tight truncate"

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Utensils, Mail, Lock } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { formatApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -34,11 +34,8 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[#2A0E14] text-white flex items-center justify-center px-6">
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-11 h-11 rounded-md bg-brand flex items-center justify-center">
-            <Utensils className="w-6 h-6 text-white" />
-          </div>
-          <span className="font-heading text-3xl font-bold tracking-tight">OrderDeck</span>
+        <div className="flex items-center mb-8 justify-center">
+          <img src="/logo-dark.svg" alt="OrderDeck" className="h-12" />
         </div>
 
         <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-8">

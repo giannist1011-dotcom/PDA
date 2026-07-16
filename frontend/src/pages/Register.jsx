@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  Utensils,
   ArrowLeft,
   ArrowRight,
   Check,
@@ -170,11 +169,8 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-[#2A0E14] text-white flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg">
-        <div className="flex items-center gap-3 mb-6 justify-center">
-          <div className="w-11 h-11 rounded-md bg-brand flex items-center justify-center">
-            <Utensils className="w-6 h-6 text-white" />
-          </div>
-          <span className="font-heading text-3xl font-bold tracking-tight">OrderDeck</span>
+        <div className="flex items-center mb-6 justify-center">
+          <img src="/logo-dark.svg" alt="OrderDeck" className="h-12" />
         </div>
 
         {/* Step indicator */}

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Utensils,
   Printer,
   LayoutGrid,
   BarChart3,
@@ -85,19 +84,8 @@ const FAQS = [
 /* ---------- Small pieces ---------- */
 
 function Logo({ size = "md" }) {
-  const box = size === "lg" ? "w-11 h-11 rounded-xl" : "w-9 h-9 rounded-lg";
-  const icon = size === "lg" ? "w-6 h-6" : "w-5 h-5";
-  const text = size === "lg" ? "text-2xl" : "text-xl";
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className={`${box} bg-gradient-to-br from-[#A62B3E] to-[#6E1B28] flex items-center justify-center shadow-lg shadow-black/40`}>
-        <Utensils className={`${icon} text-white`} />
-      </div>
-      <span className={`font-heading ${text} font-extrabold tracking-tight text-white`}>
-        Order<span className="text-flame">Deck</span>
-      </span>
-    </div>
-  );
+  const h = size === "lg" ? "h-11" : "h-9";
+  return <img src="/logo-dark.svg" alt="OrderDeck" className={h} />;
 }
 
 function SectionTitle({ eyebrow, title, sub }) {
