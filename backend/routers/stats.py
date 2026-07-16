@@ -172,7 +172,7 @@ async def compute_day_summary(user_id: str, day: str) -> dict:
 
 
 @router.get("/reports/day-summary")
-async def day_summary(date: Optional[str] = None, user: dict = Depends(require_staff)):
+async def day_summary(date: Optional[str] = None, user: dict = Depends(require_owner)):
     day = date or datetime.now(timezone.utc).date().isoformat()
     return await compute_day_summary(user["id"], day)
 
@@ -182,7 +182,7 @@ class DayCloseIn(BaseModel):
 
 
 @router.post("/reports/day-close")
-async def close_day(body: Optional[DayCloseIn] = None, user: dict = Depends(require_staff)):
+async def close_day(body: Optional[DayCloseIn] = None, user: dict = Depends(require_owner)):
     day = (body.date if body and body.date else None) or datetime.now(timezone.utc).date().isoformat()
     summary = await compute_day_summary(user["id"], day)
     doc = {
@@ -326,7 +326,7 @@ async def deck_overview(user: dict = Depends(require_owner)):
 
 
 @router.get("/reports/day")
-async def list_day_reports(user: dict = Depends(require_manager)):
+async def list_day_reports(user: dict = Depends(require_owner)):
     return await db.day_reports.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
     ).sort("closed_at", -1).to_list(365)

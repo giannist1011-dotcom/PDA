@@ -122,15 +122,16 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* Owner + Υπεύθυνος + Υπάλληλος (όχι Σερβιτόρος) */}
+            {/* Μόνο Ιδιοκτήτης */}
             <Route
               path="/app/day-close"
               element={
-                <ProtectedRoute roles={["owner", "manager", "employee"]}>
+                <ProtectedRoute roles={["owner"]}>
                   <DayClose />
                 </ProtectedRoute>
               }
             />
+            {/* Owner + Υπεύθυνος + Υπάλληλος (όχι Σερβιτόρος) */}
             <Route
               path="/app/history"
               element={

@@ -50,15 +50,25 @@ const NAV_ALL = [
 // βλέπει τουλάχιστον ένα από τα περιεχόμενά της.
 const NAV_STORE = [
   { to: "/app/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"] },
-  { to: "/app/deckpilot", label: "DeckPilot (AI βοηθός)", icon: Bot, testId: "drawer-link-deckpilot", roles: ["owner"] },
-  { to: "/app/brief", label: "Ημερήσιο Brief", icon: FileText, testId: "drawer-link-brief", roles: ["owner"] },
-  { to: "/app/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: STAFF },
+  { to: "/app/deckpilot", label: "DeckPilot (AI βοηθός)", icon: Bot, testId: "drawer-link-deckpilot", roles: ["owner"], beta: true },
+  { to: "/app/brief", label: "Ημερήσιο Brief", icon: FileText, testId: "drawer-link-brief", roles: ["owner"], beta: true },
+  { to: "/app/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: ["owner"] },
   { to: "/app/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", roles: ["owner"] },
   { to: "/app/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", roles: MANAGERS },
   { to: "/app/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", roles: ["owner"] },
 ];
 
 const STORE_GROUP_KEY = "orderdeck-nav-store-open";
+
+// Μικρό badge "beta" για features υπό δοκιμή
+const BetaBadge = () => (
+  <span
+    className="px-1.5 py-0.5 rounded text-[9px] font-bold lowercase tracking-wider bg-gold/20 text-gold shrink-0"
+    data-testid="beta-badge"
+  >
+    beta
+  </span>
+);
 
 // ---------- Demo banner (κάτω από το header όταν ο λογαριασμός είναι δοκιμαστικός) ----------
 const remainingMs = (iso) => {
@@ -186,6 +196,7 @@ export default function AppShell({ title, children }) {
       >
         <Icon className="w-5 h-5" />
         <span className="font-semibold">{n.label}</span>
+        {n.beta && <BetaBadge />}
       </Link>
     );
   };
@@ -342,6 +353,9 @@ export default function AppShell({ title, children }) {
             className="fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-flame text-white shadow-lg shadow-black/40 flex items-center justify-center hover:opacity-90 transition-opacity"
           >
             <Bot className="w-6 h-6" />
+            <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded text-[9px] font-bold lowercase tracking-wider bg-gold text-black shadow">
+              beta
+            </span>
           </button>
           {pilotOpen && (
             <>
@@ -358,6 +372,7 @@ export default function AppShell({ title, children }) {
                   <div className="flex items-center gap-2 font-heading font-bold">
                     <Bot className="w-4 h-4 text-flame" />
                     DeckPilot
+                    <BetaBadge />
                   </div>
                   <button
                     onClick={() => setPilotOpen(false)}
