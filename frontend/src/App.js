@@ -18,6 +18,8 @@ import Expenses from "@/pages/Expenses";
 import History from "@/pages/History";
 import DayClose from "@/pages/DayClose";
 import DeckView from "@/pages/DeckView";
+import DeckPilot from "@/pages/DeckPilot";
+import DailyBrief from "@/pages/DailyBrief";
 import Waiters from "@/pages/Waiters";
 import Tables from "@/pages/Tables";
 import TableOrder from "@/pages/TableOrder";
@@ -159,6 +161,22 @@ function App() {
               element={
                 <ProtectedRoute requireOwner>
                   <DeckView />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/deckpilot"
+              element={
+                <ProtectedRoute requireOwner>
+                  <DeckPilot />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/brief"
+              element={
+                <ProtectedRoute requireOwner>
+                  <DailyBrief />
                 </ProtectedRoute>
               }
             />

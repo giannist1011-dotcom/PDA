@@ -8,7 +8,7 @@ from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, ensure_demo_account, migrate_items_sort_order
-from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos
+from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai
 
 app = FastAPI(title="OrderDeck")
 
@@ -33,6 +33,7 @@ api.include_router(tables.router)
 api.include_router(promo.router)
 api.include_router(public_menu.router)
 api.include_router(stock_photos.router)
+api.include_router(ai.router)
 
 app.include_router(api)
 
@@ -75,6 +76,13 @@ async def on_startup():
     # Demo λογαριασμοί: γρήγορο εντοπισμό ληγμένων για το auto-cleanup
     await db.users.create_index([("is_demo", 1), ("demo_expires_at", 1)], sparse=True)
     await db.demo_leads.create_index([("created_at", -1)])
+    # AI (DeckPilot): rate limiting ανά ώρα + cached ημερήσια briefs
+    await db.ai_usage.create_index(
+        [("user_id", 1), ("kind", 1), ("hour", 1)], unique=True
+    )
+    await db.ai_briefs.create_index(
+        [("user_id", 1), ("date", -1), ("mode", 1)], unique=True
+    )
     await migrate_items_sort_order()
     await ensure_demo_account()
 

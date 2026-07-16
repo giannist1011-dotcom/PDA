@@ -23,7 +23,10 @@ import {
   Store,
   ChevronDown,
   Gauge,
+  Bot,
+  FileText,
 } from "lucide-react";
+import DeckPilotChat from "@/components/DeckPilotChat";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
 import { businessIcon } from "@/lib/business";
@@ -47,6 +50,8 @@ const NAV_ALL = [
 // βλέπει τουλάχιστον ένα από τα περιεχόμενά της.
 const NAV_STORE = [
   { to: "/app/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"] },
+  { to: "/app/deckpilot", label: "DeckPilot (AI βοηθός)", icon: Bot, testId: "drawer-link-deckpilot", roles: ["owner"] },
+  { to: "/app/brief", label: "Ημερήσιο Brief", icon: FileText, testId: "drawer-link-brief", roles: ["owner"] },
   { to: "/app/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: STAFF },
   { to: "/app/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", roles: ["owner"] },
   { to: "/app/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", roles: MANAGERS },
@@ -116,6 +121,7 @@ function DemoBanner({ expiresAt }) {
 export default function AppShell({ title, children }) {
   const { user, logout, exitProfile, role, canManage, profileName } = useAuth();
   const [open, setOpen] = useState(false);
+  const [pilotOpen, setPilotOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -325,6 +331,48 @@ export default function AppShell({ title, children }) {
       )}
 
       <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
+
+      {/* DeckPilot — floating κουμπί κάτω δεξιά, owner-only, παντού εκτός από τη σελίδα του */}
+      {role === "owner" && location.pathname !== "/app/deckpilot" && (
+        <>
+          <button
+            onClick={() => setPilotOpen(true)}
+            data-testid="deckpilot-fab"
+            aria-label="DeckPilot (AI βοηθός)"
+            className="fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-flame text-white shadow-lg shadow-black/40 flex items-center justify-center hover:opacity-90 transition-opacity"
+          >
+            <Bot className="w-6 h-6" />
+          </button>
+          {pilotOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+                onClick={() => setPilotOpen(false)}
+                data-testid="deckpilot-backdrop"
+              />
+              <div
+                className="fixed z-50 bottom-0 right-0 left-0 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[420px] h-[75vh] sm:h-[600px] sm:max-h-[85vh] bg-[#2A0E14] border border-[#723645] sm:rounded-lg rounded-t-lg flex flex-col overflow-hidden"
+                data-testid="deckpilot-panel"
+              >
+                <div className="shrink-0 flex items-center justify-between px-4 h-12 border-b border-[#723645]">
+                  <div className="flex items-center gap-2 font-heading font-bold">
+                    <Bot className="w-4 h-4 text-flame" />
+                    DeckPilot
+                  </div>
+                  <button
+                    onClick={() => setPilotOpen(false)}
+                    data-testid="deckpilot-close"
+                    className="w-9 h-9 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <DeckPilotChat />
+              </div>
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }

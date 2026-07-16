@@ -343,6 +343,7 @@ PER_USER_COLLECTIONS = [
     "profiles", "categories", "items", "orders", "shopping",
     "stock_categories", "stock_items", "photos", "employees", "shifts",
     "expense_categories", "expenses", "day_reports", "tables", "table_tabs",
+    "ai_usage", "ai_briefs",
 ]
 
 

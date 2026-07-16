@@ -214,6 +214,14 @@ export const apiAdminCreateStockPhoto = (pw, payload) =>
 export const apiAdminDeleteStockPhoto = (pw, id) =>
   api.delete(`/admin/stock-photos/${id}`, adminHeaders(pw)).then((r) => r.data);
 
+// AI — DeckPilot & ημερήσιο brief (owner only)
+export const apiAiChat = (messages) =>
+  api.post("/ai/chat", { messages }).then((r) => r.data);
+export const apiGetBrief = (mode) =>
+  api.get("/ai/brief", { params: { mode } }).then((r) => r.data);
+export const apiCreateBrief = (mode, force = false) =>
+  api.post("/ai/brief", { mode, force }).then((r) => r.data);
+
 // Error helper
 export function formatApiError(e) {
   const d = e?.response?.data?.detail;
