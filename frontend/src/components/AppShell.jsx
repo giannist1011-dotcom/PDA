@@ -25,6 +25,7 @@ import {
   Gauge,
   Bot,
   FileText,
+  Download,
 } from "lucide-react";
 import DeckPilotChat from "@/components/DeckPilotChat";
 import { useAuth } from "@/context/AuthContext";
@@ -147,6 +148,33 @@ export default function AppShell({ title, children }) {
       // even if it fails, navigate anyway
     }
     navigate("/app/select-profile");
+  };
+
+  // PWA install prompt (Chrome/Edge/Android) — κρατάμε το event για να το τρικάρουμε on demand
+  const [installPrompt, setInstallPrompt] = useState(null);
+  useEffect(() => {
+    const onPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    const onInstalled = () => setInstallPrompt(null);
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    try {
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === "accepted") setInstallPrompt(null);
+    } catch {
+      // ο χρήστης έκλεισε το prompt — κρατάμε το κουμπί
+    }
   };
 
   const [storeOpen, setStoreOpen] = useState(() => {
@@ -314,6 +342,16 @@ export default function AppShell({ title, children }) {
                     </div>
                   )}
                 </div>
+              )}
+              {role === "owner" && installPrompt && (
+                <button
+                  onClick={handleInstall}
+                  data-testid="drawer-install-btn"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-md mb-1 text-neutral-200 hover:bg-[#3D1620] border border-transparent"
+                >
+                  <Download className="w-5 h-5" />
+                  <span className="font-semibold">Εγκατάσταση εφαρμογής</span>
+                </button>
               )}
               <button
                 onClick={() => {

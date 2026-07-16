@@ -21,3 +21,10 @@ root.render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
+
+// PWA: service worker μόνο για installability + static cache (όχι offline data)
+if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
