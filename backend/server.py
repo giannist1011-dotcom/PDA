@@ -76,6 +76,8 @@ async def on_startup():
     # Demo λογαριασμοί: γρήγορο εντοπισμό ληγμένων για το auto-cleanup
     await db.users.create_index([("is_demo", 1), ("demo_expires_at", 1)], sparse=True)
     await db.demo_leads.create_index([("created_at", -1)])
+    # Live χάρτης: geocode cache ανά διεύθυνση (μία γεωκωδικοποίηση ανά διεύθυνση)
+    await db.geocode_cache.create_index([("user_id", 1), ("address", 1)], unique=True)
     # AI (DeckPilot): rate limiting ανά ώρα + cached ημερήσια briefs
     await db.ai_usage.create_index(
         [("user_id", 1), ("kind", 1), ("hour", 1)], unique=True

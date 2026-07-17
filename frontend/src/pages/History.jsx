@@ -12,8 +12,10 @@ import {
   Phone,
   MapPin,
   ChevronDown,
+  Map as MapIcon,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import LiveOrdersMap from "@/components/LiveOrdersMap";
 import Receipt from "@/components/Receipt";
 import PinGateModal from "@/components/PinGateModal";
 import { Button } from "@/components/ui/button";
@@ -387,7 +389,7 @@ function CustomerDetailModal({ customer, onClose, onOpenOrder }) {
 // ---------- Main page ----------
 export default function History() {
   const { user, isOwner, canManage } = useAuth();
-  const [tab, setTab] = useState("orders");
+  const [tab, setTab] = useState("map");
 
   // ---- Tab 1: orders ----
   const [date, setDate] = useState(todayISO());
@@ -540,6 +542,20 @@ export default function History() {
         </div>
         <div className="flex gap-2 mt-4 mb-6 border-b border-[#431A25]">
           <button
+            onClick={() => setTab("map")}
+            data-testid="history-tab-map"
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 -mb-px transition-colors ${
+              tab === "map"
+                ? "border-flame text-flame"
+                : "border-transparent text-neutral-400 hover:text-white"
+            }`}
+          >
+            <MapIcon className="w-4 h-4" /> Χάρτης
+            <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#00E676]/15 text-[#00E676]">
+              Live
+            </span>
+          </button>
+          <button
             onClick={() => setTab("orders")}
             data-testid="history-tab-orders"
             className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 -mb-px transition-colors ${
@@ -565,7 +581,9 @@ export default function History() {
           )}
         </div>
 
-        {tab === "orders" ? (
+        {tab === "map" ? (
+          <LiveOrdersMap />
+        ) : tab === "orders" ? (
           <>
             {/* Filters */}
             <div className="p-4 bg-[#3D1620] border border-[#723645] rounded-lg mb-5">

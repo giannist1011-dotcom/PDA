@@ -113,6 +113,9 @@ export const apiListScheduledOrders = () =>
   api.get("/orders/scheduled").then((r) => r.data);
 export const apiActivateOrder = (id) =>
   api.post(`/orders/${id}/activate`).then((r) => r.data);
+// Live χάρτης: παραγγελίες παράδοσης τελευταίων 30' με συντεταγμένες
+export const apiLiveMapOrders = () =>
+  api.get("/orders/live-map").then((r) => r.data);
 
 // CUSTOMERS
 export const apiListCustomers = () => api.get("/customers").then((r) => r.data);

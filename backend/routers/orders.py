@@ -1,8 +1,11 @@
 """Παραγγελίες: δημιουργία, scheduled, ιστορικό, ακύρωση, πελάτες."""
+import asyncio
 import re
 import uuid
+
+import requests
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -197,6 +200,87 @@ async def list_orders(
     return docs
 
 
+# ============ LIVE MAP ============
+LIVE_MAP_WINDOW_MIN = 30       # παραγγελίες παράδοσης των τελευταίων 30' (από την εκτύπωση)
+GEOCODE_MAX_NEW_PER_CALL = 5   # σεβασμός στο rate limit του Nominatim (1 req/s)
+
+
+def _nominatim_lookup(address: str):
+    """Sync κλήση στο Nominatim — τρέχει σε thread για να μην μπλοκάρει το event loop."""
+    r = requests.get(
+        "https://nominatim.openstreetmap.org/search",
+        params={"format": "json", "limit": 1, "q": address, "countrycodes": "gr"},
+        headers={"User-Agent": "OrderDeck-POS/1.0", "Accept-Language": "el"},
+        timeout=8,
+    )
+    r.raise_for_status()
+    results = r.json()
+    if results:
+        return float(results[0]["lat"]), float(results[0]["lon"])
+    return None, None
+
+
+async def _geocode_cached(user_id: str, address: str, budget: dict):
+    """Επιστρέφει (lat, lng) από cache· αλλιώς γεωκωδικοποιεί (max N νέες ανά κλήση) και αποθηκεύει."""
+    key = " ".join(address.strip().lower().split())
+    cached = await db.geocode_cache.find_one({"user_id": user_id, "address": key})
+    if cached:
+        return cached.get("lat"), cached.get("lng")
+    if budget["new"] >= GEOCODE_MAX_NEW_PER_CALL:
+        return None, None  # θα γίνει στο επόμενο poll
+    budget["new"] += 1
+    try:
+        lat, lng = await asyncio.to_thread(_nominatim_lookup, address.strip())
+    except Exception:
+        return None, None  # προσωρινό σφάλμα — δεν κάνουμε cache, retry στο επόμενο poll
+    await db.geocode_cache.update_one(
+        {"user_id": user_id, "address": key},
+        {"$set": {"lat": lat, "lng": lng, "created_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    await asyncio.sleep(1)  # Nominatim: max 1 αίτημα/δευτερόλεπτο
+    return lat, lng
+
+
+@router.get("/orders/live-map")
+async def live_map_orders(user: dict = Depends(require_staff)):
+    """Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για τον live χάρτη."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=LIVE_MAP_WINDOW_MIN)).isoformat()
+    docs = await db.orders.find(
+        {
+            "user_id": user["id"],
+            "status": "active",
+            "cancelled": {"$ne": True},
+            "delivery.delivery_type": "delivery",
+            "delivery.address": {"$nin": [None, ""]},
+            "$or": [
+                {"activated_at": {"$gte": cutoff}},
+                {"activated_at": {"$exists": False}, "created_at": {"$gte": cutoff}},
+            ],
+        },
+        {"_id": 0, "id": 1, "order_number": 1, "created_at": 1, "activated_at": 1,
+         "total": 1, "delivery": 1},
+    ).sort("created_at", -1).to_list(100)
+
+    budget = {"new": 0}
+    out = []
+    for d in docs:
+        addr = d["delivery"]["address"]
+        lat, lng = await _geocode_cached(user["id"], addr, budget)
+        out.append({
+            "id": d["id"],
+            "order_number": d["order_number"],
+            "printed_at": d.get("activated_at") or d["created_at"],
+            "address": addr,
+            "floor": d["delivery"].get("floor"),
+            "name": d["delivery"].get("name"),
+            "total": d.get("total", 0),
+            "lat": lat,
+            "lng": lng,
+        })
+    return out
+
+
 @router.get("/orders/{oid}", response_model=Order)
 async def get_order(oid: str, user: dict = Depends(require_staff)):
     doc = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})
@@ -212,7 +296,7 @@ async def activate_order(oid: str, user: dict = Depends(require_staff)):
     """Move a scheduled order to active (fired / printed)."""
     r = await db.orders.update_one(
         {"id": oid, "user_id": user["id"], "status": "scheduled"},
-        {"$set": {"status": "active"}},
+        {"$set": {"status": "active", "activated_at": datetime.now(timezone.utc).isoformat()}},
     )
     if r.matched_count == 0:
         raise HTTPException(404, "Not found")
