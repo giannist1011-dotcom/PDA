@@ -116,6 +116,8 @@ export const apiActivateOrder = (id) =>
 // Live χάρτης: παραγγελίες παράδοσης τελευταίων 30' με συντεταγμένες
 export const apiLiveMapOrders = () =>
   api.get("/orders/live-map").then((r) => r.data);
+export const apiClearLiveMap = () =>
+  api.post("/orders/live-map/clear").then((r) => r.data);
 
 // CUSTOMERS
 export const apiListCustomers = () => api.get("/customers").then((r) => r.data);

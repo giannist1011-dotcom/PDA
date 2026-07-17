@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, RefreshCw } from "lucide-react";
+import { Eraser, MapPin, MapPinOff, RefreshCw } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useAuth } from "@/context/AuthContext";
-import { apiLiveMapOrders } from "@/lib/api";
+import { apiClearLiveMap, apiLiveMapOrders } from "@/lib/api";
 import { eur, formatGRTime } from "@/lib/format";
 
 const POLL_MS = 60000; // auto-refresh κάθε ~60"
@@ -51,6 +51,21 @@ export default function LiveOrdersMap() {
   const [orders, setOrders] = useState([]);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
+
+  const clearMap = async () => {
+    if (!window.confirm("Καθαρισμός όλων των παραγγελιών από τον χάρτη;")) return;
+    setClearing(true);
+    try {
+      await apiClearLiveMap();
+      setOrders([]);
+      setLastRefresh(new Date());
+    } catch {
+      // σιωπηλά — το επόμενο poll θα δείξει την πραγματική κατάσταση
+    } finally {
+      setClearing(false);
+    }
+  };
 
   // Init χάρτη
   useEffect(() => {
@@ -145,7 +160,10 @@ export default function LiveOrdersMap() {
     );
   }
 
-  const pending = orders.filter((o) => o.lat == null || o.lng == null).length;
+  const pending = orders.filter(
+    (o) => (o.lat == null || o.lng == null) && o.geo_status !== "failed"
+  ).length;
+  const unlocated = orders.filter((o) => o.geo_status === "failed");
 
   return (
     <div className="space-y-3">
@@ -162,14 +180,25 @@ export default function LiveOrdersMap() {
             </span>
           )}
         </div>
-        <button
-          onClick={refresh}
-          data-testid="livemap-refresh-btn"
-          className="flex items-center gap-2 text-xs text-neutral-400 hover:text-white transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          {lastRefresh ? `Ανανέωση ${formatGRTime(lastRefresh)}` : "Ανανέωση"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={refresh}
+            data-testid="livemap-refresh-btn"
+            className="flex items-center gap-2 text-xs text-neutral-400 hover:text-white transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            {lastRefresh ? `Ανανέωση ${formatGRTime(lastRefresh)}` : "Ανανέωση"}
+          </button>
+          <button
+            onClick={clearMap}
+            disabled={clearing || orders.length === 0}
+            data-testid="livemap-clear-btn"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-[#723645] text-neutral-300 hover:text-white hover:border-flame transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <Eraser className="w-3.5 h-3.5" />
+            Καθαρισμός χάρτη
+          </button>
+        </div>
       </div>
 
       <div
@@ -177,6 +206,44 @@ export default function LiveOrdersMap() {
         data-testid="live-orders-map"
         className="h-[60vh] min-h-[340px] rounded-lg border border-[#723645] overflow-hidden z-0"
       />
+
+      {unlocated.length > 0 && (
+        <div
+          data-testid="livemap-unlocated"
+          className="bg-[#3D1620] border border-[#723645] rounded-lg p-3 space-y-2"
+        >
+          <div className="flex items-center gap-2 text-sm font-bold text-white">
+            <MapPinOff className="w-4 h-4 text-gold" />
+            Χωρίς τοποθεσία ({unlocated.length})
+            <span className="text-xs font-normal text-neutral-500">
+              — η διεύθυνση δεν βρέθηκε στον χάρτη
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {unlocated.map((o) => (
+              <div
+                key={o.id}
+                className="flex items-center justify-between gap-3 text-sm bg-[#2A0E14] rounded-md px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <span className="font-mono font-bold text-gold">
+                    #{String(o.order_number).padStart(3, "0")}
+                  </span>
+                  <span className="ml-2 text-neutral-400 text-xs">
+                    {formatGRTime(o.printed_at)}
+                  </span>
+                  {o.name && <span className="ml-2 text-neutral-300">{o.name}</span>}
+                  <div className="text-xs text-neutral-500 truncate">
+                    {o.address}
+                    {o.floor ? ` · Όροφος: ${o.floor}` : ""}
+                  </div>
+                </div>
+                <div className="font-bold text-gold whitespace-nowrap">{eur(o.total)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {!loading && orders.length === 0 && (
         <div className="text-sm text-neutral-500 text-center py-2">

@@ -142,6 +142,8 @@ async def create_order(body: OrderCreate, user: dict = Depends(require_staff)):
         doc["discount"]["applied_by_role"] = user.get("role")
         doc["discount"]["applied_at"] = now.isoformat()
     await db.orders.insert_one(doc)
+    if doc["status"] == "active":
+        _warm_geocode(user["id"], doc.get("delivery"))
     doc.pop("_id", None)
     doc["created_at"] = now
     return doc
@@ -221,25 +223,46 @@ def _nominatim_lookup(address: str):
 
 
 async def _geocode_cached(user_id: str, address: str, budget: dict):
-    """Επιστρέφει (lat, lng) από cache· αλλιώς γεωκωδικοποιεί (max N νέες ανά κλήση) και αποθηκεύει."""
+    """Επιστρέφει (lat, lng, status) όπου status: "ok" | "failed" | "pending".
+
+    "failed" = η διεύθυνση γεωκωδικοποιήθηκε αλλά δεν βρέθηκε (cached μόνιμα)·
+    "pending" = δεν έχει γίνει ακόμα lookup (budget/προσωρινό σφάλμα) — retry στο επόμενο poll.
+    """
     key = " ".join(address.strip().lower().split())
     cached = await db.geocode_cache.find_one({"user_id": user_id, "address": key})
     if cached:
-        return cached.get("lat"), cached.get("lng")
+        lat, lng = cached.get("lat"), cached.get("lng")
+        return lat, lng, ("ok" if lat is not None else "failed")
     if budget["new"] >= GEOCODE_MAX_NEW_PER_CALL:
-        return None, None  # θα γίνει στο επόμενο poll
+        return None, None, "pending"  # θα γίνει στο επόμενο poll
     budget["new"] += 1
     try:
         lat, lng = await asyncio.to_thread(_nominatim_lookup, address.strip())
     except Exception:
-        return None, None  # προσωρινό σφάλμα — δεν κάνουμε cache, retry στο επόμενο poll
+        return None, None, "pending"  # προσωρινό σφάλμα — δεν κάνουμε cache, retry στο επόμενο poll
     await db.geocode_cache.update_one(
         {"user_id": user_id, "address": key},
         {"$set": {"lat": lat, "lng": lng, "created_at": datetime.now(timezone.utc).isoformat()}},
         upsert=True,
     )
     await asyncio.sleep(1)  # Nominatim: max 1 αίτημα/δευτερόλεπτο
-    return lat, lng
+    return lat, lng, ("ok" if lat is not None else "failed")
+
+
+def _warm_geocode(user_id: str, delivery: Optional[dict]):
+    """Fire-and-forget geocode μόλις αποθηκευτεί/εκτυπωθεί παραγγελία παράδοσης,
+    ώστε το pin να εμφανίζεται αμέσως στο πρώτο poll του χάρτη."""
+    addr = (delivery or {}).get("address")
+    if (delivery or {}).get("delivery_type") != "delivery" or not (addr or "").strip():
+        return
+
+    async def run():
+        try:
+            await _geocode_cached(user_id, addr, {"new": 0})
+        except Exception:
+            pass  # θα ξαναδοκιμάσει το poll του χάρτη
+
+    asyncio.create_task(run())
 
 
 @router.get("/orders/live-map")
@@ -262,23 +285,36 @@ async def live_map_orders(user: dict = Depends(require_staff)):
          "total": 1, "delivery": 1},
     ).sort("created_at", -1).to_list(100)
 
+    cleared_at = user.get("live_map_cleared_at")
     budget = {"new": 0}
     out = []
     for d in docs:
+        printed_at = d.get("activated_at") or d["created_at"]
+        if cleared_at and printed_at <= cleared_at:
+            continue  # χειροκίνητος καθαρισμός χάρτη — κρύψε ό,τι υπήρχε πριν
         addr = d["delivery"]["address"]
-        lat, lng = await _geocode_cached(user["id"], addr, budget)
+        lat, lng, geo_status = await _geocode_cached(user["id"], addr, budget)
         out.append({
             "id": d["id"],
             "order_number": d["order_number"],
-            "printed_at": d.get("activated_at") or d["created_at"],
+            "printed_at": printed_at,
             "address": addr,
             "floor": d["delivery"].get("floor"),
             "name": d["delivery"].get("name"),
             "total": d.get("total", 0),
             "lat": lat,
             "lng": lng,
+            "geo_status": geo_status,
         })
     return out
+
+
+@router.post("/orders/live-map/clear")
+async def clear_live_map(user: dict = Depends(require_staff)):
+    """Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις τρέχουσες παραγγελίες."""
+    now = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one({"id": user["id"]}, {"$set": {"live_map_cleared_at": now}})
+    return {"cleared_at": now}
 
 
 @router.get("/orders/{oid}", response_model=Order)
@@ -301,6 +337,7 @@ async def activate_order(oid: str, user: dict = Depends(require_staff)):
     if r.matched_count == 0:
         raise HTTPException(404, "Not found")
     doc = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})
+    _warm_geocode(user["id"], doc.get("delivery"))
     if isinstance(doc.get("created_at"), str):
         doc["created_at"] = datetime.fromisoformat(doc["created_at"])
     return doc
