@@ -28,6 +28,7 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { eur, formatGRTime } from "@/lib/format";
+import { printReceiptJob } from "@/lib/print";
 
 let LINE_SEQ = 1;
 const newLineId = () => `TL${Date.now()}-${LINE_SEQ++}`;
@@ -219,7 +220,7 @@ export default function TableOrder() {
       setPrintSlip(null);
       setPrintOrder({ ...order, restaurant_name: user?.restaurant_name });
       setTimeout(() => {
-        window.print();
+        printReceiptJob(user);
         navigate("/app/tables");
       }, 200);
       toast.success(`Το τραπέζι έκλεισε — παραγγελία #${String(order.order_number).padStart(3, "0")}`);

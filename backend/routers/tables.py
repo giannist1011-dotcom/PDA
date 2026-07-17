@@ -57,6 +57,32 @@ async def update_business_type(body: BusinessTypeIn, user: dict = Depends(requir
     return {"business_type": body.business_type}
 
 
+class PrintingIn(BaseModel):
+    copies: int = Field(ge=1, le=10)
+    copy_labels: bool = False
+    double_print: bool = False
+
+
+@router.put("/settings/printing")
+async def update_printing(body: PrintingIn, user: dict = Depends(require_owner)):
+    """Ρυθμίσεις εκτύπωσης — αποθηκεύονται στον λογαριασμό, έρχονται με το /auth/me."""
+    await db.users.update_one(
+        {"id": user["id"]},
+        {
+            "$set": {
+                "print_copies": body.copies,
+                "print_copy_labels": bool(body.copy_labels),
+                "print_double": bool(body.double_print),
+            }
+        },
+    )
+    return {
+        "copies": body.copies,
+        "copy_labels": bool(body.copy_labels),
+        "double_print": bool(body.double_print),
+    }
+
+
 @router.put("/settings/tables")
 async def toggle_tables(body: TablesToggleIn, user: dict = Depends(require_owner)):
     await db.users.update_one(

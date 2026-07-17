@@ -181,6 +181,10 @@ export const apiSetStoreLogo = (data_url) =>
   api.put("/settings/public-menu/logo", { data_url }).then((r) => r.data);
 export const apiRemoveStoreLogo = () =>
   api.delete("/settings/public-menu/logo").then((r) => r.data);
+// Ρυθμίσεις εκτύπωσης (owner)
+export const apiUpdatePrinting = (payload) =>
+  api.put("/settings/printing", payload).then((r) => r.data);
+
 // Branding (λογότυπο μαγαζιού) — προσβάσιμο από κάθε συνδεδεμένο προφίλ
 export const apiGetBranding = () => api.get("/branding").then((r) => r.data);
 // Public — χωρίς login

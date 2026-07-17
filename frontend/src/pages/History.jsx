@@ -23,6 +23,7 @@ import { fetchOrders, apiGetOrder, apiCancelOrder, apiDeleteOrder, apiListCustom
 import { eur, todayISO, formatGRDateTime, formatGRDayMonthTime } from "@/lib/format";
 import DatePicker from "@/components/DatePicker";
 import { actorLabel } from "@/lib/roles";
+import { printReceiptJob } from "@/lib/print";
 
 const PAGE_SIZE = 30;
 
@@ -430,7 +431,7 @@ export default function History() {
 
   const handleReprint = (order) => {
     setPrintOrder({ ...order, restaurant_name: user?.restaurant_name });
-    setTimeout(() => window.print(), 100);
+    setTimeout(() => printReceiptJob(user), 100);
   };
 
   // PIN gate state for employee-initiated cancel/delete

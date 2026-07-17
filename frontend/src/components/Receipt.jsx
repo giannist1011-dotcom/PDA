@@ -1,4 +1,5 @@
 import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
+import { useAuth } from "@/context/AuthContext";
 
 const summarize = (c) => {
   if (!c) return null;
@@ -18,11 +19,31 @@ const summarize = (c) => {
 
 const orderTime = (iso) => formatGRTime(iso);
 
-export default function Receipt({ order }) {
-  if (!order) return null;
+// Ετικέτα ανά αντίγραφο όταν είναι ενεργή η επιλογή στις ρυθμίσεις εκτύπωσης
+const copyLabel = (idx) => {
+  if (idx === 0) return "ΚΟΥΖΙΝΑ";
+  if (idx === 1) return "ΠΕΛΑΤΗΣ";
+  return `ΑΝΤΙΓΡΑΦΟ ${idx + 1}`;
+};
+
+function ReceiptCopy({ order, label }) {
   const d = order.delivery;
   return (
-    <div id="print-area" className="hidden print:block">
+    <div>
+      {label && (
+        <div
+          style={{
+            textAlign: "center",
+            fontWeight: 800,
+            fontSize: 13,
+            border: "1px solid #000",
+            padding: "1px 0",
+            marginBottom: 4,
+          }}
+        >
+          {label}
+        </div>
+      )}
       <div className="receipt-title text-center">
         {(order.restaurant_name || "POS").toUpperCase()}
       </div>
@@ -91,6 +112,22 @@ export default function Receipt({ order }) {
       </div>
       <hr />
       <div style={{ textAlign: "center", fontSize: 10 }}>Ευχαριστούμε! Καλή όρεξη</div>
+    </div>
+  );
+}
+
+export default function Receipt({ order }) {
+  const { user } = useAuth();
+  if (!order) return null;
+  const copies = Math.max(1, Math.min(10, Number(user?.print_copies) || 1));
+  const withLabels = copies > 1 && !!user?.print_copy_labels;
+  return (
+    <div id="print-area" className="hidden print:block">
+      {Array.from({ length: copies }, (_, i) => (
+        <div key={i} style={i < copies - 1 ? { breakAfter: "page" } : undefined}>
+          <ReceiptCopy order={order} label={withLabels ? copyLabel(i) : null} />
+        </div>
+      ))}
     </div>
   );
 }

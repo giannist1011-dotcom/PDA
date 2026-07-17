@@ -19,6 +19,7 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { eur, formatGRTime, formatGRDayMonthTime } from "@/lib/format";
+import { printReceiptJob } from "@/lib/print";
 
 let LINE_SEQ = 1;
 const newLineId = () => `L${Date.now()}-${LINE_SEQ++}`;
@@ -322,7 +323,7 @@ export default function PDA() {
     new Promise((resolve) => {
       setPrintOrder({ ...order, restaurant_name: user?.restaurant_name });
       setTimeout(() => {
-        window.print();
+        printReceiptJob(user);
         resolve();
       }, 150);
     });
@@ -525,7 +526,7 @@ export default function PDA() {
         );
       } else {
         setPrintOrder({ ...saved, restaurant_name: user.restaurant_name });
-        setTimeout(() => window.print(), 100);
+        setTimeout(() => printReceiptJob(user), 100);
         toast.success(`Παραγγελία #${saved.order_number} αποθηκεύτηκε`);
       }
       setItems([]);

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, LayoutGrid, Globe } from "lucide-react";
+import { Users, LayoutGrid, Globe, Printer } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ProfilesManager from "@/components/ProfilesManager";
 import TablesEditor from "@/components/TablesEditor";
 import PublicMenuSettings from "@/components/PublicMenuSettings";
+import PrintingSettings from "@/components/PrintingSettings";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import { apiTablesState, apiToggleTables, formatApiError } from "@/lib/api";
@@ -98,6 +99,21 @@ export default function Settings() {
           </div>
           <div className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg">
             <TablesSettings />
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Printer className="w-6 h-6 text-flame" />
+              <h2 className="font-heading text-2xl font-bold">Εκτύπωση</h2>
+            </div>
+            <p className="text-sm text-neutral-400">
+              Αντίγραφα ανά παραγγελία και ταυτόχρονη εκτύπωση σε δεύτερο εκτυπωτή
+            </p>
+          </div>
+          <div className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg">
+            <PrintingSettings />
           </div>
         </section>
 
