@@ -181,6 +181,15 @@ export const apiSetStoreLogo = (data_url) =>
   api.put("/settings/public-menu/logo", { data_url }).then((r) => r.data);
 export const apiRemoveStoreLogo = () =>
   api.delete("/settings/public-menu/logo").then((r) => r.data);
+// Στοιχεία καταστήματος (owner) — όνομα, τηλέφωνο, διεύθυνση, τοποθεσία
+export const apiUpdateStoreDetails = (payload) =>
+  api.put("/settings/store", payload).then((r) => r.data);
+// Geocoding μέσω Nominatim (OpenStreetMap) — δωρεάν, χωρίς API key
+export const geocodeAddress = (q) =>
+  fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+    { headers: { "Accept-Language": "el" } }
+  ).then((r) => r.json());
 // Ρυθμίσεις εκτύπωσης (owner)
 export const apiUpdatePrinting = (payload) =>
   api.put("/settings/printing", payload).then((r) => r.data);

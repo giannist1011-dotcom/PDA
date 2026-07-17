@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Users, LayoutGrid, Globe, Printer } from "lucide-react";
+import { Users, LayoutGrid, Globe, Printer, Store } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import StoreDetailsSettings from "@/components/StoreDetailsSettings";
 import ProfilesManager from "@/components/ProfilesManager";
 import TablesEditor from "@/components/TablesEditor";
 import PublicMenuSettings from "@/components/PublicMenuSettings";
@@ -72,6 +73,21 @@ export default function Settings() {
   return (
     <AppShell title="Ρυθμίσεις">
       <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-[900px] mx-auto w-full space-y-8">
+        <section>
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Store className="w-6 h-6 text-flame" />
+              <h2 className="font-heading text-2xl font-bold">Στοιχεία καταστήματος</h2>
+            </div>
+            <p className="text-sm text-neutral-400">
+              Όνομα, τηλέφωνο, διεύθυνση και τοποθεσία στον χάρτη — χρησιμοποιούνται στον live χάρτη παραγγελιών
+            </p>
+          </div>
+          <div className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg">
+            <StoreDetailsSettings />
+          </div>
+        </section>
+
         <section>
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-1">

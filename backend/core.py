@@ -139,6 +139,13 @@ def public_user(u: dict) -> dict:
         "employee_pin_set": bool(u.get("employee_pin_set", False)),
         "tables_enabled": bool(u.get("tables_enabled", False)),
         "business_type": u.get("business_type") or "souvlaki",
+        "store_phone": u.get("store_phone") or "",
+        "store_address": u.get("store_address") or "",
+        "store_lat": u.get("store_lat"),
+        "store_lng": u.get("store_lng"),
+        "print_copies": u.get("print_copies", 1),
+        "print_copy_labels": bool(u.get("print_copy_labels", False)),
+        "print_double": bool(u.get("print_double", False)),
         "is_demo": bool(u.get("is_demo", False)),
         "demo_expires_at": u.get("demo_expires_at"),
     }

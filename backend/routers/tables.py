@@ -1,7 +1,7 @@
 """Τραπέζια & καρτέλες (tabs), ρυθμίσεις επιχείρησης/τραπεζιών."""
 import uuid
 from datetime import datetime, timezone
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
@@ -55,6 +55,28 @@ async def update_business_type(body: BusinessTypeIn, user: dict = Depends(requir
         {"id": user["id"]}, {"$set": {"business_type": body.business_type}}
     )
     return {"business_type": body.business_type}
+
+
+class StoreDetailsIn(BaseModel):
+    restaurant_name: str = Field(min_length=1, max_length=80)
+    store_phone: Optional[str] = Field(default=None, max_length=60)
+    store_address: Optional[str] = Field(default=None, max_length=200)
+    store_lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    store_lng: Optional[float] = Field(default=None, ge=-180, le=180)
+
+
+@router.put("/settings/store")
+async def update_store_details(body: StoreDetailsIn, user: dict = Depends(require_owner)):
+    """Στοιχεία καταστήματος — όνομα, τηλέφωνο, διεύθυνση, συντεταγμένες (lat/lng)."""
+    fields = {
+        "restaurant_name": body.restaurant_name.strip(),
+        "store_phone": (body.store_phone or "").strip(),
+        "store_address": (body.store_address or "").strip(),
+        "store_lat": body.store_lat,
+        "store_lng": body.store_lng,
+    }
+    await db.users.update_one({"id": user["id"]}, {"$set": fields})
+    return fields
 
 
 class PrintingIn(BaseModel):
