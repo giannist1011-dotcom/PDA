@@ -1,5 +1,6 @@
 """Παραγγελίες: δημιουργία, scheduled, ιστορικό, ακύρωση, πελάτες."""
 import asyncio
+import logging
 import re
 import uuid
 
@@ -21,6 +22,7 @@ from core import (
 from routers.menu import MenuOption
 
 router = APIRouter()
+logger = logging.getLogger("orderdeck.orders")
 
 
 # ============ MODELS ============
@@ -212,13 +214,18 @@ def _nominatim_lookup(address: str):
     r = requests.get(
         "https://nominatim.openstreetmap.org/search",
         params={"format": "json", "limit": 1, "q": address, "countrycodes": "gr"},
-        headers={"User-Agent": "OrderDeck-POS/1.0", "Accept-Language": "el"},
+        headers={
+            # Το Nominatim απαιτεί αναγνωρίσιμο User-Agent με στοιχεία επικοινωνίας
+            "User-Agent": "OrderDeck-POS/1.0 (giannist1011@gmail.com)",
+            "Accept-Language": "el",
+        },
         timeout=8,
     )
     r.raise_for_status()
     results = r.json()
     if results:
         return float(results[0]["lat"]), float(results[0]["lon"])
+    logger.info("geocode: no Nominatim result for %r", address)
     return None, None
 
 
@@ -238,7 +245,8 @@ async def _geocode_cached(user_id: str, address: str, budget: dict):
     budget["new"] += 1
     try:
         lat, lng = await asyncio.to_thread(_nominatim_lookup, address.strip())
-    except Exception:
+    except Exception as e:
+        logger.warning("geocode: lookup error for %r: %s", address, e)
         return None, None, "pending"  # προσωρινό σφάλμα — δεν κάνουμε cache, retry στο επόμενο poll
     await db.geocode_cache.update_one(
         {"user_id": user_id, "address": key},
@@ -259,8 +267,8 @@ def _warm_geocode(user_id: str, delivery: Optional[dict]):
     async def run():
         try:
             await _geocode_cached(user_id, addr, {"new": 0})
-        except Exception:
-            pass  # θα ξαναδοκιμάσει το poll του χάρτη
+        except Exception as e:
+            logger.warning("geocode: warm-geocode failed for %r: %s", addr, e)
 
     asyncio.create_task(run())
 
@@ -272,7 +280,9 @@ async def live_map_orders(user: dict = Depends(require_staff)):
     docs = await db.orders.find(
         {
             "user_id": user["id"],
-            "status": "active",
+            # ΟΛΕΣ οι εκτυπωμένες παραγγελίες (και όσες δεν έχουν καθόλου status
+            # από παλαιότερες εκδόσεις) — εκτός των scheduled που δεν έχουν "φύγει"
+            "status": {"$ne": "scheduled"},
             "cancelled": {"$ne": True},
             "delivery.delivery_type": "delivery",
             "delivery.address": {"$nin": [None, ""]},
@@ -306,6 +316,13 @@ async def live_map_orders(user: dict = Depends(require_staff)):
             "lng": lng,
             "geo_status": geo_status,
         })
+    # Προσωρινό debug: πού σπάει η αλυσίδα query → geocode → pin
+    counts = Counter(o["geo_status"] for o in out)
+    logger.info(
+        "live-map user=%s: query=%d shown=%d ok=%d failed=%d pending=%d",
+        user["id"], len(docs), len(out),
+        counts.get("ok", 0), counts.get("failed", 0), counts.get("pending", 0),
+    )
     return out
 
 
