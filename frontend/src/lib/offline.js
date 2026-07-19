@@ -7,7 +7,6 @@
 // Το online path ΔΕΝ αλλάζει: η cache γράφεται μόνο μετά από επιτυχημένες κλήσεις
 // και διαβάζεται μόνο όταν το δίκτυο αποτύχει.
 import { useEffect, useState } from "react";
-import bcrypt from "bcryptjs";
 import { api, apiGetMenuConfig, apiMe, apiOfflineProfiles, submitOrder } from "@/lib/api";
 
 const DB_NAME = "orderdeck-offline";
@@ -219,9 +218,10 @@ export const getCachedNextOrderNumber = async () => (await cacheGet("next_order_
 
 export const rememberNextOrderNumber = (n) => cacheSet("next_order_number", n);
 
-// ---------- Offline σύνδεση: προφίλ + PIN hashes στη συσκευή ----------
-// Σε κάθε online φόρτωση της οθόνης προφίλ αποθηκεύουμε τα προφίλ ΜΕ τα bcrypt
-// pin hashes τους, ώστε η επιλογή προφίλ + PIN να δουλεύει και χωρίς δίκτυο.
+// ---------- Offline σύνδεση: προφίλ + τοπικά PIN hashes στη συσκευή ----------
+// Ο server ΔΕΝ στέλνει ποτέ τα bcrypt hashes του. Στην cache μπαίνει μόνο η λίστα
+// προφίλ (id/name/role) για εμφάνιση offline· το hash για offline επαλήθευση
+// παράγεται τοπικά με Web Crypto (PBKDF2) όταν το PIN επαληθευτεί online.
 export async function cacheProfilesForOffline() {
   try {
     const profiles = await apiOfflineProfiles();
@@ -233,20 +233,65 @@ export async function cacheProfilesForOffline() {
   }
 }
 
-// Λίστα προφίλ για εμφάνιση offline (χωρίς τα hashes)
+// Λίστα προφίλ για εμφάνιση offline
 export async function getCachedProfiles() {
-  const profiles = (await cacheGet("offline_profiles")) || [];
-  return profiles.map(({ pin_hash, ...rest }) => rest);
+  return (await cacheGet("offline_profiles")) || [];
 }
 
-// Τοπική επαλήθευση PIN πάνω στο cached bcrypt hash. null = το προφίλ δεν
-// υπάρχει στην cache (η συσκευή δεν έχει συνδεθεί ποτέ online) — όχι λάθος PIN.
+// PBKDF2-SHA256 μέσω crypto.subtle — native στον browser, χωρίς dependencies
+const PBKDF2_ITERATIONS = 100000;
+
+const toHex = (buf) =>
+  Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
+
+async function derivePinHash(pin, saltHex) {
+  const enc = new TextEncoder();
+  const salt = new Uint8Array(saltHex.match(/../g).map((h) => parseInt(h, 16)));
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, [
+    "deriveBits",
+  ]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations: PBKDF2_ITERATIONS },
+    keyMaterial,
+    256
+  );
+  return toHex(bits);
+}
+
+// Καλείται μετά από ΕΠΙΤΥΧΗ online είσοδο με PIN: αποθηκεύει τοπικό PBKDF2 hash
+// (με τυχαίο salt) ώστε το ίδιο προφίλ να μπορεί να συνδεθεί και χωρίς δίκτυο.
+export async function rememberPinOffline(profileId, pin, { name, role } = {}) {
+  try {
+    const salt = toHex(crypto.getRandomValues(new Uint8Array(16)));
+    const hash = await derivePinHash(pin, salt);
+    const pins = (await cacheGet("offline_pins")) || {};
+    pins[profileId] = { salt, hash, name, role };
+    await cacheSet("offline_pins", pins);
+  } catch {
+    /* best-effort — χωρίς crypto.subtle (π.χ. http χωρίς localhost) απλά δεν υπάρχει offline login */
+  }
+}
+
+// Τοπική επαλήθευση PIN πάνω στο τοπικό PBKDF2 hash. null = το προφίλ δεν έχει
+// συνδεθεί ποτέ online από αυτή τη συσκευή — όχι λάθος PIN.
 export async function verifyPinOffline(profileId, pin) {
+  const pins = (await cacheGet("offline_pins")) || {};
+  const entry = pins[profileId];
+  if (!entry) return null;
+  let hash;
+  try {
+    hash = await derivePinHash(pin, entry.salt);
+  } catch {
+    return null;
+  }
+  if (hash !== entry.hash) return false;
   const profiles = (await cacheGet("offline_profiles")) || [];
   const prof = profiles.find((p) => p.id === profileId);
-  if (!prof || !prof.pin_hash) return null;
-  const ok = await bcrypt.compare(pin, prof.pin_hash);
-  return ok ? { id: prof.id, name: prof.name, role: prof.role } : false;
+  return {
+    id: profileId,
+    name: prof?.name ?? entry.name,
+    role: prof?.role ?? entry.role,
+  };
 }
 
 // Ελαφρύ health check — χρησιμοποιείται από το banner για auto-reconnect όσο υπάρχει ουρά

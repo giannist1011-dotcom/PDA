@@ -14,6 +14,7 @@ import { setFavicon, resetFavicon } from "@/lib/favicon";
 import {
   getMeCached,
   verifyPinOffline,
+  rememberPinOffline,
   cacheProfilesForOffline,
   cacheSet,
   isNetworkError,
@@ -113,6 +114,8 @@ export function AuthProvider({ children }) {
       const me = await getMeCached();
       setUser(me);
       cacheProfilesForOffline(); // ανανέωση cache για μελλοντική offline σύνδεση
+      // Το PIN επαληθεύτηκε online — αποθήκευσε τοπικό hash για offline είσοδο
+      rememberPinOffline(profileId, pin, { name: me.profile_name, role: me.role });
       return me;
     } catch (e) {
       if (!isNetworkError(e)) throw e;
@@ -153,6 +156,7 @@ export function AuthProvider({ children }) {
           pendingOfflineLogin.pin
         );
         setToken(token);
+        rememberPinOffline(pendingOfflineLogin.profileId, pendingOfflineLogin.pin, {});
         pendingOfflineLogin = null;
         const me = await apiMe();
         setUser(me);

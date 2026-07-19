@@ -60,7 +60,7 @@ export default function MenuGrid({
 
           const stateClasses = unavailable
             ? "bg-[#33111A] border border-[#4F202D] cursor-not-allowed opacity-50"
-            : `bg-[#4A1B27] border border-[#723645] hover:border-flame hover:scale-[1.03] hover:shadow-lg hover:shadow-gold/20 hover:bg-[#582233] active:scale-[0.96] transition-[transform,box-shadow,background-color,border-color] duration-[130ms] ease-out ${
+            : `bg-[#4A1B27] border border-[#723645] hover:border-flame hover:scale-[1.03] hover:shadow-lg hover:shadow-gold/20 hover:bg-[#582233] active:scale-[0.96] transition-[transform,box-shadow,background-color,border-color] [transition-duration:130ms] ease-out ${
                 pulsing ? "menu-item--pulse" : ""
               }`;
 

@@ -229,11 +229,11 @@ async def admin_demo_cleanup(x_admin_password: Optional[str] = Header(None)):
 
 @router.get("/auth/offline-profiles")
 async def offline_profiles(user: dict = Depends(get_current_user)):
-    """Προφίλ ΜΕ τα bcrypt pin hashes — μόνο για τοπική cache της συσκευής (PWA offline
-    login). Απαιτεί έγκυρο store token· η επαλήθευση PIN γίνεται τοπικά όταν δεν υπάρχει δίκτυο."""
+    """Λίστα προφίλ για τοπική cache της συσκευής (PWA offline login) — ΧΩΡΙΣ pin hashes.
+    Το offline hash του PIN παράγεται client-side (Web Crypto) στην τελευταία online είσοδο."""
     await ensure_profiles_migrated(user["id"])
     docs = await db.profiles.find(
-        {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
+        {"user_id": user["id"]}, {"_id": 0, "user_id": 0, "pin_hash": 0}
     ).sort("created_at", 1).to_list(100)
     return docs
 
