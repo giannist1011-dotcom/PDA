@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import DeckPilotChat from "@/components/DeckPilotChat";
 import OfflineBanner from "@/components/OfflineBanner";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
 import { useOfflineStatus } from "@/lib/offline";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
@@ -314,6 +315,8 @@ export default function AppShell({ title, children }) {
       {user && user !== false && user.is_demo && user.demo_expires_at && (
         <DemoBanner expiresAt={user.demo_expires_at} />
       )}
+
+      <AnnouncementBanner />
 
       <OfflineBanner />
 

@@ -30,6 +30,7 @@ import AdminOverview from "@/pages/AdminOverview";
 import AdminShops from "@/pages/AdminShops";
 import AdminSubscriptions from "@/pages/AdminSubscriptions";
 import AdminLeads from "@/pages/AdminLeads";
+import AdminAnnouncements from "@/pages/AdminAnnouncements";
 import PublicMenu from "@/pages/PublicMenu";
 
 // Old top-level app paths now live under /app — keep old links/bookmarks working.
@@ -73,6 +74,7 @@ function App() {
             <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
             <Route path="/admin/leads" element={<AdminLeads />} />
             <Route path="/admin/promo" element={<AdminPromo />} />
+            <Route path="/admin/announcements" element={<AdminAnnouncements />} />
             <Route path="/admin/stock-photos" element={<AdminStockPhotos />} />
 
             {/* Auth */}

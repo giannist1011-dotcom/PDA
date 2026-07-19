@@ -9,6 +9,7 @@ import {
   Users,
   Ticket,
   Images,
+  Megaphone,
   LogOut,
 } from "lucide-react";
 import { apiAdminPing, formatApiError } from "@/lib/api";
@@ -26,6 +27,7 @@ const NAV = [
   { to: "/admin/subscriptions", label: "Συνδρομές", icon: CreditCard },
   { to: "/admin/leads", label: "Leads", icon: Users },
   { to: "/admin/promo", label: "Κωδικοί", icon: Ticket },
+  { to: "/admin/announcements", label: "Ανακοινώσεις", icon: Megaphone },
   { to: "/admin/stock-photos", label: "Φωτογραφίες", icon: Images },
 ];
 

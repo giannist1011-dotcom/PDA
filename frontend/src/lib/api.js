@@ -273,6 +273,18 @@ export const apiAdminExpiringSubs = (pw) =>
 export const apiAdminLeads = (pw, params) =>
   api.get("/admin/leads", { ...adminHeaders(pw), params }).then((r) => r.data);
 
+// ΑΝΑΚΟΙΝΩΣΕΙΣ — admin CRUD (ίδιο admin password) + active για την εφαρμογή
+export const apiAdminListAnnouncements = (pw) =>
+  api.get("/admin/announcements", adminHeaders(pw)).then((r) => r.data);
+export const apiAdminCreateAnnouncement = (pw, payload) =>
+  api.post("/admin/announcements", payload, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminUpdateAnnouncement = (pw, id, payload) =>
+  api.patch(`/admin/announcements/${id}`, payload, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminDeleteAnnouncement = (pw, id) =>
+  api.delete(`/admin/announcements/${id}`, adminHeaders(pw)).then((r) => r.data);
+export const apiActiveAnnouncement = () =>
+  api.get("/announcements/active").then((r) => r.data);
+
 // AI — DeckPilot & ημερήσιο brief (owner only)
 export const apiAiChat = (messages) =>
   api.post("/ai/chat", { messages }).then((r) => r.data);
