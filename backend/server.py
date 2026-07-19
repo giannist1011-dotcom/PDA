@@ -54,6 +54,8 @@ async def on_startup():
     await db.items.create_index([("user_id", 1)])
     await db.items.create_index([("user_id", 1), ("sort_order", 1)])
     await db.orders.create_index([("user_id", 1), ("created_at", -1)])
+    # Offline sync: idempotency ανά client_id (μόνο όσες παραγγελίες το έχουν)
+    await db.orders.create_index([("user_id", 1), ("client_id", 1)], sparse=True)
     await db.shopping.create_index([("user_id", 1), ("created_at", 1)])
     await db.stock_categories.create_index([("user_id", 1), ("order", 1)])
     await db.stock_items.create_index([("user_id", 1), ("category_id", 1)])

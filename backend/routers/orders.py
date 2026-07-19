@@ -90,6 +90,9 @@ class OrderCreate(BaseModel):
     scheduled_at: Optional[str] = None  # ISO datetime — order fires later
     discount: Optional[DiscountInfo] = None
     table_name: Optional[str] = None  # set when the order came from a closed table tab
+    # Offline mode (PWA): idempotency key + τοπική ώρα δημιουργίας από τη συσκευή
+    client_id: Optional[str] = None
+    client_created_at: Optional[str] = None  # ISO datetime — πότε γράφτηκε offline
 
 
 class Order(OrderCreate):
@@ -124,13 +127,33 @@ async def next_order_number(user: dict = Depends(require_staff)):
 
 @router.post("/orders", response_model=Order)
 async def create_order(body: OrderCreate, user: dict = Depends(require_staff)):
+    # Offline sync: αν η παραγγελία έχει ήδη ανέβει (retry/διπλό sync), γύρνα την υπάρχουσα
+    if body.client_id:
+        existing = await db.orders.find_one(
+            {"user_id": user["id"], "client_id": body.client_id}, {"_id": 0}
+        )
+        if existing:
+            if isinstance(existing.get("created_at"), str):
+                existing["created_at"] = datetime.fromisoformat(existing["created_at"])
+            return existing
     oid = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
+    # Offline παραγγελίες κρατούν την τοπική ώρα δημιουργίας τους (σωστά στατιστικά)
+    created_at = now
+    if body.client_created_at:
+        try:
+            parsed = datetime.fromisoformat(body.client_created_at.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            if parsed <= now:  # ποτέ μελλοντική ώρα
+                created_at = parsed
+        except ValueError:
+            pass
     doc = body.model_dump()
     doc.update({
         "id": oid,
         "user_id": user["id"],
-        "created_at": now.isoformat(),
+        "created_at": created_at.isoformat(),
         "status": "scheduled" if body.scheduled_at else "active",
         "taken_by": {
             "profile_id": user.get("profile_id"),
@@ -147,7 +170,7 @@ async def create_order(body: OrderCreate, user: dict = Depends(require_staff)):
     if doc["status"] == "active":
         _warm_geocode(user, doc.get("delivery"))
     doc.pop("_id", None)
-    doc["created_at"] = now
+    doc["created_at"] = created_at
     return doc
 
 

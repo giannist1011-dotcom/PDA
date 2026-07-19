@@ -22,6 +22,7 @@ import {
   Clapperboard,
   ArrowRight,
   Store,
+  WifiOff,
   ChevronDown,
   Gauge,
   Bot,
@@ -29,6 +30,8 @@ import {
   Download,
 } from "lucide-react";
 import DeckPilotChat from "@/components/DeckPilotChat";
+import OfflineBanner from "@/components/OfflineBanner";
+import { useOfflineStatus } from "@/lib/offline";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
 import { businessIcon } from "@/lib/business";
@@ -62,6 +65,20 @@ const NAV_STORE = [
 ];
 
 const STORE_GROUP_KEY = "orderdeck-nav-store-open";
+
+// Σελίδες που ΔΕΝ δουλεύουν εκτός σύνδεσης (χρειάζονται live δεδομένα server)
+const OFFLINE_BLOCKED = {
+  "/app/analytics": "Στατιστικά",
+  "/app/history": "Ιστορικό",
+  "/app/deckpilot": "DeckPilot",
+  "/app/brief": "Ημερήσιο Brief",
+  "/app/menu": "Διαχείριση μενού",
+  "/app/settings": "Ρυθμίσεις",
+  "/app/day-close": "Κλείσιμο ημέρας",
+  "/app/expenses": "Έξοδα",
+  "/app/deck": "Deck View & χάρτης",
+  "/app/photos": "Βιβλιοθήκη φωτογραφιών",
+};
 
 // Μικρό badge "beta" για features υπό δοκιμή
 const BetaBadge = () => (
@@ -138,6 +155,8 @@ export default function AppShell({ title, children }) {
   const [pilotOpen, setPilotOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { offline } = useOfflineStatus();
+  const blockedLabel = offline ? OFFLINE_BLOCKED[location.pathname] : null;
 
   const handleLogout = () => {
     logout();
@@ -296,6 +315,8 @@ export default function AppShell({ title, children }) {
         <DemoBanner expiresAt={user.demo_expires_at} />
       )}
 
+      <OfflineBanner />
+
       {open && (
         <>
           <div
@@ -398,7 +419,29 @@ export default function AppShell({ title, children }) {
         </>
       )}
 
-      <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
+      {blockedLabel ? (
+        <div
+          className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center"
+          data-testid="offline-blocked-page"
+        >
+          <WifiOff className="w-10 h-10 text-[#FFB340]" />
+          <div className="font-heading text-xl font-bold">
+            {blockedLabel}: μη διαθέσιμο εκτός σύνδεσης
+          </div>
+          <div className="text-sm text-neutral-400 max-w-md">
+            Αυτή η σελίδα χρειάζεται σύνδεση με τον server. Το ταμείο (Παραγγελίες) συνεχίζει να
+            δουλεύει κανονικά — οι παραγγελίες αποθηκεύονται τοπικά και θα συγχρονιστούν αυτόματα.
+          </div>
+          <Link
+            to="/app"
+            className="mt-2 h-11 px-5 rounded-md bg-brand hover:bg-brand-hover text-white font-bold flex items-center"
+          >
+            Μετάβαση στις Παραγγελίες
+          </Link>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
+      )}
 
       {/* DeckPilot — floating κουμπί κάτω δεξιά, owner-only, παντού εκτός από τη σελίδα του */}
       {role === "owner" && location.pathname !== "/app/deckpilot" && (

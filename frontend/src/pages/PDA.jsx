@@ -22,7 +22,6 @@ import Receipt from "@/components/Receipt";
 import { useAuth } from "@/context/AuthContext";
 import { ORDER_SOURCES } from "@/data/menu";
 import {
-  apiGetMenuConfig,
   fetchNextOrderNumber,
   submitOrder,
   apiListScheduledOrders,
@@ -30,6 +29,14 @@ import {
   apiCancelOrder,
   formatApiError,
 } from "@/lib/api";
+import {
+  getMenuConfigCached,
+  enqueueOrder,
+  isNetworkError,
+  markServerDown,
+  getCachedNextOrderNumber,
+  rememberNextOrderNumber,
+} from "@/lib/offline";
 import { eur, formatGRTime, formatGRDayMonthTime } from "@/lib/format";
 import { printReceiptJob } from "@/lib/print";
 
@@ -304,15 +311,18 @@ export default function PDA() {
 
   const loadNext = async () => {
     try {
-      setOrderNumber(await fetchNextOrderNumber());
-    } catch {
-      setOrderNumber(1);
+      const n = await fetchNextOrderNumber();
+      setOrderNumber(n);
+      rememberNextOrderNumber(n); // ώστε offline να συνεχίσει η αρίθμηση από εκεί
+    } catch (e) {
+      if (isNetworkError(e)) markServerDown();
+      setOrderNumber(await getCachedNextOrderNumber());
     }
   };
 
   const loadConfig = async () => {
     try {
-      const c = await apiGetMenuConfig();
+      const c = await getMenuConfigCached();
       setConfig(c);
       if (c.categories?.length && !activeCategory) {
         setActiveCategory(c.categories[0].id);
@@ -365,8 +375,9 @@ export default function PDA() {
           // ήδη ενεργοποιημένη από άλλη συσκευή — απλώς προχωράμε
         }
       }
-    } catch {
+    } catch (e) {
       // σφάλμα δικτύου — θα ξαναδοκιμάσει στο επόμενο poll
+      if (isNetworkError(e)) markServerDown();
     } finally {
       firingRef.current = false;
     }
@@ -547,7 +558,35 @@ export default function PDA() {
       setScheduled({ enabled: false, date: "", time: "" });
       await loadNext();
     } catch (e) {
-      toast.error(formatApiError(e));
+      // Offline path: χωρίς σύνδεση, η παραγγελία γράφεται σε τοπική ουρά,
+      // τυπώνεται κανονικά και θα συγχρονιστεί αυτόματα (online = default, μόνο fallback)
+      if (isNetworkError(e) && !isScheduled) {
+        markServerDown();
+        try {
+          const entry = await enqueueOrder(payload);
+          setPrintOrder({
+            ...entry,
+            id: entry.client_id,
+            created_at: entry.client_created_at,
+            restaurant_name: user.restaurant_name,
+          });
+          setTimeout(() => printReceiptJob(user), 100);
+          toast.warning(
+            `Εκτός σύνδεσης — η #${String(payload.order_number).padStart(3, "0")} αποθηκεύτηκε τοπικά και θα συγχρονιστεί`
+          );
+          setItems([]);
+          setDelivery(null);
+          setDiscount(null);
+          setScheduled({ enabled: false, date: "", time: "" });
+          setOrderNumber(payload.order_number + 1);
+        } catch {
+          toast.error("Αποτυχία τοπικής αποθήκευσης — δοκιμάστε ξανά");
+        }
+      } else if (isNetworkError(e) && isScheduled) {
+        toast.error("Οι προγραμματισμένες παραγγελίες απαιτούν σύνδεση");
+      } else {
+        toast.error(formatApiError(e));
+      }
     } finally {
       setSubmitting(false);
     }

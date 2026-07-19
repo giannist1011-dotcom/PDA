@@ -1,7 +1,9 @@
-/* OrderDeck service worker — μόνο installability + cache static assets.
-   ΔΕΝ κάνει cache κλήσεις API (παραγγελίες/sync μένουν πάντα live). */
-const CACHE_NAME = "orderdeck-static-v2";
-const PRECACHE = ["/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
+/* OrderDeck service worker — installability + offline shell.
+   Cache static assets + index.html ώστε η εφαρμογή να ανοίγει χωρίς ίντερνετ.
+   ΔΕΝ κάνει cache κλήσεις API — τα offline data (μενού/ουρά παραγγελιών)
+   ζουν σε IndexedDB (βλ. src/lib/offline.js), όχι εδώ. */
+const CACHE_NAME = "orderdeck-static-v3";
+const PRECACHE = ["/index.html", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)));

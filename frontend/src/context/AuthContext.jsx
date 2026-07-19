@@ -11,6 +11,7 @@ import {
   getToken,
 } from "@/lib/api";
 import { setFavicon, resetFavicon } from "@/lib/favicon";
+import { getMeCached } from "@/lib/offline";
 
 const AuthCtx = createContext(null);
 
@@ -49,7 +50,8 @@ export function AuthProvider({ children }) {
         return;
       }
       try {
-        const me = await apiMe();
+        // Offline-aware: αν το δίκτυο πέσει, γυρνά το cached προφίλ αντί για logout
+        const me = await getMeCached();
         setUser(me);
       } catch {
         setToken(null);
