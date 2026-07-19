@@ -25,7 +25,13 @@ export default function Login() {
       toast.success("Καλωσήρθατε!");
       navigate("/app");
     } catch (err) {
-      setError(formatApiError(err));
+      // Η πρώτη σύνδεση καταστήματος απαιτεί δίκτυο — αν έχεις ήδη συνδεθεί,
+      // το session διατηρείται τοπικά και δεν φτάνεις ποτέ σε αυτή τη σελίδα offline
+      setError(
+        !err?.response
+          ? "Δεν υπάρχει σύνδεση στο διαδίκτυο. Η πρώτη είσοδος σε αυτή τη συσκευή απαιτεί δίκτυο."
+          : formatApiError(err)
+      );
     } finally {
       setBusy(false);
     }

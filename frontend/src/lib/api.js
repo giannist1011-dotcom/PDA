@@ -25,6 +25,8 @@ export const apiRegister = (payload) => api.post("/auth/register", payload).then
 export const apiLogin = (payload) => api.post("/auth/login", payload).then((r) => r.data);
 export const apiStartDemo = (payload) => api.post("/auth/demo", payload).then((r) => r.data);
 export const apiMe = () => api.get("/auth/me").then((r) => r.data);
+// Προφίλ με pin hashes για τοπική cache (offline login) — ΔΕΝ εμφανίζονται πουθενά στο UI
+export const apiOfflineProfiles = () => api.get("/auth/offline-profiles").then((r) => r.data);
 
 // MENU
 export const apiGetMenuConfig = () => api.get("/menu/config").then((r) => r.data);

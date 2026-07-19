@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Crown, User as UserIcon, Delete, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { apiListProfiles, formatApiError } from "@/lib/api";
+import { cacheProfilesForOffline, getCachedProfiles, isNetworkError } from "@/lib/offline";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"];
@@ -129,8 +130,21 @@ export default function ProfileSelect() {
     (async () => {
       try {
         setProfiles(await apiListProfiles());
+        cacheProfilesForOffline(); // ανανέωση τοπικής cache για offline σύνδεση
       } catch (e) {
-        toast.error(formatApiError(e));
+        if (isNetworkError(e)) {
+          // Χωρίς δίκτυο: εμφάνισε τα cached προφίλ — το PIN θα ελεγχθεί τοπικά
+          const cached = await getCachedProfiles();
+          if (cached.length > 0) {
+            setProfiles(cached);
+            return;
+          }
+          toast.error(
+            "Απαιτείται σύνδεση στο διαδίκτυο για την πρώτη είσοδο σε αυτή τη συσκευή"
+          );
+        } else {
+          toast.error(formatApiError(e));
+        }
         setProfiles([]);
       }
     })();

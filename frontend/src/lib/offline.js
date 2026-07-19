@@ -7,7 +7,8 @@
 // Το online path ΔΕΝ αλλάζει: η cache γράφεται μόνο μετά από επιτυχημένες κλήσεις
 // και διαβάζεται μόνο όταν το δίκτυο αποτύχει.
 import { useEffect, useState } from "react";
-import { api, apiGetMenuConfig, apiMe, submitOrder } from "@/lib/api";
+import bcrypt from "bcryptjs";
+import { api, apiGetMenuConfig, apiMe, apiOfflineProfiles, submitOrder } from "@/lib/api";
 
 const DB_NAME = "orderdeck-offline";
 const DB_VERSION = 1;
@@ -157,6 +158,11 @@ export async function syncQueue() {
           markServerDown();
           break; // ο server είναι ακόμα κάτω — retry αργότερα
         }
+        if (e?.response?.status === 401 || e?.response?.status === 403) {
+          // Το session δεν έχει ακόμα επαληθευτεί ξανά online (offline login με
+          // store-level token) — ΜΗΝ πετάξεις την παραγγελία, retry μετά το re-verify
+          break;
+        }
         // Ο server απάντησε με σφάλμα (π.χ. validation) — μην μπλοκάρεις την ουρά για πάντα:
         // κράτα την παραγγελία σε ξεχωριστό αρχείο σφαλμάτων και συνέχισε.
         const failed = (await cacheGet("failed_orders")) || [];
@@ -212,6 +218,36 @@ export async function getMeCached() {
 export const getCachedNextOrderNumber = async () => (await cacheGet("next_order_number")) || 1;
 
 export const rememberNextOrderNumber = (n) => cacheSet("next_order_number", n);
+
+// ---------- Offline σύνδεση: προφίλ + PIN hashes στη συσκευή ----------
+// Σε κάθε online φόρτωση της οθόνης προφίλ αποθηκεύουμε τα προφίλ ΜΕ τα bcrypt
+// pin hashes τους, ώστε η επιλογή προφίλ + PIN να δουλεύει και χωρίς δίκτυο.
+export async function cacheProfilesForOffline() {
+  try {
+    const profiles = await apiOfflineProfiles();
+    await cacheSet("offline_profiles", profiles);
+    markServerUp();
+    return profiles;
+  } catch {
+    return null; // best-effort — αν αποτύχει μένει η προηγούμενη cache
+  }
+}
+
+// Λίστα προφίλ για εμφάνιση offline (χωρίς τα hashes)
+export async function getCachedProfiles() {
+  const profiles = (await cacheGet("offline_profiles")) || [];
+  return profiles.map(({ pin_hash, ...rest }) => rest);
+}
+
+// Τοπική επαλήθευση PIN πάνω στο cached bcrypt hash. null = το προφίλ δεν
+// υπάρχει στην cache (η συσκευή δεν έχει συνδεθεί ποτέ online) — όχι λάθος PIN.
+export async function verifyPinOffline(profileId, pin) {
+  const profiles = (await cacheGet("offline_profiles")) || [];
+  const prof = profiles.find((p) => p.id === profileId);
+  if (!prof || !prof.pin_hash) return null;
+  const ok = await bcrypt.compare(pin, prof.pin_hash);
+  return ok ? { id: prof.id, name: prof.name, role: prof.role } : false;
+}
 
 // Ελαφρύ health check — χρησιμοποιείται από το banner για auto-reconnect όσο υπάρχει ουρά
 export async function pingServer() {
