@@ -16,6 +16,9 @@ import {
   verifyPinOffline,
   rememberPinOffline,
   cacheProfilesForOffline,
+  rememberStoreLoginOffline,
+  verifyStoreLoginOffline,
+  wipeOfflineDeviceData,
   cacheSet,
   isNetworkError,
   markServerDown,
@@ -29,6 +32,10 @@ const AuthCtx = createContext(null);
 // ώστε μόλις επανέλθει το δίκτυο να επαληθευτεί ξανά το session με τον server
 // και να εκδοθεί κανονικό JWT με το προφίλ.
 let pendingOfflineLogin = null;
+
+// Offline σύνδεση καταστήματος (email+κωδικός): ίδια λογική — τα credentials
+// μένουν ΜΟΝΟ στη μνήμη μέχρι να επανέλθει το δίκτυο και να εκδοθεί κανονικό JWT.
+let pendingOfflineStoreLogin = null;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null); // null=checking, false=guest, obj=authed
@@ -77,12 +84,43 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     setError(null);
-    const { token, user: u } = await apiLogin({ email, password });
-    setToken(token);
-    setUser(u);
-    cacheSet("me", u);
-    cacheProfilesForOffline(); // ώστε η επιλογή προφίλ + PIN να δουλεύει και offline
-    return u;
+    try {
+      const { token, user: u } = await apiLogin({ email, password });
+      setToken(token);
+      setUser(u);
+      pendingOfflineStoreLogin = null;
+      cacheSet("me", u);
+      cacheProfilesForOffline(); // ώστε η επιλογή προφίλ + PIN να δουλεύει και offline
+      // Η σύνδεση επαληθεύτηκε online — αποθήκευσε τοπικό hash για offline είσοδο
+      rememberStoreLoginOffline(email, password, u);
+      return u;
+    } catch (e) {
+      if (!isNetworkError(e)) throw e;
+      // Χωρίς δίκτυο: τοπική επαλήθευση πάνω στα cached credentials της συσκευής
+      markServerDown();
+      const cachedUser = await verifyStoreLoginOffline(email, password);
+      if (cachedUser === null) {
+        const err = new Error(
+          "Απαιτείται σύνδεση στο διαδίκτυο για την πρώτη είσοδο σε αυτή τη συσκευή"
+        );
+        err.offline = true;
+        throw err;
+      }
+      if (cachedUser === false) {
+        const err = new Error("Λάθος email ή κωδικός");
+        err.offline = true;
+        throw err;
+      }
+      const me = { ...cachedUser, offline_session: true };
+      delete me.role;
+      delete me.profile;
+      delete me.profile_id;
+      delete me.profile_name; // ο ρόλος ορίζεται από την επιλογή προφίλ + PIN (offline path)
+      cacheSet("me", me); // ώστε reload χωρίς δίκτυο να κρατά το session
+      pendingOfflineStoreLogin = { email, password };
+      setUser(me);
+      return me;
+    }
   };
 
   const register = async (payload) => {
@@ -101,9 +139,20 @@ export function AuthProvider({ children }) {
     return u;
   };
 
+  // Απλή αποσύνδεση: τα offline δεδομένα της συσκευής (credentials/PIN hashes,
+  // cache, ουρά) ΔΙΑΤΗΡΟΥΝΤΑΙ ώστε το offline login να δουλεύει μετά.
   const logout = () => {
+    pendingOfflineLogin = null;
+    pendingOfflineStoreLogin = null;
     setToken(null);
     setUser(false);
+  };
+
+  // Ρητή ενέργεια "Αποσύνδεση & διαγραφή δεδομένων συσκευής": πλήρες reset —
+  // σβήνει credentials, PIN hashes, cache και ουρά offline παραγγελιών.
+  const logoutAndWipe = async () => {
+    logout();
+    await wipeOfflineDeviceData();
   };
 
   const selectProfile = async (profileId, pin) => {
@@ -149,6 +198,30 @@ export function AuthProvider({ children }) {
   const { offline } = useOfflineStatus();
   useEffect(() => {
     const revalidate = async () => {
+      // Πρώτα το store-level login: χωρίς αυτό δεν υπάρχει καν token
+      if (pendingOfflineStoreLogin) {
+        try {
+          const { email, password } = pendingOfflineStoreLogin;
+          const { token, user: u } = await apiLogin({ email, password });
+          setToken(token);
+          rememberStoreLoginOffline(email, password, u); // ανανέωση hash + snapshot
+          pendingOfflineStoreLogin = null;
+          if (!pendingOfflineLogin) {
+            setUser(u);
+            cacheSet("me", u);
+            cacheProfilesForOffline();
+            syncQueue();
+          }
+        } catch (e) {
+          if (isNetworkError(e)) return; // το δίκτυο ξανάπεσε — retry στο επόμενο online
+          // Ο server αρνήθηκε (π.χ. άλλαξε ο κωδικός εν τω μεταξύ) → πλήρες logout
+          pendingOfflineStoreLogin = null;
+          pendingOfflineLogin = null;
+          setToken(null);
+          setUser(false);
+          return;
+        }
+      }
       if (!pendingOfflineLogin) return;
       try {
         const { token } = await apiSelectProfile(
@@ -231,6 +304,7 @@ export function AuthProvider({ children }) {
         register,
         startDemo,
         logout,
+        logoutAndWipe,
         selectProfile,
         exitProfile,
         refreshMe,

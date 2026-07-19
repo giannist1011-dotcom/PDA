@@ -25,12 +25,14 @@ export default function Login() {
       toast.success("Καλωσήρθατε!");
       navigate("/app");
     } catch (err) {
-      // Η πρώτη σύνδεση καταστήματος απαιτεί δίκτυο — αν έχεις ήδη συνδεθεί,
-      // το session διατηρείται τοπικά και δεν φτάνεις ποτέ σε αυτή τη σελίδα offline
+      // err.offline: μήνυμα από την τοπική (offline) επαλήθευση credentials —
+      // είτε "πρώτη είσοδος απαιτεί δίκτυο" είτε "λάθος κωδικός"
       setError(
-        !err?.response
-          ? "Δεν υπάρχει σύνδεση στο διαδίκτυο. Η πρώτη είσοδος σε αυτή τη συσκευή απαιτεί δίκτυο."
-          : formatApiError(err)
+        err?.offline
+          ? err.message
+          : !err?.response
+            ? "Δεν υπάρχει σύνδεση στο διαδίκτυο. Η πρώτη είσοδος σε αυτή τη συσκευή απαιτεί δίκτυο."
+            : formatApiError(err)
       );
     } finally {
       setBusy(false);

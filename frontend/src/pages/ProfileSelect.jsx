@@ -119,7 +119,7 @@ function PinPad({ profile, onSubmit, onCancel, busy }) {
 }
 
 export default function ProfileSelect() {
-  const { user, hasProfile, selectProfile, logout } = useAuth();
+  const { user, hasProfile, selectProfile, logout, logoutAndWipe } = useAuth();
   const navigate = useNavigate();
   const [profiles, setProfiles] = useState(null); // null = loading
   const [chosen, setChosen] = useState(null);
@@ -240,6 +240,25 @@ export default function ProfileSelect() {
           >
             <LogOut className="w-4 h-4" /> Αποσύνδεση καταστήματος
           </button>
+          <div className="mt-3 text-xs text-neutral-500">
+            Τα δεδομένα offline λειτουργίας διατηρούνται σε αυτή τη συσκευή.{" "}
+            <button
+              onClick={async () => {
+                if (
+                  !window.confirm(
+                    "Να διαγραφούν όλα τα τοπικά δεδομένα της συσκευής; Θα χαθούν τα αποθηκευμένα στοιχεία offline σύνδεσης και τυχόν μη συγχρονισμένες παραγγελίες."
+                  )
+                )
+                  return;
+                await logoutAndWipe();
+                navigate("/app/login");
+              }}
+              data-testid="profile-logout-wipe"
+              className="text-[#FF6961] hover:underline font-semibold"
+            >
+              Αποσύνδεση &amp; διαγραφή δεδομένων συσκευής
+            </button>
+          </div>
         </div>
 
         {user && (!user.owner_pin_set || !user.employee_pin_set) && (

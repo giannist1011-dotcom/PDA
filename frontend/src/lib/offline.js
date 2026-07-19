@@ -294,6 +294,54 @@ export async function verifyPinOffline(profileId, pin) {
   };
 }
 
+// ---------- Offline σύνδεση καταστήματος (email + κωδικός) ----------
+// Μετά από ΕΠΙΤΥΧΗ online σύνδεση καταστήματος αποθηκεύουμε τοπικά PBKDF2 hash
+// του κωδικού (τυχαίο salt) + snapshot βασικών στοιχείων λογαριασμού, ώστε αν
+// χαθεί το token/γίνει logout να μπορεί να ξαναμπεί χωρίς δίκτυο. ΠΟΤΕ δεν
+// αποθηκεύεται ο κωδικός σε καθαρή μορφή ούτε ο server-side hash.
+export async function rememberStoreLoginOffline(email, password, user) {
+  try {
+    const salt = toHex(crypto.getRandomValues(new Uint8Array(16)));
+    const hash = await derivePinHash(password, salt);
+    await cacheSet("offline_store_login", {
+      email: (email || "").trim().toLowerCase(),
+      salt,
+      hash,
+      user, // snapshot λογαριασμού (store name, business type, ρυθμίσεις) — ΟΧΙ διαπιστευτήρια
+    });
+  } catch {
+    /* best-effort — χωρίς crypto.subtle απλά δεν υπάρχει offline store login */
+  }
+}
+
+// Τοπική επαλήθευση σύνδεσης καταστήματος. null = δεν υπάρχουν cached credentials
+// για αυτό το email σε αυτή τη συσκευή — όχι λάθος κωδικός.
+export async function verifyStoreLoginOffline(email, password) {
+  const entry = await cacheGet("offline_store_login");
+  if (!entry || entry.email !== (email || "").trim().toLowerCase()) return null;
+  let hash;
+  try {
+    hash = await derivePinHash(password, entry.salt);
+  } catch {
+    return null;
+  }
+  if (hash !== entry.hash) return false;
+  return entry.user || null;
+}
+
+// Πλήρες reset συσκευής: σβήνει cache (credentials, PIN hashes, μενού, me) ΚΑΙ
+// ουρά παραγγελιών. Καλείται μόνο από ρητή ενέργεια "Αποσύνδεση & διαγραφή
+// δεδομένων συσκευής".
+export async function wipeOfflineDeviceData() {
+  try {
+    await tx("cache", "readwrite", (s) => s.clear());
+    await tx("queue", "readwrite", (s) => s.clear());
+  } catch {
+    /* best-effort */
+  }
+  await refreshPending();
+}
+
 // Ελαφρύ health check — χρησιμοποιείται από το banner για auto-reconnect όσο υπάρχει ουρά
 export async function pingServer() {
   try {
