@@ -141,6 +141,7 @@ def public_user(u: dict) -> dict:
         "business_type": u.get("business_type") or "souvlaki",
         "store_phone": u.get("store_phone") or "",
         "store_address": u.get("store_address") or "",
+        "store_city": u.get("store_city") or "",
         "store_lat": u.get("store_lat"),
         "store_lng": u.get("store_lng"),
         "print_copies": u.get("print_copies", 1),

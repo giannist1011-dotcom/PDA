@@ -78,6 +78,9 @@ async def on_startup():
     await db.demo_leads.create_index([("created_at", -1)])
     # Live χάρτης: geocode cache ανά διεύθυνση (μία γεωκωδικοποίηση ανά διεύθυνση)
     await db.geocode_cache.create_index([("user_id", 1), ("address", 1)], unique=True)
+    # Μία φορά: πέτα entries από πριν το city/viewbox geocoding (χωρίς πεδίο "q") —
+    # περιλαμβάνει και failed και λάθος-πόλης αποτελέσματα· θα ξανα-γεωκωδικοποιηθούν
+    await db.geocode_cache.delete_many({"q": {"$exists": False}})
     # AI (DeckPilot): rate limiting ανά ώρα + cached ημερήσια briefs
     await db.ai_usage.create_index(
         [("user_id", 1), ("kind", 1), ("hour", 1)], unique=True

@@ -61,6 +61,7 @@ class StoreDetailsIn(BaseModel):
     restaurant_name: str = Field(min_length=1, max_length=80)
     store_phone: Optional[str] = Field(default=None, max_length=60)
     store_address: Optional[str] = Field(default=None, max_length=200)
+    store_city: Optional[str] = Field(default=None, max_length=80)
     store_lat: Optional[float] = Field(default=None, ge=-90, le=90)
     store_lng: Optional[float] = Field(default=None, ge=-180, le=180)
 
@@ -72,10 +73,19 @@ async def update_store_details(body: StoreDetailsIn, user: dict = Depends(requir
         "restaurant_name": body.restaurant_name.strip(),
         "store_phone": (body.store_phone or "").strip(),
         "store_address": (body.store_address or "").strip(),
+        "store_city": (body.store_city or "").strip(),
         "store_lat": body.store_lat,
         "store_lng": body.store_lng,
     }
     await db.users.update_one({"id": user["id"]}, {"$set": fields})
+    # Πόλη/θέση επηρεάζουν το geocoding του live χάρτη — καθάρισε το cache
+    # ώστε να ξαναδοκιμαστούν οι διευθύνσεις με τα νέα στοιχεία
+    if (
+        fields["store_city"] != (user.get("store_city") or "")
+        or fields["store_lat"] != user.get("store_lat")
+        or fields["store_lng"] != user.get("store_lng")
+    ):
+        await db.geocode_cache.delete_many({"user_id": user["id"]})
     return fields
 
 

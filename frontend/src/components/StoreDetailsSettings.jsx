@@ -24,6 +24,7 @@ export default function StoreDetailsSettings() {
   const [name, setName] = useState(user?.restaurant_name || "");
   const [phone, setPhone] = useState(user?.store_phone || "");
   const [address, setAddress] = useState(user?.store_address || "");
+  const [city, setCity] = useState(user?.store_city || "");
   const [latlng, setLatlng] = useState(
     user?.store_lat != null && user?.store_lng != null
       ? { lat: user.store_lat, lng: user.store_lng }
@@ -104,6 +105,7 @@ export default function StoreDetailsSettings() {
         restaurant_name: name.trim(),
         store_phone: phone.trim(),
         store_address: address.trim(),
+        store_city: city.trim(),
         store_lat: latlng?.lat ?? null,
         store_lng: latlng?.lng ?? null,
       });
@@ -140,6 +142,20 @@ export default function StoreDetailsSettings() {
             className={inputCls}
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-xs text-neutral-400 mb-1.5">
+          Πόλη / Περιοχή — προστίθεται αυτόματα στις διευθύνσεις παραγγελιών για τον live χάρτη
+        </label>
+        <input
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          maxLength={80}
+          placeholder="π.χ. Κοζάνη"
+          data-testid="store-city-input"
+          className={inputCls}
+        />
       </div>
 
       <div>
