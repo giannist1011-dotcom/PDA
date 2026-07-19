@@ -27,6 +27,7 @@ const DELIVERY_FIELDS = [
   { key: "name", label: "Όνομα", placeholder: "π.χ. Νίκος" },
   { key: "phone", label: "Τηλέφωνο", placeholder: "6912345678", inputMode: "tel" },
   { key: "address", label: "Διεύθυνση", placeholder: "π.χ. Ερμού 12" },
+  { key: "city", label: "Πόλη", placeholder: "π.χ. Χαλκίδα" },
   { key: "floor", label: "Όροφος", placeholder: "π.χ. 3ος" },
 ];
 
@@ -56,6 +57,7 @@ export default function OrderPanel({
   discountAmount = 0,
   onDiscountClick,
   onEditOptions,
+  storeCity = "",
 }) {
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
   const total = Math.max(0, subtotal - discountAmount);
@@ -82,7 +84,10 @@ export default function OrderPanel({
       if (delivery_type === type) {
         return Object.values(fields).some(Boolean) ? fields : null;
       }
-      return { ...fields, delivery_type: type };
+      const next = { ...fields, delivery_type: type };
+      // Προσυμπλήρωση πόλης από τα Στοιχεία καταστήματος (επεξεργάσιμη)
+      if (type === "delivery" && !next.city && storeCity) next.city = storeCity;
+      return next;
     });
 
   const canSubmit =

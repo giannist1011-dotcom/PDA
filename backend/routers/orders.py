@@ -259,8 +259,9 @@ async def _geocode_cached(user: dict, address: str, budget: dict):
     if budget["new"] >= GEOCODE_MAX_NEW_PER_CALL:
         return None, None, "pending"  # θα γίνει στο επόμενο poll
     budget["new"] += 1
-    # Οι διευθύνσεις παραγγελιών συνήθως δεν έχουν πόλη ("Παπανδρέου 4") — χωρίς αυτήν
-    # το Nominatim γυρνάει ομώνυμο δρόμο σε άλλη πόλη. Πρόσθεσε την πόλη του μαγαζιού.
+    # Οι νέες παραγγελίες αποθηκεύουν ήδη πλήρη διεύθυνση (οδός, πόλη) — το lookup
+    # τη χρησιμοποιεί ως έχει. Fallback: παλιές παραγγελίες χωρίς πόλη παίρνουν
+    # την πόλη του μαγαζιού, αλλιώς το Nominatim γυρνάει ομώνυμο δρόμο αλλού.
     query = address.strip()
     city = (user.get("store_city") or "").strip()
     if city and city.lower() not in query.lower():

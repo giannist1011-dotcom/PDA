@@ -5,6 +5,18 @@ import PinGateModal from "@/components/PinGateModal";
 import AppShell from "@/components/AppShell";
 import MenuGrid from "@/components/MenuGrid";
 import OrderPanel from "@/components/OrderPanel";
+
+// Ενώνει οδό + πόλη σε πλήρη διεύθυνση (η πόλη δεν αποθηκεύεται ξεχωριστά)
+const buildDeliveryPayload = (source, delivery) => {
+  if (source !== "Τηλέφωνο" || !delivery?.delivery_type) return null;
+  const { city, ...rest } = delivery;
+  const street = (rest.address || "").trim();
+  const cityTrim = (city || "").trim();
+  if (street && cityTrim && !street.toLowerCase().includes(cityTrim.toLowerCase())) {
+    rest.address = `${street}, ${cityTrim}`;
+  }
+  return rest;
+};
 import CustomizationModal from "@/components/CustomizationModal";
 import Receipt from "@/components/Receipt";
 import { useAuth } from "@/context/AuthContext";
@@ -501,7 +513,7 @@ export default function PDA() {
         discount && discountAmount > 0
           ? { type: discount.type, value: discount.value, amount: discountAmount }
           : null,
-      delivery: source === "Τηλέφωνο" && delivery?.delivery_type ? delivery : null,
+      delivery: buildDeliveryPayload(source, delivery),
       scheduled_at: scheduledAt,
       items: items.map((it) => ({
         item_id: it.item_id,
@@ -646,6 +658,7 @@ export default function PDA() {
           onSubmit={handleSubmit}
           onEditOptions={handleEditLineOptions}
           submitting={submitting}
+          storeCity={user?.store_city || ""}
         />
         </div>
       </main>
