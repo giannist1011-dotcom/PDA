@@ -12,6 +12,11 @@ from seed_data import DEFAULT_CUSTOMIZATION
 router = APIRouter()
 
 
+async def _mark_menu_customized(uid: str):
+    """Onboarding: το μαγαζί πείραξε το μενού του (βήμα «Έλεγξε/προσάρμοσε το μενού»)."""
+    await db.users.update_one({"id": uid}, {"$set": {"onb_menu": True}})
+
+
 # ============ MODELS ============
 class MenuOption(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -118,6 +123,7 @@ async def create_category(body: CategoryIn, user: dict = Depends(require_manager
     cid = str(uuid.uuid4())[:8]
     doc = {"id": cid, "name": body.name.strip(), "order": body.order, "user_id": user["id"]}
     await db.categories.insert_one(doc)
+    await _mark_menu_customized(user["id"])
     return {"id": cid, "name": body.name.strip(), "order": body.order}
 
 
@@ -153,6 +159,7 @@ async def update_category(cid: str, body: CategoryIn, user: dict = Depends(requi
     )
     if r.matched_count == 0:
         raise HTTPException(404, "Not found")
+    await _mark_menu_customized(user["id"])
     return {"id": cid, "name": body.name.strip(), "order": body.order}
 
 
@@ -162,6 +169,7 @@ async def delete_category(cid: str, user: dict = Depends(require_manager)):
     r = await db.categories.delete_one({"id": cid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
+    await _mark_menu_customized(user["id"])
     return {"ok": True}
 
 
@@ -185,6 +193,7 @@ async def create_item(body: MenuItemIn, user: dict = Depends(require_manager)):
         "sort_order": sort_order,
     }
     await db.items.insert_one(doc)
+    await _mark_menu_customized(user["id"])
     doc.pop("user_id", None)
     doc.pop("_id", None)
     return doc
@@ -206,6 +215,7 @@ async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(require_m
     r = await db.items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
     if r.matched_count == 0:
         raise HTTPException(404, "Not found")
+    await _mark_menu_customized(user["id"])
     return {"id": iid, **update}
 
 
@@ -224,6 +234,7 @@ async def delete_item(iid: str, user: dict = Depends(require_manager)):
     r = await db.items.delete_one({"id": iid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
+    await _mark_menu_customized(user["id"])
     return {"ok": True}
 
 
@@ -251,6 +262,7 @@ class BulkItemsIn(BaseModel):
 @router.post("/menu/items/bulk")
 async def bulk_items(body: BulkItemsIn, user: dict = Depends(require_manager)):
     q = {"user_id": user["id"], "id": {"$in": body.ids}}
+    await _mark_menu_customized(user["id"])
 
     if body.action == "delete":
         r = await db.items.delete_many(q)

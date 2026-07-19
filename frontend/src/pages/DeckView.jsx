@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AppShell from "@/components/AppShell";
+import OnboardingChecklist from "@/components/OnboardingChecklist";
 import { fetchDeckOverview } from "@/lib/api";
 import { eur, formatGRTime } from "@/lib/format";
 
@@ -101,6 +102,9 @@ export default function DeckView() {
             {error}
           </div>
         )}
+
+        {/* Onboarding: πρώτα βήματα νέου μαγαζιού */}
+        <OnboardingChecklist />
 
         {/* Checklist ημέρας — μικρή ένδειξη */}
         {data?.checklist &&

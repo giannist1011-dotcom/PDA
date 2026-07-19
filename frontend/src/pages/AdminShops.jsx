@@ -49,6 +49,21 @@ const STATUS_BADGE = {
   demo: ["Demo", "bg-gold/15 text-gold"],
 };
 
+// Ποσοστό onboarding μαγαζιού — μίνι progress bar + %
+const OnboardingCell = ({ onboarding }) => {
+  if (!onboarding) return <span className="text-neutral-500">—</span>;
+  const pct = onboarding.percent ?? 0;
+  const color = pct >= 100 ? "bg-emerald-400" : pct >= 50 ? "bg-gold" : "bg-[#FF6961]";
+  return (
+    <div className="flex items-center gap-2 min-w-[90px]">
+      <div className="flex-1 h-1.5 rounded-full bg-[#2A0E14] overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="font-mono text-xs text-neutral-300">{pct}%</span>
+    </div>
+  );
+};
+
 export const StatusBadge = ({ status }) => {
   const [label, cls] = STATUS_BADGE[status] || [status, "bg-neutral-500/15 text-neutral-400"];
   return (
@@ -180,6 +195,11 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
                 <Row label="Τζίρος">{fmtEur(shop.orders_revenue)}</Row>
                 <Row label="Προφίλ / Είδη">{`${shop.profiles_count} / ${shop.items_count}`}</Row>
                 <Row label="DeckPilot">{shop.uses_deckpilot ? "Ναι" : "Όχι"}</Row>
+                <Row label="Onboarding">
+                  {shop.onboarding
+                    ? `${shop.onboarding.done}/${shop.onboarding.total} (${shop.onboarding.percent}%)`
+                    : "—"}
+                </Row>
                 <Row label="Promo">{shop.promo?.code || "—"}</Row>
               </div>
 
@@ -448,6 +468,7 @@ function ShopsContent() {
                 <th className="px-3 py-2.5 font-bold">Τελ. δραστ.</th>
                 <th className="px-3 py-2.5 font-bold text-right">Παραγγελίες</th>
                 <th className="px-3 py-2.5 font-bold">Κατάσταση</th>
+                <th className="px-3 py-2.5 font-bold">Onboarding</th>
                 <th className="px-3 py-2.5 font-bold">Promo</th>
                 <th className="px-3 py-2.5 font-bold">Πλάνο</th>
               </tr>
@@ -471,6 +492,9 @@ function ShopsContent() {
                   </td>
                   <td className="px-3 py-2.5 text-right font-semibold">{s.orders_count}</td>
                   <td className="px-3 py-2.5"><StatusBadge status={s.status} /></td>
+                  <td className="px-3 py-2.5" data-testid={`shop-onboarding-${s.id}`}>
+                    <OnboardingCell onboarding={s.onboarding} />
+                  </td>
                   <td className="px-3 py-2.5 font-mono text-xs text-gold">{s.promo?.code || "—"}</td>
                   <td className="px-3 py-2.5 text-neutral-300">{PLAN_LABELS[s.plan] || "—"}</td>
                 </tr>

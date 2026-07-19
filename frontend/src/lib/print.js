@@ -5,7 +5,11 @@
 // - Διπλή εκτύπωση (2ος εκτυπωτής): ο browser ΔΕΝ επιτρέπει επιλογή εκτυπωτή
 //   προγραμματιστικά, οπότε ανοίγουμε δεύτερο print dialog — εκεί ο χρήστης
 //   (ή το kiosk setup) στέλνει το job στον δεύτερο εκτυπωτή.
+import { apiOnboardingMarkPrint } from "@/lib/api";
+
 export function printReceiptJob(user) {
+  // Onboarding: σημείωσε ότι έγινε εκτύπωση (fire-and-forget, δεν μπλοκάρει)
+  apiOnboardingMarkPrint().catch(() => {});
   window.print();
   if (user?.print_double) {
     // Το window.print() είναι blocking όσο είναι ανοιχτό το dialog —

@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Header, Query
 from pydantic import BaseModel, Field
 
 from core import db, purge_user_data
+from routers.onboarding import ONB_PROJECT, fetch_onboarding, onboarding_progress
 from routers.promo import require_admin
 
 router = APIRouter()
@@ -135,7 +136,8 @@ async def admin_list_shops(
         {"$sort": {"created_at": -1}},
         {"$skip": (page - 1) * limit},
         {"$limit": limit},
-        {"$project": SHOP_FIELDS},
+        # SHOP_FIELDS + υπολογιζόμενα πεδία onboarding (χωρίς να κατέβει το logo blob)
+        {"$project": {**SHOP_FIELDS, **{k: v for k, v in ONB_PROJECT.items() if k != "_id"}}},
         {"$lookup": {
             "from": "orders",
             "let": {"uid": "$id"},
@@ -159,6 +161,9 @@ async def admin_list_shops(
         u["orders_revenue"] = round(st.get("revenue", 0) or 0, 2)
         u["last_activity"] = st.get("last")
         u["status"] = shop_status(u)
+        u["onboarding"] = onboarding_progress(u)
+        for k in ONB_PROJECT:
+            u.pop(k, None)
         shops.append(u)
     return {"total": total, "page": page, "limit": limit, "shops": shops}
 
@@ -187,6 +192,7 @@ async def admin_shop_detail(uid: str, x_admin_password: Optional[str] = Header(N
     u["profiles_count"] = await db.profiles.count_documents({"user_id": uid})
     u["items_count"] = await db.items.count_documents({"user_id": uid})
     u["uses_deckpilot"] = bool(await db.ai_usage.find_one({"user_id": uid}, {"_id": 1}))
+    u["onboarding"] = await fetch_onboarding(uid)
     return u
 
 

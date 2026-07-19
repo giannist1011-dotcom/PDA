@@ -285,6 +285,12 @@ export const apiAdminDeleteAnnouncement = (pw, id) =>
 export const apiActiveAnnouncement = () =>
   api.get("/announcements/active").then((r) => r.data);
 
+// ONBOARDING (checklist πρώτων βημάτων νέου μαγαζιού — owner)
+export const apiOnboardingStatus = () => api.get("/onboarding/status").then((r) => r.data);
+export const apiOnboardingHide = () => api.post("/onboarding/hide").then((r) => r.data);
+export const apiOnboardingMarkPrint = () =>
+  api.post("/onboarding/print-test").then((r) => r.data);
+
 // AI — DeckPilot & ημερήσιο brief (owner only)
 export const apiAiChat = (messages) =>
   api.post("/ai/chat", { messages }).then((r) => r.data);

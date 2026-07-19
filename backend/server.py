@@ -8,7 +8,7 @@ from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, ensure_demo_account, migrate_items_sort_order
-from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, announcements
+from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, announcements, onboarding
 
 app = FastAPI(title="OrderDeck")
 
@@ -37,6 +37,7 @@ api.include_router(ai.router)
 api.include_router(checklist.router)
 api.include_router(admin.router)
 api.include_router(announcements.router)
+api.include_router(onboarding.router)
 
 app.include_router(api)
 

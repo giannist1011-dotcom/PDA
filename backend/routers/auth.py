@@ -296,6 +296,8 @@ async def create_profile(body: ProfileIn, user: dict = Depends(require_manager))
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.profiles.insert_one(doc)
+    # Onboarding: προστέθηκε προφίλ πέρα από τα προεπιλεγμένα
+    await db.users.update_one({"id": user["id"]}, {"$set": {"onb_profile": True}})
     return public_profile(doc)
 
 
@@ -315,6 +317,8 @@ async def update_profile(pid: str, body: ProfileIn, user: dict = Depends(require
         if not (body.pin.isdigit() and len(body.pin) == 4):
             raise HTTPException(400, "Ο κωδικός πρέπει να είναι 4 ψηφία")
         update["pin_hash"] = hash_password(body.pin)
+        # Onboarding: άλλαξε PIN προφίλ
+        await db.users.update_one({"id": user["id"]}, {"$set": {"onb_pins": True}})
     await db.profiles.update_one({"id": pid, "user_id": user["id"]}, {"$set": update})
     return {"id": pid, "name": update["name"], "role": update["role"]}
 
