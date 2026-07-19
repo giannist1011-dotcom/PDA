@@ -121,6 +121,8 @@ export const fetchNextOrderNumber = async () => (await api.get("/orders/next-num
 export const submitOrder = (payload) => api.post("/orders", payload).then((r) => r.data);
 export const fetchOrders = (params) =>
   api.get("/orders", { params }).then((r) => r.data);
+export const fetchOrdersCount = (params) =>
+  api.get("/orders/count", { params }).then((r) => r.data);
 export const apiGetOrder = (id) => api.get(`/orders/${id}`).then((r) => r.data);
 export const apiCancelOrder = (id, pin = null) =>
   api.post(`/orders/${id}/cancel`, { pin }).then((r) => r.data);

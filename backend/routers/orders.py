@@ -188,17 +188,14 @@ async def list_scheduled_orders(user: dict = Depends(require_staff)):
     return docs
 
 
-@router.get("/orders", response_model=List[Order])
-async def list_orders(
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-    source: Optional[str] = None,
-    q: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 500,
-    user: dict = Depends(require_staff),
-):
-    query = {"user_id": user["id"]}
+def _history_query(
+    user_id: str,
+    date_from: Optional[str],
+    date_to: Optional[str],
+    source: Optional[str],
+    q: Optional[str],
+) -> dict:
+    query = {"user_id": user_id}
     if date_from or date_to:
         # Τοπικές (Ελλάδα) ημέρες → UTC όρια, αλλιώς χάνονται οι παραγγελίες μετά τα μεσάνυχτα
         utc_from, _ = local_day_range(date_from or date_to)
@@ -220,6 +217,20 @@ async def list_orders(
         if term.isdigit():
             ors.append({"order_number": int(term)})
         query["$or"] = ors
+    return query
+
+
+@router.get("/orders", response_model=List[Order])
+async def list_orders(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    source: Optional[str] = None,
+    q: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 500,
+    user: dict = Depends(require_staff),
+):
+    query = _history_query(user["id"], date_from, date_to, source, q)
     docs = (
         await db.orders.find(query, {"_id": 0})
         .sort("created_at", -1)
@@ -230,6 +241,19 @@ async def list_orders(
         if isinstance(d.get("created_at"), str):
             d["created_at"] = datetime.fromisoformat(d["created_at"])
     return docs
+
+
+@router.get("/orders/count")
+async def count_orders(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    source: Optional[str] = None,
+    q: Optional[str] = None,
+    user: dict = Depends(require_staff),
+):
+    """Συνολικό πλήθος για τα φίλτρα του ιστορικού — το «Χ παραγγελίες» δίπλα στο εύρος."""
+    query = _history_query(user["id"], date_from, date_to, source, q)
+    return {"count": await db.orders.count_documents(query)}
 
 
 # ============ LIVE MAP ============
@@ -287,12 +311,14 @@ async def _geocode_cached(user: dict, address: str, budget: dict):
     if budget["new"] >= GEOCODE_MAX_NEW_PER_CALL:
         return None, None, "pending"  # θα γίνει στο επόμενο poll
     budget["new"] += 1
-    # Οι νέες παραγγελίες αποθηκεύουν ήδη πλήρη διεύθυνση (οδός, πόλη) — το lookup
+    # Οι νέες παραγγελίες αποθηκεύουν ήδη πλήρη διεύθυνση "οδός, πόλη" — το lookup
     # τη χρησιμοποιεί ως έχει. Fallback: παλιές παραγγελίες χωρίς πόλη παίρνουν
     # την πόλη του μαγαζιού, αλλιώς το Nominatim γυρνάει ομώνυμο δρόμο αλλού.
+    # Αν όμως υπάρχει ήδη κόμμα, το frontend έχει βάλει πόλη (ίσως ΑΛΛΗ από του
+    # μαγαζιού — παράδοση εκτός πόλης)· δεν προσθέτουμε δεύτερη.
     query = address.strip()
     city = (user.get("store_city") or "").strip()
-    if city and city.lower() not in query.lower():
+    if city and "," not in query and city.lower() not in query.lower():
         query = f"{query}, {city}"
     viewbox = _store_viewbox(user)
     try:

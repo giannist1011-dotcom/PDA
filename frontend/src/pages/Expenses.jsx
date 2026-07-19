@@ -24,13 +24,8 @@ import {
 } from "@/lib/api";
 import { eur, todayISO, formatGRDate } from "@/lib/format";
 import DatePicker from "@/components/DatePicker";
-
-const firstOfMonthISO = () => {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}-01`;
-};
+import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
+import { presetRange } from "@/lib/dates";
 
 // ---------- Expense create/edit modal ----------
 function ExpenseModal({ open, onClose, categories, initial, onSubmit }) {
@@ -282,8 +277,11 @@ export default function Expenses() {
   const [categories, setCategories] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [from, setFrom] = useState(firstOfMonthISO());
-  const [to, setTo] = useState(todayISO());
+  // Κοινό pattern presets περιόδου — default «Αυτός ο μήνας» (όπως πριν)
+  const [period, setPeriod] = useState(() => ({
+    preset: "thisMonth",
+    ...presetRange("thisMonth"),
+  }));
   const [filterCat, setFilterCat] = useState("all");
   const [expenseModal, setExpenseModal] = useState({ open: false, editing: null });
   const [catModalOpen, setCatModalOpen] = useState(false);
@@ -296,7 +294,7 @@ export default function Expenses() {
     }
   };
 
-  const loadExpenses = async (f = from, t = to) => {
+  const loadExpenses = async (f = period.from, t = period.to) => {
     setLoading(true);
     try {
       setExpenses(await apiListExpenses({ date_from: f, date_to: t }));
@@ -305,6 +303,12 @@ export default function Expenses() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Preset → άμεση εφαρμογή· custom ημερομηνία → πατάει «Εφαρμογή»
+  const handlePeriodChange = (next, meta) => {
+    setPeriod(next);
+    if (meta.fromPreset) loadExpenses(next.from, next.to);
   };
 
   useEffect(() => {
@@ -452,30 +456,13 @@ export default function Expenses() {
         </div>
 
         {/* Filters */}
-        <div className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg mb-6">
+        <div className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg mb-6 space-y-3">
           <div className="flex flex-wrap items-end gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
-                Από
-              </label>
-              <DatePicker
-                value={from}
-                onChange={setFrom}
-                testId="expenses-date-from"
-                className="h-12 px-3"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
-                Έως
-              </label>
-              <DatePicker
-                value={to}
-                onChange={setTo}
-                testId="expenses-date-to"
-                className="h-12 px-3"
-              />
-            </div>
+            <PeriodFilter
+              value={period}
+              onChange={handlePeriodChange}
+              testIdPrefix="expenses"
+            />
             <div className="flex flex-col gap-1">
               <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
                 Κατηγορία
@@ -484,7 +471,7 @@ export default function Expenses() {
                 value={filterCat}
                 onChange={(e) => setFilterCat(e.target.value)}
                 data-testid="expenses-category-filter"
-                className="h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+                className="h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
               >
                 <option value="all">Όλες</option>
                 {categories.map((c) => (
@@ -499,11 +486,17 @@ export default function Expenses() {
               onClick={() => loadExpenses()}
               disabled={loading}
               data-testid="expenses-apply-filter-btn"
-              className="h-12 px-6 bg-brand hover:bg-brand-hover text-white font-bold"
+              className="h-11 px-6 bg-brand hover:bg-brand-hover text-white font-bold"
             >
               <RefreshCcw className="w-4 h-4 mr-2" />
               {loading ? "Φόρτωση..." : "Εφαρμογή"}
             </Button>
+          </div>
+          <div className="pt-3 border-t border-[#431A25] text-sm text-neutral-300">
+            Εύρος:{" "}
+            <span className="font-mono font-bold text-white" data-testid="expenses-period-label">
+              {periodLabel(period)}
+            </span>
           </div>
         </div>
 

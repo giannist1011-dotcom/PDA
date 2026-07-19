@@ -29,8 +29,10 @@ import {
 } from "recharts";
 import { fetchAnalytics } from "@/lib/api";
 import { eur, todayISO } from "@/lib/format";
+import { athensToday } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import DatePicker from "@/components/DatePicker";
+import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
 
 const COLORS = ["#F97316", "#00E676", "#D4A017", "#00B0FF", "#FF3B30"];
 
@@ -126,8 +128,11 @@ const CompareCard = ({ label, valueA, valueB, format, testId }) => {
 };
 
 export default function Analytics() {
-  const [from, setFrom] = useState(todayISO());
-  const [to, setTo] = useState(todayISO());
+  // Κύριο φίλτρο: κοινό pattern presets + custom εύρος (ημέρες Ελλάδας)
+  const [period, setPeriod] = useState(() => {
+    const t = athensToday();
+    return { preset: "today", from: t, to: t };
+  });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -149,11 +154,11 @@ export default function Analytics() {
   const [cmpLoading, setCmpLoading] = useState(false);
   const [cmpError, setCmpError] = useState(null);
 
-  const load = async () => {
+  const load = async (f = period.from, t = period.to) => {
     setLoading(true);
     setError(null);
     try {
-      const d = await fetchAnalytics(from, to);
+      const d = await fetchAnalytics(f, t);
       setData(d);
     } catch (e) {
       setError("Σφάλμα φόρτωσης");
@@ -167,26 +172,10 @@ export default function Analytics() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setPreset = (preset) => {
-    const now = new Date();
-    const toDate = new Date(now);
-    let fromDate = new Date(now);
-    if (preset === "today") {
-      // same day
-    } else if (preset === "week") {
-      fromDate.setDate(now.getDate() - 6);
-    } else if (preset === "month") {
-      fromDate.setDate(now.getDate() - 29);
-    }
-    const fmt = (d) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
-    };
-    setFrom(fmt(fromDate));
-    setTo(fmt(toDate));
-    setTimeout(load, 0);
+  // Preset → άμεση εφαρμογή· custom ημερομηνία → πατάει «Εφαρμογή»
+  const handlePeriodChange = (next, meta) => {
+    setPeriod(next);
+    if (meta.fromPreset) load(next.from, next.to);
   };
 
   // Μία μπάρα ανά ώρα — κρατάμε το συνεχόμενο παράθυρο από την πρώτη έως την
@@ -273,55 +262,28 @@ export default function Analytics() {
     <AppShell title="Στατιστικά">
       <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-[1600px] mx-auto w-full">
         {/* Filters */}
-        <div className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg mb-6">
+        <div className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg mb-6 space-y-3">
           <div className="flex flex-wrap items-end gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
-                Από
-              </label>
-              <DatePicker
-                value={from}
-                onChange={setFrom}
-                testId="date-from-input"
-                className="h-12 px-3"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
-                Έως
-              </label>
-              <DatePicker
-                value={to}
-                onChange={setTo}
-                testId="date-to-input"
-                className="h-12 px-3"
-              />
-            </div>
+            <PeriodFilter
+              value={period}
+              onChange={handlePeriodChange}
+              testIdPrefix="analytics"
+            />
             <Button
-              onClick={load}
+              onClick={() => load()}
               disabled={loading}
               data-testid="apply-filter-btn"
-              className="h-12 px-6 bg-brand hover:bg-brand-hover text-white font-bold"
+              className="h-11 px-6 bg-brand hover:bg-brand-hover text-white font-bold"
             >
               <RefreshCcw className="w-4 h-4 mr-2" />
               {loading ? "Φόρτωση..." : "Εφαρμογή"}
             </Button>
-            <div className="flex gap-2 ml-auto">
-              {[
-                { k: "today", label: "Σήμερα" },
-                { k: "week", label: "7 μέρες" },
-                { k: "month", label: "30 μέρες" },
-              ].map((p) => (
-                <button
-                  key={p.k}
-                  onClick={() => setPreset(p.k)}
-                  data-testid={`preset-${p.k}`}
-                  className="h-10 px-4 rounded-md text-sm font-bold bg-[#4A1B27] border border-[#723645] text-neutral-200 hover:border-flame hover:text-white"
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+          </div>
+          <div className="pt-3 border-t border-[#431A25] text-sm text-neutral-300">
+            Εύρος:{" "}
+            <span className="font-mono font-bold text-white" data-testid="analytics-period-label">
+              {periodLabel(period)}
+            </span>
           </div>
         </div>
 

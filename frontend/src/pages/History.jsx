@@ -21,9 +21,10 @@ import PinGateModal from "@/components/PinGateModal";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { ORDER_SOURCES } from "@/data/menu";
-import { fetchOrders, apiGetOrder, apiCancelOrder, apiDeleteOrder, apiListCustomers, formatApiError } from "@/lib/api";
-import { eur, todayISO, formatGRDateTime, formatGRDayMonthTime } from "@/lib/format";
-import DatePicker from "@/components/DatePicker";
+import { fetchOrders, fetchOrdersCount, apiGetOrder, apiCancelOrder, apiDeleteOrder, apiListCustomers, formatApiError } from "@/lib/api";
+import { eur, formatGRDateTime, formatGRDayMonthTime } from "@/lib/format";
+import { athensToday } from "@/lib/dates";
+import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
 import { actorLabel } from "@/lib/roles";
 import { printReceiptJob } from "@/lib/print";
 
@@ -392,17 +393,24 @@ export default function History() {
   const [tab, setTab] = useState("map");
 
   // ---- Tab 1: orders ----
-  const [date, setDate] = useState(todayISO());
+  // Φίλτρο περιόδου: preset ή custom εύρος ημερών (Ελλάδας) · "all" = χωρίς date filter
+  const [period, setPeriod] = useState(() => {
+    const t = athensToday();
+    return { preset: "today", from: t, to: t };
+  });
   const [source, setSource] = useState("all");
   const [search, setSearch] = useState("");
   const [orders, setOrders] = useState([]);
+  const [totalCount, setTotalCount] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [printOrder, setPrintOrder] = useState(null);
 
   const buildParams = (skip = 0) => {
-    const p = { date_from: date, date_to: date, skip, limit: PAGE_SIZE };
+    const p = { skip, limit: PAGE_SIZE };
+    if (period.from) p.date_from = period.from;
+    if (period.to) p.date_to = period.to;
     if (source !== "all") p.source = source;
     if (search.trim()) p.q = search.trim();
     return p;
@@ -411,9 +419,20 @@ export default function History() {
   const loadOrders = async ({ append = false, skip = 0 } = {}) => {
     setLoading(true);
     try {
-      const docs = await fetchOrders(buildParams(skip));
-      setOrders((prev) => (append ? [...prev, ...docs] : docs));
-      setHasMore(docs.length === PAGE_SIZE);
+      if (append) {
+        const docs = await fetchOrders(buildParams(skip));
+        setOrders((prev) => [...prev, ...docs]);
+        setHasMore(docs.length === PAGE_SIZE);
+      } else {
+        // Λίστα (σελιδοποιημένη) + συνολικό πλήθος για τα ίδια φίλτρα
+        const [docs, cnt] = await Promise.all([
+          fetchOrders(buildParams(0)),
+          fetchOrdersCount(buildParams(0)),
+        ]);
+        setOrders(docs);
+        setHasMore(docs.length === PAGE_SIZE);
+        setTotalCount(cnt.count);
+      }
     } catch (e) {
       toast.error(formatApiError(e));
     } finally {
@@ -424,7 +443,7 @@ export default function History() {
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, source]);
+  }, [period, source]);
 
   const submitSearch = (e) => {
     e?.preventDefault();
@@ -586,19 +605,14 @@ export default function History() {
         ) : tab === "orders" ? (
           <>
             {/* Filters */}
-            <div className="p-4 bg-[#3D1620] border border-[#723645] rounded-lg mb-5">
+            <div className="p-4 bg-[#3D1620] border border-[#723645] rounded-lg mb-5 space-y-3">
+              <PeriodFilter
+                value={period}
+                onChange={setPeriod}
+                includeAll
+                testIdPrefix="history"
+              />
               <form onSubmit={submitSearch} className="flex flex-wrap items-end gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
-                    Ημερομηνία
-                  </label>
-                  <DatePicker
-                    value={date}
-                    onChange={setDate}
-                    testId="history-date-input"
-                    className="h-11 px-3"
-                  />
-                </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">
                     Πηγή
@@ -639,6 +653,19 @@ export default function History() {
                   </div>
                 </div>
               </form>
+              {/* Επιλεγμένο εύρος + συνολικό πλήθος για τα τρέχοντα φίλτρα */}
+              <div
+                className="pt-3 border-t border-[#431A25] text-sm text-neutral-300"
+                data-testid="history-period-summary"
+              >
+                <span className="font-mono font-bold text-white">{periodLabel(period)}</span>
+                {totalCount != null && (
+                  <span className="text-neutral-400">
+                    {" · "}
+                    {totalCount} {totalCount === 1 ? "παραγγελία" : "παραγγελίες"}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Orders list */}
