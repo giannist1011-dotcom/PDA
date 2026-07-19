@@ -8,7 +8,7 @@ from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, ensure_demo_account, migrate_items_sort_order
-from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai
+from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist
 
 app = FastAPI(title="OrderDeck")
 
@@ -34,6 +34,7 @@ api.include_router(promo.router)
 api.include_router(public_menu.router)
 api.include_router(stock_photos.router)
 api.include_router(ai.router)
+api.include_router(checklist.router)
 
 app.include_router(api)
 
@@ -81,6 +82,11 @@ async def on_startup():
     # Μία φορά: πέτα entries από πριν το city/viewbox geocoding (χωρίς πεδίο "q") —
     # περιλαμβάνει και failed και λάθος-πόλης αποτελέσματα· θα ξανα-γεωκωδικοποιηθούν
     await db.geocode_cache.delete_many({"q": {"$exists": False}})
+    # Checklist ανοίγματος/κλεισίματος: templates + ημερήσια τικ (ένα ανά item/μέρα)
+    await db.checklist_templates.create_index([("user_id", 1), ("list", 1), ("order", 1)])
+    await db.checklist_ticks.create_index(
+        [("user_id", 1), ("date", -1), ("template_id", 1)], unique=True
+    )
     # AI (DeckPilot): rate limiting ανά ώρα + cached ημερήσια briefs
     await db.ai_usage.create_index(
         [("user_id", 1), ("kind", 1), ("hour", 1)], unique=True

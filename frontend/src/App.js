@@ -10,6 +10,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import MenuManagement from "@/pages/MenuManagement";
 import Stock from "@/pages/Stock";
+import Checklist from "@/pages/Checklist";
 import Schedule from "@/pages/Schedule";
 import ProfileSelect from "@/pages/ProfileSelect";
 import Settings from "@/pages/Settings";
@@ -145,6 +146,14 @@ function App() {
               element={
                 <ProtectedRoute roles={["owner", "manager", "employee"]}>
                   <Stock />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/checklist"
+              element={
+                <ProtectedRoute roles={["owner", "manager", "employee"]}>
+                  <Checklist />
                 </ProtectedRoute>
               }
             />

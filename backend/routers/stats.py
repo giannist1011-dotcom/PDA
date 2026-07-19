@@ -308,7 +308,24 @@ async def deck_overview(user: dict = Depends(require_owner)):
     ]
     open_tables.sort(key=lambda x: x["table_name"])
 
+    # Checklist ημέρας — μικρή ένδειξη "Άνοιγμα: 5/6" στο Deck View
+    cl_templates = await db.checklist_templates.find(
+        {"user_id": user["id"]}, {"_id": 0, "id": 1, "list": 1}
+    ).to_list(500)
+    cl_ticks = await db.checklist_ticks.find(
+        {"user_id": user["id"], "date": today}, {"_id": 0, "template_id": 1}
+    ).to_list(1000)
+    ticked = {t["template_id"] for t in cl_ticks}
+    checklist = {
+        lst: {
+            "total": sum(1 for t in cl_templates if t["list"] == lst),
+            "done": sum(1 for t in cl_templates if t["list"] == lst and t["id"] in ticked),
+        }
+        for lst in ("open", "close")
+    }
+
     return {
+        "checklist": checklist,
         "date": today,
         "as_of": now_local.isoformat(),
         "total_orders": total_orders,

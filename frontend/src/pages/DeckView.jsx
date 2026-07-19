@@ -8,7 +8,9 @@ import {
   Wallet,
   Scale,
   RefreshCcw,
+  ListChecks,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import { fetchDeckOverview } from "@/lib/api";
 import { eur, formatGRTime } from "@/lib/format";
@@ -99,6 +101,36 @@ export default function DeckView() {
             {error}
           </div>
         )}
+
+        {/* Checklist ημέρας — μικρή ένδειξη */}
+        {data?.checklist &&
+          (data.checklist.open.total > 0 || data.checklist.close.total > 0) && (
+            <Link
+              to="/app/checklist"
+              data-testid="deck-checklist"
+              className="inline-flex items-center gap-3 mb-5 px-4 py-2.5 bg-[#3D1620] border border-[#723645] rounded-lg hover:border-flame transition-colors"
+            >
+              <ListChecks className="w-4 h-4 text-flame" />
+              {["open", "close"].map((lst) => {
+                const c = data.checklist[lst];
+                if (c.total === 0) return null;
+                const full = c.done === c.total;
+                return (
+                  <span key={lst} className="text-sm font-semibold text-neutral-300">
+                    {lst === "open" ? "Άνοιγμα" : "Κλείσιμο"}:{" "}
+                    <span
+                      className={`font-mono font-bold ${
+                        full ? "text-[#00E676]" : "text-gold"
+                      }`}
+                      data-testid={`deck-checklist-${lst}`}
+                    >
+                      {c.done}/{c.total}
+                    </span>
+                  </span>
+                );
+              })}
+            </Link>
+          )}
 
         {/* Μεγάλα νούμερα ημέρας */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">

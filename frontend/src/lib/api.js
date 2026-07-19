@@ -84,6 +84,23 @@ export const apiToggleStockItemShopping = (id, needs) =>
 export const apiDeleteStockItem = (id) =>
   api.delete(`/stock/items/${id}`).then((r) => r.data);
 
+// CHECKLIST (άνοιγμα/κλείσιμο καταστήματος)
+export const apiChecklistToday = () => api.get("/checklist/today").then((r) => r.data);
+export const apiChecklistTick = (templateId, done) =>
+  api.post("/checklist/tick", { template_id: templateId, done }).then((r) => r.data);
+export const apiChecklistTemplates = () =>
+  api.get("/checklist/templates").then((r) => r.data);
+export const apiChecklistCreateTemplate = (list, text) =>
+  api.post("/checklist/templates", { list, text }).then((r) => r.data);
+export const apiChecklistUpdateTemplate = (id, text) =>
+  api.put(`/checklist/templates/${id}`, { text }).then((r) => r.data);
+export const apiChecklistDeleteTemplate = (id) =>
+  api.delete(`/checklist/templates/${id}`).then((r) => r.data);
+export const apiChecklistReorder = (list, ids) =>
+  api.post("/checklist/templates/reorder", { list, ids }).then((r) => r.data);
+export const apiChecklistHistory = (days = 14) =>
+  api.get("/checklist/history", { params: { days } }).then((r) => r.data);
+
 // EMPLOYEES
 export const apiListEmployees = () => api.get("/employees").then((r) => r.data);
 export const apiCreateEmployee = (name) => api.post("/employees", { name }).then((r) => r.data);
