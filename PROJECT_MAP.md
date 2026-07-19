@@ -1,0 +1,401 @@
+# PROJECT_MAP — αυτόματα παραγόμενο, ΜΗΝ το επεξεργάζεσαι με το χέρι (τρέξε: node scripts/generate_map.js)
+
+Backend: όλα τα endpoints σερβίρονται με prefix `/api` (server.py). Μορφή: METHOD /path → function @γραμμή — περιγραφή.
+Frontend: Name@γραμμή = component/hook ορισμένο στο αρχείο. Εκτός χάρτη: components/ui, components/icons (shadcn/boilerplate).
+
+## BACKEND — endpoints (backend/routers/*.py)
+### admin.py
+- GET /admin/ping → admin_ping @43 — Ελαφρύς έλεγχος του admin password για το login…
+- GET /admin/overview → admin_overview @51
+- GET /admin/shops → admin_list_shops @97
+- GET /admin/shops/{uid} → admin_shop_detail @172
+- PATCH /admin/shops/{uid} → admin_update_shop @208
+- DELETE /admin/shops/{uid} → admin_delete_shop @224
+- GET /admin/subscriptions/expiring → admin_expiring_subscriptions @239 — Συνδρομές/δοκιμές που λήγουν στις επόμενες 7 ημέρες (για…
+- GET /admin/leads → admin_leads @260
+### ai.py
+- POST /ai/chat → ai_chat @192
+- GET /ai/brief → get_brief @268 — Επιστρέφει cached brief της ημέρας αν υπάρχει, αλλιώς…
+- POST /ai/brief → create_brief @288
+### announcements.py
+- GET /admin/announcements → admin_list_announcements @47
+- POST /admin/announcements → admin_create_announcement @53
+- PATCH /admin/announcements/{aid} → admin_update_announcement @73
+- DELETE /admin/announcements/{aid} → admin_delete_announcement @96
+- GET /announcements/active → active_announcement @108 — Η πιο πρόσφατη ενεργή ανακοίνωση που αφορά αυτό…
+### auth.py
+- POST /auth/register → register @63
+- POST /auth/login → login @143
+- POST /auth/demo → start_demo @160 — Δημιουργεί δοκιμαστικό λογαριασμό που λήγει σε 3 ώρες…
+- POST /admin/demo/cleanup → admin_demo_cleanup @228 — Καθαρισμός ληγμένων demo λογαριασμών — καλείται από cron…
+- GET /auth/offline-profiles → offline_profiles @236 — Λίστα προφίλ για τοπική cache της συσκευής (PWA…
+- GET /auth/me → me @247
+- GET /profiles → list_profiles @276
+- POST /profiles → create_profile @285
+- PUT /profiles/{pid} → update_profile @305
+- DELETE /profiles/{pid} → delete_profile @327
+- POST /profile/select → profile_select @344
+- POST /profile/exit → profile_exit @360 — Return a token with profile cleared (used for…
+- POST /auth/verify-owner-pin → verify_owner_pin @372
+### checklist.py
+- GET /checklist/templates → list_templates @38
+- POST /checklist/templates → create_template @46
+- PUT /checklist/templates/{tid} → update_template @63
+- DELETE /checklist/templates/{tid} → delete_template @73
+- POST /checklist/templates/reorder → reorder_templates @85
+- GET /checklist/today → checklist_today @96
+- POST /checklist/tick → tick_item @126
+- GET /checklist/history → checklist_history @165
+### expenses.py
+- GET /expenses/categories → list_expense_categories @56
+- POST /expenses/categories → create_expense_category @64
+- PUT /expenses/categories/{cid} → update_expense_category @77
+- DELETE /expenses/categories/{cid} → delete_expense_category @88
+- GET /expenses → list_expenses @101
+- POST /expenses → create_expense @124
+- PUT /expenses/{eid} → update_expense @146
+- DELETE /expenses/{eid} → delete_expense @169
+### menu.py
+- GET /menu/config → get_menu_config @91
+- POST /menu/categories → create_category @121
+- POST /menu/categories/reorder → reorder_categories @135 — Νέα σειρά κατηγοριών: η θέση στη λίστα ids…
+- POST /menu/items/reorder → reorder_items @145 — Νέα σειρά προϊόντων (μέσα σε μία κατηγορία): η…
+- PUT /menu/categories/{cid} → update_category @155
+- DELETE /menu/categories/{cid} → delete_category @167
+- POST /menu/items → create_item @177
+- PUT /menu/items/{iid} → update_item @203
+- PATCH /menu/items/{iid}/availability → set_item_availability @223
+- DELETE /menu/items/{iid} → delete_item @233
+- POST /menu/items/bulk → bulk_items @263
+- PUT /menu/customization → update_customization @345
+- GET /photos → list_photos @361
+- POST /photos → create_photo @369
+- POST /photos/import-stock/{stock_id} → import_stock_photo @385 — Επιλογή stock φωτογραφίας από τη βιβλιοθήκη OrderDeck →…
+- DELETE /photos/{pid} → delete_photo @414
+### onboarding.py
+- GET /onboarding/status → onboarding_status @70
+- POST /onboarding/hide → onboarding_hide @75
+- POST /onboarding/print-test → onboarding_print_test @81 — Καλείται από το frontend όταν γίνει οποιαδήποτε εκτύπωση…
+### orders.py
+- GET /orders/next-number → next_order_number @126
+- POST /orders → create_order @131
+- GET /orders/scheduled → list_scheduled_orders @180
+- GET /orders → list_orders @224
+- GET /orders/count → count_orders @247 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
+- GET /orders/live-map → live_map_orders @360 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
+- POST /orders/live-map/clear → clear_live_map @413 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
+- GET /orders/{oid} → get_order @421
+- POST /orders/{oid}/activate → activate_order @431 — Move a scheduled order to active (fired /…
+- POST /orders/{oid}/cancel → cancel_order @451
+- DELETE /orders/{oid} → delete_order @476
+- GET /customers → list_customers @489 — Aggregate customers from phone/delivery orders, grouped by phone
+### promo.py
+- GET /admin/promo → admin_list_promos @106
+- POST /admin/promo → admin_create_promo @122
+- PATCH /admin/promo/{pid} → admin_toggle_promo @148
+- DELETE /admin/promo/{pid} → admin_delete_promo @157
+- GET /admin/promo/{pid}/uses → admin_promo_uses @166
+- POST /promo/validate → validate_promo @204
+### public_menu.py
+- GET /settings/public-menu → get_public_menu_settings @81
+- PUT /settings/public-menu → toggle_public_menu @96
+- PUT /settings/public-menu/slug → update_public_slug @105
+- PUT /settings/public-menu/logo → set_store_logo @120
+- DELETE /settings/public-menu/logo → remove_store_logo @130
+- GET /branding → get_branding @139
+- GET /public/menu/{slug} → public_menu @146
+### schedule.py
+- GET /employees → list_employees @18
+- POST /employees → create_employee @26
+- PUT /employees/{eid} → update_employee @39
+- DELETE /employees/{eid} → delete_employee @50
+- GET /shifts → list_shifts @68
+- PUT /shifts → upsert_shift @77
+- DELETE /shifts → delete_shift @98
+### stats.py
+- GET /analytics → analytics @20
+- GET /reports/day-summary → day_summary @151
+- POST /reports/day-close → close_day @161
+- GET /deck/overview → deck_overview @240
+- GET /reports/day → list_day_reports @322
+### stock.py
+- GET /stock/config → stock_config @40
+- POST /stock/categories → create_stock_category @51
+- PUT /stock/categories/{cid} → update_stock_category @64
+- DELETE /stock/categories/{cid} → delete_stock_category @75
+- POST /stock/items → create_stock_item @92
+- PATCH /stock/items/{iid} → update_stock_item @111
+- POST /stock/items/{iid}/shopping → toggle_stock_item_shopping @146
+- DELETE /stock/items/{iid} → delete_stock_item @187
+- GET /shopping → list_shopping @198
+- POST /shopping/reset → reset_shopping @206 — Wipe entire shopping list and clear shopping_item_id on…
+- POST /shopping → add_shopping @217
+- PUT /shopping/{sid} → update_shopping @235
+- DELETE /shopping/{sid} → delete_shopping @250
+### stock_photos.py
+- GET /admin/stock-photos → admin_list_stock_photos @44
+- POST /admin/stock-photos → admin_create_stock_photo @61
+- DELETE /admin/stock-photos/{pid} → admin_delete_stock_photo @80
+- GET /stock-photos → list_stock_photos_for_shop @92
+### tables.py
+- PUT /settings/business → update_business_type @53
+- PUT /settings/store → update_store_details @70 — Στοιχεία καταστήματος — όνομα, τηλέφωνο, διεύθυνση, συντεταγμένες (lat/lng).
+- PUT /settings/printing → update_printing @99 — Ρυθμίσεις εκτύπωσης — αποθηκεύονται στον λογαριασμό, έρχονται με…
+- PUT /settings/tables → toggle_tables @119
+- GET /tables/state → tables_state @127
+- POST /tables → create_table @150
+- POST /tables/reorder → reorder_tables @163
+- PUT /tables/{tid} → update_table @172
+- DELETE /tables/{tid} → delete_table @183
+- GET /tables/{tid}/tab → get_table_tab @196
+- POST /tables/{tid}/rounds → send_round @212 — Αποστολή: append a round to the table's open…
+- POST /tabs/{tab_id}/close → close_tab @249 — Κλείσιμο τραπεζιού: turn the tab into a normal…
+- POST /tabs/{tab_id}/transfer → transfer_tab @292
+
+## BACKEND — Mongo collections (paths σχετικά με backend/)
+- ai_briefs: routers/ai.py, server.py
+- ai_usage: routers/admin.py, routers/ai.py, server.py
+- announcements: routers/announcements.py, server.py
+- categories: core.py, routers/ai.py, routers/menu.py, routers/public_menu.py, server.py
+- checklist_templates: routers/checklist.py, routers/stats.py, server.py
+- checklist_ticks: routers/checklist.py, routers/stats.py, server.py
+- day_reports: routers/stats.py, server.py
+- demo_leads: routers/admin.py, routers/auth.py, server.py
+- employees: routers/schedule.py, routers/stats.py, server.py
+- expense_categories: routers/ai.py, routers/expenses.py, server.py
+- expenses: routers/ai.py, routers/expenses.py, routers/stats.py, server.py
+- geocode_cache: routers/orders.py, routers/tables.py, server.py
+- items: core.py, routers/admin.py, routers/ai.py, routers/menu.py, routers/public_menu.py, server.py
+- orders: routers/admin.py, routers/ai.py, routers/orders.py, routers/stats.py, routers/tables.py, server.py
+- photos: routers/menu.py, routers/public_menu.py, server.py
+- profiles: core.py, routers/admin.py, routers/auth.py, server.py
+- promo_codes: routers/promo.py, server.py
+- shifts: routers/schedule.py, routers/stats.py, server.py
+- shopping: routers/ai.py, routers/stock.py, server.py
+- stock_categories: core.py, routers/stock.py, server.py
+- stock_items: routers/stock.py, server.py
+- stock_photos: routers/menu.py, routers/stock_photos.py, server.py
+- table_tabs: routers/stats.py, routers/tables.py, server.py
+- tables: core.py, routers/stats.py, routers/tables.py, server.py
+- users: core.py, routers/admin.py, routers/auth.py, routers/menu.py, routers/onboarding.py, routers/orders.py, routers/promo.py, routers/public_menu.py, routers/tables.py, server.py
+
+## FRONTEND — routes (frontend/src/App.js)
+- / → Landing
+- /menu/:slug → PublicMenu
+- /admin → AdminOverview
+- /admin/shops → AdminShops
+- /admin/subscriptions → AdminSubscriptions
+- /admin/leads → AdminLeads
+- /admin/promo → AdminPromo
+- /admin/announcements → AdminAnnouncements
+- /admin/stock-photos → AdminStockPhotos
+- /app/login → Login
+- /app/register → Register
+- /app/select-profile → ProfileSelect
+- /app → PDA [owner,manager,employee]
+- /app/tables → Tables
+- /app/tables/:tableId → TableOrder
+- /app/menu → MenuManagement [owner,manager]
+- /app/photos → Photos [owner,manager]
+- /app/waiters → Waiters [owner,manager]
+- /app/day-close → DayClose [owner]
+- /app/history → History [owner,manager,employee]
+- /app/stock → Stock [owner,manager,employee]
+- /app/checklist → Checklist [owner,manager,employee]
+- /app/schedule → Schedule [owner,manager,employee]
+- /app/deck → DeckView [owner]
+- /app/deckpilot → DeckPilot [owner]
+- /app/brief → DailyBrief [owner]
+- /app/analytics → Analytics [owner]
+- /app/expenses → Expenses [owner]
+- /app/settings → Settings [owner]
+
+## FRONTEND — pages (frontend/src/pages)
+- AdminAnnouncements.jsx (386 γρ): Field@51, AnnouncementsContent@63, AdminAnnouncements@379
+- AdminLeads.jsx (156 γρ): LeadsContent@33, AdminLeads@149
+- AdminOverview.jsx (127 γρ): Card@14, Stat@23, OverviewContent@30, AdminOverview@120
+- AdminPromo.jsx (394 γρ): Field@50, PromoContent@62, AdminPromo@387
+- AdminShops.jsx (565 γρ): OnboardingCell@53, StatusBadge@67, ShopModal@77, ShopsContent@349, AdminShops@546
+- AdminStockPhotos.jsx (289 γρ): Field@51, StockPhotosContent@58, AdminStockPhotos@282
+- AdminSubscriptions.jsx (126 γρ): SubsContent@25, AdminSubscriptions@119
+- Analytics.jsx (720 γρ): StatCard@39, ChangeBadge@79, CompareCard@101, Analytics@130
+- Checklist.jsx (467 γρ): TickList@50, ManageList@112, HistoryTab@281, Checklist@360
+- DailyBrief.jsx (159 γρ): DailyBrief@40
+- DayClose.jsx (404 γρ): ZReportPrint@45, SummaryRow@117, DayClose@130
+- DeckPilot.jsx (13 γρ): DeckPilot@4
+- DeckView.jsx (269 γρ): BigCard@21, Panel@39, DeckView@49
+- Expenses.jsx (641 γρ): ExpenseModal@31, CategoryManagerModal@166, Expenses@276
+- History.jsx (842 γρ): ScheduledBadge@51, OrderDetailModal@85, CustomerDetailModal@275, History@391
+- Landing.jsx (615 γρ): Logo@86, SectionTitle@91, FaqItem@106, MockupFrame@122, PlaceholderPDA@137, PlaceholderTables@153, PlaceholderStats@168, DemoModal@191, Landing@333
+- Login.jsx (123 γρ): Login@9
+- MenuManagement.jsx (1405 γρ): ItemModal@79, PricedOptionList@590, CustomizationConfigModal@649, MenuManagement@758
+- PDA.jsx (755 γρ): DiscountModal@90, ScheduledOrdersModal@191, PDA@273
+- Photos.jsx (182 γρ): Photos@41
+- ProfileSelect.jsx (274 γρ): PinPad@12, ProfileSelect@121
+- PublicMenu.jsx (165 γρ): PublicMenu@8
+- Register.jsx (476 γρ): Field@20, YesNo@34, Register@59
+- Schedule.jsx (616 γρ): ShiftModal@40, Schedule@246
+- Settings.jsx (154 γρ): TablesSettings@14, Settings@72
+- Stock.jsx (761 γρ): StockRow@34, AddItemModal@92, CategoryModal@167, Stock@293
+- TableOrder.jsx (564 γρ): KitchenSlip@55, TableOrder@85
+- Tables.jsx (159 γρ): Tables@12
+- Waiters.jsx (27 γρ): Waiters@6
+
+## FRONTEND — components (frontend/src/components)
+- AdminShell.jsx (183 γρ): useAdminPw@22, AdminShell@37
+- AnnouncementBanner.jsx (88 γρ): AnnouncementBanner@32
+- AppShell.jsx (497 γρ): BetaBadge@85, DemoBanner@109, AppShell@152
+- BulkActionsBar.jsx (478 γρ): PriceChangeDialog@32, CategoryDialog@126, OptionGroupDialog@186, BulkActionsBar@362
+- CustomizationModal.jsx (356 γρ): OptionTile@13, LegacyOptions@47, GroupsOptions@126, CustomizationModal@188
+- DatePicker.jsx (168 γρ): DatePicker@20
+- DeckPilotChat.jsx (148 γρ): DeckPilotChat@31
+- LineEditModal.jsx (148 γρ): LineEditModal@29
+- LiveOrdersMap.jsx (256 γρ): LiveOrdersMap@44
+- MenuGrid.jsx (147 γρ): MenuGrid@4
+- OfflineBanner.jsx (67 γρ): OfflineBanner@10
+- OnboardingChecklist.jsx (100 γρ): OnboardingChecklist@18
+- OrderPanel.jsx (416 γρ): OrderPanel@39
+- PeriodFilter.jsx (91 γρ): PeriodFilter@20
+- PinGateModal.jsx (179 γρ): PinGateModal@16
+- PrintingSettings.jsx (159 γρ): PrintingSettings@10
+- ProfilesManager.jsx (276 γρ): ProfileModal@16, ProfilesManager@131
+- ProtectedRoute.jsx (27 γρ): ProtectedRoute@9
+- PublicMenuSettings.jsx (306 γρ): PublicMenuSettings@28
+- Receipt.jsx (134 γρ): ReceiptCopy@29, Receipt@119
+- StoreDetailsSettings.jsx (217 γρ): StoreDetailsSettings@22
+- TablesEditor.jsx (164 γρ): TablesEditor@14
+- TimePicker.jsx (119 γρ): Column@23, TimePicker@60
+
+## FRONTEND — lib/api.js (exported)
+- api — axios instance (baseURL /api)
+- setToken(t)
+- getToken()
+- apiRegister(payload) → POST /auth/register
+- apiLogin(payload) → POST /auth/login
+- apiStartDemo(payload) → POST /auth/demo
+- apiMe() → GET /auth/me
+- apiOfflineProfiles() → GET /auth/offline-profiles
+- apiGetMenuConfig() → GET /menu/config
+- apiCreateCategory(payload) → POST /menu/categories
+- apiUpdateCategory(id, payload) → PUT /menu/categories/${id}
+- apiDeleteCategory(id) → DELETE /menu/categories/${id}
+- apiReorderCategories(ids) → POST /menu/categories/reorder
+- apiReorderItems(ids) → POST /menu/items/reorder
+- apiCreateItem(payload) → POST /menu/items
+- apiUpdateItem(id, payload) → PUT /menu/items/${id}
+- apiDeleteItem(id) → DELETE /menu/items/${id}
+- apiUpdateCustomization(payload) → PUT /menu/customization
+- apiBulkItems(payload) → POST /menu/items/bulk
+- apiListProfiles() → GET /profiles
+- apiSelectProfile(profileId, pin) → POST /profile/select
+- apiExitProfile() → POST /profile/exit
+- apiCreateProfile(payload) → POST /profiles
+- apiUpdateProfile(id, payload) → PUT /profiles/${id}
+- apiDeleteProfile(id) → DELETE /profiles/${id}
+- apiListShopping() → GET /shopping
+- apiAddShopping(text) → POST /shopping
+- apiUpdateShopping(id, payload) → PUT /shopping/${id}
+- apiDeleteShopping(id) → DELETE /shopping/${id}
+- apiResetShopping() → POST /shopping/reset
+- apiListPhotos() → GET /photos
+- apiCreatePhoto(payload) → POST /photos
+- apiDeletePhoto(id) → DELETE /photos/${id}
+- apiListStockPhotos() → GET /stock-photos
+- apiImportStockPhoto(stockId) → POST /photos/import-stock/${stockId}
+- apiGetStockConfig() → GET /stock/config
+- apiCreateStockCategory(payload) → POST /stock/categories
+- apiUpdateStockCategory(id, payload) → PUT /stock/categories/${id}
+- apiDeleteStockCategory(id) → DELETE /stock/categories/${id}
+- apiCreateStockItem(payload) → POST /stock/items
+- apiToggleStockItemShopping(id, needs) → POST /stock/items/${id}/shopping
+- apiDeleteStockItem(id) → DELETE /stock/items/${id}
+- apiChecklistToday() → GET /checklist/today
+- apiChecklistTick(templateId, done) → POST /checklist/tick
+- apiChecklistTemplates() → GET /checklist/templates
+- apiChecklistCreateTemplate(list, text) → POST /checklist/templates
+- apiChecklistUpdateTemplate(id, text) → PUT /checklist/templates/${id}
+- apiChecklistDeleteTemplate(id) → DELETE /checklist/templates/${id}
+- apiChecklistReorder(list, ids) → POST /checklist/templates/reorder
+- apiChecklistHistory(days = 14) → GET /checklist/history
+- apiListEmployees() → GET /employees
+- apiCreateEmployee(name) → POST /employees
+- apiUpdateEmployee(id, name) → PUT /employees/${id}
+- apiDeleteEmployee(id) → DELETE /employees/${id}
+- apiListShifts(weekStart) → GET /shifts
+- apiUpsertShift(payload) → PUT /shifts
+- apiDeleteShift(employeeId, weekStart, day) → DELETE /shifts
+- fetchNextOrderNumber() → GET /orders/next-number
+- submitOrder(payload) → POST /orders
+- fetchOrders(params) → GET /orders
+- fetchOrdersCount(params) → GET /orders/count
+- apiGetOrder(id) → GET /orders/${id}
+- apiCancelOrder(id, pin = null) → POST /orders/${id}/cancel
+- apiDeleteOrder(id, pin = null) → DELETE /orders/${id}
+- apiVerifyOwnerPin(pin) → POST /auth/verify-owner-pin
+- apiListScheduledOrders() → GET /orders/scheduled
+- apiActivateOrder(id) → POST /orders/${id}/activate
+- apiLiveMapOrders() → GET /orders/live-map
+- apiClearLiveMap() → POST /orders/live-map/clear
+- apiListCustomers() → GET /customers
+- apiTablesState() → GET /tables/state
+- apiToggleTables(enabled) → PUT /settings/tables
+- apiCreateTable(name) → POST /tables
+- apiUpdateTable(id, payload) → PUT /tables/${id}
+- apiDeleteTable(id) → DELETE /tables/${id}
+- apiReorderTables(ids) → POST /tables/reorder
+- apiGetTableTab(tableId) → GET /tables/${tableId}/tab
+- apiSendRound(tableId, items) → POST /tables/${tableId}/rounds
+- apiCloseTab(tabId) → POST /tabs/${tabId}/close
+- apiTransferTab(tabId, tableId) → POST /tabs/${tabId}/transfer
+- apiDaySummary(date) → GET /reports/day-summary
+- apiCloseDay(date) → POST /reports/day-close
+- apiListDayReports() → GET /reports/day
+- fetchAnalytics(dateFrom, dateTo) → GET /analytics
+- fetchDeckOverview() → GET /deck/overview
+- apiListExpenseCategories() → GET /expenses/categories
+- apiCreateExpenseCategory(payload) → POST /expenses/categories
+- apiUpdateExpenseCategory(id, payload) → PUT /expenses/categories/${id}
+- apiDeleteExpenseCategory(id) → DELETE /expenses/categories/${id}
+- apiListExpenses(params) → GET /expenses
+- apiCreateExpense(payload) → POST /expenses
+- apiUpdateExpense(id, payload) → PUT /expenses/${id}
+- apiDeleteExpense(id) → DELETE /expenses/${id}
+- apiGetPublicMenuSettings() → GET /settings/public-menu
+- apiTogglePublicMenu(enabled) → PUT /settings/public-menu
+- apiUpdatePublicSlug(slug) → PUT /settings/public-menu/slug
+- apiSetStoreLogo(data_url) → PUT /settings/public-menu/logo
+- apiRemoveStoreLogo() → DELETE /settings/public-menu/logo
+- apiUpdateStoreDetails(payload) → PUT /settings/store
+- geocodeAddress(q)
+- apiUpdatePrinting(payload) → PUT /settings/printing
+- apiGetBranding() → GET /branding
+- apiGetPublicMenu(slug) → GET /public/menu/${encodeURIComponent(slug)}
+- apiValidatePromo(code) → POST /promo/validate
+- apiAdminListPromos(pw) → GET /admin/promo
+- apiAdminCreatePromo(pw, payload) → POST /admin/promo
+- apiAdminTogglePromo(pw, id, active) → PATCH /admin/promo/${id}
+- apiAdminDeletePromo(pw, id) → DELETE /admin/promo/${id}
+- apiAdminPromoUses(pw, id) → GET /admin/promo/${id}/uses
+- apiAdminListStockPhotos(pw, businessType) → GET /admin/stock-photos
+- apiAdminCreateStockPhoto(pw, payload) → POST /admin/stock-photos
+- apiAdminDeleteStockPhoto(pw, id) → DELETE /admin/stock-photos/${id}
+- apiAdminPing(pw) → GET /admin/ping
+- apiAdminOverview(pw) → GET /admin/overview
+- apiAdminListShops(pw, params) → GET /admin/shops
+- apiAdminShopDetail(pw, id) → GET /admin/shops/${id}
+- apiAdminUpdateShop(pw, id, payload) → PATCH /admin/shops/${id}
+- apiAdminDeleteShop(pw, id, confirm) → DELETE /admin/shops/${id}
+- apiAdminExpiringSubs(pw) → GET /admin/subscriptions/expiring
+- apiAdminLeads(pw, params) → GET /admin/leads
+- apiAdminListAnnouncements(pw) → GET /admin/announcements
+- apiAdminCreateAnnouncement(pw, payload) → POST /admin/announcements
+- apiAdminUpdateAnnouncement(pw, id, payload) → PATCH /admin/announcements/${id}
+- apiAdminDeleteAnnouncement(pw, id) → DELETE /admin/announcements/${id}
+- apiActiveAnnouncement() → GET /announcements/active
+- apiOnboardingStatus() → GET /onboarding/status
+- apiOnboardingHide() → POST /onboarding/hide
+- apiOnboardingMarkPrint() → POST /onboarding/print-test
+- apiAiChat(messages) → POST /ai/chat
+- apiGetBrief(mode) → GET /ai/brief
+- apiCreateBrief(mode, force = false) → POST /ai/brief
+- formatApiError(e)
