@@ -3,41 +3,16 @@ import uuid
 from collections import Counter, defaultdict
 from datetime import datetime, timezone, timedelta
 from typing import Optional
-from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from core import db, require_staff, require_owner, require_manager
+from core import (
+    db, require_staff, require_owner, require_manager,
+    athens_now, athens_today, local_day_range, to_athens,
+)
 
 router = APIRouter()
-
-ATHENS = ZoneInfo("Europe/Athens")
-
-
-def athens_now() -> datetime:
-    return datetime.now(timezone.utc).astimezone(ATHENS)
-
-
-def athens_today() -> str:
-    return athens_now().date().isoformat()
-
-
-def local_day_range_utc(day_from: str, day_to: str) -> tuple[str, str]:
-    """Όρια τοπικών (Ελλάδα) ημερών ως UTC ISO strings για query στο created_at."""
-    start = datetime.fromisoformat(f"{day_from}T00:00:00").replace(tzinfo=ATHENS)
-    end = datetime.fromisoformat(f"{day_to}T00:00:00").replace(tzinfo=ATHENS) + timedelta(days=1)
-    return (
-        start.astimezone(timezone.utc).isoformat(),
-        end.astimezone(timezone.utc).isoformat(),
-    )
-
-
-def to_athens(iso: str) -> datetime:
-    dt_obj = datetime.fromisoformat(iso)
-    if dt_obj.tzinfo is None:
-        dt_obj = dt_obj.replace(tzinfo=timezone.utc)
-    return dt_obj.astimezone(ATHENS)
 
 
 # ============ ANALYTICS ============
@@ -50,7 +25,7 @@ async def analytics(
     today = athens_today()
     df = date_from or today
     dt = date_to or today
-    utc_from, utc_to = local_day_range_utc(df, dt)
+    utc_from, utc_to = local_day_range(df, dt)
     query = {
         "user_id": user["id"],
         "created_at": {"$gte": utc_from, "$lt": utc_to},
@@ -115,10 +90,11 @@ async def analytics(
 # ============ DAY CLOSE (Z-REPORT) ============
 async def compute_day_summary(user_id: str, day: str) -> dict:
     """Aggregate a single day's orders + expenses into a Z-report summary."""
+    utc_from, utc_to = local_day_range(day)
     docs = await db.orders.find(
         {
             "user_id": user_id,
-            "created_at": {"$gte": f"{day}T00:00:00+00:00", "$lte": f"{day}T23:59:59+00:00"},
+            "created_at": {"$gte": utc_from, "$lt": utc_to},
         },
         {"_id": 0},
     ).to_list(50000)
@@ -173,7 +149,7 @@ async def compute_day_summary(user_id: str, day: str) -> dict:
 
 @router.get("/reports/day-summary")
 async def day_summary(date: Optional[str] = None, user: dict = Depends(require_owner)):
-    day = date or datetime.now(timezone.utc).date().isoformat()
+    day = date or athens_today()
     return await compute_day_summary(user["id"], day)
 
 
@@ -183,7 +159,7 @@ class DayCloseIn(BaseModel):
 
 @router.post("/reports/day-close")
 async def close_day(body: Optional[DayCloseIn] = None, user: dict = Depends(require_owner)):
-    day = (body.date if body and body.date else None) or datetime.now(timezone.utc).date().isoformat()
+    day = (body.date if body and body.date else None) or athens_today()
     summary = await compute_day_summary(user["id"], day)
     doc = {
         "id": str(uuid.uuid4()),
@@ -264,7 +240,7 @@ async def _on_shift_now(user_id: str, now_local: datetime) -> list:
 async def deck_overview(user: dict = Depends(require_owner)):
     now_local = athens_now()
     today = now_local.date().isoformat()
-    utc_from, utc_to = local_day_range_utc(today, today)
+    utc_from, utc_to = local_day_range(today)
 
     docs = await db.orders.find(
         {

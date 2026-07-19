@@ -11,7 +11,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from core import db, get_current_user
+from core import db, get_current_user, athens_today
 from routers.promo import require_admin
 
 router = APIRouter()
@@ -107,7 +107,7 @@ async def admin_delete_announcement(
 @router.get("/announcements/active")
 async def active_announcement(user: dict = Depends(get_current_user)):
     """Η πιο πρόσφατη ενεργή ανακοίνωση που αφορά αυτό το μαγαζί (ή null)."""
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = athens_today()
     biz = user.get("business_type") or "souvlaki"
     plan = user.get("plan") or "trial"
     match = {

@@ -32,6 +32,42 @@ db = client[os.environ["DB_NAME"]]
 
 
 # ============ HELPERS ============
+from zoneinfo import ZoneInfo
+
+ATHENS = ZoneInfo("Europe/Athens")
+
+
+def athens_now() -> datetime:
+    return datetime.now(timezone.utc).astimezone(ATHENS)
+
+
+def athens_today() -> str:
+    """Η τρέχουσα ημερολογιακή ημέρα στην Ελλάδα (YYYY-MM-DD)."""
+    return athens_now().date().isoformat()
+
+
+def local_day_range(day_from: str, day_to: Optional[str] = None) -> tuple[str, str]:
+    """Μετατρέπει τοπικές (Ελλάδα) ημέρες σε UTC ISO όρια για query στο created_at.
+
+    Επιστρέφει (utc_start, utc_end) για χρήση ως $gte/$lt — σωστό και σε
+    χειμερινή/θερινή ώρα. Πάντα φιλτράρουμε created_at με αυτά τα όρια,
+    ΠΟΤΕ με σκέτο f"{day}T00:00:00+00:00" (UTC ημέρα ≠ ελληνική ημέρα).
+    """
+    start = datetime.fromisoformat(f"{day_from}T00:00:00").replace(tzinfo=ATHENS)
+    end = datetime.fromisoformat(f"{day_to or day_from}T00:00:00").replace(tzinfo=ATHENS) + timedelta(days=1)
+    return (
+        start.astimezone(timezone.utc).isoformat(),
+        end.astimezone(timezone.utc).isoformat(),
+    )
+
+
+def to_athens(iso: str) -> datetime:
+    dt_obj = datetime.fromisoformat(iso)
+    if dt_obj.tzinfo is None:
+        dt_obj = dt_obj.replace(tzinfo=timezone.utc)
+    return dt_obj.astimezone(ATHENS)
+
+
 def hash_password(pw: str) -> str:
     return bcrypt.hashpw(pw.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 

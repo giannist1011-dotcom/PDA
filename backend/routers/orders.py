@@ -18,6 +18,8 @@ from core import (
     require_owner,
     actor_name,
     require_owner_or_pin,
+    athens_today,
+    local_day_range,
 )
 from routers.menu import MenuOption
 
@@ -109,11 +111,11 @@ class Order(OrderCreate):
 
 # ============ ORDER ROUTES ============
 async def compute_next_order_number(user_id: str) -> int:
-    today = datetime.now(timezone.utc).date().isoformat()
+    utc_from, utc_to = local_day_range(athens_today())
     docs = await db.orders.find(
         {
             "user_id": user_id,
-            "created_at": {"$gte": f"{today}T00:00:00+00:00", "$lte": f"{today}T23:59:59+00:00"},
+            "created_at": {"$gte": utc_from, "$lt": utc_to},
         },
         {"_id": 0, "order_number": 1},
     ).sort("order_number", -1).limit(1).to_list(1)
@@ -198,11 +200,14 @@ async def list_orders(
 ):
     query = {"user_id": user["id"]}
     if date_from or date_to:
+        # Τοπικές (Ελλάδα) ημέρες → UTC όρια, αλλιώς χάνονται οι παραγγελίες μετά τα μεσάνυχτα
+        utc_from, _ = local_day_range(date_from or date_to)
+        _, utc_to = local_day_range(date_to or date_from)
         rng = {}
         if date_from:
-            rng["$gte"] = f"{date_from}T00:00:00+00:00"
+            rng["$gte"] = utc_from
         if date_to:
-            rng["$lte"] = f"{date_to}T23:59:59+00:00"
+            rng["$lt"] = utc_to
         query["created_at"] = rng
     if source:
         query["source"] = source

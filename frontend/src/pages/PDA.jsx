@@ -507,7 +507,8 @@ export default function PDA() {
     const isScheduled = scheduled.enabled && scheduled.time;
     let scheduledAt = null;
     if (isScheduled) {
-      const dt = new Date(`${scheduled.date || new Date().toISOString().slice(0, 10)}T${scheduled.time}:00`);
+      // Τοπική ημερομηνία (όχι toISOString = UTC — μετά τα μεσάνυχτα θα έδινε τη χθεσινή)
+      const dt = new Date(`${scheduled.date || new Date().toLocaleDateString("sv")}T${scheduled.time}:00`);
       if (Number.isNaN(dt.getTime())) {
         toast.error("Μη έγκυρη ώρα προγραμματισμού");
         return;

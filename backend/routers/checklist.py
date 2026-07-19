@@ -8,21 +8,15 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Literal, Optional
-from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from core import db, actor_name, require_staff, require_owner
+from core import db, actor_name, require_staff, require_owner, athens_today
 
 router = APIRouter()
 
-ATHENS = ZoneInfo("Europe/Athens")
 LISTS = ("open", "close")
-
-
-def athens_today() -> str:
-    return datetime.now(timezone.utc).astimezone(ATHENS).date().isoformat()
 
 
 # ============ TEMPLATES (owner) ============
