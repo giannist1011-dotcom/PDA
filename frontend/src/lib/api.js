@@ -253,6 +253,26 @@ export const apiAdminCreateStockPhoto = (pw, payload) =>
 export const apiAdminDeleteStockPhoto = (pw, id) =>
   api.delete(`/admin/stock-photos/${id}`, adminHeaders(pw)).then((r) => r.data);
 
+// ADMIN PANEL — επισκόπηση, μαγαζιά, συνδρομές, leads (ίδιο admin password)
+export const apiAdminPing = (pw) =>
+  api.get("/admin/ping", adminHeaders(pw)).then((r) => r.data);
+export const apiAdminOverview = (pw) =>
+  api.get("/admin/overview", adminHeaders(pw)).then((r) => r.data);
+export const apiAdminListShops = (pw, params) =>
+  api.get("/admin/shops", { ...adminHeaders(pw), params }).then((r) => r.data);
+export const apiAdminShopDetail = (pw, id) =>
+  api.get(`/admin/shops/${id}`, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminUpdateShop = (pw, id, payload) =>
+  api.patch(`/admin/shops/${id}`, payload, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminDeleteShop = (pw, id, confirm) =>
+  api
+    .delete(`/admin/shops/${id}`, { ...adminHeaders(pw), params: { confirm } })
+    .then((r) => r.data);
+export const apiAdminExpiringSubs = (pw) =>
+  api.get("/admin/subscriptions/expiring", adminHeaders(pw)).then((r) => r.data);
+export const apiAdminLeads = (pw, params) =>
+  api.get("/admin/leads", { ...adminHeaders(pw), params }).then((r) => r.data);
+
 // AI — DeckPilot & ημερήσιο brief (owner only)
 export const apiAiChat = (messages) =>
   api.post("/ai/chat", { messages }).then((r) => r.data);

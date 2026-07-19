@@ -79,6 +79,11 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     )
     if not user:
         raise HTTPException(401, "User not found")
+    if user.get("disabled"):
+        raise HTTPException(
+            403,
+            "Ο λογαριασμός σας έχει απενεργοποιηθεί. Επικοινωνήστε με την υποστήριξη του OrderDeck.",
+        )
     role = payload.get("profile")  # legacy tokens carry "owner"/"employee" here
     profile_id = payload.get("profile_id")
     profile_name = payload.get("profile_name")

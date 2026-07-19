@@ -26,6 +26,10 @@ import Tables from "@/pages/Tables";
 import TableOrder from "@/pages/TableOrder";
 import AdminPromo from "@/pages/AdminPromo";
 import AdminStockPhotos from "@/pages/AdminStockPhotos";
+import AdminOverview from "@/pages/AdminOverview";
+import AdminShops from "@/pages/AdminShops";
+import AdminSubscriptions from "@/pages/AdminSubscriptions";
+import AdminLeads from "@/pages/AdminLeads";
 import PublicMenu from "@/pages/PublicMenu";
 
 // Old top-level app paths now live under /app — keep old links/bookmarks working.
@@ -64,6 +68,10 @@ function App() {
             <Route path="/menu/:slug" element={<PublicMenu />} />
 
             {/* OrderDeck admin — δικό του password gate, εκτός λογαριασμών μαγαζιών */}
+            <Route path="/admin" element={<AdminOverview />} />
+            <Route path="/admin/shops" element={<AdminShops />} />
+            <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+            <Route path="/admin/leads" element={<AdminLeads />} />
             <Route path="/admin/promo" element={<AdminPromo />} />
             <Route path="/admin/stock-photos" element={<AdminStockPhotos />} />
 

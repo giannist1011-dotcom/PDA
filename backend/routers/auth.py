@@ -145,6 +145,11 @@ async def login(body: LoginIn):
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(401, "Λάθος email ή κωδικός")
+    if user.get("disabled"):
+        raise HTTPException(
+            403,
+            "Ο λογαριασμός σας έχει απενεργοποιηθεί. Επικοινωνήστε με την υποστήριξη του OrderDeck.",
+        )
     await ensure_profiles_migrated(user["id"])
     token = create_token(user["id"], email)
     return {"token": token, "user": public_user(user)}

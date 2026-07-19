@@ -8,7 +8,7 @@ from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, ensure_demo_account, migrate_items_sort_order
-from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist
+from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin
 
 app = FastAPI(title="OrderDeck")
 
@@ -35,6 +35,7 @@ api.include_router(public_menu.router)
 api.include_router(stock_photos.router)
 api.include_router(ai.router)
 api.include_router(checklist.router)
+api.include_router(admin.router)
 
 app.include_router(api)
 
@@ -79,6 +80,8 @@ async def on_startup():
     # Demo λογαριασμοί: γρήγορο εντοπισμό ληγμένων για το auto-cleanup
     await db.users.create_index([("is_demo", 1), ("demo_expires_at", 1)], sparse=True)
     await db.demo_leads.create_index([("created_at", -1)])
+    # Admin panel: λίστα "λήγουν σύντομα" (χειροκίνητες συνδρομές)
+    await db.users.create_index([("subscription_expires_at", 1)], sparse=True)
     # Live χάρτης: geocode cache ανά διεύθυνση (μία γεωκωδικοποίηση ανά διεύθυνση)
     await db.geocode_cache.create_index([("user_id", 1), ("address", 1)], unique=True)
     # Μία φορά: πέτα entries από πριν το city/viewbox geocoding (χωρίς πεδίο "q") —
