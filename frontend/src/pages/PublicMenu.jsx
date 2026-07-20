@@ -65,7 +65,9 @@ export default function PublicMenu() {
   const { restaurant_name, logo, categories } = data;
 
   return (
-    <div className="min-h-screen bg-[#1A070C] text-white overflow-x-hidden">
+    // ΟΧΙ overflow-x-hidden στο root: overflow σε γονέα σπάει το position:sticky
+    // της CategoryBar. Το οριζόντιο scroll ζει ΜΟΝΟ στο εσωτερικό div της μπάρας.
+    <div className="min-h-screen bg-[#1A070C] text-white">
       {/* Header */}
       <header className="relative">
         <div className="absolute inset-0 bg-gradient-to-b from-[#4a1019] via-[#2a0a10] to-[#1A070C]" />
