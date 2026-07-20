@@ -10,7 +10,6 @@ import {
   Wallet,
   ShieldCheck,
   Check,
-  ChevronDown,
   FileQuestion,
   Shuffle,
   EyeOff,
@@ -18,11 +17,13 @@ import {
   Sparkles,
   Tag,
   Clapperboard,
-  X,
 } from "lucide-react";
 import { BUSINESS_TYPES } from "@/lib/business";
-import { useAuth } from "@/context/AuthContext";
-import { formatApiError } from "@/lib/api";
+import Logo from "./landing/Logo";
+import SectionTitle from "./landing/SectionTitle";
+import FaqItem from "./landing/FaqItem";
+import { MockupFrame, PlaceholderPDA, PlaceholderTables, PlaceholderStats } from "./landing/Mockups";
+import DemoModal from "./landing/DemoModal";
 
 /* ---------- Data ---------- */
 
@@ -80,253 +81,6 @@ const FAQS = [
     a: "Καθόλου. Διαλέγεις τον τύπο της επιχείρησής σου (σουβλατζίδικο, καφετέρια, πιτσαρία, burger) και ξεκινάς με έτοιμο μενού που προσαρμόζεις στα δικά σου προϊόντα και τιμές.",
   },
 ];
-
-/* ---------- Small pieces ---------- */
-
-function Logo({ size = "md" }) {
-  const h = size === "lg" ? "h-11" : "h-9";
-  return <img src="/logo-dark.svg" alt="OrderDeck" className={h} />;
-}
-
-function SectionTitle({ eyebrow, title, sub }) {
-  return (
-    <div className="text-center max-w-2xl mx-auto mb-10 md:mb-14">
-      {eyebrow && (
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold text-xs font-bold uppercase tracking-widest mb-4">
-          <Sparkles className="w-3.5 h-3.5" />
-          {eyebrow}
-        </div>
-      )}
-      <h2 className="font-heading text-3xl md:text-4xl font-extrabold text-white leading-tight">{title}</h2>
-      {sub && <p className="mt-3 text-neutral-400 text-base md:text-lg">{sub}</p>}
-    </div>
-  );
-}
-
-function FaqItem({ q, a }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border border-[#333] rounded-xl bg-[#141414] overflow-hidden">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
-      >
-        <span className="font-semibold text-white text-sm md:text-base">{q}</span>
-        <ChevronDown className={`w-5 h-5 text-flame shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && <div className="px-5 pb-5 text-sm md:text-base text-neutral-400 leading-relaxed">{a}</div>}
-    </div>
-  );
-}
-
-function MockupFrame({ label, children }) {
-  return (
-    <div className="rounded-2xl border border-[#3a3a3a] bg-[#161616] shadow-2xl shadow-black/50 overflow-hidden">
-      <div className="flex items-center gap-1.5 px-4 h-9 bg-[#1f1f1f] border-b border-[#333]">
-        <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
-        <span className="w-2.5 h-2.5 rounded-full bg-gold" />
-        <span className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
-        <span className="ml-3 text-[11px] text-neutral-500 font-mono truncate">orderdeck · {label}</span>
-      </div>
-      <div className="aspect-[4/3] p-4">{children}</div>
-    </div>
-  );
-}
-
-/* Placeholder screenshot content — swapped for real screenshots later */
-function PlaceholderPDA() {
-  return (
-    <div className="h-full flex gap-2">
-      <div className="flex-1 grid grid-cols-3 gap-1.5 content-start">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className={`h-10 rounded-md ${i === 1 ? "bg-flame/30" : "bg-[#262626]"}`} />
-        ))}
-      </div>
-      <div className="w-1/3 flex flex-col gap-1.5">
-        <div className="flex-1 rounded-md bg-[#262626]" />
-        <div className="h-8 rounded-md bg-brand" />
-      </div>
-    </div>
-  );
-}
-
-function PlaceholderTables() {
-  return (
-    <div className="h-full grid grid-cols-4 gap-2 content-start">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div
-          key={i}
-          className={`aspect-square rounded-lg border-2 ${
-            i % 3 === 0 ? "bg-flame/15 border-flame/50" : "bg-[#00E676]/10 border-[#00E676]/30"
-          }`}
-        />
-      ))}
-    </div>
-  );
-}
-
-function PlaceholderStats() {
-  const bars = [35, 60, 45, 80, 55, 95, 70];
-  return (
-    <div className="h-full flex flex-col gap-3">
-      <div className="grid grid-cols-3 gap-2">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-12 rounded-md bg-[#262626] p-2">
-            <div className={`h-2 w-8 rounded-sm ${i === 0 ? "bg-gold/60" : "bg-[#3a3a3a]"}`} />
-            <div className="h-3 w-12 rounded-sm bg-[#3a3a3a] mt-1.5" />
-          </div>
-        ))}
-      </div>
-      <div className="flex-1 flex items-end gap-2 px-2">
-        {bars.map((h, i) => (
-          <div key={i} className="flex-1 rounded-t-md bg-gradient-to-t from-brand to-flame/80" style={{ height: `${h}%` }} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ---------- Demo modal ---------- */
-
-function DemoModal({ open, onClose }) {
-  const navigate = useNavigate();
-  const { startDemo } = useAuth();
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [type, setType] = useState("souvlaki");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-
-  if (!open) return null;
-
-  const inputCls =
-    "mt-1 w-full h-11 px-3 bg-[#0D0D0D] border border-[#333] rounded-lg text-white placeholder:text-neutral-600 focus:outline-none focus:border-flame";
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    if (!/\S+@\S+\.\S+/.test(email)) return setError("Εισάγετε έγκυρο email");
-    if (!name.trim()) return setError("Εισάγετε όνομα επιχείρησης");
-    setBusy(true);
-    try {
-      await startDemo({ email: email.trim(), business_name: name.trim(), business_type: type });
-      navigate("/app");
-    } catch (err) {
-      setError(formatApiError(err));
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-      data-testid="demo-modal"
-    >
-      <div className="w-full max-w-md bg-[#141414] border border-[#333] rounded-2xl p-6 max-h-[92dvh] overflow-y-auto">
-        <div className="flex items-start justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-flame/15 border border-flame/30 flex items-center justify-center shrink-0">
-              <Clapperboard className="w-5 h-5 text-flame" />
-            </div>
-            <div>
-              <h3 className="font-heading text-xl font-extrabold leading-tight">Δοκιμαστικό demo</h3>
-              <p className="text-xs text-neutral-500 mt-0.5">Μπες κατευθείαν — χωρίς εγγραφή, χωρίς κωδικό</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            data-testid="demo-modal-close"
-            className="w-9 h-9 rounded-lg border border-[#333] hover:border-flame flex items-center justify-center text-neutral-400 shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <form onSubmit={submit} className="space-y-4">
-          <div>
-            <label className="text-xs uppercase tracking-widest font-bold text-neutral-400">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@email.com"
-              data-testid="demo-email"
-              autoFocus
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-widest font-bold text-neutral-400">
-              Όνομα επιχείρησης
-            </label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="π.χ. Ο Λευτέρης"
-              data-testid="demo-business-name"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-widest font-bold text-neutral-400">
-              Τύπος επιχείρησης
-            </label>
-            <div className="grid grid-cols-2 gap-2 mt-1.5">
-              {BUSINESS_TYPES.map((b) => {
-                const Icon = b.icon;
-                const active = type === b.key;
-                return (
-                  <button
-                    type="button"
-                    key={b.key}
-                    onClick={() => setType(b.key)}
-                    data-testid={`demo-biz-${b.key}`}
-                    className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all active:scale-[0.98] ${
-                      active
-                        ? "bg-flame/10 border-flame text-white"
-                        : "bg-[#1b1b1b] border-[#333] text-neutral-300 hover:border-flame"
-                    }`}
-                  >
-                    <span
-                      className={`w-9 h-9 rounded-lg bg-flame/15 flex items-center justify-center shrink-0 ${
-                        active ? "" : "opacity-70"
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 text-flame" />
-                    </span>
-                    <span className="text-sm font-bold">{b.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {error && (
-            <div
-              className="text-sm text-[#FF6961] bg-[#FF3B30]/10 border border-[#FF3B30]/40 rounded-lg p-3"
-              data-testid="demo-error"
-            >
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={busy}
-            data-testid="demo-submit"
-            className="w-full h-14 rounded-xl bg-flame hover:bg-[#EA580C] text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-flame/25 transition-all disabled:opacity-50"
-          >
-            {busy ? "Δημιουργία demo..." : (<>Ξεκίνα το demo <ArrowRight className="w-5 h-5" /></>)}
-          </button>
-
-          <p className="text-xs text-center text-neutral-500 leading-relaxed" data-testid="demo-warning">
-            🎬 Ο δοκιμαστικός λογαριασμός διαγράφεται αυτόματα μετά από 3 ώρες.
-          </p>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 /* ---------- Page ---------- */
 

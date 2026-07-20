@@ -215,31 +215,97 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - AdminLeads.jsx (156 γρ): LeadsContent@33, AdminLeads@149
 - AdminOverview.jsx (127 γρ): Card@14, Stat@23, OverviewContent@30, AdminOverview@120
 - AdminPromo.jsx (394 γρ): Field@50, PromoContent@62, AdminPromo@387
-- AdminShops.jsx (565 γρ): OnboardingCell@53, StatusBadge@67, ShopModal@77, ShopsContent@349, AdminShops@546
+- AdminShops.jsx (29 γρ): AdminShops@10
 - AdminStockPhotos.jsx (289 γρ): Field@51, StockPhotosContent@58, AdminStockPhotos@282
 - AdminSubscriptions.jsx (126 γρ): SubsContent@25, AdminSubscriptions@119
-- Analytics.jsx (720 γρ): StatCard@39, ChangeBadge@79, CompareCard@101, Analytics@130
-- Checklist.jsx (467 γρ): TickList@50, ManageList@112, HistoryTab@281, Checklist@360
+- Analytics.jsx (295 γρ): Analytics@41
+- Checklist.jsx (123 γρ): Checklist@16
 - DailyBrief.jsx (159 γρ): DailyBrief@40
-- DayClose.jsx (404 γρ): ZReportPrint@45, SummaryRow@117, DayClose@130
+- DayClose.jsx (320 γρ): DayClose@46
 - DeckPilot.jsx (13 γρ): DeckPilot@4
 - DeckView.jsx (269 γρ): BigCard@21, Panel@39, DeckView@49
-- Expenses.jsx (641 γρ): ExpenseModal@31, CategoryManagerModal@166, Expenses@276
-- History.jsx (842 γρ): ScheduledBadge@51, OrderDetailModal@85, CustomerDetailModal@275, History@391
-- Landing.jsx (615 γρ): Logo@86, SectionTitle@91, FaqItem@106, MockupFrame@122, PlaceholderPDA@137, PlaceholderTables@153, PlaceholderStats@168, DemoModal@191, Landing@333
+- Expenses.jsx (397 γρ): Expenses@32
+- History.jsx (294 γρ): History@25
+- Landing.jsx (369 γρ): Landing@87
 - Login.jsx (123 γρ): Login@9
-- MenuManagement.jsx (1405 γρ): ItemModal@79, PricedOptionList@590, CustomizationConfigModal@649, MenuManagement@758
-- PDA.jsx (755 γρ): DiscountModal@90, ScheduledOrdersModal@191, PDA@273
+- MenuManagement.jsx (359 γρ): MenuManagement@29
+- PDA.jsx (486 γρ): PDA@76
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (274 γρ): PinPad@12, ProfileSelect@121
 - PublicMenu.jsx (165 γρ): PublicMenu@8
-- Register.jsx (476 γρ): Field@20, YesNo@34, Register@59
-- Schedule.jsx (616 γρ): ShiftModal@40, Schedule@246
+- Register.jsx (224 γρ): Register@15
+- Schedule.jsx (297 γρ): Schedule@29
 - Settings.jsx (154 γρ): TablesSettings@14, Settings@72
-- Stock.jsx (761 γρ): StockRow@34, AddItemModal@92, CategoryModal@167, Stock@293
-- TableOrder.jsx (564 γρ): KitchenSlip@55, TableOrder@85
+- Stock.jsx (350 γρ): Stock@95
+- TableOrder.jsx (337 γρ): TableOrder@28
 - Tables.jsx (159 γρ): Tables@12
 - Waiters.jsx (27 γρ): Waiters@6
+- admin-shops/Badges.jsx (30 γρ): OnboardingCell@8, StatusBadge@22
+- admin-shops/ShopModal.jsx (293 γρ): ShopModal@21
+- admin-shops/ShopsContent.jsx (215 γρ): ShopsContent@17
+- admin-shops/utils.js (15 γρ)
+- analytics/ChangeBadge.jsx (26 γρ): ChangeBadge@3
+- analytics/ChartsRow.jsx (125 γρ): ChartsRow@19
+- analytics/CompareCard.jsx (34 γρ): CompareCard@4
+- analytics/CompareSection.jsx (209 γρ): CompareSection@9
+- analytics/PopularItems.jsx (102 γρ): PopularItems@5
+- analytics/StatCard.jsx (18 γρ): StatCard@1
+- analytics/utils.js (5 γρ)
+- checklist/HistoryTab.jsx (97 γρ): HistoryTab@20
+- checklist/ManageList.jsx (188 γρ): ManageList@21
+- checklist/TickList.jsx (66 γρ): TickList@6
+- checklist/utils.js (7 γρ)
+- day-close/SummaryRow.jsx (15 γρ): SummaryRow@1
+- day-close/ZReportPrint.jsx (76 γρ): ZReportPrint@5
+- day-close/utils.js (2 γρ)
+- expenses/CategoryManagerModal.jsx (114 γρ): CategoryManagerModal@6
+- expenses/ExpenseModal.jsx (141 γρ): ExpenseModal@8
+- history/CustomerDetailModal.jsx (119 γρ): CustomerDetailModal@5
+- history/CustomersTab.jsx (84 γρ): CustomersTab@4
+- history/OrderDetailModal.jsx (220 γρ): OrderDetailModal@32
+- history/OrdersTab.jsx (165 γρ): OrdersTab@11
+- history/ScheduledBadge.jsx (21 γρ): ScheduledBadge@5
+- history/utils.js (16 γρ)
+- landing/DemoModal.jsx (147 γρ): DemoModal@8
+- landing/FaqItem.jsx (19 γρ): FaqItem@4
+- landing/Logo.jsx (5 γρ): Logo@1
+- landing/Mockups.jsx (67 γρ): MockupFrame@1, PlaceholderPDA@16, PlaceholderTables@32, PlaceholderStats@47
+- landing/SectionTitle.jsx (17 γρ): SectionTitle@3
+- menu/CategoriesPanel.jsx (159 γρ): CategoriesPanel@13
+- menu/CustomizationConfigModal.jsx (127 γρ): CustomizationConfigModal@20
+- menu/DeleteDialogs.jsx (71 γρ): DeleteItemDialog@12, DeleteCategoryDialog@42
+- menu/ItemModal.jsx (324 γρ): ItemModal@31
+- menu/ItemPhotoPicker.jsx (135 γρ): ItemPhotoPicker@4
+- menu/ItemsPanel.jsx (202 γρ): ItemsPanel@15
+- menu/MenuToolbar.jsx (36 γρ): MenuToolbar@4
+- menu/OptionGroupsEditor.jsx (130 γρ): OptionGroupsEditor@5
+- menu/PricedOptionList.jsx (62 γρ): PricedOptionList@4
+- menu/utils.js (11 γρ)
+- pda/DiscountModal.jsx (106 γρ): DiscountModal@7
+- pda/MenuSection.jsx (44 γρ): MenuSection@6
+- pda/MobileTabs.jsx (40 γρ): MobileTabs@2
+- pda/PDAModals.jsx (85 γρ): PDAModals@8
+- pda/ScheduledOrdersModal.jsx (86 γρ): ScheduledOrdersModal@5
+- pda/utils.js (12 γρ)
+- register/FieldYesNo.jsx (36 γρ): Field@1, YesNo@12
+- register/StepAccount.jsx (80 γρ): StepAccount@5
+- register/StepBusiness.jsx (73 γρ): StepBusiness@5
+- register/StepOperation.jsx (29 γρ): StepOperation@4
+- register/StepPin.jsx (60 γρ): StepPin@6
+- register/utils.js (3 γρ)
+- schedule/ScheduleGrid.jsx (115 γρ): ScheduleGrid@5
+- schedule/ShareDialog.jsx (41 γρ): ShareDialog@11
+- schedule/ShiftModal.jsx (111 γρ): ShiftModal@16
+- schedule/utils.js (114 γρ)
+- stock/AddItemModal.jsx (78 γρ): AddItemModal@5
+- stock/CategoryModal.jsx (61 γρ): CategoryModal@5
+- stock/ShoppingListPanel.jsx (112 γρ): ShoppingListPanel@5
+- stock/StockRow.jsx (60 γρ): StockRow@4
+- stock/StockSection.jsx (168 γρ): StockSection@6
+- table-order/KitchenSlip.jsx (33 γρ): KitchenSlip@4
+- table-order/TabPanel.jsx (184 γρ): TabPanel@15
+- table-order/TransferModal.jsx (43 γρ): TransferModal@4
+- table-order/utils.js (20 γρ)
 
 ## FRONTEND — components (frontend/src/components)
 - AdminShell.jsx (183 γρ): useAdminPw@22, AdminShell@37

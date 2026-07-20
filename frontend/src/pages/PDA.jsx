@@ -1,24 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Clock, X, Printer, Ban, Phone as PhoneIcon, Percent } from "lucide-react";
-import PinGateModal from "@/components/PinGateModal";
 import AppShell from "@/components/AppShell";
-import MenuGrid from "@/components/MenuGrid";
 import OrderPanel from "@/components/OrderPanel";
-
-// Ενώνει οδό + πόλη σε πλήρη διεύθυνση (η πόλη δεν αποθηκεύεται ξεχωριστά)
-const buildDeliveryPayload = (source, delivery) => {
-  if (source !== "Τηλέφωνο" || !delivery?.delivery_type) return null;
-  const { city, ...rest } = delivery;
-  const street = (rest.address || "").trim();
-  const cityTrim = (city || "").trim();
-  if (street && cityTrim && !street.toLowerCase().includes(cityTrim.toLowerCase())) {
-    rest.address = `${street}, ${cityTrim}`;
-  }
-  return rest;
-};
-import CustomizationModal from "@/components/CustomizationModal";
-import Receipt from "@/components/Receipt";
 import { useAuth } from "@/context/AuthContext";
 import { ORDER_SOURCES } from "@/data/menu";
 import {
@@ -37,8 +20,24 @@ import {
   getCachedNextOrderNumber,
   rememberNextOrderNumber,
 } from "@/lib/offline";
-import { eur, formatGRTime, formatGRDayMonthTime } from "@/lib/format";
+import { formatGRTime } from "@/lib/format";
 import { printReceiptJob } from "@/lib/print";
+import MobileTabs from "./pda/MobileTabs";
+import MenuSection from "./pda/MenuSection";
+import PDAModals from "./pda/PDAModals";
+import { schedDateTime } from "./pda/utils";
+
+// Ενώνει οδό + πόλη σε πλήρη διεύθυνση (η πόλη δεν αποθηκεύεται ξεχωριστά)
+const buildDeliveryPayload = (source, delivery) => {
+  if (source !== "Τηλέφωνο" || !delivery?.delivery_type) return null;
+  const { city, ...rest } = delivery;
+  const street = (rest.address || "").trim();
+  const cityTrim = (city || "").trim();
+  if (street && cityTrim && !street.toLowerCase().includes(cityTrim.toLowerCase())) {
+    rest.address = `${street}, ${cityTrim}`;
+  }
+  return rest;
+};
 
 let LINE_SEQ = 1;
 const newLineId = () => `L${Date.now()}-${LINE_SEQ++}`;
@@ -47,16 +46,6 @@ const FIRE_AHEAD_MS = 15 * 60 * 1000; // print 15' before the scheduled time
 const POLL_MS = 60 * 1000;
 
 const schedTime = (iso) => formatGRTime(iso);
-
-const schedDateTime = (iso) => {
-  try {
-    const d = new Date(iso);
-    const sameDay = d.toDateString() === new Date().toDateString();
-    return sameDay ? formatGRTime(d) : formatGRDayMonthTime(d);
-  } catch {
-    return "";
-  }
-};
 
 // Double-beep alert via WebAudio — no asset files needed
 const playAlert = () => {
@@ -83,192 +72,6 @@ const playAlert = () => {
     /* audio not available */
   }
 };
-
-// ---------- Discount modal ----------
-const DISCOUNT_PERCENTS = [5, 10, 15, 20];
-
-function DiscountModal({ open, subtotal, current, onApply, onRemove, onClose }) {
-  const [amountText, setAmountText] = useState("");
-
-  useEffect(() => {
-    if (open) setAmountText(current?.type === "amount" ? String(current.value) : "");
-  }, [open, current]);
-
-  if (!open) return null;
-
-  const applyAmount = () => {
-    const v = parseFloat(String(amountText).replace(",", "."));
-    if (!v || v <= 0) {
-      toast.error("Εισάγετε έγκυρο ποσό έκπτωσης");
-      return;
-    }
-    if (v > subtotal) {
-      toast.error("Η έκπτωση δεν μπορεί να υπερβαίνει το σύνολο");
-      return;
-    }
-    onApply({ type: "amount", value: Math.round(v * 100) / 100 });
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-      data-testid="discount-modal"
-    >
-      <div className="bg-[#3D1620] border border-[#723645] rounded-lg w-full max-w-sm p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Percent className="w-5 h-5 text-[#00E676]" />
-            <h3 className="font-heading text-lg font-bold">Έκπτωση</h3>
-          </div>
-          <button
-            onClick={onClose}
-            data-testid="discount-modal-close"
-            className="w-8 h-8 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="text-xs uppercase tracking-widest text-neutral-400 font-bold mb-2">
-          Ποσοστό
-        </div>
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          {DISCOUNT_PERCENTS.map((p) => {
-            const active = current?.type === "percent" && current.value === p;
-            return (
-              <button
-                key={p}
-                onClick={() => onApply({ type: "percent", value: p })}
-                data-testid={`discount-percent-${p}`}
-                className={`h-12 rounded-md border font-mono font-bold text-lg transition-colors ${
-                  active
-                    ? "bg-[#00E676] border-[#00E676] text-black"
-                    : "bg-[#2A0E14] border-[#723645] text-white hover:border-[#00E676]"
-                }`}
-              >
-                {p}%
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="text-xs uppercase tracking-widest text-neutral-400 font-bold mb-2">
-          Ή ποσό (€)
-        </div>
-        <div className="flex gap-2 mb-4">
-          <input
-            inputMode="decimal"
-            value={amountText}
-            onChange={(e) => setAmountText(e.target.value)}
-            placeholder="π.χ. 2,00"
-            data-testid="discount-amount-input"
-            className="flex-1 h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-[#00E676]"
-          />
-          <button
-            onClick={applyAmount}
-            data-testid="discount-amount-apply"
-            className="h-12 px-4 rounded-md bg-[#00E676] hover:bg-[#33EB91] text-black font-bold"
-          >
-            OK
-          </button>
-        </div>
-
-        {current && (
-          <button
-            onClick={onRemove}
-            data-testid="discount-remove-btn"
-            className="w-full h-11 rounded-md border border-[#FF3B30]/50 text-[#FF6961] hover:bg-[#FF3B30]/10 text-sm font-bold"
-          >
-            Αφαίρεση έκπτωσης
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ---------- Scheduled orders modal ----------
-function ScheduledOrdersModal({ open, orders, onClose, onPrintNow, onCancel }) {
-  if (!open) return null;
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-      data-testid="scheduled-orders-modal"
-    >
-      <div className="bg-[#3D1620] border border-[#723645] rounded-lg w-full max-w-lg max-h-[85vh] flex flex-col">
-        <div className="flex items-center justify-between p-5 border-b border-[#431A25]">
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-[#00B0FF]" />
-            <h3 className="font-heading text-xl font-bold">Προγραμματισμένες παραγγελίες</h3>
-          </div>
-          <button
-            onClick={onClose}
-            data-testid="scheduled-modal-close"
-            className="w-9 h-9 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-5">
-          {orders.length === 0 ? (
-            <div className="text-neutral-500 text-center py-10">
-              Δεν υπάρχουν προγραμματισμένες παραγγελίες
-            </div>
-          ) : (
-            <ul className="space-y-3">
-              {orders.map((o) => (
-                <li
-                  key={o.id}
-                  data-testid={`scheduled-order-${o.id}`}
-                  className="p-4 bg-[#2A0E14] border border-[#00B0FF]/40 rounded-lg"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="font-mono text-xl font-bold text-[#00B0FF] shrink-0">
-                        {schedDateTime(o.scheduled_at)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-white font-semibold text-sm truncate">
-                          #{String(o.order_number).padStart(3, "0")}
-                          {o.delivery?.name ? ` · ${o.delivery.name}` : ""}
-                        </div>
-                        {o.delivery?.phone && (
-                          <div className="flex items-center gap-1 text-xs text-neutral-400">
-                            <PhoneIcon className="w-3 h-3" /> {o.delivery.phone}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="font-mono font-bold text-white shrink-0">{eur(o.total)}</div>
-                  </div>
-                  <div className="text-xs text-neutral-400 mt-2 leading-snug">
-                    {o.items.map((it) => `${it.quantity}x ${it.name}`).join(" · ")}
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={() => onPrintNow(o)}
-                      data-testid={`scheduled-print-now-${o.id}`}
-                      className="flex-1 h-10 rounded-md bg-brand hover:bg-brand-hover text-white text-sm font-bold flex items-center justify-center gap-2"
-                    >
-                      <Printer className="w-4 h-4" /> Τύπωσε τώρα
-                    </button>
-                    <button
-                      onClick={() => onCancel(o)}
-                      data-testid={`scheduled-cancel-${o.id}`}
-                      className="h-10 px-4 rounded-md border border-[#FF3B30]/50 text-[#FF6961] hover:bg-[#FF3B30]/10 text-sm font-bold flex items-center justify-center gap-2"
-                    >
-                      <Ban className="w-4 h-4" /> Ακύρωση
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function PDA() {
   const { user, canManage } = useAuth();
@@ -610,68 +413,16 @@ export default function PDA() {
           όχι σε user-agent/touch. Android tablets 1280x800 με DPR ~1.33 δίνουν
           ~960 CSS px, γι' αυτό το παλιό lg: (1024px) τα έριχνε σε mobile layout. */}
       <main className="flex-1 flex flex-col sm:grid sm:grid-cols-[1fr_300px] md:grid-cols-[1fr_340px] lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-hidden">
-        {/* Μενού / Παραγγελία εναλλαγή — μόνο σε κινητό (<640px) */}
-        <div className="sm:hidden shrink-0 flex gap-1.5 p-2 border-b border-[#723645] bg-[#2A0E14]">
-          <button
-            onClick={() => setMobileTab("menu")}
-            data-testid="pda-tab-menu"
-            data-state={mobileTab === "menu" ? "on" : "off"}
-            className={`flex-1 h-12 rounded-md text-sm font-bold transition-colors ${
-              mobileTab === "menu"
-                ? "bg-brand text-white"
-                : "bg-[#3D1620] border border-[#723645] text-neutral-300"
-            }`}
-          >
-            Μενού
-          </button>
-          <button
-            onClick={() => setMobileTab("order")}
-            data-testid="pda-tab-order"
-            data-state={mobileTab === "order" ? "on" : "off"}
-            className={`flex-1 h-12 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
-              mobileTab === "order"
-                ? "bg-brand text-white"
-                : "bg-[#3D1620] border border-[#723645] text-neutral-300"
-            }`}
-          >
-            Παραγγελία
-            {orderCount > 0 && (
-              <span
-                key={orderCount}
-                className="pk-pop min-w-[22px] h-[22px] px-1.5 rounded-full bg-flame text-white text-xs font-bold flex items-center justify-center"
-              >
-                {orderCount}
-              </span>
-            )}
-          </button>
-        </div>
-
-        <section
-          className={`p-3 md:p-4 xl:p-6 overflow-hidden flex-col min-h-0 flex-1 sm:flex-none ${
-            mobileTab === "menu" ? "flex" : "hidden"
-          } sm:flex`}
-        >
-          {scheduledOrders.length > 0 && (
-            <button
-              onClick={() => setScheduledOpen(true)}
-              data-testid="scheduled-badge-btn"
-              className="mb-4 shrink-0 flex items-center gap-2 self-start max-w-full px-4 h-10 rounded-md border border-[#00B0FF]/50 bg-[#00B0FF]/10 text-[#00B0FF] text-sm font-bold hover:bg-[#00B0FF]/20 transition-colors"
-            >
-              <Clock className="w-4 h-4 shrink-0" />
-              <span className="truncate">Προγραμματισμένες: {scheduledOrders.length}</span>
-              <span className="text-xs font-normal text-[#00B0FF]/70 hidden sm:inline shrink-0">
-                · επόμενη {schedDateTime(scheduledOrders[0]?.scheduled_at)}
-              </span>
-            </button>
-          )}
-          <MenuGrid
-            categories={config.categories}
-            items={config.items}
-            activeCategory={activeCategory}
-            onCategoryChange={setActiveCategory}
-            onItemClick={handleItemClick}
-          />
-        </section>
+        <MobileTabs mobileTab={mobileTab} setMobileTab={setMobileTab} orderCount={orderCount} />
+        <MenuSection
+          mobileTab={mobileTab}
+          scheduledOrders={scheduledOrders}
+          setScheduledOpen={setScheduledOpen}
+          config={config}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          handleItemClick={handleItemClick}
+        />
         <div
           className={`min-h-0 overflow-hidden flex-1 sm:flex-none flex-col ${
             mobileTab === "order" ? "flex" : "hidden"
@@ -703,52 +454,32 @@ export default function PDA() {
         </div>
       </main>
 
-      <CustomizationModal
-        item={modalItem}
-        config={config.customization}
-        open={modalOpen}
-        mode={modalMode}
+      <PDAModals
+        modalItem={modalItem}
+        config={config}
+        modalOpen={modalOpen}
+        modalMode={modalMode}
         initialCustomization={initialCustomization}
-        onClose={() => {
-          setModalOpen(false);
-          setModalItem(null);
-          setModalMode("add");
-          setEditingLineId(null);
-          setInitialCustomization(null);
-        }}
-        onConfirm={handleConfirmCustomization}
-      />
-      <ScheduledOrdersModal
-        open={scheduledOpen}
-        orders={scheduledOrders}
-        onClose={() => setScheduledOpen(false)}
-        onPrintNow={handlePrintNow}
-        onCancel={handleCancelScheduled}
-      />
-      <DiscountModal
-        open={discountOpen}
+        setModalOpen={setModalOpen}
+        setModalItem={setModalItem}
+        setModalMode={setModalMode}
+        setEditingLineId={setEditingLineId}
+        setInitialCustomization={setInitialCustomization}
+        handleConfirmCustomization={handleConfirmCustomization}
+        scheduledOpen={scheduledOpen}
+        scheduledOrders={scheduledOrders}
+        setScheduledOpen={setScheduledOpen}
+        handlePrintNow={handlePrintNow}
+        handleCancelScheduled={handleCancelScheduled}
+        discountOpen={discountOpen}
         subtotal={subtotal}
-        current={discount}
-        onApply={(d) => {
-          setDiscount(d);
-          setDiscountOpen(false);
-        }}
-        onRemove={() => {
-          setDiscount(null);
-          setDiscountOpen(false);
-        }}
-        onClose={() => setDiscountOpen(false)}
+        discount={discount}
+        setDiscount={setDiscount}
+        setDiscountOpen={setDiscountOpen}
+        pinGateOpen={pinGateOpen}
+        setPinGateOpen={setPinGateOpen}
+        printOrder={printOrder}
       />
-      <PinGateModal
-        open={pinGateOpen}
-        title="Απαιτείται PIN ιδιοκτήτη/υπευθύνου για έκπτωση"
-        onClose={() => setPinGateOpen(false)}
-        onSuccess={() => {
-          setPinGateOpen(false);
-          setDiscountOpen(true);
-        }}
-      />
-      <Receipt order={printOrder} />
     </AppShell>
   );
 }

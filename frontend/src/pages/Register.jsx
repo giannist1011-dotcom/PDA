@@ -1,60 +1,16 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  LayoutGrid,
-  Users,
-  KeyRound,
-  Ticket,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { formatApiError, apiValidatePromo } from "@/lib/api";
-import { BUSINESS_TYPES } from "@/lib/business";
 import { Button } from "@/components/ui/button";
+import StepAccount from "./register/StepAccount";
+import StepBusiness from "./register/StepBusiness";
+import StepOperation from "./register/StepOperation";
+import StepPin from "./register/StepPin";
 
 const STEPS = ["Λογαριασμός", "Επιχείρηση", "Λειτουργία", "PIN"];
-
-const Field = ({ label, optional, children, hint }) => (
-  <div>
-    <label className="text-xs uppercase tracking-widest font-bold text-neutral-400">
-      {label}
-      {optional && <span className="text-neutral-600 normal-case tracking-normal font-normal"> (προαιρετικό)</span>}
-    </label>
-    <div className="mt-1">{children}</div>
-    {hint && <div className="text-xs text-neutral-500 mt-1">{hint}</div>}
-  </div>
-);
-
-const inputCls =
-  "w-full h-12 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame";
-
-function YesNo({ value, onChange, testId }) {
-  return (
-    <div className="grid grid-cols-2 gap-2 mt-1">
-      {[
-        { v: true, label: "Ναι" },
-        { v: false, label: "Όχι" },
-      ].map((o) => (
-        <button
-          key={String(o.v)}
-          type="button"
-          onClick={() => onChange(o.v)}
-          data-testid={`${testId}-${o.v ? "yes" : "no"}`}
-          className={`h-12 rounded-md border font-bold transition-colors ${
-            value === o.v
-              ? "bg-brand border-brand text-white"
-              : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export default function Register() {
   const { user, register } = useAuth();
@@ -197,225 +153,17 @@ export default function Register() {
         <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-6 md:p-8">
           {/* STEP 1 — Λογαριασμός */}
           {step === 0 && (
-            <div className="space-y-4">
-              <h1 className="font-heading text-2xl font-bold">Λογαριασμός</h1>
-              <Field label="Email">
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => set("email", e.target.value)}
-                  data-testid="register-email"
-                  className={inputCls}
-                />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Κωδικός" hint="Τουλάχιστον 4 χαρακτήρες">
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={(e) => set("password", e.target.value)}
-                    data-testid="register-password"
-                    className={inputCls}
-                  />
-                </Field>
-                <Field label="Επιβεβαίωση">
-                  <input
-                    type="password"
-                    value={form.password2}
-                    onChange={(e) => set("password2", e.target.value)}
-                    data-testid="register-password2"
-                    className={inputCls}
-                  />
-                </Field>
-              </div>
-              <Field label="Ονοματεπώνυμο">
-                <input
-                  value={form.full_name}
-                  onChange={(e) => set("full_name", e.target.value)}
-                  placeholder="π.χ. Γιάννης Παπαδόπουλος"
-                  data-testid="register-fullname"
-                  className={inputCls}
-                />
-              </Field>
-              <Field label="Τηλέφωνο">
-                <input
-                  inputMode="tel"
-                  value={form.phone}
-                  onChange={(e) => set("phone", e.target.value)}
-                  placeholder="π.χ. 6912345678"
-                  data-testid="register-phone"
-                  className={inputCls}
-                />
-              </Field>
-              <Field label="Εκπτωτικός κωδικός" optional>
-                <div className="relative">
-                  <Ticket className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    value={form.promo_code}
-                    onChange={(e) => {
-                      set("promo_code", e.target.value.toUpperCase());
-                      setPromoInfo(null);
-                    }}
-                    placeholder="π.χ. WELCOME10"
-                    data-testid="register-promo"
-                    className={`${inputCls} pl-9 font-mono tracking-wider`}
-                  />
-                </div>
-                {promoInfo && promoInfo.code === form.promo_code.trim().toUpperCase() && (
-                  <div className="text-xs text-gold mt-1 flex items-center gap-1" data-testid="register-promo-ok">
-                    <Check className="w-3.5 h-3.5" /> {promoInfo.description}
-                  </div>
-                )}
-              </Field>
-            </div>
+            <StepAccount form={form} set={set} promoInfo={promoInfo} setPromoInfo={setPromoInfo} />
           )}
 
           {/* STEP 2 — Επιχείρηση */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <h1 className="font-heading text-2xl font-bold">Η επιχείρησή σας</h1>
-              <Field label="Όνομα επιχείρησης">
-                <input
-                  value={form.restaurant_name}
-                  onChange={(e) => set("restaurant_name", e.target.value)}
-                  placeholder="π.χ. Ο Λευτέρης"
-                  data-testid="register-restaurant"
-                  className={inputCls}
-                />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Πόλη" optional>
-                  <input
-                    value={form.city}
-                    onChange={(e) => set("city", e.target.value)}
-                    data-testid="register-city"
-                    className={inputCls}
-                  />
-                </Field>
-                <Field label="Website" optional>
-                  <input
-                    value={form.website}
-                    onChange={(e) => set("website", e.target.value)}
-                    placeholder="https://..."
-                    data-testid="register-website"
-                    className={inputCls}
-                  />
-                </Field>
-              </div>
-              <Field label="Τύπος επιχείρησης">
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  {BUSINESS_TYPES.map((b) => {
-                    const Icon = b.icon;
-                    const active = form.business_type === b.key;
-                    return (
-                      <button
-                        key={b.key}
-                        type="button"
-                        onClick={() => set("business_type", b.key)}
-                        data-testid={`register-biz-${b.key}`}
-                        className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all active:scale-[0.98] ${
-                          active
-                            ? "bg-flame/10 border-flame text-white"
-                            : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
-                        }`}
-                      >
-                        <span
-                          className={`w-12 h-12 rounded-md bg-brand flex items-center justify-center ${
-                            active ? "" : "opacity-60"
-                          }`}
-                        >
-                          <Icon className="w-7 h-7 text-white" />
-                        </span>
-                        <span className="text-sm font-bold">{b.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </Field>
-              <div className="text-xs text-neutral-500">
-                Θα προ-φορτωθεί έτοιμο ελληνικό μενού για τον τύπο σας — το επεξεργάζεστε ελεύθερα μετά.
-              </div>
-            </div>
-          )}
+          {step === 1 && <StepBusiness form={form} set={set} />}
 
           {/* STEP 3 — Λειτουργία */}
-          {step === 2 && (
-            <div className="space-y-5">
-              <h1 className="font-heading text-2xl font-bold">Πώς λειτουργείτε;</h1>
-              <div className="p-4 bg-[#2A0E14] border border-[#723645] rounded-lg">
-                <div className="flex items-center gap-2 font-semibold">
-                  <LayoutGrid className="w-5 h-5 text-flame" /> Έχετε τραπέζια;
-                </div>
-                <div className="text-xs text-neutral-500 mt-1 mb-2">
-                  Ενεργοποιεί καρτέλες ανά τραπέζι με γύρους για την κουζίνα (8 έτοιμα τραπέζια)
-                </div>
-                <YesNo value={form.has_tables} onChange={(v) => set("has_tables", v)} testId="register-tables" />
-              </div>
-              <div className="p-4 bg-[#2A0E14] border border-[#723645] rounded-lg">
-                <div className="flex items-center gap-2 font-semibold">
-                  <Users className="w-5 h-5 text-flame" /> Έχετε σερβιτόρους;
-                </div>
-                <div className="text-xs text-neutral-500 mt-1 mb-2">
-                  Δημιουργεί έτοιμο προφίλ Σερβιτόρου (πρόσβαση μόνο στα Τραπέζια)
-                </div>
-                <YesNo value={form.has_waiters} onChange={(v) => set("has_waiters", v)} testId="register-waiters" />
-              </div>
-            </div>
-          )}
+          {step === 2 && <StepOperation form={form} set={set} />}
 
           {/* STEP 4 — PIN */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <h1 className="font-heading text-2xl font-bold flex items-center gap-2">
-                <KeyRound className="w-6 h-6 text-flame" /> PIN Ιδιοκτήτη
-              </h1>
-              <p className="text-sm text-neutral-400">
-                Με αυτό το 4-ψήφιο PIN θα συνδέεστε στο προφίλ Ιδιοκτήτη και θα εγκρίνετε
-                ευαίσθητες ενέργειες (εκπτώσεις, ακυρώσεις).
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="PIN (4 ψηφία)">
-                  <input
-                    inputMode="numeric"
-                    maxLength={4}
-                    value={form.owner_pin}
-                    onChange={(e) => set("owner_pin", e.target.value.replace(/\D/g, "").slice(0, 4))}
-                    data-testid="register-pin"
-                    className={`${inputCls} font-mono text-xl tracking-widest text-center`}
-                  />
-                </Field>
-                <Field label="Επιβεβαίωση">
-                  <input
-                    inputMode="numeric"
-                    maxLength={4}
-                    value={form.owner_pin2}
-                    onChange={(e) => set("owner_pin2", e.target.value.replace(/\D/g, "").slice(0, 4))}
-                    data-testid="register-pin2"
-                    className={`${inputCls} font-mono text-xl tracking-widest text-center`}
-                  />
-                </Field>
-              </div>
-              <div className="p-3 bg-[#2A0E14] border border-[#723645] rounded-md text-xs text-neutral-400 space-y-1">
-                <div className="font-bold uppercase tracking-widest text-neutral-500 mb-1">Σύνοψη</div>
-                <div>Επιχείρηση: <span className="text-white">{form.restaurant_name}</span></div>
-                <div>
-                  Τύπος:{" "}
-                  <span className="text-white">
-                    {BUSINESS_TYPES.find((b) => b.key === form.business_type)?.label}
-                  </span>
-                </div>
-                <div>Τραπέζια: <span className="text-white">{form.has_tables ? "Ναι (8 έτοιμα)" : "Όχι"}</span></div>
-                <div>Σερβιτόροι: <span className="text-white">{form.has_waiters ? "Ναι" : "Όχι"}</span></div>
-                {form.promo_code.trim() && (
-                  <div>
-                    Εκπτωτικός κωδικός:{" "}
-                    <span className="text-gold font-mono">{form.promo_code.trim().toUpperCase()}</span>
-                    {promoInfo?.description && <span className="text-neutral-400"> — {promoInfo.description}</span>}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {step === 3 && <StepPin form={form} set={set} promoInfo={promoInfo} />}
 
           {error && (
             <div

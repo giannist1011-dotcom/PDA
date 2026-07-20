@@ -101,16 +101,22 @@ function summarizeJsx(p) {
   return { count: ls.length, defs };
 }
 
-function frontendSection(dirName, exclude = []) {
-  const dir = path.join(ROOT, "frontend", "src", dirName);
+function frontendSection(dirName, excludeDirs = []) {
+  const base = path.join(ROOT, "frontend", "src", dirName);
   const out = [];
-  for (const f of fs.readdirSync(dir).sort()) {
-    const p = path.join(dir, f);
-    if (fs.statSync(p).isDirectory()) continue; // ui/, icons/ κλπ εκτός χάρτη
-    if (exclude.includes(f) || !/\.(jsx?|tsx?)$/.test(f)) continue;
-    const { count, defs } = summarizeJsx(p);
-    out.push(`- ${f} (${count} γρ)${defs.length ? ": " + defs.join(", ") : ""}`);
-  }
+  (function walk(dir) {
+    for (const f of fs.readdirSync(dir).sort()) {
+      const p = path.join(dir, f);
+      if (fs.statSync(p).isDirectory()) {
+        if (!excludeDirs.includes(f)) walk(p); // ui/, icons/ εκτός χάρτη
+        continue;
+      }
+      if (!/\.(jsx?|tsx?)$/.test(f)) continue;
+      const { count, defs } = summarizeJsx(p);
+      const name = path.relative(base, p).replace(/\\/g, "/");
+      out.push(`- ${name} (${count} γρ)${defs.length ? ": " + defs.join(", ") : ""}`);
+    }
+  })(base);
   return out;
 }
 
@@ -199,7 +205,7 @@ out.push(...frontendSection("pages"));
 out.push("");
 
 out.push("## FRONTEND — components (frontend/src/components)");
-out.push(...frontendSection("components"));
+out.push(...frontendSection("components", ["ui", "icons"]));
 out.push("");
 
 out.push("## FRONTEND — lib/api.js (exported)");
