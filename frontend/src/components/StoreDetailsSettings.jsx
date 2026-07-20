@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MapPin, Search, Loader2 } from "lucide-react";
+import { MapPin, Search, Loader2, Clock, Star, QrCode } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useAuth } from "@/context/AuthContext";
 import { apiUpdateStoreDetails, geocodeAddress, formatApiError } from "@/lib/api";
+import StoreHoursEditor from "@/components/StoreHoursEditor";
 
 // Προεπιλεγμένο κέντρο χάρτη όταν δεν υπάρχει pin: Αθήνα
 const DEFAULT_CENTER = [37.9838, 23.7275];
@@ -30,12 +32,15 @@ export default function StoreDetailsSettings() {
       ? { lat: user.store_lat, lng: user.store_lng }
       : null
   );
+  const [hours, setHours] = useState(user?.store_hours || {});
+  const [reviewLink, setReviewLink] = useState(user?.google_review_link || "");
   const [saving, setSaving] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
 
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+  const reviewQrRef = useRef(null);
 
   const placePin = (lat, lng, pan = true) => {
     setLatlng({ lat, lng });
@@ -94,10 +99,36 @@ export default function StoreDetailsSettings() {
     }
   };
 
+  // Ίδια λογική με το QR του καταλόγου (PublicMenuSettings): λευκό περιθώριο + PNG download
+  const downloadReviewQR = () => {
+    const src = reviewQrRef.current?.querySelector("canvas");
+    if (!src) return;
+    const pad = 24;
+    const out = document.createElement("canvas");
+    out.width = src.width + pad * 2;
+    out.height = src.height + pad * 2;
+    const ctx = out.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(src, pad, pad);
+    const a = document.createElement("a");
+    a.href = out.toDataURL("image/png");
+    a.download = "google-review-qr.png";
+    a.click();
+  };
+
   const save = async () => {
     if (!name.trim()) {
       toast.error("Το όνομα καταστήματος είναι υποχρεωτικό");
       return;
+    }
+    // Πέτα ημιτελείς γραμμές ωραρίου (κενό start/end) — το backend τις απορρίπτει με 422
+    const cleanHours = {};
+    for (const [k, d] of Object.entries(hours || {})) {
+      cleanHours[k] = {
+        closed: !!d.closed,
+        ranges: (d.ranges || []).filter((r) => r.start && r.end),
+      };
     }
     setSaving(true);
     try {
@@ -108,6 +139,8 @@ export default function StoreDetailsSettings() {
         store_city: city.trim(),
         store_lat: latlng?.lat ?? null,
         store_lng: latlng?.lng ?? null,
+        store_hours: cleanHours,
+        google_review_link: reviewLink.trim(),
       });
       await refreshMe();
       toast.success("Τα στοιχεία καταστήματος αποθηκεύτηκαν");
@@ -199,6 +232,51 @@ export default function StoreDetailsSettings() {
           data-testid="store-map"
           className="h-[300px] rounded-md border border-[#723645] overflow-hidden z-0"
         />
+      </div>
+
+      <div>
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <Clock className="w-4 h-4 text-flame" />
+          <label className="text-xs text-neutral-400">
+            Ωράριο λειτουργίας — εμφανίζεται στον δημόσιο κατάλογο με ένδειξη «Ανοιχτά τώρα»
+          </label>
+        </div>
+        <StoreHoursEditor value={hours} onChange={setHours} />
+      </div>
+
+      <div>
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <Star className="w-4 h-4 text-gold" />
+          <label className="text-xs text-neutral-400">
+            Google review link — προαιρετικό· εμφανίζει κουμπί «Αξιολογήστε μας» στον δημόσιο κατάλογο
+          </label>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <input
+            value={reviewLink}
+            onChange={(e) => setReviewLink(e.target.value)}
+            maxLength={300}
+            placeholder="π.χ. https://g.page/r/XXXXXXXX/review"
+            data-testid="review-link-input"
+            className={`${inputCls} flex-1 min-w-[220px]`}
+          />
+          <button
+            type="button"
+            onClick={downloadReviewQR}
+            disabled={!reviewLink.trim()}
+            data-testid="review-qr-btn"
+            className="h-10 px-4 shrink-0 rounded-md border border-[#723645] bg-[#2A0E14] text-sm font-bold text-neutral-300 hover:border-flame transition-colors flex items-center gap-2 disabled:opacity-40 disabled:hover:border-[#723645]"
+          >
+            <QrCode className="w-4 h-4" />
+            Λήψη QR
+          </button>
+        </div>
+        {/* Κρυφό canvas μόνο για την παραγωγή του PNG */}
+        {reviewLink.trim() && (
+          <div ref={reviewQrRef} className="hidden">
+            <QRCodeCanvas value={reviewLink.trim()} size={296} level="M" />
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end">

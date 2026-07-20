@@ -80,7 +80,7 @@ export default function Settings() {
               <h2 className="font-heading text-2xl font-bold">Στοιχεία καταστήματος</h2>
             </div>
             <p className="text-sm text-neutral-400">
-              Όνομα, τηλέφωνο, διεύθυνση και τοποθεσία στον χάρτη — χρησιμοποιούνται στον live χάρτη παραγγελιών
+              Όνομα, τηλέφωνο, διεύθυνση, ωράριο και Google reviews — χρησιμοποιούνται στον live χάρτη και στον δημόσιο κατάλογο
             </p>
           </div>
           <div className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg">

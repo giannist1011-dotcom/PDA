@@ -44,6 +44,8 @@ class MenuItemIn(BaseModel):
     unavailable_note: str = ""
     option_groups: List[MenuOptionGroup] = Field(default_factory=list)
     photo_id: Optional[str] = None
+    # Αλλεργιογόνα/σύσταση — φαίνεται μόνο στον δημόσιο κατάλογο, όχι στο PDA
+    allergens: str = Field(default="", max_length=200)
 
 
 class AvailabilityIn(BaseModel):
@@ -190,6 +192,7 @@ async def create_item(body: MenuItemIn, user: dict = Depends(require_manager)):
         "unavailable_note": body.unavailable_note.strip(),
         "option_groups": [g.model_dump() for g in body.option_groups],
         "photo_id": body.photo_id,
+        "allergens": body.allergens.strip(),
         "sort_order": sort_order,
     }
     await db.items.insert_one(doc)
@@ -211,6 +214,7 @@ async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(require_m
         "unavailable_note": body.unavailable_note.strip(),
         "option_groups": [g.model_dump() for g in body.option_groups],
         "photo_id": body.photo_id,
+        "allergens": body.allergens.strip(),
     }
     r = await db.items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
     if r.matched_count == 0:

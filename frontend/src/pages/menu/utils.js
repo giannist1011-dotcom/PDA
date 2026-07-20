@@ -7,4 +7,5 @@ export const emptyItem = (categoryId = "") => ({
   double_meat_eligible: false,
   option_groups: [],
   photo_id: null,
+  allergens: "",
 });

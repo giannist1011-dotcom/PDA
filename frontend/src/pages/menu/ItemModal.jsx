@@ -104,6 +104,7 @@ export default function ItemModal({
         price: parseFloat(String(form.price).replace(",", ".")) || 0,
         option_groups: cleanGroups,
         photo_id: form.photo_id || null,
+        allergens: (form.allergens || "").trim(),
       });
     } finally {
       setBusy(false);
@@ -250,6 +251,23 @@ export default function ItemModal({
                 {form.photo_id ? "Αλλαγή" : "Επιλογή"}
               </Button>
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+              Αλλεργιογόνα / Σύσταση (προαιρετικό)
+            </label>
+            <input
+              value={form.allergens || ""}
+              onChange={(e) => setForm({ ...form, allergens: e.target.value })}
+              maxLength={200}
+              placeholder="π.χ. γλουτένη, γάλα, ξηροί καρποί"
+              data-testid="item-allergens-input"
+              className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame"
+            />
+            <p className="text-xs text-neutral-500 mt-1">
+              Εμφανίζεται μόνο στον δημόσιο κατάλογο — όχι στο ταμείο (PDA)
+            </p>
           </div>
 
           <div className="flex items-center justify-between px-4 py-3 bg-[#3D1620] border border-[#723645] rounded-md">

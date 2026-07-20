@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { UtensilsCrossed } from "lucide-react";
+import { UtensilsCrossed, Info } from "lucide-react";
 import { apiGetPublicMenu, formatApiError } from "@/lib/api";
 import { eur } from "@/lib/format";
 import { setFavicon, resetFavicon } from "@/lib/favicon";
+import HoursBadge from "./public-menu/HoursBadge";
+import CategoryBar from "./public-menu/CategoryBar";
+import StoreInfoSection from "./public-menu/StoreInfoSection";
 
 export default function PublicMenu() {
   const { slug } = useParams();
@@ -34,10 +37,6 @@ export default function PublicMenu() {
       resetFavicon();
     };
   }, [slug]);
-
-  const scrollToCat = (id) => {
-    document.getElementById(`cat-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
 
   if (loading) {
     return (
@@ -87,25 +86,12 @@ export default function PublicMenu() {
             {restaurant_name}
           </h1>
           <div className="mt-3 inline-block w-16 h-1 rounded-full bg-gradient-to-r from-flame to-gold" />
+          <HoursBadge hours={data.store_hours} />
         </div>
       </header>
 
-      {/* Category chips */}
-      {categories.length > 1 && (
-        <nav className="sticky top-0 z-20 bg-[#1A070C]/90 backdrop-blur-md border-b border-[#3D1620]">
-          <div className="max-w-2xl mx-auto px-3 py-2.5 flex gap-2 overflow-x-auto no-scrollbar">
-            {categories.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => scrollToCat(c.id)}
-                className="shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-[#3D1620] border border-[#723645] text-neutral-200 hover:border-flame hover:text-flame transition-colors"
-              >
-                {c.name}
-              </button>
-            ))}
-          </div>
-        </nav>
-      )}
+      {/* Sticky κατηγορίες με scroll spy */}
+      <CategoryBar categories={categories} />
 
       {/* Menu */}
       <main className="max-w-2xl mx-auto px-5 py-8">
@@ -143,6 +129,12 @@ export default function PublicMenu() {
                             {it.description}
                           </p>
                         )}
+                        {it.allergens && (
+                          <p className="text-[11px] text-neutral-500 mt-1 leading-snug flex items-start gap-1">
+                            <Info className="w-3 h-3 shrink-0 mt-[1px]" />
+                            <span>{it.allergens}</span>
+                          </p>
+                        )}
                       </div>
                       <div className="font-heading font-bold text-gold whitespace-nowrap pl-1">
                         {eur(it.price)}
@@ -155,6 +147,8 @@ export default function PublicMenu() {
           </div>
         )}
       </main>
+
+      <StoreInfoSection data={data} />
 
       <footer className="max-w-2xl mx-auto px-5 pb-10 pt-2 text-center">
         <div className="text-xs text-neutral-600">Κατάλογος με OrderDeck</div>

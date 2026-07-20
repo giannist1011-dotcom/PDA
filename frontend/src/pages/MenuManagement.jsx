@@ -110,6 +110,7 @@ export default function MenuManagement() {
         double_meat_eligible: !!form.double_meat_eligible,
         option_groups: form.option_groups || [],
         photo_id: form.photo_id || null,
+        allergens: form.allergens || "",
       };
       if (form.id) {
         const upd = await apiUpdateItem(form.id, payload);

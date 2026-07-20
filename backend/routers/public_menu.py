@@ -154,6 +154,13 @@ async def public_menu(slug: str):
             "store_logo": 1,
             "public_menu_enabled": 1,
             "business_type": 1,
+            "store_phone": 1,
+            "store_address": 1,
+            "store_city": 1,
+            "store_lat": 1,
+            "store_lng": 1,
+            "store_hours": 1,
+            "google_review_link": 1,
         },
     )
     if not u or not u.get("public_menu_enabled"):
@@ -166,7 +173,7 @@ async def public_menu(slug: str):
     )
     items = await db.items.find(
         {"user_id": uid, "available": True},
-        {"_id": 0, "id": 1, "name": 1, "price": 1, "category": 1, "photo_id": 1, "description": 1},
+        {"_id": 0, "id": 1, "name": 1, "price": 1, "category": 1, "photo_id": 1, "description": 1, "allergens": 1},
     ).sort("sort_order", 1).to_list(2000)
     # φωτογραφίες προϊόντων
     photo_ids = list({i.get("photo_id") for i in items if i.get("photo_id")})
@@ -192,5 +199,12 @@ async def public_menu(slug: str):
         "restaurant_name": u["restaurant_name"],
         "logo": u.get("store_logo"),
         "business_type": u.get("business_type") or "souvlaki",
+        "store_phone": u.get("store_phone") or "",
+        "store_address": u.get("store_address") or "",
+        "store_city": u.get("store_city") or "",
+        "store_lat": u.get("store_lat"),
+        "store_lng": u.get("store_lng"),
+        "store_hours": u.get("store_hours") or {},
+        "google_review_link": u.get("google_review_link") or "",
         "categories": out_cats,
     }

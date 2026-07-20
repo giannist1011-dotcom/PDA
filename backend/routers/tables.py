@@ -57,6 +57,19 @@ async def update_business_type(body: BusinessTypeIn, user: dict = Depends(requir
     return {"business_type": body.business_type}
 
 
+class HoursRange(BaseModel):
+    start: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    end: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+class DayHours(BaseModel):
+    closed: bool = False
+    ranges: List[HoursRange] = Field(default_factory=list, max_length=2)
+
+
+WEEK_DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+
 class StoreDetailsIn(BaseModel):
     restaurant_name: str = Field(min_length=1, max_length=80)
     store_phone: Optional[str] = Field(default=None, max_length=60)
@@ -64,11 +77,18 @@ class StoreDetailsIn(BaseModel):
     store_city: Optional[str] = Field(default=None, max_length=80)
     store_lat: Optional[float] = Field(default=None, ge=-90, le=90)
     store_lng: Optional[float] = Field(default=None, ge=-180, le=180)
+    # Ωράριο ανά ημέρα (mon..sun) — έως 2 βάρδιες/ημέρα, overnight όταν end < start
+    store_hours: Optional[dict[str, DayHours]] = None
+    google_review_link: Optional[str] = Field(default=None, max_length=300)
 
 
 @router.put("/settings/store")
 async def update_store_details(body: StoreDetailsIn, user: dict = Depends(require_owner)):
     """Στοιχεία καταστήματος — όνομα, τηλέφωνο, διεύθυνση, συντεταγμένες (lat/lng)."""
+    hours = {}
+    for day, dh in (body.store_hours or {}).items():
+        if day in WEEK_DAYS:
+            hours[day] = dh.model_dump()
     fields = {
         "restaurant_name": body.restaurant_name.strip(),
         "store_phone": (body.store_phone or "").strip(),
@@ -76,6 +96,8 @@ async def update_store_details(body: StoreDetailsIn, user: dict = Depends(requir
         "store_city": (body.store_city or "").strip(),
         "store_lat": body.store_lat,
         "store_lng": body.store_lng,
+        "store_hours": hours,
+        "google_review_link": (body.google_review_link or "").strip(),
     }
     await db.users.update_one({"id": user["id"]}, {"$set": fields})
     # Πόλη/θέση επηρεάζουν το geocoding του live χάρτη — καθάρισε το cache
