@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from pydantic import BaseModel, Field, EmailStr
 
 from core import (
@@ -19,6 +19,10 @@ from core import (
     seed_account_from_preset,
     cleanup_expired_demos,
     DEMO_TTL_HOURS,
+    rate_limit,
+    pin_locked_for,
+    pin_lock_message,
+    register_pin_attempt,
 )
 from presets import PRESETS
 from routers.promo import redeem_promo, promo_description, require_admin
@@ -60,7 +64,8 @@ class TokenOut(BaseModel):
 
 # ============ AUTH ROUTES ============
 @router.post("/auth/register", response_model=TokenOut)
-async def register(body: RegisterIn):
+async def register(body: RegisterIn, request: Request):
+    rate_limit(request, "register", limit=5, window_seconds=3600)
     email = body.email.lower()
     if await db.users.find_one({"email": email}):
         raise HTTPException(400, "Το email χρησιμοποιείται ήδη")
@@ -140,7 +145,8 @@ async def register(body: RegisterIn):
 
 
 @router.post("/auth/login", response_model=TokenOut)
-async def login(body: LoginIn):
+async def login(body: LoginIn, request: Request):
+    rate_limit(request, "login", limit=10, window_seconds=60)
     email = body.email.lower()
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(body.password, user["password_hash"]):
@@ -157,9 +163,10 @@ async def login(body: LoginIn):
 
 # ============ DEMO MODE (per-visitor, auto-expiring, auto-login) ============
 @router.post("/auth/demo", response_model=TokenOut)
-async def start_demo(body: DemoIn):
+async def start_demo(body: DemoIn, request: Request):
     """Δημιουργεί δοκιμαστικό λογαριασμό που λήγει σε 3 ώρες και επιστρέφει JWT
     με ήδη επιλεγμένο προφίλ Ιδιοκτήτη → ο επισκέπτης μπαίνει κατευθείαν, χωρίς login/PIN."""
+    rate_limit(request, "demo", limit=3, window_seconds=3600)
     # Ευκαιριακό καθάρισμα τυχόν ληγμένων demo (best-effort — δεν μπλοκάρει το request)
     try:
         await cleanup_expired_demos()
@@ -347,13 +354,53 @@ async def profile_select(body: ProfileSelectIn, user: dict = Depends(get_current
     prof = await db.profiles.find_one({"id": body.profile_id, "user_id": user["id"]})
     if not prof:
         raise HTTPException(404, "Το προφίλ δεν βρέθηκε")
-    if not verify_password(body.pin, prof.get("pin_hash", "")):
-        raise HTTPException(401, "Λάθος κωδικός")
+    # Lockout ανά προφίλ: 5 συνεχόμενα λάθη → 5' κλείδωμα (κοινός helper με το owner-PIN gate)
+    locked = pin_locked_for(prof)
+    if locked:
+        raise HTTPException(429, pin_lock_message(locked))
+    matched = verify_password(body.pin, prof.get("pin_hash", ""))
+    res = await register_pin_attempt(
+        db.profiles, {"id": prof["id"], "user_id": user["id"]}, prof, matched
+    )
+    if not res["ok"]:
+        if res.get("locked_for"):
+            raise HTTPException(429, pin_lock_message(res["locked_for"]))
+        raise HTTPException(401, f"Λάθος κωδικός — απομένουν {res['attempts_left']} προσπάθειες")
     token = create_token(
         user["id"], user["email"],
         profile_id=prof["id"], role=prof["role"], profile_name=prof["name"],
     )
-    return {"token": token, "profile": prof["role"], "profile_id": prof["id"], "profile_name": prof["name"]}
+    # Default PIN 0000 (migrated/νέα προφίλ): υποχρεωτική αλλαγή στο πρώτο login (όχι σε demo)
+    must_change_pin = body.pin == "0000" and not user.get("is_demo")
+    return {
+        "token": token,
+        "profile": prof["role"],
+        "profile_id": prof["id"],
+        "profile_name": prof["name"],
+        "must_change_pin": must_change_pin,
+    }
+
+
+class ChangeOwnPinIn(BaseModel):
+    pin: str = Field(min_length=4, max_length=4)
+
+
+@router.post("/profile/change-pin")
+async def change_own_pin(body: ChangeOwnPinIn, user: dict = Depends(get_current_user)):
+    """Αλλαγή PIN του ενεργού προφίλ — χρησιμοποιείται στην υποχρεωτική αλλαγή του 0000."""
+    if not user.get("profile_id"):
+        raise HTTPException(400, "Δεν έχει επιλεγεί προφίλ")
+    if not body.pin.isdigit():
+        raise HTTPException(400, "Ο κωδικός πρέπει να είναι 4 ψηφία")
+    if body.pin == "0000":
+        raise HTTPException(400, "Το PIN δεν μπορεί να είναι 0000 — επιλέξτε άλλον κωδικό")
+    await db.profiles.update_one(
+        {"id": user["profile_id"], "user_id": user["id"]},
+        {"$set": {"pin_hash": hash_password(body.pin)}},
+    )
+    flag = "owner_pin_set" if user.get("role") == "owner" else "employee_pin_set"
+    await db.users.update_one({"id": user["id"]}, {"$set": {flag: True, "onb_pins": True}})
+    return {"ok": True}
 
 
 @router.post("/profile/exit")

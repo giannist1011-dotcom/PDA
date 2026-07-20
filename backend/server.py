@@ -2,6 +2,7 @@
 
 Τα endpoints ζουν στα routers/ (ένα ανά feature)· τα κοινά (db, auth, seeding) στο core.py.
 """
+import logging
 import os
 
 from fastapi import FastAPI, APIRouter
@@ -41,10 +42,21 @@ api.include_router(onboarding.router)
 
 app.include_router(api)
 
+# CORS: μόνο τα origins του CORS_ORIGINS (comma-separated). Χωρίς env var → "*"
+# με warning, ώστε το local dev να δουλεύει χωρίς setup.
+_cors_env = os.environ.get("CORS_ORIGINS", "").strip()
+if _cors_env:
+    cors_origins = [o.strip() for o in _cors_env.split(",") if o.strip()]
+else:
+    cors_origins = ["*"]
+    logging.getLogger("orderdeck").warning(
+        "CORS_ORIGINS not set — allowing ALL origins (dev fallback, do not use in production)"
+    )
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=False,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

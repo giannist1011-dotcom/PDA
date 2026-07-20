@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { apiListProfiles, formatApiError } from "@/lib/api";
 import { cacheProfilesForOffline, getCachedProfiles, isNetworkError } from "@/lib/offline";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
+import ForcePinChange from "./profile-select/ForcePinChange";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"];
 
@@ -124,6 +125,7 @@ export default function ProfileSelect() {
   const [profiles, setProfiles] = useState(null); // null = loading
   const [chosen, setChosen] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [forcePinProfile, setForcePinProfile] = useState(null); // προφίλ με default PIN 0000
 
   useEffect(() => {
     if (!user || user === false) return;
@@ -152,12 +154,28 @@ export default function ProfileSelect() {
 
   if (user === null) return null;
   if (user === false) return <Navigate to="/app/login" replace />;
+  if (forcePinProfile) {
+    // Υποχρεωτική αλλαγή default PIN 0000 — πριν το Navigate στο /app, χωρίς skip
+    return (
+      <ForcePinChange
+        profile={forcePinProfile}
+        onDone={() => {
+          setForcePinProfile(null);
+          navigate("/app");
+        }}
+      />
+    );
+  }
   if (hasProfile) return <Navigate to="/app" replace />;
 
   const handleSubmit = async (pin) => {
     setBusy(true);
     try {
-      await selectProfile(chosen.id, pin);
+      const me = await selectProfile(chosen.id, pin);
+      if (me?.must_change_pin) {
+        setForcePinProfile(chosen);
+        return;
+      }
       toast.success(`Καλωσήρθες, ${chosen.name}`);
       navigate("/app");
     } finally {

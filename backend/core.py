@@ -5,14 +5,16 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 import os
+import time
 import uuid
 import logging
 import bcrypt
 import jwt
+from collections import defaultdict, deque
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import HTTPException, Depends, Header
+from fastapi import HTTPException, Depends, Header, Request
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from seed_data import DEFAULT_CUSTOMIZATION
@@ -223,9 +225,77 @@ async def ensure_profiles_migrated(user_id: str):
     ])
 
 
-# ============ OWNER PIN GATE (sensitive actions) ============
+# ============ RATE LIMITING (in-memory — single instance) ============
+_rate_buckets: dict = defaultdict(deque)
+
+
+def client_ip(request: Request) -> str:
+    """IP πελάτη — πίσω από το Render proxy έρχεται στο X-Forwarded-For."""
+    fwd = request.headers.get("x-forwarded-for") or ""
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def rate_limit(request: Request, bucket: str, limit: int, window_seconds: int):
+    """Απλό sliding-window όριο ανά (bucket, IP). Raises 429 όταν ξεπεραστεί."""
+    now = time.monotonic()
+    key = (bucket, client_ip(request))
+    q = _rate_buckets[key]
+    while q and q[0] <= now - window_seconds:
+        q.popleft()
+    if len(q) >= limit:
+        raise HTTPException(429, "Πολλές προσπάθειες — δοκιμάστε ξανά σε λίγο")
+    q.append(now)
+    # Συντήρηση μνήμης: πέτα άδεια κλειδιά όταν μαζευτούν πολλά
+    if len(_rate_buckets) > 10000:
+        for k in [k for k, v in _rate_buckets.items() if not v]:
+            del _rate_buckets[k]
+
+
+# ============ PIN LOCKOUT (κοινό για owner-PIN gate & επιλογή προφίλ) ============
 PIN_MAX_FAILS = 5
 PIN_LOCK_SECONDS = 300  # 5 minutes
+
+
+def pin_locked_for(doc: dict) -> int:
+    """Δευτερόλεπτα που απομένουν αν το doc είναι κλειδωμένο από λάθος PIN, αλλιώς 0."""
+    lock_until = doc.get("pin_lock_until")
+    if not lock_until:
+        return 0
+    try:
+        lu = datetime.fromisoformat(lock_until)
+    except (ValueError, TypeError):
+        return 0
+    return max(0, int((lu - datetime.now(timezone.utc)).total_seconds()))
+
+
+async def register_pin_attempt(coll, query: dict, doc: dict, matched: bool) -> dict:
+    """Κοινός μετρητής αποτυχιών PIN: 5 συνεχόμενα λάθη → κλείδωμα 5', reset σε επιτυχία.
+
+    Επιστρέφει {"ok": True} / {"ok": False, "attempts_left": n} / {"ok": False, "locked_for": s}.
+    """
+    if matched:
+        await coll.update_one(
+            query, {"$set": {"pin_fail_count": 0, "pin_lock_until": None}}
+        )
+        return {"ok": True}
+    fails = int(doc.get("pin_fail_count") or 0) + 1
+    if fails >= PIN_MAX_FAILS:
+        lock_until = datetime.now(timezone.utc) + timedelta(seconds=PIN_LOCK_SECONDS)
+        await coll.update_one(
+            query,
+            {"$set": {"pin_fail_count": 0, "pin_lock_until": lock_until.isoformat()}},
+        )
+        return {"ok": False, "locked_for": PIN_LOCK_SECONDS}
+    await coll.update_one(query, {"$set": {"pin_fail_count": fails}})
+    return {"ok": False, "attempts_left": PIN_MAX_FAILS - fails}
+
+
+def pin_lock_message(seconds: int) -> str:
+    if seconds >= 60:
+        return f"Πολλές λάθος προσπάθειες — δοκιμάστε ξανά σε {(seconds + 59) // 60} λεπτά"
+    return f"Πολλές λάθος προσπάθειες — δοκιμάστε ξανά σε {seconds} δευτερόλεπτα"
 
 
 async def check_owner_pin(user_id: str, pin: str) -> dict:
@@ -233,39 +303,17 @@ async def check_owner_pin(user_id: str, pin: str) -> dict:
     u = await db.users.find_one({"id": user_id})
     if not u:
         return {"ok": False, "attempts_left": 0}
-    now = datetime.now(timezone.utc)
-    lock_until = u.get("pin_lock_until")
-    if lock_until:
-        try:
-            lu = datetime.fromisoformat(lock_until)
-        except (ValueError, TypeError):
-            lu = None
-        if lu and lu > now:
-            return {"ok": False, "locked_for": int((lu - now).total_seconds())}
+    locked = pin_locked_for(u)
+    if locked:
+        return {"ok": False, "locked_for": locked}
     await ensure_profiles_migrated(user_id)
     supervisors = await db.profiles.find(
         {"user_id": user_id, "role": {"$in": ["owner", "manager"]}}
     ).to_list(100)
-    matched = pin and any(
+    matched = bool(pin) and any(
         verify_password(pin, p.get("pin_hash", "")) for p in supervisors
     )
-    if matched:
-        await db.users.update_one(
-            {"id": user_id}, {"$set": {"pin_fail_count": 0, "pin_lock_until": None}}
-        )
-        return {"ok": True}
-    fails = int(u.get("pin_fail_count") or 0) + 1
-    if fails >= PIN_MAX_FAILS:
-        await db.users.update_one(
-            {"id": user_id},
-            {"$set": {
-                "pin_fail_count": 0,
-                "pin_lock_until": (now + timedelta(seconds=PIN_LOCK_SECONDS)).isoformat(),
-            }},
-        )
-        return {"ok": False, "locked_for": PIN_LOCK_SECONDS}
-    await db.users.update_one({"id": user_id}, {"$set": {"pin_fail_count": fails}})
-    return {"ok": False, "attempts_left": PIN_MAX_FAILS - fails}
+    return await register_pin_attempt(db.users, {"id": user_id}, u, matched)
 
 
 async def require_owner_or_pin(user: dict, pin: Optional[str]):

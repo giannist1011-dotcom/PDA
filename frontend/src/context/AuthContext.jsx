@@ -157,7 +157,7 @@ export function AuthProvider({ children }) {
 
   const selectProfile = async (profileId, pin) => {
     try {
-      const { token } = await apiSelectProfile(profileId, pin);
+      const { token, must_change_pin } = await apiSelectProfile(profileId, pin);
       setToken(token);
       pendingOfflineLogin = null;
       const me = await getMeCached();
@@ -165,7 +165,7 @@ export function AuthProvider({ children }) {
       cacheProfilesForOffline(); // ανανέωση cache για μελλοντική offline σύνδεση
       // Το PIN επαληθεύτηκε online — αποθήκευσε τοπικό hash για offline είσοδο
       rememberPinOffline(profileId, pin, { name: me.profile_name, role: me.role });
-      return me;
+      return { ...me, must_change_pin: !!must_change_pin };
     } catch (e) {
       if (!isNetworkError(e)) throw e;
       // Χωρίς δίκτυο: τοπική επαλήθευση PIN πάνω στα cached hashes

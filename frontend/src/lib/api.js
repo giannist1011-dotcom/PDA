@@ -46,6 +46,8 @@ export const apiListProfiles = () => api.get("/profiles").then((r) => r.data);
 export const apiSelectProfile = (profileId, pin) =>
   api.post("/profile/select", { profile_id: profileId, pin }).then((r) => r.data);
 export const apiExitProfile = () => api.post("/profile/exit").then((r) => r.data);
+export const apiChangeOwnPin = (pin) =>
+  api.post("/profile/change-pin", { pin }).then((r) => r.data);
 export const apiCreateProfile = (payload) =>
   api.post("/profiles", payload).then((r) => r.data);
 export const apiUpdateProfile = (id, payload) =>
