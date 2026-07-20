@@ -450,6 +450,8 @@ export default function PDA() {
           onEditOptions={handleEditLineOptions}
           submitting={submitting}
           storeCity={user?.store_city || ""}
+          storeLat={user?.store_lat ?? null}
+          storeLng={user?.store_lng ?? null}
         />
         </div>
       </main>

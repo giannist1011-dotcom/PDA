@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LineEditModal from "@/components/LineEditModal";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 import TimePicker from "@/components/TimePicker";
 import DatePicker from "@/components/DatePicker";
 import { ORDER_SOURCES } from "@/data/menu";
@@ -58,6 +59,8 @@ export default function OrderPanel({
   onDiscountClick,
   onEditOptions,
   storeCity = "",
+  storeLat = null,
+  storeLng = null,
 }) {
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
   const total = Math.max(0, subtotal - discountAmount);
@@ -292,17 +295,32 @@ export default function OrderPanel({
 
             {activeFields.length > 0 && (
               <div className="grid grid-cols-2 gap-1.5 mt-1.5">
-                {activeFields.map((f) => (
-                  <input
-                    key={f.key}
-                    value={delivery?.[f.key] || ""}
-                    onChange={(e) => setField(f.key, e.target.value)}
-                    inputMode={f.inputMode || "text"}
-                    placeholder={f.label + " — " + f.placeholder}
-                    data-testid={`delivery-input-${f.key}`}
-                    className="w-full h-9 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame"
-                  />
-                ))}
+                {activeFields.map((f) =>
+                  f.key === "address" ? (
+                    // Διεύθυνση σε πλήρες πλάτος με autocomplete (γνωστοί πελάτες + Photon)
+                    <AddressAutocomplete
+                      key={f.key}
+                      value={delivery?.address || ""}
+                      onChange={(v) => setField("address", v)}
+                      city={delivery?.city || storeCity}
+                      storeLat={storeLat}
+                      storeLng={storeLng}
+                      placeholder={f.label + " — " + f.placeholder}
+                      testId="delivery-input-address"
+                      className="col-span-2"
+                    />
+                  ) : (
+                    <input
+                      key={f.key}
+                      value={delivery?.[f.key] || ""}
+                      onChange={(e) => setField(f.key, e.target.value)}
+                      inputMode={f.inputMode || "text"}
+                      placeholder={f.label + " — " + f.placeholder}
+                      data-testid={`delivery-input-${f.key}`}
+                      className="w-full h-9 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame"
+                    />
+                  )
+                )}
               </div>
             )}
           </div>

@@ -1,32 +1,20 @@
-import { MapPin, Phone, Navigation, Star } from "lucide-react";
+import { Phone, Navigation, Star } from "lucide-react";
+import { buildDirectionsUrl } from "./utils";
 
 // Στοιχεία επιχείρησης στο κάτω μέρος του δημόσιου καταλόγου:
-// διεύθυνση, τηλέφωνα (tap-to-call), οδηγίες Google Maps, κουμπί αξιολόγησης
+// τηλέφωνα (tap-to-call), οδηγίες Google Maps, κουμπί αξιολόγησης.
+// Η διεύθυνση εμφανίζεται πλέον ψηλά στο header (HeaderContact).
 export default function StoreInfoSection({ data }) {
-  const {
-    store_phone,
-    store_address,
-    store_city,
-    store_lat,
-    store_lng,
-    google_review_link,
-  } = data;
+  const { store_phone, google_review_link } = data;
 
   const phones = (store_phone || "")
     .split(/[,/]/)
     .map((p) => p.trim())
     .filter(Boolean);
 
-  const address = [store_address, store_city].filter(Boolean).join(", ");
+  const directionsUrl = buildDirectionsUrl(data);
 
-  const hasCoords = store_lat != null && store_lng != null;
-  const directionsUrl = hasCoords
-    ? `https://www.google.com/maps/dir/?api=1&destination=${store_lat},${store_lng}`
-    : address
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
-    : null;
-
-  if (!address && phones.length === 0 && !directionsUrl && !google_review_link) return null;
+  if (phones.length === 0 && !directionsUrl && !google_review_link) return null;
 
   return (
     <section
@@ -34,13 +22,6 @@ export default function StoreInfoSection({ data }) {
       data-testid="store-info-section"
     >
       <div className="bg-[#2A0E14] border border-[#3D1620] rounded-xl p-4 space-y-3">
-        {address && (
-          <div className="flex items-start gap-2.5 text-sm text-neutral-300">
-            <MapPin className="w-4 h-4 text-flame shrink-0 mt-0.5" />
-            <span>{address}</span>
-          </div>
-        )}
-
         {phones.length > 0 && (
           <div className="flex items-start gap-2.5 text-sm">
             <Phone className="w-4 h-4 text-flame shrink-0 mt-0.5" />

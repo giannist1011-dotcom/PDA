@@ -417,6 +417,33 @@ async def clear_live_map(user: dict = Depends(require_staff)):
     return {"cleared_at": now}
 
 
+@router.get("/orders/address-book")
+async def address_book(user: dict = Depends(require_staff)):
+    """Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης του PDA —
+    από τις πιο πρόσφατες παραγγελίες παράδοσης, dedup ανά διεύθυνση, με όνομα πελάτη."""
+    docs = await db.orders.find(
+        {
+            "user_id": user["id"],
+            "delivery.delivery_type": "delivery",
+            "delivery.address": {"$nin": [None, ""]},
+            "cancelled": {"$ne": True},
+        },
+        {"_id": 0, "delivery.name": 1, "delivery.address": 1},
+    ).sort("created_at", -1).limit(1000).to_list(1000)
+    seen, out = set(), []
+    for d in docs:
+        dv = d.get("delivery") or {}
+        addr = (dv.get("address") or "").strip()
+        key = addr.lower()
+        if not addr or key in seen:
+            continue
+        seen.add(key)
+        out.append({"address": addr, "name": (dv.get("name") or "").strip()})
+        if len(out) >= 300:
+            break
+    return out
+
+
 @router.get("/orders/{oid}", response_model=Order)
 async def get_order(oid: str, user: dict = Depends(require_staff)):
     doc = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})

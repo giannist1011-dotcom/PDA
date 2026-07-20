@@ -212,6 +212,20 @@ export const apiRemoveStoreLogo = () =>
 // Στοιχεία καταστήματος (owner) — όνομα, τηλέφωνο, διεύθυνση, τοποθεσία
 export const apiUpdateStoreDetails = (payload) =>
   api.put("/settings/store", payload).then((r) => r.data);
+// Γνωστές διευθύνσεις πελατών (από προηγούμενες παραγγελίες) για autocomplete στη φόρμα παράδοσης
+export const apiAddressBook = () => api.get("/orders/address-book").then((r) => r.data);
+// Autocomplete διευθύνσεων μέσω Photon (komoot) — δωρεάν geocoder που ΕΠΙΤΡΕΠΕΙ typeahead
+// (το Nominatim το απαγορεύει στο usage policy του). Bias στις συντεταγμένες του καταστήματος.
+export const photonSearch = (q, { lat, lon, signal } = {}) => {
+  const params = new URLSearchParams({ q, lang: "el", limit: "5" });
+  if (lat != null && lon != null) {
+    params.set("lat", lat);
+    params.set("lon", lon);
+  }
+  return fetch(`https://photon.komoot.io/api/?${params.toString()}`, { signal }).then((r) =>
+    r.json()
+  );
+};
 // Geocoding μέσω Nominatim (OpenStreetMap) — δωρεάν, χωρίς API key
 export const geocodeAddress = (q) =>
   fetch(

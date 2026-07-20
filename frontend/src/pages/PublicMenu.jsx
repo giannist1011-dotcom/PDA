@@ -5,6 +5,7 @@ import { apiGetPublicMenu, formatApiError } from "@/lib/api";
 import { eur } from "@/lib/format";
 import { setFavicon, resetFavicon } from "@/lib/favicon";
 import HoursBadge from "./public-menu/HoursBadge";
+import HeaderContact from "./public-menu/HeaderContact";
 import CategoryBar from "./public-menu/CategoryBar";
 import StoreInfoSection from "./public-menu/StoreInfoSection";
 
@@ -89,6 +90,7 @@ export default function PublicMenu() {
           </h1>
           <div className="mt-3 inline-block w-16 h-1 rounded-full bg-gradient-to-r from-flame to-gold" />
           <HoursBadge hours={data.store_hours} />
+          <HeaderContact data={data} />
         </div>
       </header>
 

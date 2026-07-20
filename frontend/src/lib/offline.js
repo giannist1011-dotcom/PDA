@@ -7,7 +7,7 @@
 // Το online path ΔΕΝ αλλάζει: η cache γράφεται μόνο μετά από επιτυχημένες κλήσεις
 // και διαβάζεται μόνο όταν το δίκτυο αποτύχει.
 import { useEffect, useState } from "react";
-import { api, apiGetMenuConfig, apiMe, apiOfflineProfiles, submitOrder } from "@/lib/api";
+import { api, apiAddressBook, apiGetMenuConfig, apiMe, apiOfflineProfiles, submitOrder } from "@/lib/api";
 
 const DB_NAME = "orderdeck-offline";
 const DB_VERSION = 1;
@@ -210,6 +210,20 @@ export async function getMeCached() {
       if (cached) return cached;
     }
     throw e;
+  }
+}
+
+// Γνωστές διευθύνσεις πελατών: online-first με cache fallback, ώστε το autocomplete
+// της φόρμας παράδοσης να δουλεύει (μόνο με τοπικές προτάσεις) και χωρίς σύνδεση
+export async function getAddressBookCached() {
+  try {
+    const book = await apiAddressBook();
+    cacheSet("address_book", book);
+    markServerUp();
+    return book || [];
+  } catch (e) {
+    if (isNetworkError(e)) markServerDown();
+    return (await cacheGet("address_book")) || [];
   }
 }
 
