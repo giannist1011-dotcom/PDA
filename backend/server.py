@@ -115,6 +115,15 @@ async def on_startup():
     )
     # Ανακοινώσεις πλατφόρμας: γρήγορη εύρεση ενεργής ανά μαγαζί
     await db.announcements.create_index([("active", 1), ("created_at", -1)])
+    # Μία φορά: ενοποίηση πεδίου πόλης — παλιοί λογαριασμοί με city από την εγγραφή
+    # αλλά χωρίς store_city (το κανονικό πεδίο) → αντιγραφή city → store_city
+    await db.users.update_many(
+        {
+            "city": {"$exists": True, "$nin": ["", None]},
+            "$or": [{"store_city": {"$exists": False}}, {"store_city": {"$in": ["", None]}}],
+        },
+        [{"$set": {"store_city": "$city"}}],
+    )
     await migrate_items_sort_order()
     await ensure_demo_account()
 

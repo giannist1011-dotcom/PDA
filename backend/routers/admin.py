@@ -24,11 +24,16 @@ PAYMENT_STATUSES = ("paid", "pending", "expired")
 # Whitelist πεδίων χρήστη που επιστρέφονται στο admin panel (ποτέ hashes/logo)
 SHOP_FIELDS = {
     "_id": 0, "id": 1, "email": 1, "restaurant_name": 1, "full_name": 1,
-    "phone": 1, "city": 1, "website": 1, "business_type": 1, "created_at": 1,
+    "phone": 1, "city": 1, "store_city": 1, "website": 1, "business_type": 1, "created_at": 1,
     "is_demo": 1, "demo_expires_at": 1, "disabled": 1, "admin_notes": 1,
     "promo": 1, "billing_note": 1, "plan": 1, "subscription_expires_at": 1,
     "payment_status": 1, "tables_enabled": 1, "public_slug": 1,
 }
+
+
+def fill_city(u: dict) -> None:
+    """Κανονικό πεδίο πόλης είναι το store_city — το "city" (wizard εγγραφής) μόνο fallback."""
+    u["city"] = u.pop("store_city", None) or u.get("city") or ""
 
 
 def shop_status(u: dict) -> str:
@@ -161,6 +166,7 @@ async def admin_list_shops(
         u["orders_revenue"] = round(st.get("revenue", 0) or 0, 2)
         u["last_activity"] = st.get("last")
         u["status"] = shop_status(u)
+        fill_city(u)
         u["onboarding"] = onboarding_progress(u)
         for k in ONB_PROJECT:
             u.pop(k, None)
@@ -175,6 +181,7 @@ async def admin_shop_detail(uid: str, x_admin_password: Optional[str] = Header(N
     if not u:
         raise HTTPException(404, "Το μαγαζί δεν βρέθηκε")
     u["status"] = shop_status(u)
+    fill_city(u)
     stats = {"orders_count": 0, "orders_revenue": 0, "last_activity": None}
     async for row in db.orders.aggregate([
         {"$match": {"user_id": uid}},
@@ -251,6 +258,7 @@ async def admin_expiring_subscriptions(x_admin_password: Optional[str] = Header(
     ).sort("subscription_expires_at", 1)
     async for u in cur:
         u["status"] = shop_status(u)
+        fill_city(u)
         shops.append(u)
     return shops
 

@@ -96,6 +96,9 @@ async def register(body: RegisterIn, request: Request):
         "full_name": body.full_name.strip(),
         "phone": body.phone.strip(),
         "city": body.city.strip(),
+        # Κανονικό πεδίο πόλης (ταμείο/κατάλογος/χάρτης διαβάζουν store_city) —
+        # το "city" μένει μόνο ως ιστορικό του wizard εγγραφής
+        "store_city": body.city.strip(),
         "website": body.website.strip(),
         "business_type": body.business_type,
         "tables_enabled": bool(body.has_tables),

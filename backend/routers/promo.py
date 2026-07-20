@@ -170,7 +170,7 @@ async def admin_promo_uses(pid: str, x_admin_password: Optional[str] = Header(No
         raise HTTPException(404, "Ο κωδικός δεν βρέθηκε")
     shops = await db.users.find(
         {"promo.code": promo["code"]},
-        {"_id": 0, "restaurant_name": 1, "email": 1, "city": 1, "promo.applied_at": 1},
+        {"_id": 0, "restaurant_name": 1, "email": 1, "city": 1, "store_city": 1, "promo.applied_at": 1},
     ).sort("promo.applied_at", -1).to_list(1000)
     return {
         "code": promo["code"],
@@ -178,7 +178,7 @@ async def admin_promo_uses(pid: str, x_admin_password: Optional[str] = Header(No
             {
                 "restaurant_name": s.get("restaurant_name", ""),
                 "email": s.get("email", ""),
-                "city": s.get("city", ""),
+                "city": s.get("store_city") or s.get("city", ""),
                 "applied_at": (s.get("promo") or {}).get("applied_at"),
             }
             for s in shops
