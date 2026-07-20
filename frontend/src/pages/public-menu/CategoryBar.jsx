@@ -29,11 +29,16 @@ export default function CategoryBar({ categories }) {
     };
   }, [categories]);
 
-  // Κράτα το ενεργό chip ορατό/κεντραρισμένο στην μπάρα (κινητό)
+  // Κράτα το ενεργό chip ορατό/κεντραρισμένο στην μπάρα (κινητό).
+  // ΜΟΝΟ οριζόντιο scrollLeft του container — ποτέ scrollIntoView, γιατί
+  // σκρολάρει και κάθετα τη σελίδα και "κλωτσάει" το scroll του χρήστη.
   useEffect(() => {
     if (!active) return;
-    const btn = barRef.current?.querySelector(`[data-cat="${active}"]`);
-    btn?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    const bar = barRef.current;
+    const btn = bar?.querySelector(`[data-cat="${active}"]`);
+    if (!bar || !btn) return;
+    const target = btn.offsetLeft - (bar.clientWidth - btn.offsetWidth) / 2;
+    bar.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
   }, [active]);
 
   const scrollToCat = (id) => {
