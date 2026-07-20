@@ -82,6 +82,32 @@ export function AuthProvider({ children }) {
     })();
   }, []);
 
+  // Σιωπηλό refresh του user όταν το tab ξαναπάρει focus: ρυθμίσεις που αποθηκεύτηκαν
+  // από άλλη συσκευή/tab (store_city, εκτύπωση κλπ) φτάνουν στο ταμείο χωρίς logout/login
+  useEffect(() => {
+    if (!userId) return undefined;
+    const refetch = async () => {
+      if (document.visibilityState !== "visible") return;
+      if (pendingOfflineLogin || pendingOfflineStoreLogin) return;
+      try {
+        const me = await apiMe();
+        if (!getToken()) return; // έγινε logout όσο έτρεχε το request
+        cacheSet("me", me);
+        setUser((prev) =>
+          prev && prev !== false && JSON.stringify(prev) === JSON.stringify(me) ? prev : me
+        );
+      } catch {
+        /* offline ή server down — κρατάμε το τρέχον user */
+      }
+    };
+    document.addEventListener("visibilitychange", refetch);
+    window.addEventListener("focus", refetch);
+    return () => {
+      document.removeEventListener("visibilitychange", refetch);
+      window.removeEventListener("focus", refetch);
+    };
+  }, [userId]);
+
   const login = async (email, password) => {
     setError(null);
     try {
@@ -262,6 +288,7 @@ export function AuthProvider({ children }) {
       pendingOfflineLogin = null;
       const me = await apiMe();
       setUser(me);
+      cacheSet("me", me);
       return me;
     } catch (e) {
       if (!isNetworkError(e)) throw e;
@@ -283,6 +310,7 @@ export function AuthProvider({ children }) {
   const refreshMe = async () => {
     const me = await apiMe();
     setUser(me);
+    cacheSet("me", me); // αλλιώς το επόμενο offline/cold-start άνοιγμα σερβίρει παλιό snapshot
     return me;
   };
 
