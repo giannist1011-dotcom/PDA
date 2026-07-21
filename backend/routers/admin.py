@@ -3,6 +3,7 @@
 Όλα τα endpoints προστατεύονται με το ίδιο admin password gate (PROMO_ADMIN_PASSWORD,
 header X-Admin-Password) — ΔΕΝ σχετίζονται με JWT λογαριασμών μαγαζιών.
 """
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 from zoneinfo import ZoneInfo
@@ -10,7 +11,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, HTTPException, Header, Query
 from pydantic import BaseModel, Field
 
-from core import db, purge_user_data
+from core import db, hash_password, purge_user_data
 from routers.onboarding import ONB_PROJECT, fetch_onboarding, onboarding_progress
 from routers.promo import require_admin
 
@@ -196,11 +197,62 @@ async def admin_shop_detail(uid: str, x_admin_password: Optional[str] = Header(N
             "last_activity": row["last"],
         }
     u.update(stats)
-    u["profiles_count"] = await db.profiles.count_documents({"user_id": uid})
+    u["profiles"] = await db.profiles.find(
+        {"user_id": uid},
+        {"_id": 0, "id": 1, "name": 1, "role": 1, "must_change_pin": 1, "pin_lock_until": 1},
+    ).sort("created_at", 1).to_list(100)
+    u["profiles_count"] = len(u["profiles"])
     u["items_count"] = await db.items.count_documents({"user_id": uid})
     u["uses_deckpilot"] = bool(await db.ai_usage.find_one({"user_id": uid}, {"_id": 1}))
     u["onboarding"] = await fetch_onboarding(uid)
     return u
+
+
+class ResetPinIn(BaseModel):
+    pin: str = Field(min_length=4, max_length=4)
+
+
+@router.post("/admin/shops/{uid}/profiles/{pid}/reset-pin")
+async def admin_reset_profile_pin(
+    uid: str, pid: str, body: ResetPinIn, x_admin_password: Optional[str] = Header(None)
+):
+    """Επαναφορά PIN προφίλ από τον διαχειριστή πλατφόρμας: προσωρινό PIN (ίδιο hashing
+    με το login), καθάρισμα lockout, υποχρεωτική αλλαγή στο επόμενο login + audit log."""
+    require_admin(x_admin_password)
+    if not body.pin.isdigit():
+        raise HTTPException(400, "Το προσωρινό PIN πρέπει να είναι 4 ψηφία")
+    u = await db.users.find_one({"id": uid}, {"_id": 0, "id": 1, "restaurant_name": 1})
+    if not u:
+        raise HTTPException(404, "Το μαγαζί δεν βρέθηκε")
+    prof = await db.profiles.find_one({"id": pid, "user_id": uid})
+    if not prof:
+        raise HTTPException(404, "Το προφίλ δεν βρέθηκε")
+    await db.profiles.update_one(
+        {"id": pid, "user_id": uid},
+        {"$set": {
+            "pin_hash": hash_password(body.pin),
+            "must_change_pin": True,
+            "pin_fail_count": 0,
+            "pin_lock_until": None,
+        }},
+    )
+    # Το owner-PIN gate (ευαίσθητες ενέργειες) κλειδώνει σε επίπεδο λογαριασμού — καθάρισέ το κι αυτό
+    await db.users.update_one(
+        {"id": uid}, {"$set": {"pin_fail_count": 0, "pin_lock_until": None}}
+    )
+    # Audit: η admin auth είναι κοινό password (χωρίς ατομικά ids) — καταγράφεται ως platform_admin
+    await db.admin_audit.insert_one({
+        "id": str(uuid.uuid4()),
+        "action": "reset_pin",
+        "admin_id": "platform_admin",
+        "user_id": uid,
+        "restaurant_name": u.get("restaurant_name") or "",
+        "profile_id": pid,
+        "profile_name": prof.get("name") or "",
+        "profile_role": prof.get("role") or "",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"ok": True}
 
 
 class ShopUpdateIn(BaseModel):

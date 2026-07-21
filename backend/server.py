@@ -113,6 +113,8 @@ async def on_startup():
     await db.ai_briefs.create_index(
         [("user_id", 1), ("date", -1), ("mode", 1)], unique=True
     )
+    # Audit log ενεργειών admin panel (π.χ. reset PIN) — ανά μαγαζί, πιο πρόσφατα πρώτα
+    await db.admin_audit.create_index([("user_id", 1), ("created_at", -1)])
     # Ανακοινώσεις πλατφόρμας: γρήγορη εύρεση ενεργής ανά μαγαζί
     await db.announcements.create_index([("active", 1), ("created_at", -1)])
     # Μία φορά: ενοποίηση πεδίου πόλης — παλιοί λογαριασμοί με city από την εγγραφή

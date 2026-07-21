@@ -287,6 +287,10 @@ export const apiAdminShopDetail = (pw, id) =>
   api.get(`/admin/shops/${id}`, adminHeaders(pw)).then((r) => r.data);
 export const apiAdminUpdateShop = (pw, id, payload) =>
   api.patch(`/admin/shops/${id}`, payload, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminResetProfilePin = (pw, shopId, profileId, pin) =>
+  api
+    .post(`/admin/shops/${shopId}/profiles/${profileId}/reset-pin`, { pin }, adminHeaders(pw))
+    .then((r) => r.data);
 export const apiAdminDeleteShop = (pw, id, confirm) =>
   api
     .delete(`/admin/shops/${id}`, { ...adminHeaders(pw), params: { confirm } })

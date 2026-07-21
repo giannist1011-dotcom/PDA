@@ -327,6 +327,7 @@ async def update_profile(pid: str, body: ProfileIn, user: dict = Depends(require
         if not (body.pin.isdigit() and len(body.pin) == 4):
             raise HTTPException(400, "Ο κωδικός πρέπει να είναι 4 ψηφία")
         update["pin_hash"] = hash_password(body.pin)
+        update["must_change_pin"] = False
         # Onboarding: άλλαξε PIN προφίλ
         await db.users.update_one({"id": user["id"]}, {"$set": {"onb_pins": True}})
     await db.profiles.update_one({"id": pid, "user_id": user["id"]}, {"$set": update})
@@ -373,8 +374,11 @@ async def profile_select(body: ProfileSelectIn, user: dict = Depends(get_current
         user["id"], user["email"],
         profile_id=prof["id"], role=prof["role"], profile_name=prof["name"],
     )
-    # Default PIN 0000 (migrated/νέα προφίλ): υποχρεωτική αλλαγή στο πρώτο login (όχι σε demo)
-    must_change_pin = body.pin == "0000" and not user.get("is_demo")
+    # Default PIN 0000 (migrated/νέα προφίλ) ή admin reset (must_change_pin flag):
+    # υποχρεωτική αλλαγή στο πρώτο login (όχι σε demo)
+    must_change_pin = (
+        body.pin == "0000" or bool(prof.get("must_change_pin"))
+    ) and not user.get("is_demo")
     return {
         "token": token,
         "profile": prof["role"],
@@ -399,7 +403,7 @@ async def change_own_pin(body: ChangeOwnPinIn, user: dict = Depends(get_current_
         raise HTTPException(400, "Το PIN δεν μπορεί να είναι 0000 — επιλέξτε άλλον κωδικό")
     await db.profiles.update_one(
         {"id": user["profile_id"], "user_id": user["id"]},
-        {"$set": {"pin_hash": hash_password(body.pin)}},
+        {"$set": {"pin_hash": hash_password(body.pin), "must_change_pin": False}},
     )
     flag = "owner_pin_set" if user.get("role") == "owner" else "employee_pin_set"
     await db.users.update_one({"id": user["id"]}, {"$set": {flag: True, "onb_pins": True}})

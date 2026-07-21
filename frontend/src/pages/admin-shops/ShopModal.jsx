@@ -12,6 +12,7 @@ import { formatGRDate, formatGRDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import DatePicker from "@/components/DatePicker";
 import { StatusBadge } from "./Badges";
+import PinResetSection from "./PinResetSection";
 import { inputCls, PLAN_LABELS, PAYMENT_LABELS } from "./utils";
 
 const fmtEur = (v) =>
@@ -211,6 +212,9 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
                 </Button>
               </div>
             </div>
+
+            {/* ΠΡΟΦΙΛ & PIN */}
+            <PinResetSection pw={pw} shopId={shopId} profiles={shop.profiles} onChanged={load} />
 
             {/* ΕΝΕΡΓΕΙΕΣ */}
             <div className="p-5 border-t border-[#723645] space-y-3">
