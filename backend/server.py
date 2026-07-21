@@ -21,6 +21,12 @@ async def root():
     return {"status": "ok", "service": "OrderDeck"}
 
 
+# Uptime ping κάθε 5' — χωρίς auth και χωρίς DB query, σχεδόν μηδενικό κόστος
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 # Route registration order matters for overlapping paths (literal before {param}),
 # which each router preserves internally — same order as the old monolith.
 api.include_router(auth.router)

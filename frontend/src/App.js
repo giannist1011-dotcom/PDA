@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { StartupOverlay } from "@/components/LoadingScreen";
 import Landing from "@/pages/Landing";
 import PDA from "@/pages/PDA";
 import Analytics from "@/pages/Analytics";
@@ -61,6 +62,8 @@ function App() {
     <div className="App dark">
       <BrowserRouter>
         <AuthProvider>
+          {/* Branded οθόνη εκκίνησης όσο εκκρεμεί το /auth/me (και το cold start) */}
+          <StartupOverlay />
           <Routes>
             {/* Public landing page */}
             <Route path="/" element={<Landing />} />

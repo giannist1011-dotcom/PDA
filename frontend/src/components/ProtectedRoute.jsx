@@ -8,13 +8,8 @@ import { useAuth } from "@/context/AuthContext";
  */
 export default function ProtectedRoute({ children, requireOwner = false, roles = null }) {
   const { user, hasProfile, role } = useAuth();
-  if (user === null) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#2A0E14] text-neutral-400">
-        Φόρτωση...
-      </div>
-    );
-  }
+  // Όσο εκκρεμεί το /auth/me το branded StartupOverlay (App.js) καλύπτει την οθόνη
+  if (user === null) return null;
   if (user === false) return <Navigate to="/app/login" replace />;
   if (!hasProfile) return <Navigate to="/app/select-profile" replace />;
   const allowed = requireOwner ? ["owner"] : roles;

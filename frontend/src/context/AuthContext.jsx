@@ -65,6 +65,16 @@ export function AuthProvider({ children }) {
     return () => resetFavicon();
   }, [storeLogo]);
 
+  // Dynamic τίτλος tab: όνομα μαγαζιού όσο υπάρχει session, OrderDeck στο logout
+  const storeName = user && user !== false ? user.restaurant_name : null;
+  useEffect(() => {
+    if (!storeName) return undefined;
+    document.title = storeName;
+    return () => {
+      document.title = "OrderDeck — POS για την εστίασή σου";
+    };
+  }, [storeName]);
+
   useEffect(() => {
     (async () => {
       if (!getToken()) {
