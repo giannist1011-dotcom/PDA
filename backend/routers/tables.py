@@ -77,6 +77,8 @@ class StoreDetailsIn(BaseModel):
     store_city: Optional[str] = Field(default=None, max_length=80)
     store_lat: Optional[float] = Field(default=None, ge=-90, le=90)
     store_lng: Optional[float] = Field(default=None, ge=-180, le=180)
+    # Ζώνη διανομής γύρω από το pin του μαγαζιού — κόβει τα αποτελέσματα του autocomplete
+    delivery_radius_km: Optional[float] = Field(default=6, ge=1, le=100)
     # Ωράριο ανά ημέρα (mon..sun) — έως 2 βάρδιες/ημέρα, overnight όταν end < start
     store_hours: Optional[dict[str, DayHours]] = None
     google_review_link: Optional[str] = Field(default=None, max_length=300)
@@ -96,6 +98,7 @@ async def update_store_details(body: StoreDetailsIn, user: dict = Depends(requir
         "store_city": (body.store_city or "").strip(),
         "store_lat": body.store_lat,
         "store_lng": body.store_lng,
+        "delivery_radius_km": body.delivery_radius_km or 6,
         "store_hours": hours,
         "google_review_link": (body.google_review_link or "").strip(),
     }

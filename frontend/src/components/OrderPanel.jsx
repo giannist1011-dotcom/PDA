@@ -61,12 +61,15 @@ export default function OrderPanel({
   storeCity = "",
   storeLat = null,
   storeLng = null,
+  deliveryRadiusKm = 6,
 }) {
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
   const total = Math.max(0, subtotal - discountAmount);
   const isEmpty = items.length === 0;
   const isPhone = source === "Τηλέφωνο";
   const [editingLine, setEditingLine] = useState(null);
+  // Η διεύθυνση εντοπίστηκε αλλά εκτός ζώνης διανομής — προειδοποίηση, όχι εμπόδιο
+  const [outOfZone, setOutOfZone] = useState(false);
 
   // Reset delivery & scheduling when source changes away from phone
   useEffect(() => {
@@ -298,17 +301,27 @@ export default function OrderPanel({
                 {activeFields.map((f) =>
                   f.key === "address" ? (
                     // Διεύθυνση σε πλήρες πλάτος με autocomplete (γνωστοί πελάτες + Photon)
-                    <AddressAutocomplete
-                      key={f.key}
-                      value={delivery?.address || ""}
-                      onChange={(v) => setField("address", v)}
-                      city={delivery?.city || storeCity}
-                      storeLat={storeLat}
-                      storeLng={storeLng}
-                      placeholder={f.label + " — " + f.placeholder}
-                      testId="delivery-input-address"
-                      className="col-span-2"
-                    />
+                    <div key={f.key} className="col-span-2">
+                      <AddressAutocomplete
+                        value={delivery?.address || ""}
+                        onChange={(v) => setField("address", v)}
+                        city={delivery?.city || storeCity}
+                        storeLat={storeLat}
+                        storeLng={storeLng}
+                        radiusKm={deliveryRadiusKm}
+                        onZoneStatus={setOutOfZone}
+                        placeholder={f.label + " — " + f.placeholder}
+                        testId="delivery-input-address"
+                      />
+                      {outOfZone && delivery?.delivery_type === "delivery" && (
+                        <div
+                          data-testid="delivery-out-of-zone"
+                          className="mt-1 text-[11px] text-[#FFB300] flex items-center gap-1"
+                        >
+                          ⚠ Η διεύθυνση φαίνεται εκτός ζώνης διανομής ({deliveryRadiusKm} km)
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <input
                       key={f.key}

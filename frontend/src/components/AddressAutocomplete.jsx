@@ -12,6 +12,25 @@ import { getAddressBookCached } from "@/lib/offline";
 
 const DEBOUNCE_MS = 200;
 const MIN_CHARS = 2;
+const DEFAULT_RADIUS_KM = 6;
+
+// Απόσταση haversine σε km — φίλτρο ζώνης διανομής γύρω από το pin του μαγαζιού
+const distanceKm = (lat1, lon1, lat2, lon2) => {
+  const rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad;
+  const dLon = (lon2 - lon1) * rad;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(a));
+};
+
+// bbox για το Photon API: "minLon,minLat,maxLon,maxLat" γύρω από το μαγαζί
+const radiusBbox = (lat, lon, km) => {
+  const dLat = km / 111.32;
+  const dLon = km / (111.32 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
+  return `${lon - dLon},${lat - dLat},${lon + dLon},${lat + dLat}`;
+};
 
 // Πεζά + αφαίρεση τόνων για ελληνικό ταίριασμα ("παυ" ↔ "Παύλου")
 const deaccent = (s) =>
@@ -53,6 +72,8 @@ export default function AddressAutocomplete({
   city = "",
   storeLat,
   storeLng,
+  radiusKm = DEFAULT_RADIUS_KM,
+  onZoneStatus = null,
   placeholder,
   testId,
   className = "",
@@ -78,11 +99,23 @@ export default function AddressAutocomplete({
 
   const q = (value || "").trim();
 
-  // Τοπικές προτάσεις: γνωστοί πελάτες που ταιριάζουν στο query
+  // Ζώνη διανομής: ενεργή μόνο όταν υπάρχει pin μαγαζιού
+  const hasZone = storeLat != null && storeLng != null;
+  const zoneKm = Number(radiusKm) > 0 ? Number(radiusKm) : DEFAULT_RADIUS_KM;
+
+  // Τοπικές προτάσεις: γνωστοί πελάτες που ταιριάζουν στο query — όσες έχουν
+  // αποθηκευμένες συντεταγμένες (από το geocode cache) κόβονται εκτός ζώνης
   const localMatches =
     q.length >= 1
       ? book
           .filter((e) => norm(e.address).includes(norm(q)))
+          .filter(
+            (e) =>
+              !hasZone ||
+              e.lat == null ||
+              e.lng == null ||
+              distanceKm(storeLat, storeLng, e.lat, e.lng) <= zoneKm
+          )
           .slice(0, 4)
           .map((e) => ({
             key: `local:${e.address}`,
@@ -99,19 +132,29 @@ export default function AddressAutocomplete({
     if (q.length < MIN_CHARS) {
       console.warn(`[AddressAutocomplete] skip: q="${q}" < ${MIN_CHARS} chars`);
       setPhotonResults([]);
+      if (onZoneStatus) onZoneStatus(false);
       return undefined;
     }
     debounceRef.current = setTimeout(async () => {
       const ctrl = new AbortController();
       abortRef.current = ctrl;
       try {
-        const data = await photonSearch(q, {
+        const bbox = hasZone ? radiusBbox(storeLat, storeLng, zoneKm) : undefined;
+        let data = await photonSearch(q, {
           lat: storeLat,
           lon: storeLng,
+          bbox,
           signal: ctrl.signal,
         });
+        let features = data?.features || [];
+        // Το bbox έκοψε τα πάντα; Δεύτερο αίτημα ΧΩΡΙΣ bbox για να ξεχωρίσουμε
+        // "δεν υπάρχει τέτοια οδός" από "υπάρχει αλλά εκτός ζώνης διανομής"
+        if (!features.length && bbox) {
+          data = await photonSearch(q, { lat: storeLat, lon: storeLng, signal: ctrl.signal });
+          features = data?.features || [];
+        }
         const cityN = norm(city);
-        const mapped = (data?.features || [])
+        const mapped = features
           .map((f) => {
             const p = f.properties || {};
             const street = p.type === "street" ? p.name : p.street || p.name;
@@ -122,20 +165,38 @@ export default function AddressAutocomplete({
               !cityN ||
               !places.length ||
               places.some((v) => norm(v).includes(cityN) || cityN.includes(norm(v)));
-            return { key: `photon:${label}`, label, sub: null, local: false, inCity };
+            const [flon, flat] = f.geometry?.coordinates || [];
+            return { key: `photon:${label}`, label, sub: null, local: false, inCity, lat: flat, lon: flon };
           })
           .filter(Boolean);
+        // Φίλτρο ζώνης διανομής: haversine από το pin του μαγαζιού — ό,τι είναι
+        // πέρα από την ακτίνα κόβεται (το bbox είναι τετράγωνο, εδώ γίνεται κύκλος)
+        const inZone = hasZone
+          ? mapped.filter(
+              (r) =>
+                r.lat != null &&
+                r.lon != null &&
+                distanceKm(storeLat, storeLng, r.lat, r.lon) <= zoneKm
+            )
+          : mapped;
+        // Η οδός υπάρχει αλλά μόνο εκτός ζώνης → μη μπλοκάρον warning στη φόρμα
+        const outOfZone = hasZone && mapped.length > 0 && inZone.length === 0;
+        if (onZoneStatus) onZoneStatus(outOfZone);
+        if (outOfZone)
+          console.warn(
+            `[AddressAutocomplete] Photon: ${mapped.length} αποτελέσματα για q="${q}" αλλά όλα εκτός ζώνης ${zoneKm}km`
+          );
         // Προτίμηση στην πόλη του καταστήματος — αλλά αν το φίλτρο θα άδειαζε τη λίστα
         // (το Photon γυρνάει λατινικές μεταγραφές ή ονόματα οικισμών/χωριών αντί για
         // την πόλη), κρατάμε όλα τα αποτελέσματα: το lat/lon bias ήδη τα κρατά κοντινά
-        const cityMatches = mapped.filter((r) => r.inCity);
+        const cityMatches = inZone.filter((r) => r.inCity);
         if (!mapped.length)
           console.warn(`[AddressAutocomplete] Photon: κανένα feature για q="${q}"`);
-        else if (!cityMatches.length)
+        else if (inZone.length && !cityMatches.length)
           console.warn(
-            `[AddressAutocomplete] Photon: κανένα από τα ${mapped.length} αποτελέσματα δεν ταιριάζει στην πόλη "${city}" — εμφανίζονται όλα (proximity bias)`
+            `[AddressAutocomplete] Photon: κανένα από τα ${inZone.length} αποτελέσματα δεν ταιριάζει στην πόλη "${city}" — εμφανίζονται όλα (proximity bias)`
           );
-        setPhotonResults(cityMatches.length ? cityMatches : mapped);
+        setPhotonResults(cityMatches.length ? cityMatches : inZone);
       } catch (err) {
         // AbortError = ο χρήστης συνέχισε να γράφει (φυσιολογικό) — δεν είναι αποτυχία
         if (err?.name !== "AbortError")
@@ -145,7 +206,7 @@ export default function AddressAutocomplete({
     }, DEBOUNCE_MS);
     return () => clearTimeout(debounceRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, city, storeLat, storeLng]);
+  }, [q, city, storeLat, storeLng, radiusKm]);
 
   // Συγχώνευση: τοπικές πρώτα, μετά Photon χωρίς διπλότυπα (και μεταξύ τους —
   // ίδια οδός μπορεί να έρθει από πολλούς γειτονικούς οικισμούς)

@@ -187,6 +187,7 @@ def public_user(u: dict) -> dict:
         "store_city": u.get("store_city") or "",
         "store_lat": u.get("store_lat"),
         "store_lng": u.get("store_lng"),
+        "delivery_radius_km": u.get("delivery_radius_km") or 6,
         "store_hours": u.get("store_hours") or {},
         "google_review_link": u.get("google_review_link") or "",
         "print_copies": u.get("print_copies", 1),

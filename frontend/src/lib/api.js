@@ -217,12 +217,14 @@ export const apiAddressBook = () => api.get("/orders/address-book").then((r) => 
 // Autocomplete διευθύνσεων μέσω Photon (komoot) — δωρεάν geocoder που ΕΠΙΤΡΕΠΕΙ typeahead
 // (το Nominatim το απαγορεύει στο usage policy του). Bias στις συντεταγμένες του καταστήματος.
 // ΧΩΡΙΣ lang param: το Photon δεν υποστηρίζει "el" (γυρνάει HTTP 400) — το default δίνει τα τοπικά ονόματα
-export const photonSearch = (q, { lat, lon, signal } = {}) => {
+export const photonSearch = (q, { lat, lon, bbox, signal } = {}) => {
   const params = new URLSearchParams({ q, limit: "5" });
   if (lat != null && lon != null) {
     params.set("lat", lat);
     params.set("lon", lon);
   }
+  // bbox = "minLon,minLat,maxLon,maxLat" — κόβει στο API αποτελέσματα εκτός ζώνης διανομής
+  if (bbox) params.set("bbox", bbox);
   return fetch(`https://photon.komoot.io/api/?${params.toString()}`, { signal }).then((r) => {
     if (!r.ok) {
       console.warn(`Photon geocoder: HTTP ${r.status}`);

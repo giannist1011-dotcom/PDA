@@ -441,6 +441,19 @@ async def address_book(user: dict = Depends(require_staff)):
         out.append({"address": addr, "name": (dv.get("name") or "").strip()})
         if len(out) >= 300:
             break
+    # Συντεταγμένες από το geocode cache του live χάρτη (ίδιο κλειδί: normalized lower)
+    # ώστε το autocomplete να φιλτράρει τις γνωστές διευθύνσεις με τη ζώνη διανομής
+    cache_keys = [" ".join(e["address"].lower().split()) for e in out]
+    if cache_keys:
+        cached = await db.geocode_cache.find(
+            {"user_id": user["id"], "address": {"$in": cache_keys}, "lat": {"$ne": None}},
+            {"_id": 0, "address": 1, "lat": 1, "lng": 1},
+        ).to_list(len(cache_keys))
+        coords = {c["address"]: (c["lat"], c["lng"]) for c in cached}
+        for e in out:
+            k = " ".join(e["address"].lower().split())
+            if k in coords:
+                e["lat"], e["lng"] = coords[k]
     return out
 
 

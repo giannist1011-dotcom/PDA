@@ -452,6 +452,7 @@ export default function PDA() {
           storeCity={user?.store_city || ""}
           storeLat={user?.store_lat ?? null}
           storeLng={user?.store_lng ?? null}
+          deliveryRadiusKm={user?.delivery_radius_km || 6}
         />
         </div>
       </main>

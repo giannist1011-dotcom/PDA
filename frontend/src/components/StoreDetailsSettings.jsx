@@ -32,6 +32,7 @@ export default function StoreDetailsSettings() {
       ? { lat: user.store_lat, lng: user.store_lng }
       : null
   );
+  const [radiusKm, setRadiusKm] = useState(String(user?.delivery_radius_km ?? 6));
   const [hours, setHours] = useState(user?.store_hours || {});
   const [reviewLink, setReviewLink] = useState(user?.google_review_link || "");
   const [saving, setSaving] = useState(false);
@@ -139,6 +140,8 @@ export default function StoreDetailsSettings() {
         store_city: city.trim(),
         store_lat: latlng?.lat ?? null,
         store_lng: latlng?.lng ?? null,
+        // 1–100 km, default 6 — κόβει τα αποτελέσματα του autocomplete διεύθυνσης
+        delivery_radius_km: Math.min(100, Math.max(1, parseFloat(radiusKm) || 6)),
         store_hours: cleanHours,
         google_review_link: reviewLink.trim(),
       });
@@ -177,18 +180,36 @@ export default function StoreDetailsSettings() {
         </div>
       </div>
 
-      <div>
-        <label className="block text-xs text-neutral-400 mb-1.5">
-          Πόλη / Περιοχή — προστίθεται αυτόματα στις διευθύνσεις παραγγελιών για τον live χάρτη
-        </label>
-        <input
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          maxLength={80}
-          placeholder="π.χ. Κοζάνη"
-          data-testid="store-city-input"
-          className={inputCls}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs text-neutral-400 mb-1.5">
+            Πόλη / Περιοχή — προστίθεται αυτόματα στις διευθύνσεις παραγγελιών για τον live χάρτη
+          </label>
+          <input
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            maxLength={80}
+            placeholder="π.χ. Κοζάνη"
+            data-testid="store-city-input"
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-neutral-400 mb-1.5">
+            Ζώνη διανομής (km) — οι προτάσεις διεύθυνσης κόβονται έξω από αυτή την ακτίνα γύρω από το pin
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            step={0.5}
+            value={radiusKm}
+            onChange={(e) => setRadiusKm(e.target.value)}
+            placeholder="6"
+            data-testid="delivery-radius-input"
+            className={inputCls}
+          />
+        </div>
       </div>
 
       <div>
