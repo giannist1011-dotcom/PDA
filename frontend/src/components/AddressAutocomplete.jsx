@@ -6,12 +6,12 @@ import { getAddressBookCached } from "@/lib/offline";
 // Autocomplete διεύθυνσης για τη φόρμα παράδοσης του PDA.
 // Προτάσεις: 1) γνωστές διευθύνσεις πελατών (πρώτες, με όνομα) 2) Photon geocoder
 // με bias στις συντεταγμένες του καταστήματος και φίλτρο στην πόλη του.
-// Ποτέ εμπόδιο στην πληκτρολόγηση: το Photon έχει debounce 300ms, min 3 χαρακτήρες,
+// Ποτέ εμπόδιο στην πληκτρολόγηση: το Photon έχει debounce 200ms, min 2 χαρακτήρες,
 // και offline/σφάλμα δεν μπλοκάρει — οι τοπικές προτάσεις δουλεύουν από cache.
 // Κάθε early-return του Photon path γράφει console.warn για εύκολο debugging στο πεδίο.
 
-const DEBOUNCE_MS = 300;
-const MIN_CHARS = 3;
+const DEBOUNCE_MS = 200;
+const MIN_CHARS = 2;
 
 // Πεζά + αφαίρεση τόνων για ελληνικό ταίριασμα ("παυ" ↔ "Παύλου")
 const deaccent = (s) =>
@@ -63,6 +63,7 @@ export default function AddressAutocomplete({
   const [book, setBook] = useState([]);
   const debounceRef = useRef(null);
   const abortRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Φόρτωση γνωστών διευθύνσεων μία φορά (online-first, cache fallback για offline)
   useEffect(() => {
@@ -160,10 +161,20 @@ export default function AddressAutocomplete({
 
   const showDropdown = open && suggestions.length > 0;
 
+  // Η επιλογή ΔΕΝ κλείνει το πεδίο: γεμίζει την οδό + κενό στο τέλος και κρατά το
+  // focus με τον κέρσορα στο τέλος, ώστε ο χρήστης να γράψει αμέσως τον αριθμό
   const select = (s) => {
-    onChange(s.label);
+    const next = `${s.label} `;
+    onChange(next);
     setOpen(false);
     setHighlight(-1);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(next.length, next.length);
+      }
+    });
   };
 
   const onKeyDown = (e) => {
@@ -188,6 +199,7 @@ export default function AddressAutocomplete({
   return (
     <div className={`relative ${className}`}>
       <input
+        ref={inputRef}
         value={value || ""}
         onChange={(e) => {
           onChange(e.target.value);
