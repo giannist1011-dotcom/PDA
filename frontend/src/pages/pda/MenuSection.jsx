@@ -1,9 +1,12 @@
+import { memo } from "react";
 import { Clock } from "lucide-react";
 import MenuGrid from "@/components/MenuGrid";
 import { schedDateTime } from "./utils";
 
-// Αριστερή στήλη: badge προγραμματισμένων + πλέγμα μενού
-export default function MenuSection({
+// Αριστερή στήλη: badge προγραμματισμένων + πλέγμα μενού.
+// memo: το πλέγμα ΔΕΝ ξαναρεντάρεται όταν αλλάζει state της δεξιάς στήλης
+// (π.χ. πληκτρολόγηση διεύθυνσης) — όλα τα props εδώ μένουν σταθερά τότε
+function MenuSection({
   mobileTab,
   scheduledOrders,
   setScheduledOpen,
@@ -41,3 +44,5 @@ export default function MenuSection({
     </section>
   );
 }
+
+export default memo(MenuSection);

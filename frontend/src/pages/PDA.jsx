@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
 import OrderPanel from "@/components/OrderPanel";
@@ -101,6 +101,11 @@ export default function PDA() {
 
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
   const orderCount = items.reduce((s, it) => s + it.quantity, 0);
+  // Σταθερό αντικείμενο ανά config — όχι νέο Object.fromEntries σε κάθε render/πλήκτρο
+  const menuItemsById = useMemo(
+    () => Object.fromEntries((config.items || []).map((i) => [i.id, i])),
+    [config.items]
+  );
   const discountAmount = !discount
     ? 0
     : discount.type === "percent"
@@ -215,7 +220,9 @@ export default function PDA() {
     }
   };
 
-  const addLine = (item, customization = null, unitPriceOverride = null) => {
+  // useCallback: σταθερή αναφορά ώστε το memo(MenuSection) να μην ξαναρεντάρει το
+  // πλέγμα μενού όταν αλλάζει άσχετο state (π.χ. πληκτρολόγηση στη φόρμα παράδοσης)
+  const addLine = useCallback((item, customization = null, unitPriceOverride = null) => {
     const unit_price = unitPriceOverride ?? item.price;
     setItems((prev) => [
       ...prev,
@@ -230,9 +237,9 @@ export default function PDA() {
         customization,
       },
     ]);
-  };
+  }, []);
 
-  const handleItemClick = (item) => {
+  const handleItemClick = useCallback((item) => {
     if (item.available === false) return;
     const hasGroups = Array.isArray(item.option_groups) && item.option_groups.length > 0;
     if (hasGroups || item.customizable) {
@@ -244,7 +251,7 @@ export default function PDA() {
     } else {
       addLine(item);
     }
-  };
+  }, [addLine]);
 
   const handleEditLineOptions = (line) => {
     const menuItem = config.items.find((i) => i.id === line.item_id);
@@ -431,7 +438,7 @@ export default function PDA() {
         <OrderPanel
           orderNumber={orderNumber}
           items={items}
-          menuItemsById={Object.fromEntries((config.items || []).map((i) => [i.id, i]))}
+          menuItemsById={menuItemsById}
           source={source}
           onSourceChange={setSource}
           delivery={delivery}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, User } from "lucide-react";
 import { photonSearch } from "@/lib/api";
 import { getAddressBookCached } from "@/lib/offline";
@@ -13,6 +13,20 @@ import { getAddressBookCached } from "@/lib/offline";
 const DEBOUNCE_MS = 200;
 const MIN_CHARS = 2;
 const DEFAULT_RADIUS_KM = 6;
+const MAX_SUGGESTIONS = 6;
+
+// Session cache query→αποτελέσματα Photon: ο ίδιος όρος (π.χ. backspace και ξανά)
+// δεν ξαναχτυπάει το API. Δεν κρατάμε network errors — μόνο επιτυχημένες απαντήσεις.
+const photonCache = new Map();
+const PHOTON_CACHE_MAX = 200;
+const cachedPhotonSearch = async (q, opts = {}) => {
+  const key = `${q}|${opts.lat ?? ""}|${opts.lon ?? ""}|${opts.bbox ?? ""}`;
+  if (photonCache.has(key)) return photonCache.get(key);
+  const data = await photonSearch(q, opts);
+  if (photonCache.size >= PHOTON_CACHE_MAX) photonCache.clear();
+  photonCache.set(key, data);
+  return data;
+};
 
 // Απόσταση haversine σε km — φίλτρο ζώνης διανομής γύρω από το pin του μαγαζιού
 const distanceKm = (lat1, lon1, lat2, lon2) => {
@@ -86,11 +100,12 @@ export default function AddressAutocomplete({
   const abortRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Φόρτωση γνωστών διευθύνσεων μία φορά (online-first, cache fallback για offline)
+  // Φόρτωση γνωστών διευθύνσεων μία φορά (online-first, cache fallback για offline).
+  // Η κανονικοποίηση (norm) γίνεται ΜΙΑ φορά εδώ — όχι σε όλη τη λίστα ανά πλήκτρο.
   useEffect(() => {
     let alive = true;
     getAddressBookCached().then((b) => {
-      if (alive) setBook(b || []);
+      if (alive) setBook((b || []).map((e) => ({ ...e, normAddress: norm(e.address) })));
     });
     return () => {
       alive = false;
@@ -105,25 +120,26 @@ export default function AddressAutocomplete({
 
   // Τοπικές προτάσεις: γνωστοί πελάτες που ταιριάζουν στο query — όσες έχουν
   // αποθηκευμένες συντεταγμένες (από το geocode cache) κόβονται εκτός ζώνης
-  const localMatches =
-    q.length >= 1
-      ? book
-          .filter((e) => norm(e.address).includes(norm(q)))
-          .filter(
-            (e) =>
-              !hasZone ||
-              e.lat == null ||
-              e.lng == null ||
-              distanceKm(storeLat, storeLng, e.lat, e.lng) <= zoneKm
-          )
-          .slice(0, 4)
-          .map((e) => ({
-            key: `local:${e.address}`,
-            label: stripCity(e.address, city),
-            sub: e.name || null,
-            local: true,
-          }))
-      : [];
+  const localMatches = useMemo(() => {
+    if (q.length < 1) return [];
+    const qn = norm(q);
+    return book
+      .filter((e) => e.normAddress.includes(qn))
+      .filter(
+        (e) =>
+          !hasZone ||
+          e.lat == null ||
+          e.lng == null ||
+          distanceKm(storeLat, storeLng, e.lat, e.lng) <= zoneKm
+      )
+      .slice(0, 4)
+      .map((e) => ({
+        key: `local:${e.address}`,
+        label: stripCity(e.address, city),
+        sub: e.name || null,
+        local: true,
+      }));
+  }, [q, book, city, hasZone, storeLat, storeLng, zoneKm]);
 
   // Photon: debounce + abort προηγούμενου request + σιωπηλή παράλειψη σε σφάλμα/offline
   useEffect(() => {
@@ -140,7 +156,7 @@ export default function AddressAutocomplete({
       abortRef.current = ctrl;
       try {
         const bbox = hasZone ? radiusBbox(storeLat, storeLng, zoneKm) : undefined;
-        let data = await photonSearch(q, {
+        let data = await cachedPhotonSearch(q, {
           lat: storeLat,
           lon: storeLng,
           bbox,
@@ -150,9 +166,11 @@ export default function AddressAutocomplete({
         // Το bbox έκοψε τα πάντα; Δεύτερο αίτημα ΧΩΡΙΣ bbox για να ξεχωρίσουμε
         // "δεν υπάρχει τέτοια οδός" από "υπάρχει αλλά εκτός ζώνης διανομής"
         if (!features.length && bbox) {
-          data = await photonSearch(q, { lat: storeLat, lon: storeLng, signal: ctrl.signal });
+          data = await cachedPhotonSearch(q, { lat: storeLat, lon: storeLng, signal: ctrl.signal });
           features = data?.features || [];
         }
+        // Ξεκίνησε νεότερο query όσο περιμέναμε — ΠΟΤΕ render αποτελεσμάτων παλιού query
+        if (ctrl.signal.aborted) return;
         const cityN = norm(city);
         const mapped = features
           .map((f) => {
@@ -198,9 +216,10 @@ export default function AddressAutocomplete({
           );
         setPhotonResults(cityMatches.length ? cityMatches : inZone);
       } catch (err) {
-        // AbortError = ο χρήστης συνέχισε να γράφει (φυσιολογικό) — δεν είναι αποτυχία
-        if (err?.name !== "AbortError")
-          console.warn(`[AddressAutocomplete] Photon fetch απέτυχε για q="${q}": ${err?.name || err}`);
+        // AbortError = ο χρήστης συνέχισε να γράφει (φυσιολογικό) — ΔΕΝ αγγίζουμε το state,
+        // το νεότερο query θα γράψει τα δικά του αποτελέσματα
+        if (err?.name === "AbortError" || ctrl.signal.aborted) return;
+        console.warn(`[AddressAutocomplete] Photon fetch απέτυχε για q="${q}": ${err?.name || err}`);
         setPhotonResults([]); // offline ή σφάλμα Photon — μόνο τοπικές προτάσεις
       }
     }, DEBOUNCE_MS);
@@ -209,16 +228,21 @@ export default function AddressAutocomplete({
   }, [q, city, storeLat, storeLng, radiusKm]);
 
   // Συγχώνευση: τοπικές πρώτα, μετά Photon χωρίς διπλότυπα (και μεταξύ τους —
-  // ίδια οδός μπορεί να έρθει από πολλούς γειτονικούς οικισμούς)
-  const seen = new Set(localMatches.map((s) => norm(s.label)));
-  const suggestions = [...localMatches];
-  for (const s of photonResults) {
-    const k = norm(s.label);
-    if (seen.has(k)) continue;
-    seen.add(k);
-    suggestions.push(s);
-  }
-  suggestions.length = Math.min(suggestions.length, 8);
+  // ίδια οδός μπορεί να έρθει από πολλούς γειτονικούς οικισμούς).
+  // useMemo: δεν ξαναϋπολογίζεται σε renders από highlight/open (arrow keys, hover)
+  const suggestions = useMemo(() => {
+    const seen = new Set(localMatches.map((s) => norm(s.label)));
+    const merged = [...localMatches];
+    for (const s of photonResults) {
+      if (merged.length >= MAX_SUGGESTIONS) break;
+      const k = norm(s.label);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      merged.push(s);
+    }
+    merged.length = Math.min(merged.length, MAX_SUGGESTIONS);
+    return merged;
+  }, [localMatches, photonResults]);
 
   const showDropdown = open && suggestions.length > 0;
 
