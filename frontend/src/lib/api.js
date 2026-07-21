@@ -216,15 +216,20 @@ export const apiUpdateStoreDetails = (payload) =>
 export const apiAddressBook = () => api.get("/orders/address-book").then((r) => r.data);
 // Autocomplete διευθύνσεων μέσω Photon (komoot) — δωρεάν geocoder που ΕΠΙΤΡΕΠΕΙ typeahead
 // (το Nominatim το απαγορεύει στο usage policy του). Bias στις συντεταγμένες του καταστήματος.
+// ΧΩΡΙΣ lang param: το Photon δεν υποστηρίζει "el" (γυρνάει HTTP 400) — το default δίνει τα τοπικά ονόματα
 export const photonSearch = (q, { lat, lon, signal } = {}) => {
-  const params = new URLSearchParams({ q, lang: "el", limit: "5" });
+  const params = new URLSearchParams({ q, limit: "5" });
   if (lat != null && lon != null) {
     params.set("lat", lat);
     params.set("lon", lon);
   }
-  return fetch(`https://photon.komoot.io/api/?${params.toString()}`, { signal }).then((r) =>
-    r.json()
-  );
+  return fetch(`https://photon.komoot.io/api/?${params.toString()}`, { signal }).then((r) => {
+    if (!r.ok) {
+      console.warn(`Photon geocoder: HTTP ${r.status}`);
+      return { features: [] };
+    }
+    return r.json();
+  });
 };
 // Geocoding μέσω Nominatim (OpenStreetMap) — δωρεάν, χωρίς API key
 export const geocodeAddress = (q) =>
