@@ -6,18 +6,35 @@ import { getAddressBookCached } from "@/lib/offline";
 // Autocomplete διεύθυνσης για τη φόρμα παράδοσης του PDA.
 // Προτάσεις: 1) γνωστές διευθύνσεις πελατών (πρώτες, με όνομα) 2) Photon geocoder
 // με bias στις συντεταγμένες του καταστήματος και φίλτρο στην πόλη του.
-// Ποτέ εμπόδιο στην πληκτρολόγηση: το Photon έχει debounce 300ms, min 2 χαρακτήρες,
-// και offline/σφάλμα παραλείπεται σιωπηλά — οι τοπικές προτάσεις δουλεύουν από cache.
+// Ποτέ εμπόδιο στην πληκτρολόγηση: το Photon έχει debounce 300ms, min 3 χαρακτήρες,
+// και offline/σφάλμα δεν μπλοκάρει — οι τοπικές προτάσεις δουλεύουν από cache.
+// Κάθε early-return του Photon path γράφει console.warn για εύκολο debugging στο πεδίο.
 
 const DEBOUNCE_MS = 300;
-const MIN_CHARS = 2;
+const MIN_CHARS = 3;
 
 // Πεζά + αφαίρεση τόνων για ελληνικό ταίριασμα ("παυ" ↔ "Παύλου")
-const norm = (s) =>
+const deaccent = (s) =>
   (s || "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "");
+
+// Το Photon συχνά γυρνάει city/locality σε λατινική μεταγραφή ("Ptolemaida", "Kozani")
+// ενώ η πόλη του καταστήματος είναι στα ελληνικά — μεταγράφουμε τα ελληνικά σε λατινικά
+// πριν τη σύγκριση ώστε να ταιριάζουν και οι δύο γραφές
+const GREEKLISH = {
+  α: "a", β: "v", γ: "g", δ: "d", ε: "e", ζ: "z", η: "i", θ: "th",
+  ι: "i", κ: "k", λ: "l", μ: "m", ν: "n", ξ: "x", ο: "o", π: "p",
+  ρ: "r", σ: "s", ς: "s", τ: "t", υ: "y", φ: "f", χ: "ch", ω: "o",
+};
+const norm = (s) =>
+  deaccent(s)
+    // Δίφθογγοι πρώτα: αυ→av, ευ→ev, ου→ou (αλλιώς "Παύλου"→"paylou" ≠ "Pavlou")
+    .replace(/αυ/g, "av")
+    .replace(/ευ/g, "ev")
+    .replace(/ου/g, "ou")
+    .replace(/[α-ως]/g, (ch) => GREEKLISH[ch] || ch);
 
 // Κόβει το ", Πόλη" από το τέλος αποθηκευμένης διεύθυνσης — στο πεδίο μπαίνει μόνο η οδός,
 // η πόλη έχει δικό της πεδίο (η αποθήκευση ενώνει "οδός, πόλη" στο buildDeliveryPayload)
@@ -79,6 +96,7 @@ export default function AddressAutocomplete({
     clearTimeout(debounceRef.current);
     if (abortRef.current) abortRef.current.abort();
     if (q.length < MIN_CHARS) {
+      console.warn(`[AddressAutocomplete] skip: q="${q}" < ${MIN_CHARS} chars`);
       setPhotonResults([]);
       return undefined;
     }
@@ -92,38 +110,53 @@ export default function AddressAutocomplete({
           signal: ctrl.signal,
         });
         const cityN = norm(city);
-        const results = (data?.features || [])
+        const mapped = (data?.features || [])
           .map((f) => {
             const p = f.properties || {};
             const street = p.type === "street" ? p.name : p.street || p.name;
             if (!street) return null;
             const label = p.housenumber ? `${street} ${p.housenumber}` : street;
             const places = [p.city, p.district, p.county, p.locality].filter(Boolean);
-            // Φίλτρο στην πόλη του καταστήματος (χαλαρό, χωρίς τόνους)
-            if (
-              cityN &&
-              places.length &&
-              !places.some((v) => norm(v).includes(cityN) || cityN.includes(norm(v)))
-            )
-              return null;
-            return { key: `photon:${label}`, label, sub: null, local: false };
+            const inCity =
+              !cityN ||
+              !places.length ||
+              places.some((v) => norm(v).includes(cityN) || cityN.includes(norm(v)));
+            return { key: `photon:${label}`, label, sub: null, local: false, inCity };
           })
           .filter(Boolean);
-        setPhotonResults(results);
-      } catch {
-        setPhotonResults([]); // offline ή σφάλμα Photon — μόνο τοπικές προτάσεις, χωρίς μήνυμα
+        // Προτίμηση στην πόλη του καταστήματος — αλλά αν το φίλτρο θα άδειαζε τη λίστα
+        // (το Photon γυρνάει λατινικές μεταγραφές ή ονόματα οικισμών/χωριών αντί για
+        // την πόλη), κρατάμε όλα τα αποτελέσματα: το lat/lon bias ήδη τα κρατά κοντινά
+        const cityMatches = mapped.filter((r) => r.inCity);
+        if (!mapped.length)
+          console.warn(`[AddressAutocomplete] Photon: κανένα feature για q="${q}"`);
+        else if (!cityMatches.length)
+          console.warn(
+            `[AddressAutocomplete] Photon: κανένα από τα ${mapped.length} αποτελέσματα δεν ταιριάζει στην πόλη "${city}" — εμφανίζονται όλα (proximity bias)`
+          );
+        setPhotonResults(cityMatches.length ? cityMatches : mapped);
+      } catch (err) {
+        // AbortError = ο χρήστης συνέχισε να γράφει (φυσιολογικό) — δεν είναι αποτυχία
+        if (err?.name !== "AbortError")
+          console.warn(`[AddressAutocomplete] Photon fetch απέτυχε για q="${q}": ${err?.name || err}`);
+        setPhotonResults([]); // offline ή σφάλμα Photon — μόνο τοπικές προτάσεις
       }
     }, DEBOUNCE_MS);
     return () => clearTimeout(debounceRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, city, storeLat, storeLng]);
 
-  // Συγχώνευση: τοπικές πρώτα, μετά Photon χωρίς διπλότυπα
+  // Συγχώνευση: τοπικές πρώτα, μετά Photon χωρίς διπλότυπα (και μεταξύ τους —
+  // ίδια οδός μπορεί να έρθει από πολλούς γειτονικούς οικισμούς)
   const seen = new Set(localMatches.map((s) => norm(s.label)));
-  const suggestions = [
-    ...localMatches,
-    ...photonResults.filter((s) => !seen.has(norm(s.label))),
-  ].slice(0, 8);
+  const suggestions = [...localMatches];
+  for (const s of photonResults) {
+    const k = norm(s.label);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    suggestions.push(s);
+  }
+  suggestions.length = Math.min(suggestions.length, 8);
 
   const showDropdown = open && suggestions.length > 0;
 
