@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   apiLogin,
   apiMe,
@@ -58,22 +59,33 @@ export function AuthProvider({ children }) {
     };
   }, [userId]);
 
+  // Το tenant branding (favicon/τίτλος μαγαζιού) ΔΕΝ εφαρμόζεται ποτέ στο admin
+  // panel της πλατφόρμας — εκεί πάντα OrderDeck, ακόμα κι αν υπάρχει store session
+  const { pathname } = useLocation();
+  const onAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+
   // Dynamic favicon: λογότυπο μαγαζιού όσο υπάρχει, OrderDeck default αλλιώς/στο logout
   useEffect(() => {
-    if (!storeLogo) return undefined;
+    if (!storeLogo || onAdmin) return undefined;
     setFavicon(storeLogo);
     return () => resetFavicon();
-  }, [storeLogo]);
+  }, [storeLogo, onAdmin]);
 
   // Dynamic τίτλος tab: όνομα μαγαζιού όσο υπάρχει session, OrderDeck στο logout
   const storeName = user && user !== false ? user.restaurant_name : null;
   useEffect(() => {
+    if (onAdmin) {
+      document.title = "OrderDeck Admin";
+      return () => {
+        document.title = "OrderDeck — POS για την εστίασή σου";
+      };
+    }
     if (!storeName) return undefined;
     document.title = storeName;
     return () => {
       document.title = "OrderDeck — POS για την εστίασή σου";
     };
-  }, [storeName]);
+  }, [storeName, onAdmin]);
 
   useEffect(() => {
     (async () => {
