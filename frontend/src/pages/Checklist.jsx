@@ -7,7 +7,7 @@ import {
 import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
 import { useAuth } from "@/context/AuthContext";
-import { apiChecklistToday, apiChecklistTick } from "@/lib/api";
+import { apiChecklistToday, apiChecklistTick, apiChecklistTemplates } from "@/lib/api";
 import TickList from "./checklist/TickList";
 import ManageList from "./checklist/ManageList";
 import HistoryTab from "./checklist/HistoryTab";
@@ -18,6 +18,9 @@ export default function Checklist() {
   const isOwner = role === "owner";
   const [tab, setTab] = useState("today"); // today | manage | history
   const [data, setData] = useState(null);
+  // Templates για τη «Διαχείριση»: περιλαμβάνουν και έκτακτες ΜΕΛΛΟΝΤΙΚΕΣ εργασίες
+  // που δεν εμφανίζονται στο «Σήμερα»
+  const [templates, setTemplates] = useState([]);
   const [error, setError] = useState(false);
   const [busyId, setBusyId] = useState(null);
 
@@ -25,6 +28,7 @@ export default function Checklist() {
     try {
       const d = await apiChecklistToday();
       setData(d);
+      if (isOwner) setTemplates(await apiChecklistTemplates());
       setError(false);
     } catch {
       setError(true);
@@ -33,6 +37,7 @@ export default function Checklist() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onTick = async (it) => {
@@ -110,8 +115,16 @@ export default function Checklist() {
 
         {tab === "manage" && isOwner && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ManageList list="open" items={openItems} onChanged={load} />
-            <ManageList list="close" items={closeItems} onChanged={load} />
+            <ManageList
+              list="open"
+              items={templates.filter((t) => t.list === "open")}
+              onChanged={load}
+            />
+            <ManageList
+              list="close"
+              items={templates.filter((t) => t.list === "close")}
+              onChanged={load}
+            />
           </div>
         )}
 

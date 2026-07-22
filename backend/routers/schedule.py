@@ -1,12 +1,30 @@
-"""Πρόγραμμα: υπάλληλοι (πρόγραμμα) & βάρδιες."""
+"""Πρόγραμμα: υπάλληλοι (πρόγραμμα) & βάρδιες.
+
+Οι βάρδιες αποθηκεύονται ανά week_start (Δευτέρα) — οι παλιές εβδομάδες μένουν
+στη βάση ως ιστορικό και είναι ΜΟΝΟ για προβολή (τα writes τις απορρίπτουν).
+"""
 import uuid
+from datetime import timedelta
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from core import db, require_staff, require_manager
+from core import db, require_staff, require_manager, athens_now
 
 router = APIRouter()
+
+
+def _current_week_start() -> str:
+    """Η Δευτέρα της τρέχουσας εβδομάδας (ημέρα Ελλάδας, YYYY-MM-DD)."""
+    today = athens_now().date()
+    return (today - timedelta(days=today.weekday())).isoformat()
+
+
+def _reject_past_week(week_start: str):
+    if week_start < _current_week_start():
+        raise HTTPException(
+            403, "Το πρόγραμμα περασμένων εβδομάδων είναι μόνο για προβολή"
+        )
 
 
 # ============ EMPLOYEES ============
@@ -64,6 +82,13 @@ class ShiftIn(BaseModel):
     end: str    # HH:MM
 
 
+@router.get("/shifts/weeks")
+async def list_shift_weeks(user: dict = Depends(require_staff)):
+    """Εβδομάδες (week_start) που έχουν καταχωρημένες βάρδιες — για το ιστορικό."""
+    weeks = await db.shifts.distinct("week_start", {"user_id": user["id"]})
+    return {"weeks": sorted(weeks, reverse=True), "current": _current_week_start()}
+
+
 @router.get("/shifts")
 async def list_shifts(week_start: str, user: dict = Depends(require_staff)):
     docs = await db.shifts.find(
@@ -75,6 +100,7 @@ async def list_shifts(week_start: str, user: dict = Depends(require_staff)):
 
 @router.put("/shifts")
 async def upsert_shift(body: ShiftIn, user: dict = Depends(require_manager)):
+    _reject_past_week(body.week_start)
     # ensure employee belongs to this user
     emp = await db.employees.find_one({"id": body.employee_id, "user_id": user["id"]})
     if not emp:
@@ -101,6 +127,7 @@ async def delete_shift(
     day: int,
     user: dict = Depends(require_manager),
 ):
+    _reject_past_week(week_start)
     r = await db.shifts.delete_one({
         "user_id": user["id"],
         "employee_id": employee_id,

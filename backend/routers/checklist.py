@@ -23,6 +23,13 @@ LISTS = ("open", "close")
 class TemplateIn(BaseModel):
     list: Literal["open", "close"]
     text: str = Field(min_length=1, max_length=200)
+    # Έκτακτη εργασία ΜΙΑΣ ημέρας (YYYY-MM-DD) — None = επαναλαμβανόμενη καθημερινά
+    date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _visible_on(tpl: dict, day: str) -> bool:
+    """Επαναλαμβανόμενη (χωρίς date) → κάθε μέρα· έκτακτη → μόνο τη δική της μέρα."""
+    return not tpl.get("date") or tpl["date"] == day
 
 
 class TemplatePatchIn(BaseModel):
@@ -36,8 +43,18 @@ class ReorderIn(BaseModel):
 
 @router.get("/checklist/templates")
 async def list_templates(user: dict = Depends(require_staff)):
+    # Επαναλαμβανόμενες + έκτακτες που δεν έχουν περάσει ακόμη (σημερινές/μελλοντικές).
+    # Οι περασμένες έκτακτες μένουν στη βάση (ιστορικό) αλλά δεν εμφανίζονται ξανά.
     docs = await db.checklist_templates.find(
-        {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
+        {
+            "user_id": user["id"],
+            "$or": [
+                {"date": {"$exists": False}},
+                {"date": None},
+                {"date": {"$gte": athens_today()}},
+            ],
+        },
+        {"_id": 0, "user_id": 0},
     ).sort("order", 1).to_list(500)
     return docs
 
@@ -52,6 +69,7 @@ async def create_template(body: TemplateIn, user: dict = Depends(require_owner))
         "user_id": user["id"],
         "list": body.list,
         "text": body.text.strip(),
+        "date": body.date,
         "order": count,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -104,11 +122,14 @@ async def checklist_today(user: dict = Depends(require_staff)):
     by_template = {t["template_id"]: t for t in ticks}
     items = []
     for tpl in templates:
+        if not _visible_on(tpl, today):
+            continue  # έκτακτη εργασία άλλης ημέρας — δεν εμφανίζεται σήμερα
         tick = by_template.get(tpl["id"])
         items.append({
             "id": tpl["id"],
             "list": tpl["list"],
             "text": tpl["text"],
+            "date": tpl.get("date"),
             "order": tpl.get("order", 0),
             "done": bool(tick),
             "done_by": tick["by"] if tick else None,
@@ -130,6 +151,8 @@ async def tick_item(body: TickIn, user: dict = Depends(require_staff)):
     )
     if not tpl:
         raise HTTPException(404, "Η εργασία δεν βρέθηκε")
+    if not _visible_on(tpl, today):
+        raise HTTPException(400, "Η έκτακτη εργασία δεν αφορά τη σημερινή ημέρα")
     if not body.done:
         await db.checklist_ticks.delete_one(
             {"user_id": user["id"], "template_id": body.template_id, "date": today}
@@ -182,10 +205,12 @@ async def checklist_history(days: int = 14, user: dict = Depends(require_owner))
     for d in dates:
         day_ticks = by_date[d]
         ticked_ids = {t["template_id"] for t in day_ticks}
-        # ό,τι υπάρχει σήμερα στα templates και δεν τικαρίστηκε εκείνη τη μέρα
+        # ό,τι υπάρχει σήμερα στα templates, αφορούσε εκείνη τη μέρα
+        # (επαναλαμβανόμενο ή έκτακτο της ημέρας) και δεν τικαρίστηκε
         missing = [
             {"id": tpl["id"], "list": tpl["list"], "text": tpl["text"]}
-            for tpl in templates if tpl["id"] not in ticked_ids
+            for tpl in templates
+            if tpl["id"] not in ticked_ids and _visible_on(tpl, d)
         ]
         out.append({
             "date": d,

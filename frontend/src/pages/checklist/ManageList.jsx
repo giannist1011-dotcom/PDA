@@ -7,6 +7,8 @@ import {
   ChevronDown,
   X,
   Check,
+  CalendarClock,
+  Repeat,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -15,13 +17,18 @@ import {
   apiChecklistDeleteTemplate,
   apiChecklistReorder,
 } from "@/lib/api";
-import { LIST_META } from "./utils";
+import DatePicker from "@/components/DatePicker";
+import { athensToday } from "@/lib/dates";
+import { LIST_META, fmtShortDateGR } from "./utils";
 
 // ---------- Διαχείριση (owner) ----------
 export default function ManageList({ list, items, onChanged }) {
   const meta = LIST_META[list];
   const Icon = meta.icon;
   const [newText, setNewText] = useState("");
+  // Έκτακτη εργασία μίας ημέρας: όταν οριστεί ημερομηνία, η εργασία εμφανίζεται
+  // ΜΟΝΟ εκείνη τη μέρα (κενό = επαναλαμβανόμενη καθημερινά)
+  const [newDate, setNewDate] = useState("");
   const [editId, setEditId] = useState(null);
   const [editText, setEditText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,8 +38,9 @@ export default function ManageList({ list, items, onChanged }) {
     if (!text || busy) return;
     setBusy(true);
     try {
-      await apiChecklistCreateTemplate(list, text);
+      await apiChecklistCreateTemplate(list, text, newDate || null);
       setNewText("");
+      setNewDate("");
       await onChanged();
     } catch {
       toast.error("Σφάλμα προσθήκης");
@@ -141,6 +149,24 @@ export default function ManageList({ list, items, onChanged }) {
                 <span className="flex-1 min-w-0 text-white font-semibold truncate">
                   {it.text}
                 </span>
+                {it.date ? (
+                  <span
+                    className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gold/20 text-gold"
+                    title={`Έκτακτη εργασία — μόνο στις ${fmtShortDateGR(it.date)}`}
+                    data-testid={`checklist-oneoff-badge-${it.id}`}
+                  >
+                    <CalendarClock className="w-3 h-3" />
+                    {fmtShortDateGR(it.date)}
+                  </span>
+                ) : (
+                  <span
+                    className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#2A0E14] text-neutral-500 border border-[#431A25]"
+                    title="Επαναλαμβανόμενη — κάθε μέρα"
+                  >
+                    <Repeat className="w-3 h-3" />
+                    <span className="hidden sm:inline">Καθημερινή</span>
+                  </span>
+                )}
                 <button
                   onClick={() => {
                     setEditId(it.id);
@@ -163,24 +189,52 @@ export default function ManageList({ list, items, onChanged }) {
           </div>
         ))}
       </div>
-      <div className="flex gap-2 p-3 border-t border-[#723645]">
-        <input
-          value={newText}
-          onChange={(e) => setNewText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="Νέα εργασία (π.χ. Άναψε τη σχάρα)"
-          data-testid={`checklist-add-input-${list}`}
-          className="flex-1 min-w-0 h-11 px-3 rounded-md bg-[#2A0E14] border border-[#723645] text-white placeholder-neutral-600 focus:border-flame outline-none"
-        />
-        <button
-          onClick={add}
-          disabled={!newText.trim() || busy}
-          data-testid={`checklist-add-btn-${list}`}
-          className="h-11 px-4 shrink-0 rounded-md bg-flame text-white font-bold flex items-center gap-1.5 disabled:opacity-40"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Προσθήκη</span>
-        </button>
+      <div className="p-3 border-t border-[#723645] space-y-2">
+        <div className="flex gap-2">
+          <input
+            value={newText}
+            onChange={(e) => setNewText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+            placeholder="Νέα εργασία (π.χ. Άναψε τη σχάρα)"
+            data-testid={`checklist-add-input-${list}`}
+            className="flex-1 min-w-0 h-11 px-3 rounded-md bg-[#2A0E14] border border-[#723645] text-white placeholder-neutral-600 focus:border-flame outline-none"
+          />
+          <button
+            onClick={add}
+            disabled={!newText.trim() || busy}
+            data-testid={`checklist-add-btn-${list}`}
+            className="h-11 px-4 shrink-0 rounded-md bg-flame text-white font-bold flex items-center gap-1.5 disabled:opacity-40"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Προσθήκη</span>
+          </button>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-neutral-400 flex items-center gap-1">
+            <CalendarClock className="w-3.5 h-3.5" />
+            Μόνο για μία ημέρα:
+          </span>
+          <DatePicker
+            value={newDate}
+            min={athensToday()}
+            onChange={setNewDate}
+            testId={`checklist-add-date-${list}`}
+            className="h-9 px-2"
+          />
+          {newDate ? (
+            <button
+              onClick={() => setNewDate("")}
+              data-testid={`checklist-add-date-clear-${list}`}
+              className="h-9 px-2 rounded-md text-xs font-bold text-neutral-400 hover:text-white border border-[#723645] hover:border-flame"
+            >
+              Καθαρισμός
+            </button>
+          ) : (
+            <span className="text-[11px] text-neutral-600">
+              (κενό = επαναλαμβανόμενη καθημερινά)
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

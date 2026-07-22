@@ -61,6 +61,10 @@ export const apiAddShopping = (text) => api.post("/shopping", { text }).then((r)
 export const apiUpdateShopping = (id, payload) => api.put(`/shopping/${id}`, payload).then((r) => r.data);
 export const apiDeleteShopping = (id) => api.delete(`/shopping/${id}`).then((r) => r.data);
 export const apiResetShopping = () => api.post("/shopping/reset").then((r) => r.data);
+export const apiRecordShoppingPrint = (items) =>
+  api.post("/shopping/print", { items }).then((r) => r.data);
+export const apiListShoppingPrints = (skip = 0, limit = 20) =>
+  api.get("/shopping/prints", { params: { skip, limit } }).then((r) => r.data);
 
 // PHOTOS
 export const apiListPhotos = () => api.get("/photos").then((r) => r.data);
@@ -94,8 +98,8 @@ export const apiChecklistTick = (templateId, done) =>
   api.post("/checklist/tick", { template_id: templateId, done }).then((r) => r.data);
 export const apiChecklistTemplates = () =>
   api.get("/checklist/templates").then((r) => r.data);
-export const apiChecklistCreateTemplate = (list, text) =>
-  api.post("/checklist/templates", { list, text }).then((r) => r.data);
+export const apiChecklistCreateTemplate = (list, text, date = null) =>
+  api.post("/checklist/templates", { list, text, date: date || null }).then((r) => r.data);
 export const apiChecklistUpdateTemplate = (id, text) =>
   api.put(`/checklist/templates/${id}`, { text }).then((r) => r.data);
 export const apiChecklistDeleteTemplate = (id) =>
@@ -115,6 +119,7 @@ export const apiDeleteEmployee = (id) => api.delete(`/employees/${id}`).then((r)
 export const apiListShifts = (weekStart) =>
   api.get("/shifts", { params: { week_start: weekStart } }).then((r) => r.data);
 export const apiUpsertShift = (payload) => api.put("/shifts", payload).then((r) => r.data);
+export const apiListShiftWeeks = () => api.get("/shifts/weeks").then((r) => r.data);
 export const apiDeleteShift = (employeeId, weekStart, day) =>
   api.delete("/shifts", { params: { employee_id: employeeId, week_start: weekStart, day } }).then((r) => r.data);
 
@@ -176,6 +181,11 @@ export const apiListDayReports = () => api.get("/reports/day").then((r) => r.dat
 // ANALYTICS
 export const fetchAnalytics = (dateFrom, dateTo) =>
   api.get("/analytics", { params: { date_from: dateFrom, date_to: dateTo } }).then((r) => r.data);
+
+export const fetchAnalyticsYoY = (dateFrom, dateTo) =>
+  api.get("/analytics/yoy", { params: { date_from: dateFrom, date_to: dateTo } }).then((r) => r.data);
+export const apiOrdersHeatmap = (dateFrom, dateTo) =>
+  api.get("/orders/heatmap", { params: { date_from: dateFrom, date_to: dateTo } }).then((r) => r.data);
 
 // DECK VIEW (live overview ημέρας)
 export const fetchDeckOverview = () => api.get("/deck/overview").then((r) => r.data);

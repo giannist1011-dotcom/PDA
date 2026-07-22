@@ -5,7 +5,7 @@ import { Crown, User as UserIcon, Delete, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { apiListProfiles, formatApiError } from "@/lib/api";
 import { cacheProfilesForOffline, getCachedProfiles, isNetworkError } from "@/lib/offline";
-import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
+import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole, homePathFor } from "@/lib/roles";
 import ForcePinChange from "./profile-select/ForcePinChange";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"];
@@ -161,12 +161,12 @@ export default function ProfileSelect() {
         profile={forcePinProfile}
         onDone={() => {
           setForcePinProfile(null);
-          navigate("/app");
+          navigate(homePathFor(forcePinProfile.role));
         }}
       />
     );
   }
-  if (hasProfile) return <Navigate to="/app" replace />;
+  if (hasProfile) return <Navigate to={homePathFor(user.role)} replace />;
 
   const handleSubmit = async (pin) => {
     setBusy(true);
@@ -177,7 +177,7 @@ export default function ProfileSelect() {
         return;
       }
       toast.success(`Καλωσήρθες, ${chosen.name}`);
-      navigate("/app");
+      navigate(homePathFor(chosen.role));
     } finally {
       setBusy(false);
     }

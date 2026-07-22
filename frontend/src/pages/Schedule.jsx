@@ -15,6 +15,7 @@ import {
   apiUpdateEmployee,
   apiDeleteEmployee,
   apiListShifts,
+  apiListShiftWeeks,
   apiUpsertShift,
   apiDeleteShift,
   formatApiError,
@@ -28,10 +29,14 @@ import { printSchedule, buildScheduleText, copyToClipboard } from "./schedule/ut
 
 export default function Schedule() {
   const { user, canManage } = useAuth();
-  const readOnly = !canManage;
+  const currentMonday = isoDate(mondayOf(new Date()));
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [weekStart, setWeekStart] = useState(isoDate(mondayOf(new Date())));
+  // Εβδομάδες με αποθηκευμένες βάρδιες — για το ιστορικό (παλιές = μόνο προβολή)
+  const [historyWeeks, setHistoryWeeks] = useState([]);
+  const isPastWeek = weekStart < currentMonday;
+  const readOnly = !canManage || isPastWeek;
   const [newEmp, setNewEmp] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState("");
@@ -57,10 +62,20 @@ export default function Schedule() {
     }
   };
 
+  const loadWeeks = async () => {
+    try {
+      const res = await apiListShiftWeeks();
+      setHistoryWeeks(res.weeks || []);
+    } catch {
+      // σιωπηλά — το ιστορικό εβδομάδων είναι βοηθητικό, το πρόγραμμα δουλεύει και χωρίς αυτό
+    }
+  };
+
   useEffect(() => {
     (async () => {
       await loadEmployees();
       await loadShifts();
+      await loadWeeks();
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,6 +156,7 @@ export default function Schedule() {
         );
         return [...filtered, saved];
       });
+      setHistoryWeeks((p) => (p.includes(weekStart) ? p : [weekStart, ...p].sort().reverse()));
       setModalOpen(false);
       toast.success("Η βάρδια αποθηκεύτηκε");
     } catch (e) {
@@ -160,6 +176,12 @@ export default function Schedule() {
       toast.error(formatApiError(e));
     }
   };
+
+  // Επιλογές του dropdown ιστορικού: τρέχουσα + προβαλλόμενη + όσες έχουν βάρδιες
+  const weekOptions = useMemo(() => {
+    const set = new Set([currentMonday, weekStart, ...historyWeeks]);
+    return Array.from(set).sort().reverse();
+  }, [currentMonday, weekStart, historyWeeks]);
 
   const days = useMemo(() => {
     const mon = new Date(weekStart + "T00:00:00");
@@ -198,9 +220,28 @@ export default function Schedule() {
             </h2>
             <p className="text-sm text-neutral-400 mt-1" data-testid="week-range">
               Εβδομάδα: {formatWeekRange(weekStart)}
+              {isPastWeek && (
+                <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gold/20 text-gold">
+                  Ιστορικό — μόνο προβολή
+                </span>
+              )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={weekStart}
+              onChange={(e) => setWeekStart(e.target.value)}
+              data-testid="week-history-select"
+              className="h-11 px-3 rounded-md bg-[#3D1620] border border-[#723645] text-white text-sm font-bold focus:outline-none focus:border-flame"
+              title="Ιστορικό εβδομάδων"
+            >
+              {weekOptions.map((w) => (
+                <option key={w} value={w}>
+                  {formatWeekRange(w)} · {w.slice(0, 4)}
+                  {w === currentMonday ? " (τρέχουσα)" : w < currentMonday ? " — ιστορικό" : ""}
+                </option>
+              ))}
+            </select>
             <Button
               onClick={() => changeWeek(-1)}
               data-testid="prev-week-btn"

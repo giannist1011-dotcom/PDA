@@ -21,6 +21,11 @@ export const nameMatchesRole = (name, role) =>
   !!ROLE_LABELS[role] &&
   name.trim().toLowerCase() === ROLE_LABELS[role].toLowerCase();
 
+// Αρχική σελίδα μετά την επιλογή προφίλ: το Deck View είναι το πρώτο tab για
+// όσους έχουν πρόσβαση (owner)· οι υπόλοιποι προσγειώνονται στις Παραγγελίες
+// (ο waiter ανακατευθύνεται στα Τραπέζια από το ProtectedRoute, όπως πριν).
+export const homePathFor = (role) => (role === "owner" ? "/app/deck" : "/app");
+
 // Display an audit actor. Legacy orders stored the raw role ("owner"/"employee")
 // in the name field — map those to labels; new records carry the profile name.
 export const actorLabel = (name, role = null) => {

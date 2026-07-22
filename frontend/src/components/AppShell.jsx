@@ -43,6 +43,9 @@ const ALL_ROLES = ["owner", "manager", "employee", "waiter"];
 const STAFF = ["owner", "manager", "employee"];
 const MANAGERS = ["owner", "manager"];
 const NAV_ALL = [
+  // Deck View ΠΡΩΤΟ στο μενού (πάνω από τις Παραγγελίες) — προφίλ χωρίς πρόσβαση
+  // δεν το βλέπουν (navVisible) και προσγειώνονται στις Παραγγελίες όπως πριν
+  { to: "/app/deck", label: "Deck View", icon: Gauge, testId: "drawer-link-deck", roles: ["owner"] },
   { to: "/app", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", roles: STAFF },
   { to: "/app/tables", label: "Τραπέζια", icon: LayoutGrid, testId: "drawer-link-tables", roles: ALL_ROLES, requiresTables: true },
   { to: "/app/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", roles: STAFF, perm: "history" },
@@ -51,7 +54,6 @@ const NAV_ALL = [
   { to: "/app/checklist", label: "Checklist", icon: ListChecks, testId: "drawer-link-checklist", roles: STAFF },
   { to: "/app/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule", roles: STAFF },
   { to: "/app/waiters", label: "Σερβιτόροι", icon: UserIcon, testId: "drawer-link-waiters", roles: ["manager"] },
-  { to: "/app/deck", label: "Deck View", icon: Gauge, testId: "drawer-link-deck", roles: ["owner"] },
 ];
 
 // Ομάδα "Κατάστημα" — collapsible στο drawer. Εμφανίζεται μόνο αν ο ρόλος

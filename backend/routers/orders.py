@@ -461,6 +461,59 @@ async def address_book(user: dict = Depends(require_staff)):
     return out
 
 
+@router.get("/orders/heatmap")
+async def orders_heatmap(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_feature("analytics", require_owner)),
+):
+    """Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng) με βάρος
+    το πλήθος παραγγελιών ανά διεύθυνση. Μόνο ήδη γεωκωδικοποιημένες διευθύνσεις
+    (από το geocode cache του live χάρτη) — δεν γίνεται νέο geocoding εδώ."""
+    today = athens_today()
+    df = date_from or today
+    dt = date_to or today
+    utc_from, utc_to = local_day_range(df, dt)
+    docs = await db.orders.find(
+        {
+            "user_id": user["id"],
+            "created_at": {"$gte": utc_from, "$lt": utc_to},
+            "cancelled": {"$ne": True},
+            "status": {"$ne": "scheduled"},
+            "delivery.delivery_type": "delivery",
+            "delivery.address": {"$nin": [None, ""]},
+        },
+        {"_id": 0, "delivery.address": 1},
+    ).to_list(50000)
+
+    counts: dict = {}
+    for d in docs:
+        addr = ((d.get("delivery") or {}).get("address") or "").strip()
+        if not addr:
+            continue
+        key = " ".join(addr.lower().split())  # ίδιο κλειδί με το geocode cache
+        counts[key] = counts.get(key, 0) + 1
+
+    points = []
+    keys = list(counts.keys())
+    for i in range(0, len(keys), 500):
+        batch = keys[i:i + 500]
+        cached = await db.geocode_cache.find(
+            {"user_id": user["id"], "address": {"$in": batch}, "lat": {"$ne": None}},
+            {"_id": 0, "address": 1, "lat": 1, "lng": 1},
+        ).to_list(len(batch))
+        for c in cached:
+            points.append({"lat": c["lat"], "lng": c["lng"], "count": counts[c["address"]]})
+
+    return {
+        "date_from": df,
+        "date_to": dt,
+        "total_delivery_orders": len(docs),
+        "located": sum(p["count"] for p in points),
+        "points": points,
+    }
+
+
 @router.get("/orders/{oid}", response_model=Order)
 async def get_order(oid: str, user: dict = Depends(require_staff)):
     doc = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})

@@ -1,4 +1,4 @@
-import { Plus, Trash2, ShoppingBasket, Check, Printer } from "lucide-react";
+import { Plus, Trash2, ShoppingBasket, Check, Printer, History as HistoryIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // ---------- Shopping list panel ----------
@@ -11,6 +11,7 @@ export default function ShoppingListPanel({
   toggleShopBought,
   removeShop,
   onPrint,
+  onHistory,
 }) {
   return (
     <aside className="bg-[#3D1620] border border-[#723645] rounded-lg p-5 h-fit lg:sticky lg:top-6">
@@ -19,16 +20,27 @@ export default function ShoppingListPanel({
           <ShoppingBasket className="w-5 h-5 text-flame" />
           <h2 className="font-heading text-xl font-bold">Λίστα αγορών</h2>
         </div>
-        <button
-          onClick={onPrint}
-          disabled={shopping.length === 0}
-          data-testid="shopping-print-btn"
-          className="flex items-center gap-1.5 h-9 px-3 rounded-md bg-[#2A0E14] border border-[#723645] text-neutral-200 text-sm font-bold hover:border-flame hover:text-flame disabled:opacity-40 disabled:cursor-not-allowed"
-          title="Εκτύπωση & μηδενισμός λίστας"
-        >
-          <Printer className="w-4 h-4" />
-          Εκτύπωση
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onHistory}
+            data-testid="shopping-history-btn"
+            className="flex items-center gap-1.5 h-9 px-3 rounded-md bg-[#2A0E14] border border-[#723645] text-neutral-200 text-sm font-bold hover:border-flame hover:text-flame"
+            title="Ιστορικό εκτυπώσεων"
+          >
+            <HistoryIcon className="w-4 h-4" />
+            <span className="hidden sm:inline">Ιστορικό</span>
+          </button>
+          <button
+            onClick={onPrint}
+            disabled={shopping.length === 0}
+            data-testid="shopping-print-btn"
+            className="flex items-center gap-1.5 h-9 px-3 rounded-md bg-[#2A0E14] border border-[#723645] text-neutral-200 text-sm font-bold hover:border-flame hover:text-flame disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Εκτύπωση & μηδενισμός λίστας"
+          >
+            <Printer className="w-4 h-4" />
+            Εκτύπωση
+          </button>
+        </div>
       </div>
       {canManage ? (
         <form onSubmit={addShopItem} className="flex gap-2 mb-4">

@@ -87,6 +87,61 @@ async def analytics(
     }
 
 
+# ============ ΣΥΓΚΡΙΣΗ ΜΕ ΠΕΡΣΙ (year-over-year) ============
+def _minus_one_year(day: str) -> str:
+    """YYYY-MM-DD → ίδια μέρα πέρσι (29/2 → 28/2)."""
+    y, m, d = day.split("-")
+    try:
+        return datetime(int(y) - 1, int(m), int(d)).date().isoformat()
+    except ValueError:  # 29 Φεβρουαρίου σε μη δίσεκτο έτος
+        return f"{int(y) - 1}-02-28"
+
+
+async def _range_totals(user_id: str, day_from: str, day_to: str) -> dict:
+    utc_from, utc_to = local_day_range(day_from, day_to)
+    docs = await db.orders.find(
+        {
+            "user_id": user_id,
+            "created_at": {"$gte": utc_from, "$lt": utc_to},
+            "cancelled": {"$ne": True},
+            "status": {"$ne": "scheduled"},
+        },
+        {"_id": 0, "total": 1},
+    ).to_list(50000)
+    return {
+        "date_from": day_from,
+        "date_to": day_to,
+        "orders": len(docs),
+        "revenue": round(sum(d.get("total", 0) for d in docs), 2),
+    }
+
+
+@router.get("/analytics/yoy")
+async def analytics_yoy(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_feature("analytics", require_owner)),
+):
+    """Ίδια περίοδος πέρσι: έσοδα/παραγγελίες + delta. available=False όταν το
+    μαγαζί δεν έχει καθόλου δεδομένα που να φτάνουν την περσινή περίοδο."""
+    today = athens_today()
+    df = date_from or today
+    dt = date_to or today
+    ly_from, ly_to = _minus_one_year(df), _minus_one_year(dt)
+
+    earliest = await db.orders.find_one(
+        {"user_id": user["id"]}, {"_id": 0, "created_at": 1}, sort=[("created_at", 1)]
+    )
+    _, ly_utc_to = local_day_range(ly_from, ly_to)
+    available = bool(earliest and earliest["created_at"] < ly_utc_to)
+    if not available:
+        return {"available": False, "current": None, "last_year": None}
+
+    current = await _range_totals(user["id"], df, dt)
+    last_year = await _range_totals(user["id"], ly_from, ly_to)
+    return {"available": True, "current": current, "last_year": last_year}
+
+
 # ============ DAY CLOSE (Z-REPORT) ============
 async def compute_day_summary(user_id: str, day: str) -> dict:
     """Aggregate a single day's orders + expenses into a Z-report summary."""
@@ -286,8 +341,10 @@ async def deck_overview(user: dict = Depends(require_owner)):
 
     # Checklist ημέρας — μικρή ένδειξη "Άνοιγμα: 5/6" στο Deck View
     cl_templates = await db.checklist_templates.find(
-        {"user_id": user["id"]}, {"_id": 0, "id": 1, "list": 1}
+        {"user_id": user["id"]}, {"_id": 0, "id": 1, "list": 1, "date": 1}
     ).to_list(500)
+    # Έκτακτες (one-off) εργασίες μετράνε μόνο τη δική τους μέρα
+    cl_templates = [t for t in cl_templates if not t.get("date") or t["date"] == today]
     cl_ticks = await db.checklist_ticks.find(
         {"user_id": user["id"], "date": today}, {"_id": 0, "template_id": 1}
     ).to_list(1000)

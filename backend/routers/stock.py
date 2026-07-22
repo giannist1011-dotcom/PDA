@@ -1,12 +1,12 @@
 """Ελλείψεις (stock) & λίστα αγορών (shopping list)."""
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from core import db, require_staff, require_manager
+from core import db, require_staff, require_manager, actor_name
 
 router = APIRouter()
 
@@ -14,6 +14,51 @@ router = APIRouter()
 # ============ SHOPPING LIST ============
 class ShoppingItemIn(BaseModel):
     text: str = Field(min_length=1, max_length=200)
+
+
+# ============ PRINT HISTORY (ιστορικό εκτυπώσεων λίστας αγορών) ============
+PRINT_HISTORY_KEEP_DAYS = 90  # κρατάμε τουλάχιστον 30 ημέρες — καθαρίζουμε στις 90
+
+
+class ShortagePrintItemIn(BaseModel):
+    text: str = Field(min_length=1, max_length=200)
+    bought: bool = False
+
+
+class ShortagePrintIn(BaseModel):
+    items: list[ShortagePrintItemIn] = Field(min_length=1, max_length=1000)
+
+
+@router.post("/shopping/print")
+async def record_shopping_print(body: ShortagePrintIn, user: dict = Depends(require_manager)):
+    """Καταγραφή εκτύπωσης της λίστας αγορών: snapshot ειδών + ποιος/πότε τύπωσε."""
+    now = datetime.now(timezone.utc)
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "printed_at": now.isoformat(),
+        "printed_by": actor_name(user),
+        "items": [{"text": it.text.strip(), "bought": bool(it.bought)} for it in body.items],
+    }
+    await db.shortage_prints.insert_one(doc)
+    # Lazy καθαρισμός: ό,τι είναι παλαιότερο από PRINT_HISTORY_KEEP_DAYS φεύγει
+    cutoff = (now - timedelta(days=PRINT_HISTORY_KEEP_DAYS)).isoformat()
+    await db.shortage_prints.delete_many(
+        {"user_id": user["id"], "printed_at": {"$lt": cutoff}}
+    )
+    return {k: v for k, v in doc.items() if k not in ("_id", "user_id")}
+
+
+@router.get("/shopping/prints")
+async def list_shopping_prints(
+    skip: int = 0, limit: int = 20, user: dict = Depends(require_staff)
+):
+    limit = max(1, min(limit, 50))
+    skip = max(0, skip)
+    docs = await db.shortage_prints.find(
+        {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
+    ).sort("printed_at", -1).skip(skip).to_list(limit)
+    return docs
 
 
 # ============ STOCK (INDEPENDENT INVENTORY) ============

@@ -1,6 +1,6 @@
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, CalendarClock } from "lucide-react";
 import { formatGRTime } from "@/lib/format";
-import { LIST_META } from "./utils";
+import { LIST_META, fmtShortDateGR } from "./utils";
 
 // ---------- Λίστα χρήσης (τικάρισμα) ----------
 export default function TickList({ list, items, onTick, busyId }) {
@@ -44,11 +44,21 @@ export default function TickList({ list, items, onTick, busyId }) {
               )}
               <div className="min-w-0 flex-1">
                 <div
-                  className={`font-semibold ${
+                  className={`font-semibold flex items-center gap-2 flex-wrap ${
                     it.done ? "text-neutral-400 line-through" : "text-white"
                   }`}
                 >
-                  {it.text}
+                  <span className="min-w-0">{it.text}</span>
+                  {it.date && (
+                    <span
+                      className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gold/20 text-gold no-underline"
+                      title={`Έκτακτη εργασία — μόνο σήμερα (${fmtShortDateGR(it.date)})`}
+                      data-testid={`checklist-oneoff-tick-badge-${it.id}`}
+                    >
+                      <CalendarClock className="w-3 h-3" />
+                      Έκτακτη
+                    </span>
+                  )}
                 </div>
                 {it.done && (
                   <div className="text-xs text-neutral-500 mt-0.5">

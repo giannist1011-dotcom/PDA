@@ -79,6 +79,8 @@ async def on_startup():
     # Offline sync: idempotency ανά client_id (μόνο όσες παραγγελίες το έχουν)
     await db.orders.create_index([("user_id", 1), ("client_id", 1)], sparse=True)
     await db.shopping.create_index([("user_id", 1), ("created_at", 1)])
+    # Ιστορικό εκτυπώσεων λίστας αγορών (ελλείψεις) — πιο πρόσφατες πρώτα
+    await db.shortage_prints.create_index([("user_id", 1), ("printed_at", -1)])
     await db.stock_categories.create_index([("user_id", 1), ("order", 1)])
     await db.stock_items.create_index([("user_id", 1), ("category_id", 1)])
     await db.photos.create_index([("user_id", 1), ("created_at", -1)])

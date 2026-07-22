@@ -9,7 +9,7 @@ import {
   Scale,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { fetchAnalytics } from "@/lib/api";
+import { fetchAnalytics, fetchAnalyticsYoY } from "@/lib/api";
 import { eur, todayISO } from "@/lib/format";
 import { athensToday } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import StatCard from "./analytics/StatCard";
 import ChartsRow from "./analytics/ChartsRow";
 import PopularItems from "./analytics/PopularItems";
 import CompareSection from "./analytics/CompareSection";
+import YoYSection from "./analytics/YoYSection";
+import AddressHeatmap from "./analytics/AddressHeatmap";
 
 // ---------- Comparison helpers ----------
 const iso7DaysAgo = () => {
@@ -45,6 +47,7 @@ export default function Analytics() {
     return { preset: "today", from: t, to: t };
   });
   const [data, setData] = useState(null);
+  const [yoy, setYoy] = useState(null); // σύγκριση με πέρσι για το ίδιο εύρος
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -69,8 +72,12 @@ export default function Analytics() {
     setLoading(true);
     setError(null);
     try {
-      const d = await fetchAnalytics(f, t);
+      const [d, y] = await Promise.all([
+        fetchAnalytics(f, t),
+        fetchAnalyticsYoY(f, t).catch(() => null), // η σύγκριση δεν μπλοκάρει τα βασικά
+      ]);
       setData(d);
+      setYoy(y);
     } catch (e) {
       setError("Σφάλμα φόρτωσης");
     } finally {
@@ -254,6 +261,9 @@ export default function Analytics() {
           />
         </div>
 
+        {/* Σύγκριση με πέρσι (ίδια περίοδος πριν 1 έτος) */}
+        <YoYSection yoy={yoy} />
+
         {/* Charts row */}
         <ChartsRow hourly={hourly} data={data} />
 
@@ -288,6 +298,9 @@ export default function Analytics() {
           applyComparePreset={applyComparePreset}
           bySourceMerged={bySourceMerged}
         />
+
+        {/* Heatmap διευθύνσεων παράδοσης */}
+        <AddressHeatmap />
       </main>
     </AppShell>
   );

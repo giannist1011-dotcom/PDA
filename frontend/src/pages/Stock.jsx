@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
 import { useAuth } from "@/context/AuthContext";
-import { formatGRTime } from "@/lib/format";
 import {
   apiGetStockConfig,
   apiCreateStockCategory,
@@ -16,80 +15,15 @@ import {
   apiUpdateShopping,
   apiDeleteShopping,
   apiResetShopping,
+  apiRecordShoppingPrint,
   formatApiError,
 } from "@/lib/api";
 import AddItemModal from "./stock/AddItemModal";
 import CategoryModal from "./stock/CategoryModal";
 import StockSection from "./stock/StockSection";
 import ShoppingListPanel from "./stock/ShoppingListPanel";
-
-// ---------- Print helper ----------
-function printShoppingList({ restaurantName, items }) {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("el-GR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-  const timeStr = formatGRTime(now);
-
-  const rows = items
-    .map(
-      (it) => `
-      <li class="row ${it.bought ? "bought" : ""}">
-        <span class="check">${it.bought ? "☒" : "☐"}</span>
-        <span class="text">${escapeHtml(it.text)}</span>
-      </li>`
-    )
-    .join("");
-
-  const html = `<!DOCTYPE html>
-<html lang="el">
-<head>
-<meta charset="utf-8" />
-<title>Λίστα αγορών — ${escapeHtml(restaurantName || "")}</title>
-<style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; margin: 24px; }
-  header { border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 18px; }
-  h1 { margin: 0 0 4px; font-size: 22px; }
-  .meta { font-size: 13px; color: #7A3E52; }
-  ul { list-style: none; padding: 0; margin: 0; }
-  .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed #999; font-size: 16px; }
-  .row.bought .text { text-decoration: line-through; color: #888; }
-  .check { font-size: 20px; width: 22px; text-align: center; }
-  .empty { color: #888; font-style: italic; padding: 20px 0; }
-  footer { margin-top: 24px; font-size: 11px; color: #888; text-align: right; }
-  @media print { body { margin: 12mm; } .no-print { display: none; } }
-</style>
-</head>
-<body>
-  <header>
-    <h1>Λίστα αγορών</h1>
-    <div class="meta">${escapeHtml(restaurantName || "")} · ${dateStr} · ${timeStr}</div>
-  </header>
-  ${items.length === 0 ? '<div class="empty">Η λίστα είναι άδεια</div>' : `<ul>${rows}</ul>`}
-  <footer>Εκτυπώθηκε από το OrderDeck</footer>
-  <script>window.addEventListener('load', () => setTimeout(() => window.print(), 100));</script>
-</body>
-</html>`;
-
-  const w = window.open("", "_blank", "width=720,height=900");
-  if (!w) {
-    toast.error("Ενεργοποιήστε τα pop-ups για εκτύπωση");
-    return;
-  }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => (
-    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-  ));
-}
+import PrintHistoryModal from "./stock/PrintHistoryModal";
+import { printShoppingList } from "./stock/utils";
 
 // ---------- Main page ----------
 export default function Stock() {
@@ -103,6 +37,7 @@ export default function Stock() {
 
   const [catModal, setCatModal] = useState({ open: false, editing: null });
   const [itemModal, setItemModal] = useState({ open: false });
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const load = async () => {
     try {
@@ -280,6 +215,14 @@ export default function Stock() {
     // Snapshot then print
     const snapshot = [...shopping];
     printShoppingList({ restaurantName, items: snapshot });
+    // Καταγραφή στο ιστορικό εκτυπώσεων (ποιος/πότε/τι) — δεν μπλοκάρει την εκτύπωση
+    try {
+      await apiRecordShoppingPrint(
+        snapshot.map((s) => ({ text: s.text, bought: !!s.bought }))
+      );
+    } catch {
+      toast.error("Η εκτύπωση δεν αποθηκεύτηκε στο ιστορικό");
+    }
     // Reset backend + local state so next print starts fresh
     try {
       await apiResetShopping();
@@ -322,6 +265,7 @@ export default function Stock() {
             toggleShopBought={toggleShopBought}
             removeShop={removeShop}
             onPrint={onPrint}
+            onHistory={() => setHistoryOpen(true)}
           />
         </div>
       </main>
@@ -343,6 +287,11 @@ export default function Stock() {
         categories={categories}
         defaultCategoryId={activeCat !== "all" && activeCat !== "needs" ? activeCat : ""}
         onSubmit={handleCreateItem}
+      />
+      <PrintHistoryModal
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        restaurantName={restaurantName}
       />
     </AppShell>
   );
