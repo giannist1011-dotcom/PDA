@@ -29,7 +29,7 @@ const summarize = (c) => {
 };
 
 // ---------- Order detail modal ----------
-export default function OrderDetailModal({ order, canManage, onClose, onReprint, onCancel, onDelete }) {
+export default function OrderDetailModal({ order, canManage, canCancel = true, onClose, onReprint, onCancel, onDelete }) {
   if (!order) return null;
   const d = order.delivery;
   return (
@@ -187,15 +187,17 @@ export default function OrderDetailModal({ order, canManage, onClose, onReprint,
         </div>
 
         <div className="p-5 border-t border-[#431A25] flex flex-wrap gap-2 justify-end">
-          <Button
-            onClick={() => onDelete(order)}
-            data-testid="order-delete-btn"
-            title={canManage ? "" : "Απαιτείται PIN ιδιοκτήτη/υπευθύνου"}
-            className="h-11 bg-[#FF3B30] hover:bg-[#FF5A50] text-white font-bold mr-auto"
-          >
-            <Trash2 className="w-4 h-4 mr-2" /> Διαγραφή
-          </Button>
-          {!order.cancelled && (
+          {canCancel && (
+            <Button
+              onClick={() => onDelete(order)}
+              data-testid="order-delete-btn"
+              title={canManage ? "" : "Απαιτείται PIN ιδιοκτήτη/υπευθύνου"}
+              className="h-11 bg-[#FF3B30] hover:bg-[#FF5A50] text-white font-bold mr-auto"
+            >
+              <Trash2 className="w-4 h-4 mr-2" /> Διαγραφή
+            </Button>
+          )}
+          {canCancel && !order.cancelled && (
             <Button
               onClick={() => onCancel(order)}
               data-testid="order-cancel-btn"

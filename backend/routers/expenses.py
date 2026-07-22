@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from core import db, require_owner
+from core import db, require_owner, require_feature
 
 router = APIRouter()
 
@@ -53,7 +53,7 @@ async def ensure_expense_categories(user_id: str):
 
 
 @router.get("/expenses/categories")
-async def list_expense_categories(user: dict = Depends(require_owner)):
+async def list_expense_categories(user: dict = Depends(require_feature("expenses", require_owner))):
     await ensure_expense_categories(user["id"])
     return await db.expense_categories.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
@@ -61,7 +61,7 @@ async def list_expense_categories(user: dict = Depends(require_owner)):
 
 
 @router.post("/expenses/categories")
-async def create_expense_category(body: ExpenseCategoryIn, user: dict = Depends(require_owner)):
+async def create_expense_category(body: ExpenseCategoryIn, user: dict = Depends(require_feature("expenses", require_owner))):
     count = await db.expense_categories.count_documents({"user_id": user["id"]})
     doc = {
         "id": str(uuid.uuid4())[:8],
@@ -74,7 +74,7 @@ async def create_expense_category(body: ExpenseCategoryIn, user: dict = Depends(
 
 
 @router.put("/expenses/categories/{cid}")
-async def update_expense_category(cid: str, body: ExpenseCategoryIn, user: dict = Depends(require_owner)):
+async def update_expense_category(cid: str, body: ExpenseCategoryIn, user: dict = Depends(require_feature("expenses", require_owner))):
     r = await db.expense_categories.update_one(
         {"id": cid, "user_id": user["id"]},
         {"$set": {"name": body.name.strip(), "order": body.order}},
@@ -85,7 +85,7 @@ async def update_expense_category(cid: str, body: ExpenseCategoryIn, user: dict 
 
 
 @router.delete("/expenses/categories/{cid}")
-async def delete_expense_category(cid: str, user: dict = Depends(require_owner)):
+async def delete_expense_category(cid: str, user: dict = Depends(require_feature("expenses", require_owner))):
     r = await db.expense_categories.delete_one({"id": cid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
@@ -102,7 +102,7 @@ async def list_expenses(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     category_id: Optional[str] = None,
-    user: dict = Depends(require_owner),
+    user: dict = Depends(require_feature("expenses", require_owner)),
 ):
     query = {"user_id": user["id"]}
     rng = {}
@@ -121,7 +121,7 @@ async def list_expenses(
 
 
 @router.post("/expenses")
-async def create_expense(body: ExpenseIn, user: dict = Depends(require_owner)):
+async def create_expense(body: ExpenseIn, user: dict = Depends(require_feature("expenses", require_owner))):
     validate_expense_date(body.date)
     if body.category_id:
         cat = await db.expense_categories.find_one(
@@ -143,7 +143,7 @@ async def create_expense(body: ExpenseIn, user: dict = Depends(require_owner)):
 
 
 @router.put("/expenses/{eid}")
-async def update_expense(eid: str, body: ExpenseIn, user: dict = Depends(require_owner)):
+async def update_expense(eid: str, body: ExpenseIn, user: dict = Depends(require_feature("expenses", require_owner))):
     validate_expense_date(body.date)
     if body.category_id:
         cat = await db.expense_categories.find_one(
@@ -166,7 +166,7 @@ async def update_expense(eid: str, body: ExpenseIn, user: dict = Depends(require
 
 
 @router.delete("/expenses/{eid}")
-async def delete_expense(eid: str, user: dict = Depends(require_owner)):
+async def delete_expense(eid: str, user: dict = Depends(require_feature("expenses", require_owner))):
     r = await db.expenses.delete_one({"id": eid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")

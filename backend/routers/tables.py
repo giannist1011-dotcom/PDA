@@ -6,7 +6,7 @@ from typing import List, Literal, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from core import db, get_current_user, require_owner, require_manager, actor_name
+from core import db, get_current_user, require_owner, require_manager, require_feature, actor_name
 from routers.orders import Order, OrderItem, compute_next_order_number
 
 router = APIRouter()
@@ -50,7 +50,7 @@ class BusinessTypeIn(BaseModel):
 
 
 @router.put("/settings/business")
-async def update_business_type(body: BusinessTypeIn, user: dict = Depends(require_owner)):
+async def update_business_type(body: BusinessTypeIn, user: dict = Depends(require_feature("settings", require_owner))):
     await db.users.update_one(
         {"id": user["id"]}, {"$set": {"business_type": body.business_type}}
     )
@@ -85,7 +85,7 @@ class StoreDetailsIn(BaseModel):
 
 
 @router.put("/settings/store")
-async def update_store_details(body: StoreDetailsIn, user: dict = Depends(require_owner)):
+async def update_store_details(body: StoreDetailsIn, user: dict = Depends(require_feature("settings", require_owner))):
     """Στοιχεία καταστήματος — όνομα, τηλέφωνο, διεύθυνση, συντεταγμένες (lat/lng)."""
     hours = {}
     for day, dh in (body.store_hours or {}).items():
@@ -121,7 +121,7 @@ class PrintingIn(BaseModel):
 
 
 @router.put("/settings/printing")
-async def update_printing(body: PrintingIn, user: dict = Depends(require_owner)):
+async def update_printing(body: PrintingIn, user: dict = Depends(require_feature("settings", require_owner))):
     """Ρυθμίσεις εκτύπωσης — αποθηκεύονται στον λογαριασμό, έρχονται με το /auth/me."""
     await db.users.update_one(
         {"id": user["id"]},
@@ -141,7 +141,7 @@ async def update_printing(body: PrintingIn, user: dict = Depends(require_owner))
 
 
 @router.put("/settings/tables")
-async def toggle_tables(body: TablesToggleIn, user: dict = Depends(require_owner)):
+async def toggle_tables(body: TablesToggleIn, user: dict = Depends(require_feature("settings", require_owner))):
     await db.users.update_one(
         {"id": user["id"]}, {"$set": {"tables_enabled": bool(body.enabled)}}
     )

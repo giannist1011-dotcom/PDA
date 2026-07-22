@@ -12,6 +12,7 @@ import Receipt from "@/components/Receipt";
 import PinGateModal from "@/components/PinGateModal";
 import { useAuth } from "@/context/AuthContext";
 import { fetchOrders, fetchOrdersCount, apiGetOrder, apiCancelOrder, apiDeleteOrder, apiListCustomers, formatApiError } from "@/lib/api";
+import { can } from "@/lib/perms";
 import { athensToday } from "@/lib/dates";
 import { printReceiptJob } from "@/lib/print";
 import OrderDetailModal from "./history/OrderDetailModal";
@@ -267,6 +268,7 @@ export default function History() {
       <OrderDetailModal
         order={selectedOrder}
         canManage={canManage}
+        canCancel={can(user, "cancel_orders")}
         onClose={() => setSelectedOrder(null)}
         onReprint={handleReprint}
         onCancel={handleCancelOrder}

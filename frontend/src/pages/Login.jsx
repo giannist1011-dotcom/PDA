@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 export default function Login() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("demo@peinokio.gr");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -62,6 +62,7 @@ export default function Login() {
                 <input
                   type="email"
                   required
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   data-testid="login-email"
@@ -78,6 +79,7 @@ export default function Login() {
                 <input
                   type="password"
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   data-testid="login-password"
@@ -111,10 +113,6 @@ export default function Login() {
               Εγγραφή καταστήματος
             </Link>
           </div>
-        </div>
-
-        <div className="mt-6 text-center text-xs text-neutral-500">
-          Demo λογαριασμός: <span className="font-mono text-neutral-300">demo@peinokio.gr / demo1234</span>
         </div>
       </div>
     </div>

@@ -23,6 +23,7 @@ from core import (
     pin_locked_for,
     pin_lock_message,
     register_pin_attempt,
+    FEATURE_KEYS,
 )
 from presets import PRESETS
 from routers.promo import redeem_promo, promo_description, require_admin
@@ -202,6 +203,7 @@ async def start_demo(body: DemoIn, request: Request):
         "employee_pin_set": False,
         "is_demo": True,
         "demo_expires_at": expires_iso,
+        "ai_features_enabled": True,  # demo: τα AI features φαίνονται πλήρη στον επισκέπτη
         "created_at": now_iso,
     }
     await db.users.insert_one(doc)
@@ -280,6 +282,14 @@ class ProfileIn(BaseModel):
     name: str = Field(min_length=1, max_length=40)
     role: Literal["owner", "manager", "employee", "waiter"]
     pin: Optional[str] = None  # 4 digits — required on create, optional on update
+    perms: Optional[dict] = None  # per-profile feature permissions {feature_key: bool}
+
+
+def clean_perms(perms: Optional[dict], role: str) -> dict:
+    """Κρατά μόνο έγκυρα feature keys με boolean τιμές. Ο owner δεν έχει ποτέ perms."""
+    if role == "owner" or not perms:
+        return {}
+    return {k: bool(v) for k, v in perms.items() if k in FEATURE_KEYS}
 
 
 @router.get("/profiles")
@@ -303,6 +313,7 @@ async def create_profile(body: ProfileIn, user: dict = Depends(require_manager))
         "name": body.name.strip(),
         "role": body.role,
         "pin_hash": hash_password(body.pin),
+        "perms": clean_perms(body.perms, body.role),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.profiles.insert_one(doc)
@@ -323,6 +334,9 @@ async def update_profile(pid: str, body: ProfileIn, user: dict = Depends(require
         if owners <= 1:
             raise HTTPException(400, "Πρέπει να υπάρχει τουλάχιστον ένα προφίλ Ιδιοκτήτη")
     update = {"name": body.name.strip(), "role": body.role}
+    if body.perms is not None or body.role == "owner":
+        # ρητή αλλαγή δικαιωμάτων, ή αλλαγή ρόλου σε owner → καθαρισμός perms
+        update["perms"] = clean_perms(body.perms, body.role)
     if body.pin:
         if not (body.pin.isdigit() and len(body.pin) == 4):
             raise HTTPException(400, "Ο κωδικός πρέπει να είναι 4 ψηφία")

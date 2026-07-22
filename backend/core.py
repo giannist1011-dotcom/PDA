@@ -81,6 +81,40 @@ def verify_password(pw: str, hashed: str) -> bool:
 PROFILE_ROLES = ["owner", "manager", "employee", "waiter"]
 LEGACY_ROLE_NAMES = {"owner": "Ιδιοκτήτης", "employee": "Υπάλληλος"}
 
+# ============ PER-PROFILE FEATURE PERMISSIONS ============
+# Restrict-only: κόβουν πρόσβαση ΜΕΣΑ στα όρια του ρόλου, δεν χαρίζουν παραπάνω.
+# Απουσία κλειδιού στο profile.perms = επιτρέπεται (default: όλα ενεργά).
+FEATURE_KEYS = [
+    "history",        # Ιστορικό παραγγελιών
+    "analytics",      # Στατιστικά
+    "expenses",       # Έξοδα
+    "settings",       # Ρυθμίσεις
+    "menu",           # Διαχείριση μενού & φωτογραφίες
+    "day_close",      # Κλείσιμο ημέρας / Z-report
+    "discounts",      # Εκπτώσεις στο ταμείο
+    "cancel_orders",  # Ακύρωση/διαγραφή παραγγελιών
+]
+
+
+def profile_can(user: dict, key: str) -> bool:
+    """Ο Ιδιοκτήτης έχει ΠΑΝΤΑ τα πάντα — δεν μπορεί να κλειδωθεί απ' έξω."""
+    if user.get("role") == "owner":
+        return True
+    perms = user.get("perms") or {}
+    return perms.get(key, True) is not False
+
+
+def require_feature(key: str, base_dep=None):
+    """Dependency factory: ρόλος (base_dep) + per-profile δικαίωμα λειτουργίας."""
+    base = base_dep or get_current_user
+
+    async def dep(user: dict = Depends(base)) -> dict:
+        if not profile_can(user, key):
+            raise HTTPException(403, "Το προφίλ σας δεν έχει πρόσβαση σε αυτή τη λειτουργία")
+        return user
+
+    return dep
+
 
 def create_token(
     user_id: str,
@@ -125,6 +159,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     role = payload.get("profile")  # legacy tokens carry "owner"/"employee" here
     profile_id = payload.get("profile_id")
     profile_name = payload.get("profile_name")
+    perms = {}
     if profile_id:
         prof = await db.profiles.find_one(
             {"id": profile_id, "user_id": user["id"]}, {"_id": 0}
@@ -132,6 +167,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
         if prof:
             role = prof["role"]
             profile_name = prof["name"]
+            perms = prof.get("perms") or {}
         else:
             # profile deleted while the token was live → force re-selection
             role = None
@@ -141,6 +177,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     user["role"] = role
     user["profile_id"] = profile_id
     user["profile_name"] = profile_name
+    user["perms"] = perms  # per-profile feature permissions (restrict-only)
     return user
 
 
@@ -195,6 +232,8 @@ def public_user(u: dict) -> dict:
         "print_double": bool(u.get("print_double", False)),
         "is_demo": bool(u.get("is_demo", False)),
         "demo_expires_at": u.get("demo_expires_at"),
+        "ai_features_enabled": bool(u.get("ai_features_enabled", False)),
+        "perms": u.get("perms") or {},
     }
 
 
@@ -404,6 +443,11 @@ async def ensure_demo_account():
                 {"email": demo_email},
                 {"$set": {"password_hash": hash_password(demo_pw)}},
             )
+        # Το seeded demo έχει πάντα ενεργά τα AI features (εκεί γυαλίζονται πριν το rollout)
+        if not existing.get("ai_features_enabled"):
+            await db.users.update_one(
+                {"email": demo_email}, {"$set": {"ai_features_enabled": True}}
+            )
         # Backfill default PINs if missing
         if "owner_pin_hash" not in existing:
             await db.users.update_one(
@@ -427,6 +471,7 @@ async def ensure_demo_account():
         "employee_pin_hash": hash_password("0000"),
         "owner_pin_set": False,
         "employee_pin_set": False,
+        "ai_features_enabled": True,  # demo λογαριασμός: AI features πάντα ενεργά
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.users.insert_one(user_doc)

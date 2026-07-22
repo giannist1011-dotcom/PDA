@@ -29,6 +29,7 @@ SHOP_FIELDS = {
     "is_demo": 1, "demo_expires_at": 1, "disabled": 1, "admin_notes": 1,
     "promo": 1, "billing_note": 1, "plan": 1, "subscription_expires_at": 1,
     "payment_status": 1, "tables_enabled": 1, "public_slug": 1,
+    "ai_features_enabled": 1, "addons": 1, "billing_request": 1,
 }
 
 
@@ -261,6 +262,10 @@ class ShopUpdateIn(BaseModel):
     plan: Optional[Literal["trial", "pro", "pro_deckpilot"]] = None
     subscription_expires_at: Optional[str] = None  # ISO date, "" = καθαρισμός
     payment_status: Optional[Literal["paid", "pending", "expired"]] = None
+    ai_features_enabled: Optional[bool] = None  # toggle AI features (DeckPilot/Brief)
+    addon_deckpilot: Optional[bool] = None      # add-on DeckPilot AI (χειροκίνητη χρέωση)
+    addon_fleet: Optional[bool] = None          # add-on Fleet
+    clear_billing_request: Optional[bool] = None  # καθαρισμός εκκρεμούς αιτήματος συνδρομής
 
 
 @router.patch("/admin/shops/{uid}")
@@ -273,6 +278,15 @@ async def admin_update_shop(
         raise HTTPException(400, "Δεν δόθηκαν αλλαγές")
     if update.get("subscription_expires_at") == "":
         update["subscription_expires_at"] = None
+    # Add-ons: αποθηκεύονται στο nested "addons" — όχι ως top-level πεδία
+    if "addon_deckpilot" in update:
+        update["addons.deckpilot"] = bool(update.pop("addon_deckpilot"))
+    if "addon_fleet" in update:
+        update["addons.fleet"] = bool(update.pop("addon_fleet"))
+    if update.pop("clear_billing_request", None):
+        update["billing_request"] = None
+    if not update:
+        raise HTTPException(400, "Δεν δόθηκαν αλλαγές")
     res = await db.users.update_one({"id": uid}, {"$set": update})
     if res.matched_count == 0:
         raise HTTPException(404, "Το μαγαζί δεν βρέθηκε")

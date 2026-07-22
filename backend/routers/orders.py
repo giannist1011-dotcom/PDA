@@ -18,6 +18,8 @@ from core import (
     require_owner,
     actor_name,
     require_owner_or_pin,
+    require_feature,
+    profile_can,
     athens_today,
     local_day_range,
 )
@@ -164,6 +166,8 @@ async def create_order(body: OrderCreate, user: dict = Depends(require_staff)):
         },
     })
     if doc.get("discount"):
+        if not profile_can(user, "discounts"):
+            raise HTTPException(403, "Το προφίλ σας δεν έχει δικαίωμα έκπτωσης")
         # audit trail: which profile applied the discount and when
         doc["discount"]["applied_by"] = actor_name(user)
         doc["discount"]["applied_by_role"] = user.get("role")
@@ -228,7 +232,7 @@ async def list_orders(
     q: Optional[str] = None,
     skip: int = 0,
     limit: int = 500,
-    user: dict = Depends(require_staff),
+    user: dict = Depends(require_feature("history", require_staff)),
 ):
     query = _history_query(user["id"], date_from, date_to, source, q)
     docs = (
@@ -249,7 +253,7 @@ async def count_orders(
     date_to: Optional[str] = None,
     source: Optional[str] = None,
     q: Optional[str] = None,
-    user: dict = Depends(require_staff),
+    user: dict = Depends(require_feature("history", require_staff)),
 ):
     """Συνολικό πλήθος για τα φίλτρα του ιστορικού — το «Χ παραγγελίες» δίπλα στο εύρος."""
     query = _history_query(user["id"], date_from, date_to, source, q)
@@ -497,8 +501,10 @@ async def cancel_order(
     if not order:
         raise HTTPException(404, "Not found")
     # scheduled orders may be cancelled by any profile;
-    # fired orders need the owner profile or a valid owner PIN
+    # fired orders need the owner profile or a valid owner PIN + per-profile δικαίωμα
     if order.get("status") != "scheduled":
+        if not profile_can(user, "cancel_orders"):
+            raise HTTPException(403, "Το προφίλ σας δεν έχει δικαίωμα ακύρωσης παραγγελιών")
         await require_owner_or_pin(user, body.pin if body else None)
     await db.orders.update_one(
         {"id": oid, "user_id": user["id"]},
@@ -518,6 +524,8 @@ async def delete_order(
     pin: Optional[str] = None,
     user: dict = Depends(require_staff),
 ):
+    if not profile_can(user, "cancel_orders"):
+        raise HTTPException(403, "Το προφίλ σας δεν έχει δικαίωμα διαγραφής παραγγελιών")
     await require_owner_or_pin(user, pin)
     r = await db.orders.delete_one({"id": oid, "user_id": user["id"]})
     if r.deleted_count == 0:

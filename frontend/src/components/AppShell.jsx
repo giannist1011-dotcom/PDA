@@ -35,6 +35,7 @@ import AnnouncementBanner from "@/components/AnnouncementBanner";
 import { useOfflineStatus } from "@/lib/offline";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
+import { can } from "@/lib/perms";
 import { businessIcon } from "@/lib/business";
 
 // Full nav list. Each entry lists the roles that can see it.
@@ -44,8 +45,8 @@ const MANAGERS = ["owner", "manager"];
 const NAV_ALL = [
   { to: "/app", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", roles: STAFF },
   { to: "/app/tables", label: "Τραπέζια", icon: LayoutGrid, testId: "drawer-link-tables", roles: ALL_ROLES, requiresTables: true },
-  { to: "/app/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", roles: STAFF },
-  { to: "/app/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", roles: MANAGERS },
+  { to: "/app/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", roles: STAFF, perm: "history" },
+  { to: "/app/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", roles: MANAGERS, perm: "menu" },
   { to: "/app/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock", roles: STAFF },
   { to: "/app/checklist", label: "Checklist", icon: ListChecks, testId: "drawer-link-checklist", roles: STAFF },
   { to: "/app/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule", roles: STAFF },
@@ -56,13 +57,13 @@ const NAV_ALL = [
 // Ομάδα "Κατάστημα" — collapsible στο drawer. Εμφανίζεται μόνο αν ο ρόλος
 // βλέπει τουλάχιστον ένα από τα περιεχόμενά της.
 const NAV_STORE = [
-  { to: "/app/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"] },
-  { to: "/app/deckpilot", label: "DeckPilot (AI βοηθός)", icon: Bot, testId: "drawer-link-deckpilot", roles: ["owner"], beta: true },
-  { to: "/app/brief", label: "Ημερήσιο Brief", icon: FileText, testId: "drawer-link-brief", roles: ["owner"], beta: true },
-  { to: "/app/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: ["owner"] },
-  { to: "/app/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", roles: ["owner"] },
-  { to: "/app/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", roles: MANAGERS },
-  { to: "/app/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", roles: ["owner"] },
+  { to: "/app/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"], perm: "analytics" },
+  { to: "/app/deckpilot", label: "DeckPilot (AI βοηθός)", icon: Bot, testId: "drawer-link-deckpilot", roles: ["owner"], beta: true, requiresAI: true },
+  { to: "/app/brief", label: "Ημερήσιο Brief", icon: FileText, testId: "drawer-link-brief", roles: ["owner"], beta: true, requiresAI: true },
+  { to: "/app/day-close", label: "Κλείσιμο ημέρας", icon: CalendarCheck, testId: "drawer-link-dayclose", roles: ["owner"], perm: "day_close" },
+  { to: "/app/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", roles: ["owner"], perm: "expenses" },
+  { to: "/app/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", roles: MANAGERS, perm: "menu" },
+  { to: "/app/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", roles: ["owner"], perm: "settings" },
 ];
 
 const STORE_GROUP_KEY = "orderdeck-nav-store-open";
@@ -219,15 +220,20 @@ export default function AppShell({ title, children }) {
     });
   };
 
-  const nav = NAV_ALL.filter(
-    (n) => n.roles.includes(role) && (!n.requiresTables || user?.tables_enabled)
-  ).map((n) => {
+  // Φίλτρο nav: ρόλος + per-profile δικαίωμα + flag AI features του λογαριασμού
+  const navVisible = (n) =>
+    n.roles.includes(role) &&
+    (!n.requiresTables || user?.tables_enabled) &&
+    (!n.perm || can(user, n.perm)) &&
+    (!n.requiresAI || user?.ai_features_enabled);
+
+  const nav = NAV_ALL.filter(navVisible).map((n) => {
     // Non-managers see the schedule read-only
     if (!canManage && n.to === "/schedule") return { ...n, label: "Πρόγραμμα (προβολή)" };
     return n;
   });
 
-  const storeNav = NAV_STORE.filter((n) => n.roles.includes(role));
+  const storeNav = NAV_STORE.filter(navVisible);
   const storeActive = storeNav.some((n) => location.pathname === n.to);
 
   const renderNavLink = (n) => {
@@ -446,8 +452,9 @@ export default function AppShell({ title, children }) {
         <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
       )}
 
-      {/* DeckPilot — floating κουμπί κάτω δεξιά, owner-only, παντού εκτός από τη σελίδα του */}
-      {role === "owner" && location.pathname !== "/app/deckpilot" && (
+      {/* DeckPilot — floating κουμπί κάτω δεξιά, owner-only + ενεργά AI features,
+          παντού εκτός από τη σελίδα του */}
+      {role === "owner" && user?.ai_features_enabled && location.pathname !== "/app/deckpilot" && (
         <>
           <button
             onClick={() => setPilotOpen(true)}

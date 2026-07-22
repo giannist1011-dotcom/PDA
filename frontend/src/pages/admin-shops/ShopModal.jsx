@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Power, Trash2, X, Save } from "lucide-react";
+import { Power, Trash2, X, Save, Clock, Bot } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import {
   apiAdminShopDetail,
   apiAdminUpdateShop,
@@ -48,6 +49,21 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
     try {
       await apiAdminUpdateShop(pw, shopId, edit);
       toast.success("Αποθηκεύτηκε");
+      onChanged();
+      load();
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Άμεσο PATCH ενός πεδίου (AI flag, add-ons, έγκριση/απόρριψη αιτήματος συνδρομής)
+  const patch = async (payload, msg) => {
+    setBusy(true);
+    try {
+      await apiAdminUpdateShop(pw, shopId, payload);
+      if (msg) toast.success(msg);
       onChanged();
       load();
     } catch (e) {
@@ -121,6 +137,54 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* ΕΚΚΡΕΜΕΣ ΑΙΤΗΜΑ ΣΥΝΔΡΟΜΗΣ — προεξέχει, θέλει έγκριση/απόρριψη */}
+            {shop.billing_request && (
+              <div
+                className="mx-5 mt-5 p-4 bg-gold/10 border border-gold/50 rounded-lg"
+                data-testid="shop-billing-request"
+              >
+                <div className="flex items-center gap-2 text-gold font-bold text-sm mb-1">
+                  <Clock className="w-4 h-4" /> Εκκρεμές αίτημα συνδρομής
+                </div>
+                <p className="text-sm text-neutral-200 mb-3">
+                  {shop.billing_request.action === "add" ? "Ενεργοποίηση" : "Απενεργοποίηση"}{" "}
+                  <span className="font-bold">{shop.billing_request.addon_label}</span>
+                  {shop.billing_request.requested_at
+                    ? ` · ${formatGRDateTime(shop.billing_request.requested_at)}`
+                    : ""}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    disabled={busy}
+                    data-testid="shop-billing-approve"
+                    onClick={() =>
+                      patch(
+                        {
+                          [`addon_${shop.billing_request.addon}`]:
+                            shop.billing_request.action === "add",
+                          clear_billing_request: true,
+                        },
+                        "Το αίτημα εγκρίθηκε και εφαρμόστηκε"
+                      )
+                    }
+                    className="h-9 px-4 bg-brand hover:bg-brand-hover text-white text-xs font-bold"
+                  >
+                    Έγκριση & εφαρμογή
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={busy}
+                    data-testid="shop-billing-reject"
+                    onClick={() => patch({ clear_billing_request: true }, "Το αίτημα απορρίφθηκε")}
+                    className="h-9 px-4 bg-[#2A0E14] border border-[#723645] hover:border-[#FF3B30] text-neutral-300 text-xs font-bold"
+                  >
+                    Απόρριψη
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* ΣΤΟΙΧΕΙΑ & ΧΡΗΣΗ */}
@@ -210,6 +274,52 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
                 >
                   <Save className="w-4 h-4 mr-1.5" /> Αποθήκευση
                 </Button>
+              </div>
+            </div>
+
+            {/* AI FEATURES & ADD-ONS */}
+            <div className="px-5 pb-5">
+              <h3 className="text-xs uppercase tracking-widest font-bold text-neutral-400 mb-2 flex items-center gap-1.5">
+                <Bot className="w-3.5 h-3.5" /> AI features & add-ons
+              </h3>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#2A0E14] border border-[#723645] rounded-md">
+                  <div>
+                    <div className="text-sm font-semibold">AI features (DeckPilot & Ημερήσιο Brief)</div>
+                    <div className="text-xs text-neutral-500">
+                      Εμφάνιση στο UI + πρόσβαση στα AI endpoints για αυτόν τον λογαριασμό
+                    </div>
+                  </div>
+                  <Switch
+                    checked={!!shop.ai_features_enabled}
+                    disabled={busy}
+                    onCheckedChange={(v) =>
+                      patch(
+                        { ai_features_enabled: !!v },
+                        v ? "Τα AI features ενεργοποιήθηκαν" : "Τα AI features απενεργοποιήθηκαν"
+                      )
+                    }
+                    data-testid="shop-ai-toggle"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#2A0E14] border border-[#723645] rounded-md">
+                  <div className="text-sm font-semibold">Add-on: DeckPilot AI (9,90 €/μήνα)</div>
+                  <Switch
+                    checked={!!shop.addons?.deckpilot}
+                    disabled={busy}
+                    onCheckedChange={(v) => patch({ addon_deckpilot: !!v }, "Αποθηκεύτηκε")}
+                    data-testid="shop-addon-deckpilot"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#2A0E14] border border-[#723645] rounded-md">
+                  <div className="text-sm font-semibold">Add-on: Fleet (5,00 €/μήνα)</div>
+                  <Switch
+                    checked={!!shop.addons?.fleet}
+                    disabled={busy}
+                    onCheckedChange={(v) => patch({ addon_fleet: !!v }, "Αποθηκεύτηκε")}
+                    data-testid="shop-addon-fleet"
+                  />
+                </div>
               </div>
             </div>
 

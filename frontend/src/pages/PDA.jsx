@@ -21,6 +21,7 @@ import {
   rememberNextOrderNumber,
 } from "@/lib/offline";
 import { formatGRTime } from "@/lib/format";
+import { can } from "@/lib/perms";
 import { printReceiptJob } from "@/lib/print";
 import MobileTabs from "./pda/MobileTabs";
 import MenuSection from "./pda/MenuSection";
@@ -112,7 +113,11 @@ export default function PDA() {
       ? Math.round(subtotal * discount.value) / 100
       : Math.min(discount.value, subtotal);
 
+  // Per-profile δικαίωμα έκπτωσης — όταν λείπει, το κουμπί «Έκπτωση» δεν εμφανίζεται καν
+  const canDiscount = can(user, "discounts");
+
   const handleDiscountClick = () => {
+    if (!canDiscount) return;
     if (canManage) setDiscountOpen(true);
     else setPinGateOpen(true); // employee: owner PIN required
   };
@@ -447,7 +452,7 @@ export default function PDA() {
           setScheduled={setScheduled}
           discount={discount}
           discountAmount={discountAmount}
-          onDiscountClick={handleDiscountClick}
+          onDiscountClick={canDiscount ? handleDiscountClick : null}
           onIncrement={(id) => updateQty(id, 1)}
           onDecrement={(id) => updateQty(id, -1)}
           onSetQuantity={setLineQuantity}

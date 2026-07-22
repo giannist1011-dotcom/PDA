@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from core import (
-    db, require_staff, require_owner, require_manager,
+    db, require_staff, require_owner, require_manager, require_feature,
     athens_now, athens_today, local_day_range, to_athens,
 )
 
@@ -20,7 +20,7 @@ router = APIRouter()
 async def analytics(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
-    user: dict = Depends(require_owner),
+    user: dict = Depends(require_feature("analytics", require_owner)),
 ):
     today = athens_today()
     df = date_from or today
@@ -148,7 +148,7 @@ async def compute_day_summary(user_id: str, day: str) -> dict:
 
 
 @router.get("/reports/day-summary")
-async def day_summary(date: Optional[str] = None, user: dict = Depends(require_owner)):
+async def day_summary(date: Optional[str] = None, user: dict = Depends(require_feature("day_close", require_owner))):
     day = date or athens_today()
     return await compute_day_summary(user["id"], day)
 
@@ -158,7 +158,7 @@ class DayCloseIn(BaseModel):
 
 
 @router.post("/reports/day-close")
-async def close_day(body: Optional[DayCloseIn] = None, user: dict = Depends(require_owner)):
+async def close_day(body: Optional[DayCloseIn] = None, user: dict = Depends(require_feature("day_close", require_owner))):
     day = (body.date if body and body.date else None) or athens_today()
     summary = await compute_day_summary(user["id"], day)
     doc = {
@@ -319,7 +319,7 @@ async def deck_overview(user: dict = Depends(require_owner)):
 
 
 @router.get("/reports/day")
-async def list_day_reports(user: dict = Depends(require_owner)):
+async def list_day_reports(user: dict = Depends(require_feature("day_close", require_owner))):
     return await db.day_reports.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
     ).sort("closed_at", -1).to_list(365)

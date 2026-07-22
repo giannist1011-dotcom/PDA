@@ -368,6 +368,7 @@ export default function OrderPanel({
             <span className="text-[11px] text-neutral-400 uppercase tracking-widest font-bold">
               Σύνολο
             </span>
+            {onDiscountClick && (
             <button
               onClick={onDiscountClick}
               disabled={isEmpty}
@@ -381,6 +382,7 @@ export default function OrderPanel({
               <Percent className="w-3 h-3" />
               Έκπτωση
             </button>
+            )}
           </span>
           <span
             className="font-mono text-2xl font-bold text-white"

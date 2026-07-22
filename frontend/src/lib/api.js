@@ -328,6 +328,14 @@ export const apiGetBrief = (mode) =>
 export const apiCreateBrief = (mode, force = false) =>
   api.post("/ai/brief", { mode, force }).then((r) => r.data);
 
+// ΣΥΝΔΡΟΜΗ — self-service ιδιοκτήτη (χειροκίνητη χρέωση μέχρι το Stripe)
+export const apiGetSubscription = () =>
+  api.get("/billing/subscription").then((r) => r.data);
+export const apiRequestBillingChange = (addon, action) =>
+  api.post("/billing/request-change", { addon, action }).then((r) => r.data);
+export const apiCancelBillingRequest = () =>
+  api.delete("/billing/request-change").then((r) => r.data);
+
 // Error helper
 export function formatApiError(e) {
   const d = e?.response?.data?.detail;

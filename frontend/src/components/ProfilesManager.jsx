@@ -11,12 +11,15 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
+import { FEATURES } from "@/lib/perms";
+import { Switch } from "@/components/ui/switch";
 
 // waiterOnly: manager view — only Σερβιτόρος profiles, role locked.
 function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
   const [name, setName] = useState("");
   const [role, setRole] = useState(waiterOnly ? "waiter" : "employee");
   const [pin, setPin] = useState("");
+  const [perms, setPerms] = useState({});
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -24,10 +27,15 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
       setName(initial?.name || "");
       setRole(waiterOnly ? "waiter" : initial?.role || "employee");
       setPin("");
+      setPerms(initial?.perms || {});
     }
   }, [open, initial, waiterOnly]);
 
   if (!open) return null;
+
+  // Δικαιώματα ανά προφίλ: μόνο για Υπεύθυνο/Υπάλληλο (restrict-only μέσα στον ρόλο).
+  // Ο Ιδιοκτήτης έχει πάντα τα πάντα, ο Σερβιτόρος έχει μόνο Τραπέζια.
+  const showPerms = role === "manager" || role === "employee";
 
   const submit = async (e) => {
     e.preventDefault();
@@ -42,7 +50,7 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
     }
     setBusy(true);
     try {
-      await onSave({ name: name.trim(), role, pin: pin || null });
+      await onSave({ name: name.trim(), role, pin: pin || null, perms });
       onClose();
     } finally {
       setBusy(false);
@@ -90,6 +98,39 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
               </option>
             ))}
           </select>
+        )}
+
+        {showPerms && (
+          <div className="mb-4">
+            <label className="text-xs uppercase tracking-wider text-neutral-400">
+              Δικαιώματα λειτουργιών
+            </label>
+            <p className="text-[11px] text-neutral-500 mt-0.5 mb-2">
+              Ισχύουν μέσα στα όρια του ρόλου — ό,τι δεν επιτρέπει ο ρόλος μένει κλειστό
+            </p>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {FEATURES.map((f) => (
+                <div
+                  key={f.key}
+                  className="flex items-center justify-between gap-3 px-3 py-2 bg-[#2A0E14] border border-[#723645] rounded-md"
+                >
+                  <span className="text-sm text-neutral-200">{f.label}</span>
+                  <Switch
+                    checked={perms[f.key] !== false}
+                    onCheckedChange={(v) =>
+                      setPerms((p) => ({ ...p, [f.key]: !!v }))
+                    }
+                    data-testid={`profile-perm-${f.key}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {role === "owner" && (
+          <p className="text-[11px] text-neutral-500 mb-4">
+            Ο Ιδιοκτήτης έχει πάντα πλήρη πρόσβαση σε όλες τις λειτουργίες
+          </p>
         )}
 
         <label className="text-xs uppercase tracking-wider text-neutral-400">

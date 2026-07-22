@@ -6,7 +6,7 @@ from typing import List, Literal, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field, ConfigDict
 
-from core import db, get_current_user, require_manager, require_staff
+from core import db, get_current_user, require_manager, require_staff, require_feature
 from seed_data import DEFAULT_CUSTOMIZATION
 
 router = APIRouter()
@@ -120,7 +120,7 @@ class CategoryIn(BaseModel):
 
 
 @router.post("/menu/categories")
-async def create_category(body: CategoryIn, user: dict = Depends(require_manager)):
+async def create_category(body: CategoryIn, user: dict = Depends(require_feature("menu", require_manager))):
     # generate slug-ish id
     cid = str(uuid.uuid4())[:8]
     doc = {"id": cid, "name": body.name.strip(), "order": body.order, "user_id": user["id"]}
@@ -134,7 +134,7 @@ class ReorderIn(BaseModel):
 
 
 @router.post("/menu/categories/reorder")
-async def reorder_categories(body: ReorderIn, user: dict = Depends(require_manager)):
+async def reorder_categories(body: ReorderIn, user: dict = Depends(require_feature("menu", require_manager))):
     """Νέα σειρά κατηγοριών: η θέση στη λίστα ids γίνεται το order."""
     for idx, cid in enumerate(body.ids):
         await db.categories.update_one(
@@ -144,7 +144,7 @@ async def reorder_categories(body: ReorderIn, user: dict = Depends(require_manag
 
 
 @router.post("/menu/items/reorder")
-async def reorder_items(body: ReorderIn, user: dict = Depends(require_manager)):
+async def reorder_items(body: ReorderIn, user: dict = Depends(require_feature("menu", require_manager))):
     """Νέα σειρά προϊόντων (μέσα σε μία κατηγορία): η θέση στη λίστα ids γίνεται το sort_order."""
     for idx, iid in enumerate(body.ids):
         await db.items.update_one(
@@ -154,7 +154,7 @@ async def reorder_items(body: ReorderIn, user: dict = Depends(require_manager)):
 
 
 @router.put("/menu/categories/{cid}")
-async def update_category(cid: str, body: CategoryIn, user: dict = Depends(require_manager)):
+async def update_category(cid: str, body: CategoryIn, user: dict = Depends(require_feature("menu", require_manager))):
     r = await db.categories.update_one(
         {"id": cid, "user_id": user["id"]},
         {"$set": {"name": body.name.strip(), "order": body.order}},
@@ -166,7 +166,7 @@ async def update_category(cid: str, body: CategoryIn, user: dict = Depends(requi
 
 
 @router.delete("/menu/categories/{cid}")
-async def delete_category(cid: str, user: dict = Depends(require_manager)):
+async def delete_category(cid: str, user: dict = Depends(require_feature("menu", require_manager))):
     await db.items.delete_many({"user_id": user["id"], "category": cid})
     r = await db.categories.delete_one({"id": cid, "user_id": user["id"]})
     if r.deleted_count == 0:
@@ -176,7 +176,7 @@ async def delete_category(cid: str, user: dict = Depends(require_manager)):
 
 
 @router.post("/menu/items")
-async def create_item(body: MenuItemIn, user: dict = Depends(require_manager)):
+async def create_item(body: MenuItemIn, user: dict = Depends(require_feature("menu", require_manager))):
     iid = str(uuid.uuid4())
     # Νέο προϊόν μπαίνει στο τέλος της κατηγορίας του
     sort_order = await db.items.count_documents({"user_id": user["id"], "category": body.category})
@@ -203,7 +203,7 @@ async def create_item(body: MenuItemIn, user: dict = Depends(require_manager)):
 
 
 @router.put("/menu/items/{iid}")
-async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(require_manager)):
+async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(require_feature("menu", require_manager))):
     update = {
         "name": body.name.strip(),
         "price": float(body.price),
@@ -234,7 +234,7 @@ async def set_item_availability(iid: str, body: AvailabilityIn, user: dict = Dep
     return {"id": iid, "available": body.available, "unavailable_note": body.unavailable_note.strip()}
 
 @router.delete("/menu/items/{iid}")
-async def delete_item(iid: str, user: dict = Depends(require_manager)):
+async def delete_item(iid: str, user: dict = Depends(require_feature("menu", require_manager))):
     r = await db.items.delete_one({"id": iid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
@@ -264,7 +264,7 @@ class BulkItemsIn(BaseModel):
 
 
 @router.post("/menu/items/bulk")
-async def bulk_items(body: BulkItemsIn, user: dict = Depends(require_manager)):
+async def bulk_items(body: BulkItemsIn, user: dict = Depends(require_feature("menu", require_manager))):
     q = {"user_id": user["id"], "id": {"$in": body.ids}}
     await _mark_menu_customized(user["id"])
 
@@ -346,7 +346,7 @@ async def bulk_items(body: BulkItemsIn, user: dict = Depends(require_manager)):
 
 
 @router.put("/menu/customization")
-async def update_customization(body: CustomizationConfig, user: dict = Depends(require_manager)):
+async def update_customization(body: CustomizationConfig, user: dict = Depends(require_feature("menu", require_manager))):
     payload = body.model_dump()
     await db.users.update_one(
         {"id": user["id"]},
@@ -362,7 +362,7 @@ class PhotoIn(BaseModel):
 
 
 @router.get("/photos")
-async def list_photos(user: dict = Depends(require_manager)):
+async def list_photos(user: dict = Depends(require_feature("menu", require_manager))):
     docs = await db.photos.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
     ).sort("created_at", -1).to_list(500)
@@ -370,7 +370,7 @@ async def list_photos(user: dict = Depends(require_manager)):
 
 
 @router.post("/photos")
-async def create_photo(body: PhotoIn, user: dict = Depends(require_manager)):
+async def create_photo(body: PhotoIn, user: dict = Depends(require_feature("menu", require_manager))):
     if not body.data_url.startswith("data:image/"):
         raise HTTPException(400, "Δεν είναι εικόνα (data URL)")
     doc = {
@@ -386,7 +386,7 @@ async def create_photo(body: PhotoIn, user: dict = Depends(require_manager)):
 
 
 @router.post("/photos/import-stock/{stock_id}")
-async def import_stock_photo(stock_id: str, user: dict = Depends(require_manager)):
+async def import_stock_photo(stock_id: str, user: dict = Depends(require_feature("menu", require_manager))):
     """Επιλογή stock φωτογραφίας από τη βιβλιοθήκη OrderDeck → προσωπικό αντίγραφο.
 
     Δημιουργεί ένα φυσιολογικό photo doc του μαγαζιού ώστε η αντιστοίχιση σε προϊόν
@@ -415,7 +415,7 @@ async def import_stock_photo(stock_id: str, user: dict = Depends(require_manager
 
 
 @router.delete("/photos/{pid}")
-async def delete_photo(pid: str, user: dict = Depends(require_manager)):
+async def delete_photo(pid: str, user: dict = Depends(require_feature("menu", require_manager))):
     r = await db.photos.delete_one({"id": pid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")

@@ -16,6 +16,13 @@ from core import db, require_owner, athens_now, local_day_range, to_athens
 
 router = APIRouter()
 
+
+async def require_ai_features(user: dict = Depends(require_owner)) -> dict:
+    """Owner + ανά λογαριασμό flag ai_features_enabled (admin toggle) — αλλιώς 403."""
+    if not user.get("ai_features_enabled"):
+        raise HTTPException(403, "Τα AI features δεν είναι ενεργά για αυτόν τον λογαριασμό")
+    return user
+
 AI_MODEL = "claude-sonnet-5"
 CHAT_LIMIT_PER_HOUR = 30  # όριο μηνυμάτων ανά λογαριασμό/ώρα (κόστος)
 BRIEF_LIMIT_PER_HOUR = 10
@@ -189,7 +196,7 @@ class ChatIn(BaseModel):
 
 
 @router.post("/ai/chat")
-async def ai_chat(body: ChatIn, user: dict = Depends(require_owner)):
+async def ai_chat(body: ChatIn, user: dict = Depends(require_ai_features)):
     await check_rate_limit(user["id"], "chat", CHAT_LIMIT_PER_HOUR)
     client = get_client()
     context = await build_store_context(user["id"], user.get("restaurant_name", ""))
@@ -265,7 +272,7 @@ def _day_stats_text(label: str, s: dict) -> str:
 
 
 @router.get("/ai/brief")
-async def get_brief(mode: str = "yesterday", user: dict = Depends(require_owner)):
+async def get_brief(mode: str = "yesterday", user: dict = Depends(require_ai_features)):
     """Επιστρέφει cached brief της ημέρας αν υπάρχει, αλλιώς exists=false."""
     day = _brief_day(mode)
     doc = await db.ai_briefs.find_one(
@@ -285,7 +292,7 @@ class BriefIn(BaseModel):
 
 
 @router.post("/ai/brief")
-async def create_brief(body: BriefIn, user: dict = Depends(require_owner)):
+async def create_brief(body: BriefIn, user: dict = Depends(require_ai_features)):
     mode = body.mode if body.mode in ("yesterday", "today") else "yesterday"
     day = _brief_day(mode)
     if not body.force:

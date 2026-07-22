@@ -115,7 +115,7 @@ function App() {
             <Route
               path="/app/menu"
               element={
-                <ProtectedRoute roles={["owner", "manager"]}>
+                <ProtectedRoute roles={["owner", "manager"]} perm="menu">
                   <MenuManagement />
                 </ProtectedRoute>
               }
@@ -123,7 +123,7 @@ function App() {
             <Route
               path="/app/photos"
               element={
-                <ProtectedRoute roles={["owner", "manager"]}>
+                <ProtectedRoute roles={["owner", "manager"]} perm="menu">
                   <Photos />
                 </ProtectedRoute>
               }
@@ -140,7 +140,7 @@ function App() {
             <Route
               path="/app/day-close"
               element={
-                <ProtectedRoute roles={["owner"]}>
+                <ProtectedRoute roles={["owner"]} perm="day_close">
                   <DayClose />
                 </ProtectedRoute>
               }
@@ -149,7 +149,7 @@ function App() {
             <Route
               path="/app/history"
               element={
-                <ProtectedRoute roles={["owner", "manager", "employee"]}>
+                <ProtectedRoute roles={["owner", "manager", "employee"]} perm="history">
                   <History />
                 </ProtectedRoute>
               }
@@ -190,7 +190,7 @@ function App() {
             <Route
               path="/app/deckpilot"
               element={
-                <ProtectedRoute requireOwner>
+                <ProtectedRoute requireOwner requiresAI>
                   <DeckPilot />
                 </ProtectedRoute>
               }
@@ -198,7 +198,7 @@ function App() {
             <Route
               path="/app/brief"
               element={
-                <ProtectedRoute requireOwner>
+                <ProtectedRoute requireOwner requiresAI>
                   <DailyBrief />
                 </ProtectedRoute>
               }
@@ -206,7 +206,7 @@ function App() {
             <Route
               path="/app/analytics"
               element={
-                <ProtectedRoute requireOwner>
+                <ProtectedRoute requireOwner perm="analytics">
                   <Analytics />
                 </ProtectedRoute>
               }
@@ -214,7 +214,7 @@ function App() {
             <Route
               path="/app/expenses"
               element={
-                <ProtectedRoute requireOwner>
+                <ProtectedRoute requireOwner perm="expenses">
                   <Expenses />
                 </ProtectedRoute>
               }
@@ -222,7 +222,7 @@ function App() {
             <Route
               path="/app/settings"
               element={
-                <ProtectedRoute requireOwner>
+                <ProtectedRoute requireOwner perm="settings">
                   <Settings />
                 </ProtectedRoute>
               }

@@ -8,7 +8,7 @@ import re
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from core import db, get_current_user, require_owner
+from core import db, get_current_user, require_owner, require_feature
 
 router = APIRouter()
 
@@ -78,7 +78,7 @@ class LogoIn(BaseModel):
 
 
 @router.get("/settings/public-menu")
-async def get_public_menu_settings(user: dict = Depends(require_owner)):
+async def get_public_menu_settings(user: dict = Depends(require_feature("settings", require_owner))):
     slug = await ensure_public_slug(user)
     u = await db.users.find_one(
         {"id": user["id"]}, {"_id": 0, "store_logo": 1, "public_menu_enabled": 1}
@@ -93,7 +93,7 @@ async def get_public_menu_settings(user: dict = Depends(require_owner)):
 
 
 @router.put("/settings/public-menu")
-async def toggle_public_menu(body: ToggleIn, user: dict = Depends(require_owner)):
+async def toggle_public_menu(body: ToggleIn, user: dict = Depends(require_feature("settings", require_owner))):
     await ensure_public_slug(user)
     await db.users.update_one(
         {"id": user["id"]}, {"$set": {"public_menu_enabled": bool(body.enabled)}}
@@ -102,7 +102,7 @@ async def toggle_public_menu(body: ToggleIn, user: dict = Depends(require_owner)
 
 
 @router.put("/settings/public-menu/slug")
-async def update_public_slug(body: SlugIn, user: dict = Depends(require_owner)):
+async def update_public_slug(body: SlugIn, user: dict = Depends(require_feature("settings", require_owner))):
     slug = slugify_greek(body.slug)
     if len(slug) < 3:
         raise HTTPException(
@@ -117,7 +117,7 @@ async def update_public_slug(body: SlugIn, user: dict = Depends(require_owner)):
 
 
 @router.put("/settings/public-menu/logo")
-async def set_store_logo(body: LogoIn, user: dict = Depends(require_owner)):
+async def set_store_logo(body: LogoIn, user: dict = Depends(require_feature("settings", require_owner))):
     if not body.data_url.startswith("data:image/"):
         raise HTTPException(400, "Δεν είναι εικόνα (data URL)")
     await db.users.update_one(
@@ -127,7 +127,7 @@ async def set_store_logo(body: LogoIn, user: dict = Depends(require_owner)):
 
 
 @router.delete("/settings/public-menu/logo")
-async def remove_store_logo(user: dict = Depends(require_owner)):
+async def remove_store_logo(user: dict = Depends(require_feature("settings", require_owner))):
     await db.users.update_one({"id": user["id"]}, {"$unset": {"store_logo": ""}})
     return {"ok": True}
 
