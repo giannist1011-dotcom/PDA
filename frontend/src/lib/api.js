@@ -265,8 +265,12 @@ export const apiGetPublicMenu = (slug) =>
 // PROMO CODES
 export const apiValidatePromo = (code) =>
   api.post("/promo/validate", { code }).then((r) => r.data);
-// Admin (ξεχωριστό password μέσω header — όχι JWT μαγαζιού)
-const adminHeaders = (pw) => ({ headers: { "X-Admin-Password": pw } });
+// Admin auth (όχι JWT μαγαζιού): master = σκέτο password → X-Admin-Password,
+// sub-admin = credential "jwt:<token>" → X-Admin-Token (ίδιο /admin gate)
+const adminHeaders = (pw) =>
+  pw && pw.startsWith("jwt:")
+    ? { headers: { "X-Admin-Token": pw.slice(4) } }
+    : { headers: { "X-Admin-Password": pw } };
 export const apiAdminListPromos = (pw) =>
   api.get("/admin/promo", adminHeaders(pw)).then((r) => r.data);
 export const apiAdminCreatePromo = (pw, payload) =>
@@ -346,6 +350,24 @@ export const apiAdminDeleteAnnouncement = (pw, id) =>
   api.delete(`/admin/announcements/${id}`, adminHeaders(pw)).then((r) => r.data);
 export const apiActiveAnnouncement = () =>
   api.get("/announcements/active").then((r) => r.data);
+
+// ΔΙΑΧΕΙΡΙΣΤΕΣ (sub-admins) — login/αλλαγή κωδικού για sub-admin, CRUD+audit μόνο master
+export const apiAdminLogin = (email, password) =>
+  api.post("/admin/auth/login", { email, password }).then((r) => r.data);
+export const apiAdminChangePassword = (pw, password) =>
+  api.post("/admin/auth/change-password", { password }, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminListAdmins = (pw) =>
+  api.get("/admin/admins", adminHeaders(pw)).then((r) => r.data);
+export const apiAdminCreateAdmin = (pw, payload) =>
+  api.post("/admin/admins", payload, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminUpdateAdmin = (pw, id, payload) =>
+  api.put(`/admin/admins/${id}`, payload, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminResetAdminPassword = (pw, id) =>
+  api.post(`/admin/admins/${id}/reset-password`, {}, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminDeleteAdmin = (pw, id) =>
+  api.delete(`/admin/admins/${id}`, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminAudit = (pw, params) =>
+  api.get("/admin/audit", { ...adminHeaders(pw), params }).then((r) => r.data);
 
 // ONBOARDING (checklist πρώτων βημάτων νέου μαγαζιού — owner)
 export const apiOnboardingStatus = () => api.get("/onboarding/status").then((r) => r.data);

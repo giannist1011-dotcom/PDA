@@ -12,6 +12,7 @@ import {
 import { formatGRDate, formatGRDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import DatePicker from "@/components/DatePicker";
+import { useAdminInfo } from "@/components/AdminShell";
 import { StatusBadge } from "../admin-shops/Badges";
 import { inputCls, PAYMENT_LABELS } from "../admin-shops/utils";
 import { FLEET_PLAN_LABELS } from "./utils";
@@ -20,6 +21,11 @@ const ROLE_LABELS = { fleet_admin: "Συντονιστής", driver: "Οδηγό
 
 // ============ DETAIL / EDIT MODAL ΕΤΑΙΡΙΑΣ DELIVERY ============
 function FleetModal({ pw, companyId, onClose, onChanged }) {
+  // Sub-admin scope: view = μόνο ανάγνωση, manage = disable/notes.
+  // Πλάνα/συνδρομές/διαγραφή/demo — πάντα μόνο master (και στο backend).
+  const info = useAdminInfo();
+  const isMaster = !!info?.is_master;
+  const canManage = isMaster || info?.rights === "manage";
   const [company, setCompany] = useState(null);
   const [busy, setBusy] = useState(false);
   const [edit, setEdit] = useState({});
@@ -128,8 +134,8 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
               </button>
             </div>
 
-            {/* ΕΚΚΡΕΜΕΣ ΑΙΤΗΜΑ ΣΥΝΔΡΟΜΗΣ */}
-            {company.billing_request && (
+            {/* ΕΚΚΡΕΜΕΣ ΑΙΤΗΜΑ ΣΥΝΔΡΟΜΗΣ — μόνο master */}
+            {isMaster && company.billing_request && (
               <div
                 className="mx-5 mt-5 p-4 bg-gold/10 border border-gold/50 rounded-lg"
                 data-testid="fleet-billing-request"
@@ -195,68 +201,78 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
                 </Row>
               </div>
 
-              {/* ΣΥΝΔΡΟΜΗ & ΣΗΜΕΙΩΣΕΙΣ */}
+              {/* ΣΥΝΔΡΟΜΗ & ΣΗΜΕΙΩΣΕΙΣ — πλάνο/λήξη/πληρωμή μόνο master */}
               <div className="space-y-3">
                 <h3 className="text-xs uppercase tracking-widest font-bold text-neutral-400">
-                  Συνδρομή (χειροκίνητα)
+                  {isMaster ? "Συνδρομή (χειροκίνητα)" : "Σημειώσεις"}
                 </h3>
-                <div>
-                  <label className="text-xs text-neutral-400 font-semibold">Πλάνο</label>
-                  <select
-                    value={edit.plan}
-                    onChange={(e) => setEdit((f) => ({ ...f, plan: e.target.value }))}
-                    data-testid="fleet-plan"
-                    className={`${inputCls} mt-1`}
-                  >
-                    {Object.entries(FLEET_PLAN_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-neutral-400 font-semibold">Λήξη συνδρομής</label>
-                  <DatePicker
-                    value={edit.subscription_expires_at}
-                    onChange={(v) => setEdit((f) => ({ ...f, subscription_expires_at: v }))}
-                    clearable
-                    placeholder="Χωρίς λήξη"
-                    testId="fleet-sub-expires"
-                    className="w-full h-10 px-3 mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-neutral-400 font-semibold">Κατάσταση πληρωμής</label>
-                  <select
-                    value={edit.payment_status}
-                    onChange={(e) => setEdit((f) => ({ ...f, payment_status: e.target.value }))}
-                    data-testid="fleet-payment-status"
-                    className={`${inputCls} mt-1`}
-                  >
-                    {Object.entries(PAYMENT_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
-                </div>
+                {isMaster && (
+                  <>
+                    <div>
+                      <label className="text-xs text-neutral-400 font-semibold">Πλάνο</label>
+                      <select
+                        value={edit.plan}
+                        onChange={(e) => setEdit((f) => ({ ...f, plan: e.target.value }))}
+                        data-testid="fleet-plan"
+                        className={`${inputCls} mt-1`}
+                      >
+                        {Object.entries(FLEET_PLAN_LABELS).map(([k, v]) => (
+                          <option key={k} value={k}>{v}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-neutral-400 font-semibold">Λήξη συνδρομής</label>
+                      <DatePicker
+                        value={edit.subscription_expires_at}
+                        onChange={(v) => setEdit((f) => ({ ...f, subscription_expires_at: v }))}
+                        clearable
+                        placeholder="Χωρίς λήξη"
+                        testId="fleet-sub-expires"
+                        className="w-full h-10 px-3 mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-neutral-400 font-semibold">Κατάσταση πληρωμής</label>
+                      <select
+                        value={edit.payment_status}
+                        onChange={(e) => setEdit((f) => ({ ...f, payment_status: e.target.value }))}
+                        data-testid="fleet-payment-status"
+                        className={`${inputCls} mt-1`}
+                      >
+                        {Object.entries(PAYMENT_LABELS).map(([k, v]) => (
+                          <option key={k} value={k}>{v}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
                 <div>
                   <label className="text-xs text-neutral-400 font-semibold">Σημειώσεις διαχειριστή</label>
                   <textarea
                     value={edit.admin_notes}
                     onChange={(e) => setEdit((f) => ({ ...f, admin_notes: e.target.value }))}
                     rows={4}
+                    disabled={!canManage}
                     placeholder="Ελεύθερες σημειώσεις για τον πελάτη..."
                     data-testid="fleet-notes"
-                    className="w-full px-3 py-2 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+                    className="w-full px-3 py-2 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame disabled:opacity-50"
                   />
                 </div>
-                <Button
-                  type="button"
-                  onClick={() => patch(edit, "Αποθηκεύτηκε")}
-                  disabled={busy}
-                  data-testid="fleet-save"
-                  className="w-full h-10 bg-brand hover:bg-brand-hover text-white font-bold"
-                >
-                  <Save className="w-4 h-4 mr-1.5" /> Αποθήκευση
-                </Button>
+                {canManage && (
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      // Sub-admin: το backend δέχεται μόνο disabled/admin_notes
+                      patch(isMaster ? edit : { admin_notes: edit.admin_notes }, "Αποθηκεύτηκε")
+                    }
+                    disabled={busy}
+                    data-testid="fleet-save"
+                    className="w-full h-10 bg-brand hover:bg-brand-hover text-white font-bold"
+                  >
+                    <Save className="w-4 h-4 mr-1.5" /> Αποθήκευση
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -296,6 +312,7 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
             <div className="p-5 border-t border-[#723645] space-y-3">
               <div className="flex flex-wrap gap-2">
                 {company.is_demo ? (
+                  isMaster && (
                   <Button
                     type="button"
                     onClick={resetDemo}
@@ -305,7 +322,9 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
                   >
                     <RotateCcw className="w-4 h-4 mr-1.5" /> Επαναφορά demo
                   </Button>
+                  )
                 ) : (
+                  canManage && (
                   <Button
                     type="button"
                     onClick={() =>
@@ -327,7 +346,10 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
                     <Power className="w-4 h-4 mr-1.5" />
                     {company.disabled ? "Ενεργοποίηση λογαριασμού" : "Απενεργοποίηση λογαριασμού"}
                   </Button>
+                  )
                 )}
+                {/* Διαγραφή: πάντα μόνο master */}
+                {isMaster && (
                 <Button
                   type="button"
                   onClick={() => setDeleteConfirm("")}
@@ -338,6 +360,7 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
                   <Trash2 className="w-4 h-4 mr-1.5" />
                   {company.is_demo ? "Διαγραφή demo" : "Διαγραφή λογαριασμού"}
                 </Button>
+                )}
               </div>
               {company.disabled && (
                 <p className="text-xs text-neutral-500">

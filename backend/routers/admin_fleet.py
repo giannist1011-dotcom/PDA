@@ -11,9 +11,17 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from pydantic import BaseModel, Field
 
+from routers.admin_admins import (
+    audit_subadmin,
+    check_city,
+    get_admin_ctx,
+    require_manage,
+    require_product,
+    scope_city_match,
+)
 from core import (
     PER_USER_COLLECTIONS,
     athens_today,
@@ -42,13 +50,13 @@ FLEET_FIELDS = {
 # ============ ΕΤΑΙΡΙΕΣ DELIVERY ============
 @router.get("/admin/fleet")
 async def admin_list_fleet(
-    x_admin_password: Optional[str] = Header(None),
+    ctx: dict = Depends(get_admin_ctx),
     search: str = "",
     status: Literal["all", "active", "disabled", "demo"] = "all",
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
 ):
-    require_admin(x_admin_password)
+    require_product(ctx, "fleet")
     match: dict = {"account_type": "fleet_company"}
     if status == "demo":
         match["is_demo"] = True
@@ -64,6 +72,10 @@ async def admin_list_fleet(
             {"restaurant_name": {"$regex": q, "$options": "i"}},
             {"email": {"$regex": q, "$options": "i"}},
         ]
+    # Scope sub-admin: μόνο εταιρίες στις πόλεις ευθύνης του
+    city_scope = scope_city_match(ctx)
+    if city_scope:
+        match = {"$and": [match, city_scope]}
     total = await db.users.count_documents(match)
     companies = await db.users.find(match, FLEET_FIELDS).sort("created_at", -1) \
         .skip((page - 1) * limit).to_list(limit)
@@ -102,11 +114,12 @@ async def admin_list_fleet(
 
 
 @router.get("/admin/fleet/{uid}")
-async def admin_fleet_detail(uid: str, x_admin_password: Optional[str] = Header(None)):
-    require_admin(x_admin_password)
+async def admin_fleet_detail(uid: str, ctx: dict = Depends(get_admin_ctx)):
+    require_product(ctx, "fleet")
     u = await db.users.find_one({"id": uid, "account_type": "fleet_company"}, FLEET_FIELDS)
     if not u:
         raise HTTPException(404, "Η εταιρεία δεν βρέθηκε")
+    check_city(ctx, u)
     u["status"] = shop_status(u)
     fill_city(u)
     team = await db.fleet_teams.find_one(
@@ -148,14 +161,33 @@ class FleetUpdateIn(BaseModel):
     clear_billing_request: Optional[bool] = None
 
 
+# Sub-admin με rights=manage: ΜΟΝΟ ενεργοποίηση/απενεργοποίηση + σημειώσεις (όχι πλάνα/τιμές)
+SUBADMIN_FLEET_FIELDS = {"disabled", "admin_notes"}
+
+
 @router.patch("/admin/fleet/{uid}")
 async def admin_update_fleet(
-    uid: str, body: FleetUpdateIn, x_admin_password: Optional[str] = Header(None)
+    uid: str, body: FleetUpdateIn, ctx: dict = Depends(get_admin_ctx)
 ):
-    require_admin(x_admin_password)
+    require_product(ctx, "fleet")
     update = {k: v for k, v in body.model_dump(exclude_unset=True).items()}
     if not update:
         raise HTTPException(400, "Δεν δόθηκαν αλλαγές")
+    if not ctx["is_master"]:
+        require_manage(ctx)
+        if set(update) - SUBADMIN_FLEET_FIELDS:
+            raise HTTPException(403, "Δεν έχετε δικαίωμα αλλαγής πλάνων/συνδρομών")
+        target = await db.users.find_one(
+            {"id": uid, "account_type": "fleet_company"},
+            {"_id": 0, "restaurant_name": 1, "store_city": 1, "city": 1},
+        )
+        if not target:
+            raise HTTPException(404, "Η εταιρεία δεν βρέθηκε")
+        check_city(ctx, target)
+        await audit_subadmin(
+            ctx, "update_fleet", uid, target.get("restaurant_name") or "",
+            ", ".join(f"{k}={v!r}" for k, v in update.items()),
+        )
     if update.get("subscription_expires_at") == "":
         update["subscription_expires_at"] = None
     if update.pop("clear_billing_request", None):

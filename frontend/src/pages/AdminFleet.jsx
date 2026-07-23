@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import AdminShell from "@/components/AdminShell";
+import AdminShell, { MasterOnly } from "@/components/AdminShell";
 import FleetContent from "./admin-fleet/FleetContent";
 import CreateDemoModal from "./admin-shops/CreateDemoModal";
 
@@ -14,14 +14,17 @@ export default function AdminFleet() {
       subtitle="Λογαριασμοί OrderDeck Fleet (εταιρείες διανομής)"
       actions={
         <>
-          <Button
-            type="button"
-            onClick={() => setDemoOpen(true)}
-            data-testid="fleet-create-demo"
-            className="h-9 px-3 bg-[#3D1620] border border-[#723645] hover:border-gold text-gold text-xs font-bold"
-          >
-            <Sparkles className="w-4 h-4 mr-1.5" /> Δημιουργία demo
-          </Button>
+          {/* Δημιουργία demo: master-only ενέργεια */}
+          <MasterOnly>
+            <Button
+              type="button"
+              onClick={() => setDemoOpen(true)}
+              data-testid="fleet-create-demo"
+              className="h-9 px-3 bg-[#3D1620] border border-[#723645] hover:border-gold text-gold text-xs font-bold"
+            >
+              <Sparkles className="w-4 h-4 mr-1.5" /> Δημιουργία demo
+            </Button>
+          </MasterOnly>
           <Button
             type="button"
             onClick={() => window.location.reload()}

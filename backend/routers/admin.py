@@ -8,10 +8,18 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from pydantic import BaseModel, Field
 
 from core import db, hash_password, purge_user_data
+from routers.admin_admins import (
+    audit_subadmin,
+    check_city,
+    get_admin_ctx,
+    require_manage,
+    require_product,
+    scope_city_match,
+)
 from routers.onboarding import ONB_PROJECT, fetch_onboarding, onboarding_progress
 from routers.promo import require_admin
 
@@ -47,10 +55,18 @@ def shop_status(u: dict) -> str:
 
 
 @router.get("/admin/ping")
-async def admin_ping(x_admin_password: Optional[str] = Header(None)):
-    """Ελαφρύς έλεγχος του admin password για το login gate του panel."""
-    require_admin(x_admin_password)
-    return {"ok": True}
+async def admin_ping(ctx: dict = Depends(get_admin_ctx)):
+    """Έλεγχος admin auth (master password ή sub-admin token) για το gate του panel.
+    Επιστρέφει και το scope ώστε το frontend να φιλτράρει το μενού."""
+    return {
+        "ok": True,
+        "is_master": ctx["is_master"],
+        "name": ctx["name"],
+        "products": ctx["products"],
+        "cities": ctx["cities"],
+        "rights": ctx["rights"],
+        "must_change_password": ctx["must_change_password"],
+    }
 
 
 # ============ ΕΠΙΣΚΟΠΗΣΗ ============
@@ -104,7 +120,7 @@ async def admin_overview(x_admin_password: Optional[str] = Header(None)):
 # ============ ΜΑΓΑΖΙΑ ============
 @router.get("/admin/shops")
 async def admin_list_shops(
-    x_admin_password: Optional[str] = Header(None),
+    ctx: dict = Depends(get_admin_ctx),
     search: str = "",
     status: Literal["all", "active", "disabled", "demo"] = "all",
     business_type: str = "all",
@@ -113,7 +129,7 @@ async def admin_list_shops(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
 ):
-    require_admin(x_admin_password)
+    require_product(ctx, "orderdeck")
     # Οι εταιρίες delivery εμφανίζονται στη δική τους λίστα (/admin/fleet)
     match: dict = {"account_type": {"$ne": "fleet_company"}}
     if status == "demo":
@@ -139,6 +155,10 @@ async def admin_list_shops(
         created["$lte"] = reg_to + "T23:59:59.999999+00:00"
     if created:
         match["created_at"] = created
+    # Scope sub-admin: μόνο μαγαζιά στις πόλεις ευθύνης του ($and — το match έχει δικό του $or)
+    city_scope = scope_city_match(ctx)
+    if city_scope:
+        match = {"$and": [match, city_scope]}
 
     total = await db.users.count_documents(match)
     pipeline = [
@@ -180,11 +200,12 @@ async def admin_list_shops(
 
 
 @router.get("/admin/shops/{uid}")
-async def admin_shop_detail(uid: str, x_admin_password: Optional[str] = Header(None)):
-    require_admin(x_admin_password)
+async def admin_shop_detail(uid: str, ctx: dict = Depends(get_admin_ctx)):
+    require_product(ctx, "orderdeck")
     u = await db.users.find_one({"id": uid}, SHOP_FIELDS)
     if not u:
         raise HTTPException(404, "Το μαγαζί δεν βρέθηκε")
+    check_city(ctx, u)
     u["status"] = shop_status(u)
     fill_city(u)
     stats = {"orders_count": 0, "orders_revenue": 0, "last_activity": None}
@@ -218,16 +239,20 @@ class ResetPinIn(BaseModel):
 
 @router.post("/admin/shops/{uid}/profiles/{pid}/reset-pin")
 async def admin_reset_profile_pin(
-    uid: str, pid: str, body: ResetPinIn, x_admin_password: Optional[str] = Header(None)
+    uid: str, pid: str, body: ResetPinIn, ctx: dict = Depends(get_admin_ctx)
 ):
     """Επαναφορά PIN προφίλ από τον διαχειριστή πλατφόρμας: προσωρινό PIN (ίδιο hashing
     με το login), καθάρισμα lockout, υποχρεωτική αλλαγή στο επόμενο login + audit log."""
-    require_admin(x_admin_password)
+    require_product(ctx, "orderdeck")
+    require_manage(ctx)
     if not body.pin.isdigit():
         raise HTTPException(400, "Το προσωρινό PIN πρέπει να είναι 4 ψηφία")
-    u = await db.users.find_one({"id": uid}, {"_id": 0, "id": 1, "restaurant_name": 1})
+    u = await db.users.find_one(
+        {"id": uid}, {"_id": 0, "id": 1, "restaurant_name": 1, "store_city": 1, "city": 1}
+    )
     if not u:
         raise HTTPException(404, "Το μαγαζί δεν βρέθηκε")
+    check_city(ctx, u)
     prof = await db.profiles.find_one({"id": pid, "user_id": uid})
     if not prof:
         raise HTTPException(404, "Το προφίλ δεν βρέθηκε")
@@ -244,11 +269,12 @@ async def admin_reset_profile_pin(
     await db.users.update_one(
         {"id": uid}, {"$set": {"pin_fail_count": 0, "pin_lock_until": None}}
     )
-    # Audit: η admin auth είναι κοινό password (χωρίς ατομικά ids) — καταγράφεται ως platform_admin
+    # Audit: master = platform_admin, sub-admin = το δικό του id/όνομα (ορατό στον master)
     await db.admin_audit.insert_one({
         "id": str(uuid.uuid4()),
         "action": "reset_pin",
-        "admin_id": "platform_admin",
+        "admin_id": ctx["id"],
+        "admin_name": ctx["name"],
         "user_id": uid,
         "restaurant_name": u.get("restaurant_name") or "",
         "profile_id": pid,
@@ -271,14 +297,33 @@ class ShopUpdateIn(BaseModel):
     clear_billing_request: Optional[bool] = None  # καθαρισμός εκκρεμούς αιτήματος συνδρομής
 
 
+# Sub-admin με rights=manage: ΜΟΝΟ ενεργοποίηση/απενεργοποίηση + σημειώσεις —
+# ποτέ πλάνα/τιμές/add-ons (αυτά μένουν στον master)
+SUBADMIN_SHOP_FIELDS = {"disabled", "admin_notes"}
+
+
 @router.patch("/admin/shops/{uid}")
 async def admin_update_shop(
-    uid: str, body: ShopUpdateIn, x_admin_password: Optional[str] = Header(None)
+    uid: str, body: ShopUpdateIn, ctx: dict = Depends(get_admin_ctx)
 ):
-    require_admin(x_admin_password)
+    require_product(ctx, "orderdeck")
     update = {k: v for k, v in body.model_dump(exclude_unset=True).items()}
     if not update:
         raise HTTPException(400, "Δεν δόθηκαν αλλαγές")
+    if not ctx["is_master"]:
+        require_manage(ctx)
+        if set(update) - SUBADMIN_SHOP_FIELDS:
+            raise HTTPException(403, "Δεν έχετε δικαίωμα αλλαγής πλάνων/συνδρομών")
+        target = await db.users.find_one(
+            {"id": uid}, {"_id": 0, "restaurant_name": 1, "store_city": 1, "city": 1}
+        )
+        if not target:
+            raise HTTPException(404, "Το μαγαζί δεν βρέθηκε")
+        check_city(ctx, target)
+        await audit_subadmin(
+            ctx, "update_shop", uid, target.get("restaurant_name") or "",
+            ", ".join(f"{k}={v!r}" for k, v in update.items()),
+        )
     if update.get("subscription_expires_at") == "":
         update["subscription_expires_at"] = None
     # Add-ons: αποθηκεύονται στο nested "addons" — όχι ως top-level πεδία

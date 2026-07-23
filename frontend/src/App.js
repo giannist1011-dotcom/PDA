@@ -33,6 +33,7 @@ import AdminFleet from "@/pages/AdminFleet";
 import AdminSubscriptions from "@/pages/AdminSubscriptions";
 import AdminLeads from "@/pages/AdminLeads";
 import AdminAnnouncements from "@/pages/AdminAnnouncements";
+import AdminAdmins from "@/pages/AdminAdmins";
 import PublicMenu from "@/pages/PublicMenu";
 import { FleetAuthProvider, FleetProtected } from "@/context/FleetAuthContext";
 import FleetLogin from "@/pages/FleetLogin";
@@ -134,6 +135,7 @@ function App() {
             <Route path="/admin/promo" element={<AdminPromo />} />
             <Route path="/admin/announcements" element={<AdminAnnouncements />} />
             <Route path="/admin/stock-photos" element={<AdminStockPhotos />} />
+            <Route path="/admin/admins" element={<AdminAdmins />} />
 
             {/* OrderDeck Fleet — εταιρείες διανομής (standalone) */}
             <Route path="/fleet/*" element={<FleetRoutes />} />

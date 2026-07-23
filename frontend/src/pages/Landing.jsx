@@ -17,6 +17,7 @@ import {
   Sparkles,
   Tag,
   Clapperboard,
+  Truck,
 } from "lucide-react";
 import { BUSINESS_TYPES } from "@/lib/business";
 import Logo from "./landing/Logo";
@@ -116,7 +117,7 @@ export default function Landing() {
               data-testid="landing-header-cta"
               className="hidden sm:flex h-10 px-4 rounded-lg bg-flame hover:bg-[#EA580C] text-white text-sm font-bold items-center transition-colors"
             >
-              Δοκίμασέ το δωρεάν
+              Ξεκίνα δωρεάν
             </button>
           </div>
         </div>
@@ -148,7 +149,7 @@ export default function Landing() {
               data-testid="landing-hero-cta"
               className="w-full sm:w-auto h-14 px-8 rounded-xl bg-flame hover:bg-[#EA580C] text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg shadow-flame/25 transition-all hover:scale-[1.02]"
             >
-              Δοκίμασε δωρεάν 1 μήνα
+              Ξεκίνα δωρεάν
               <ArrowRight className="w-5 h-5" />
             </button>
             <button
@@ -168,7 +169,7 @@ export default function Landing() {
             </button>
           </div>
           <div className="mt-4 text-xs md:text-sm text-neutral-500">
-            Χωρίς κάρτα · Χωρίς δέσμευση · Έτοιμο μενού σε 2 λεπτά · Το demo σβήνει σε 3 ώρες
+            1ος μήνας δωρεάν · Χωρίς κάρτα · Έτοιμο μενού σε 2 λεπτά · Το demo σβήνει σε 3 ώρες
           </div>
         </div>
       </section>
@@ -347,13 +348,40 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 8. FOOTER */}
+      {/* 8. FLEET — εταιρίες delivery (ξεχωριστό προϊόν, δική τους εγγραφή) */}
+      <section className="max-w-6xl mx-auto px-4 md:px-6 pb-16 md:pb-24">
+        <div className="rounded-2xl border border-[#333] bg-[#141414] p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-5 md:gap-6">
+          <div className="w-12 h-12 rounded-xl bg-flame/10 border border-flame/25 flex items-center justify-center shrink-0">
+            <Truck className="w-6 h-6 text-flame" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-heading font-bold text-xl mb-1">Είσαι εταιρία delivery;</h3>
+            <p className="text-sm md:text-base text-neutral-400 leading-relaxed">
+              Το OrderDeck Fleet οργανώνει τους διανομείς σου: παραγγελίες ημέρας, ανάθεση με ένα
+              tap και σύνολα ανά οδηγό — όλα από το κινητό.
+            </p>
+          </div>
+          <Link
+            to="/fleet/signup"
+            data-testid="landing-fleet-cta"
+            className="h-12 px-6 rounded-xl border border-flame/50 hover:border-flame text-flame font-bold flex items-center justify-center gap-2 transition-colors shrink-0"
+          >
+            Ξεκίνα με το Fleet
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </section>
+
+      {/* 9. FOOTER */}
       <footer className="border-t border-[#262626] bg-[#0A0A0A]">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <Logo />
           <nav className="flex items-center gap-6 text-sm text-neutral-400">
             <a href="#features" className="hover:text-flame transition-colors">Χαρακτηριστικά</a>
             <a href="#pricing" className="hover:text-flame transition-colors">Τιμές</a>
+            <Link to="/fleet/signup" data-testid="landing-footer-fleet" className="hover:text-flame transition-colors">
+              Είσαι εταιρία delivery;
+            </Link>
             <a href="mailto:hello@orderdeck.gr" className="hover:text-flame transition-colors">Επικοινωνία</a>
           </nav>
           <div className="text-xs text-neutral-600">
