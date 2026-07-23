@@ -29,6 +29,7 @@ import AdminPromo from "@/pages/AdminPromo";
 import AdminStockPhotos from "@/pages/AdminStockPhotos";
 import AdminOverview from "@/pages/AdminOverview";
 import AdminShops from "@/pages/AdminShops";
+import AdminFleet from "@/pages/AdminFleet";
 import AdminSubscriptions from "@/pages/AdminSubscriptions";
 import AdminLeads from "@/pages/AdminLeads";
 import AdminAnnouncements from "@/pages/AdminAnnouncements";
@@ -127,6 +128,7 @@ function App() {
             {/* OrderDeck admin — δικό του password gate, εκτός λογαριασμών μαγαζιών */}
             <Route path="/admin" element={<AdminOverview />} />
             <Route path="/admin/shops" element={<AdminShops />} />
+            <Route path="/admin/fleet" element={<AdminFleet />} />
             <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
             <Route path="/admin/leads" element={<AdminLeads />} />
             <Route path="/admin/promo" element={<AdminPromo />} />

@@ -315,6 +315,26 @@ export const apiAdminExpiringSubs = (pw) =>
 export const apiAdminLeads = (pw, params) =>
   api.get("/admin/leads", { ...adminHeaders(pw), params }).then((r) => r.data);
 
+// ΕΤΑΙΡΙΕΣ DELIVERY (OrderDeck Fleet) — admin (ίδιο admin password)
+export const apiAdminListFleet = (pw, params) =>
+  api.get("/admin/fleet", { ...adminHeaders(pw), params }).then((r) => r.data);
+export const apiAdminFleetDetail = (pw, id) =>
+  api.get(`/admin/fleet/${id}`, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminUpdateFleet = (pw, id, payload) =>
+  api.patch(`/admin/fleet/${id}`, payload, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminDeleteFleet = (pw, id, confirm) =>
+  api
+    .delete(`/admin/fleet/${id}`, { ...adminHeaders(pw), params: { confirm } })
+    .then((r) => r.data);
+
+// DEMO ΛΟΓΑΡΙΑΣΜΟΙ — δημιουργία/επαναφορά/διαγραφή από τον admin (μαγαζί ή εταιρία)
+export const apiAdminCreateDemo = (pw, payload) =>
+  api.post("/admin/demos", payload, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminResetDemo = (pw, id) =>
+  api.post(`/admin/demos/${id}/reset`, {}, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminDeleteDemo = (pw, id) =>
+  api.delete(`/admin/demos/${id}`, adminHeaders(pw)).then((r) => r.data);
+
 // ΑΝΑΚΟΙΝΩΣΕΙΣ — admin CRUD (ίδιο admin password) + active για την εφαρμογή
 export const apiAdminListAnnouncements = (pw) =>
   api.get("/admin/announcements", adminHeaders(pw)).then((r) => r.data);

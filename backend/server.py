@@ -9,7 +9,7 @@ from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, ensure_demo_account, migrate_items_sort_order
-from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, announcements, onboarding, billing, fleet
+from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, admin_fleet, announcements, onboarding, billing, fleet
 
 app = FastAPI(title="OrderDeck")
 
@@ -43,6 +43,7 @@ api.include_router(stock_photos.router)
 api.include_router(ai.router)
 api.include_router(checklist.router)
 api.include_router(admin.router)
+api.include_router(admin_fleet.router)
 api.include_router(announcements.router)
 api.include_router(onboarding.router)
 api.include_router(billing.router)
@@ -103,6 +104,8 @@ async def on_startup():
     await db.users.create_index("public_slug", unique=True, sparse=True)
     # Demo λογαριασμοί: γρήγορο εντοπισμό ληγμένων για το auto-cleanup
     await db.users.create_index([("is_demo", 1), ("demo_expires_at", 1)], sparse=True)
+    # Admin panel: λίστα εταιριών delivery (account_type=fleet_company)
+    await db.users.create_index("account_type", sparse=True)
     await db.demo_leads.create_index([("created_at", -1)])
     # Admin panel: λίστα "λήγουν σύντομα" (χειροκίνητες συνδρομές)
     await db.users.create_index([("subscription_expires_at", 1)], sparse=True)

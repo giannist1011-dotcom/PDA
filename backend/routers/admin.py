@@ -63,10 +63,12 @@ async def admin_overview(x_admin_password: Optional[str] = Header(None)):
     d7_iso = (now - timedelta(days=7)).isoformat()
     d30_iso = (now - timedelta(days=30)).isoformat()
 
-    real = {"is_demo": {"$ne": True}}
+    # Οι εταιρίες delivery (account_type=fleet_company) έχουν δική τους λίστα/μετρικές
+    not_fleet = {"account_type": {"$ne": "fleet_company"}}
+    real = {"is_demo": {"$ne": True}, **not_fleet}
     total = await db.users.count_documents(real)
     disabled = await db.users.count_documents({**real, "disabled": True})
-    demo = await db.users.count_documents({"is_demo": True})
+    demo = await db.users.count_documents({"is_demo": True, **not_fleet})
 
     regs_today = await db.users.count_documents({**real, "created_at": {"$gte": today_iso}})
     regs_7d = await db.users.count_documents({**real, "created_at": {"$gte": d7_iso}})
@@ -112,7 +114,8 @@ async def admin_list_shops(
     limit: int = Query(20, ge=1, le=100),
 ):
     require_admin(x_admin_password)
-    match: dict = {}
+    # Οι εταιρίες delivery εμφανίζονται στη δική τους λίστα (/admin/fleet)
+    match: dict = {"account_type": {"$ne": "fleet_company"}}
     if status == "demo":
         match["is_demo"] = True
     elif status == "disabled":

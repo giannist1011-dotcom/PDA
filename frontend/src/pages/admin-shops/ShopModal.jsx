@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Power, Trash2, X, Save, Clock, Bot } from "lucide-react";
+import { Power, Trash2, X, Save, Clock, Bot, RotateCcw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   apiAdminShopDetail,
   apiAdminUpdateShop,
   apiAdminDeleteShop,
+  apiAdminResetDemo,
   formatApiError,
 } from "@/lib/api";
 import { businessLabel } from "@/lib/business";
@@ -78,6 +79,21 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
     try {
       await apiAdminUpdateShop(pw, shopId, { disabled: !shop.disabled });
       toast.success(shop.disabled ? "Ο λογαριασμός ενεργοποιήθηκε" : "Ο λογαριασμός απενεργοποιήθηκε");
+      onChanged();
+      load();
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Demo λογαριασμός: επαναφορά στην αρχική seeded κατάσταση (μενού/προφίλ/χωρίς ιστορικό)
+  const resetDemo = async () => {
+    setBusy(true);
+    try {
+      await apiAdminResetDemo(pw, shopId);
+      toast.success("Το demo επαναφέρθηκε στην αρχική κατάσταση");
       onChanged();
       load();
     } catch (e) {
@@ -329,6 +345,17 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
             {/* ΕΝΕΡΓΕΙΕΣ */}
             <div className="p-5 border-t border-[#723645] space-y-3">
               <div className="flex flex-wrap gap-2">
+                {shop.is_demo && (
+                  <Button
+                    type="button"
+                    onClick={resetDemo}
+                    disabled={busy}
+                    data-testid="shop-demo-reset"
+                    className="h-10 px-4 bg-[#2A0E14] border border-[#723645] hover:border-gold text-gold text-sm font-bold"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-1.5" /> Επαναφορά demo
+                  </Button>
+                )}
                 <Button
                   type="button"
                   onClick={toggleDisabled}

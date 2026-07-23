@@ -11,6 +11,7 @@ import {
   Images,
   Megaphone,
   LogOut,
+  Truck,
 } from "lucide-react";
 import { apiAdminPing, formatApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export const useAdminPw = () => useContext(AdminCtx);
 const NAV = [
   { to: "/admin", label: "Επισκόπηση", icon: LayoutDashboard, end: true },
   { to: "/admin/shops", label: "Μαγαζιά", icon: Store },
+  { to: "/admin/fleet", label: "Εταιρίες Delivery", icon: Truck },
   { to: "/admin/subscriptions", label: "Συνδρομές", icon: CreditCard },
   { to: "/admin/leads", label: "Leads", icon: Users },
   { to: "/admin/promo", label: "Κωδικοί", icon: Ticket },
