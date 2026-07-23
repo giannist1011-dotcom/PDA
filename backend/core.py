@@ -227,6 +227,9 @@ def public_user(u: dict) -> dict:
         "delivery_radius_km": u.get("delivery_radius_km") or 6,
         "store_hours": u.get("store_hours") or {},
         "google_review_link": u.get("google_review_link") or "",
+        # Ρυθμίσεις καταλόγου/παραγγελιών — το POS τα χρειάζεται για χρέωση delivery + ελάχιστη
+        "min_order": u.get("min_order"),
+        "delivery_fee": u.get("delivery_fee"),
         "print_copies": u.get("print_copies", 1),
         "print_copy_labels": bool(u.get("print_copy_labels", False)),
         "print_double": bool(u.get("print_double", False)),

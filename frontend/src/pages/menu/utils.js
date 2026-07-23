@@ -8,4 +8,5 @@ export const emptyItem = (categoryId = "") => ({
   option_groups: [],
   photo_id: null,
   allergens: "",
+  code: "",
 });

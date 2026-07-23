@@ -5,6 +5,8 @@
 """
 import re
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
@@ -81,7 +83,17 @@ class LogoIn(BaseModel):
 async def get_public_menu_settings(user: dict = Depends(require_feature("settings", require_owner))):
     slug = await ensure_public_slug(user)
     u = await db.users.find_one(
-        {"id": user["id"]}, {"_id": 0, "store_logo": 1, "public_menu_enabled": 1}
+        {"id": user["id"]},
+        {
+            "_id": 0,
+            "store_logo": 1,
+            "public_menu_enabled": 1,
+            "min_order": 1,
+            "delivery_fee": 1,
+            "link_wolt": 1,
+            "link_efood": 1,
+            "link_box": 1,
+        },
     )
     u = u or {}
     return {
@@ -89,7 +101,35 @@ async def get_public_menu_settings(user: dict = Depends(require_feature("setting
         "slug": slug,
         "logo": u.get("store_logo"),
         "path": f"/menu/{slug}",
+        "min_order": u.get("min_order"),
+        "delivery_fee": u.get("delivery_fee"),
+        "link_wolt": u.get("link_wolt") or "",
+        "link_efood": u.get("link_efood") or "",
+        "link_box": u.get("link_box") or "",
     }
+
+
+class CatalogSettingsIn(BaseModel):
+    # Κενό πεδίο = None = δεν εμφανίζεται πουθενά (κατάλογος/POS)
+    min_order: Optional[float] = Field(default=None, ge=0, le=1000)
+    delivery_fee: Optional[float] = Field(default=None, ge=0, le=100)
+    link_wolt: Optional[str] = Field(default=None, max_length=300)
+    link_efood: Optional[str] = Field(default=None, max_length=300)
+    link_box: Optional[str] = Field(default=None, max_length=300)
+
+
+@router.put("/settings/catalog")
+async def update_catalog_settings(body: CatalogSettingsIn, user: dict = Depends(require_feature("settings", require_owner))):
+    """Ελάχιστη παραγγελία, χρέωση delivery και σύνδεσμοι πλατφορμών (Wolt/efood/Box)."""
+    fields = {
+        "min_order": body.min_order if body.min_order else None,
+        "delivery_fee": body.delivery_fee if body.delivery_fee else None,
+        "link_wolt": (body.link_wolt or "").strip(),
+        "link_efood": (body.link_efood or "").strip(),
+        "link_box": (body.link_box or "").strip(),
+    }
+    await db.users.update_one({"id": user["id"]}, {"$set": fields})
+    return fields
 
 
 @router.put("/settings/public-menu")
@@ -161,6 +201,11 @@ async def public_menu(slug: str):
             "store_lng": 1,
             "store_hours": 1,
             "google_review_link": 1,
+            "min_order": 1,
+            "delivery_fee": 1,
+            "link_wolt": 1,
+            "link_efood": 1,
+            "link_box": 1,
         },
     )
     if not u or not u.get("public_menu_enabled"):
@@ -206,5 +251,10 @@ async def public_menu(slug: str):
         "store_lng": u.get("store_lng"),
         "store_hours": u.get("store_hours") or {},
         "google_review_link": u.get("google_review_link") or "",
+        "min_order": u.get("min_order"),
+        "delivery_fee": u.get("delivery_fee"),
+        "link_wolt": u.get("link_wolt") or "",
+        "link_efood": u.get("link_efood") or "",
+        "link_box": u.get("link_box") or "",
         "categories": out_cats,
     }

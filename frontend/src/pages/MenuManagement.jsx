@@ -111,6 +111,7 @@ export default function MenuManagement() {
         option_groups: form.option_groups || [],
         photo_id: form.photo_id || null,
         allergens: form.allergens || "",
+        code: form.code || "",
       };
       if (form.id) {
         const upd = await apiUpdateItem(form.id, payload);

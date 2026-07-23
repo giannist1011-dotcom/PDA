@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent } from "lucide-react";
+import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LineEditModal from "@/components/LineEditModal";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
@@ -57,6 +57,10 @@ export default function OrderPanel({
   discount,
   discountAmount = 0,
   onDiscountClick,
+  note = "",
+  setNote,
+  deliveryFee = 0,
+  minOrder = 0,
   onEditOptions,
   storeCity = "",
   storeLat = null,
@@ -64,7 +68,10 @@ export default function OrderPanel({
   deliveryRadiusKm = 6,
 }) {
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
-  const total = Math.max(0, subtotal - discountAmount);
+  const total = Math.max(0, subtotal - discountAmount + deliveryFee);
+  // Κάτω από την ελάχιστη παραγγελία (μόνο σε παράδοση) — προειδοποίηση, όχι εμπόδιο
+  const belowMinimum =
+    minOrder > 0 && delivery?.delivery_type === "delivery" && subtotal > 0 && subtotal < minOrder;
   const isEmpty = items.length === 0;
   const isPhone = source === "Τηλέφωνο";
   const [editingLine, setEditingLine] = useState(null);
@@ -339,29 +346,54 @@ export default function OrderPanel({
           </div>
         )}
 
+        {/* Σημείωση παραγγελίας — ελεύθερο κείμενο, τυπώνεται στην απόδειξη */}
+        {setNote && (
+          <div className="mt-3 mb-2 relative">
+            <StickyNote className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={300}
+              placeholder="Σημείωση (π.χ. χωρίς κρεμμύδι στο 2ο)"
+              data-testid="order-note-input"
+              className="w-full h-9 pl-9 pr-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-flame"
+            />
+          </div>
+        )}
+
       </div>
 
       {/* Zone 3 — fixed footer: total + actions (ΠΑΝΤΑ ορατό, δεν μεγαλώνει ποτέ) */}
       <div className="px-4 py-3 border-t border-[#723645] bg-[#33111A] shrink-0">
+        {(discountAmount > 0 || deliveryFee > 0) && (
+          <div className="flex items-baseline justify-between">
+            <span className="text-[11px] text-neutral-500 uppercase tracking-widest font-bold">
+              Υποσύνολο
+            </span>
+            <span className="font-mono text-sm text-neutral-400" data-testid="order-subtotal">
+              {eur(subtotal)}
+            </span>
+          </div>
+        )}
         {discountAmount > 0 && (
-          <>
-            <div className="flex items-baseline justify-between">
-              <span className="text-[11px] text-neutral-500 uppercase tracking-widest font-bold">
-                Υποσύνολο
-              </span>
-              <span className="font-mono text-sm text-neutral-400" data-testid="order-subtotal">
-                {eur(subtotal)}
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between mb-1">
-              <span className="text-[11px] text-[#00E676] uppercase tracking-widest font-bold">
-                Έκπτωση{discount?.type === "percent" ? ` ${discount.value}%` : ""}
-              </span>
-              <span className="font-mono text-sm font-bold text-[#00E676]" data-testid="order-discount">
-                -{eur(discountAmount)}
-              </span>
-            </div>
-          </>
+          <div className="flex items-baseline justify-between mb-1">
+            <span className="text-[11px] text-[#00E676] uppercase tracking-widest font-bold">
+              Έκπτωση{discount?.type === "percent" ? ` ${discount.value}%` : ""}
+            </span>
+            <span className="font-mono text-sm font-bold text-[#00E676]" data-testid="order-discount">
+              -{eur(discountAmount)}
+            </span>
+          </div>
+        )}
+        {deliveryFee > 0 && (
+          <div className="flex items-baseline justify-between mb-1">
+            <span className="text-[11px] text-neutral-400 uppercase tracking-widest font-bold">
+              Χρέωση delivery
+            </span>
+            <span className="font-mono text-sm text-neutral-300" data-testid="order-delivery-fee">
+              +{eur(deliveryFee)}
+            </span>
+          </div>
         )}
         <div className="flex items-baseline justify-between mb-2">
           <span className="flex items-center gap-2">
@@ -415,6 +447,11 @@ export default function OrderPanel({
                 : "Εκτύπωση & Αποθήκευση"}
           </Button>
         </div>
+        {belowMinimum && (
+          <div className="mt-1.5 text-[11px] text-[#FFB300] text-center" data-testid="order-below-minimum">
+            ⚠ Κάτω από την ελάχιστη παραγγελία ({eur(minOrder)})
+          </div>
+        )}
         {isPhone && !delivery?.delivery_type && (
           <div className="mt-1.5 text-[11px] text-gold text-center">
             Επιλέξτε Παράδοση ή Takeaway για να συνεχίσετε

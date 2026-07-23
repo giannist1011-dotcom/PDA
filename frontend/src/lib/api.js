@@ -219,6 +219,9 @@ export const apiSetStoreLogo = (data_url) =>
   api.put("/settings/public-menu/logo", { data_url }).then((r) => r.data);
 export const apiRemoveStoreLogo = () =>
   api.delete("/settings/public-menu/logo").then((r) => r.data);
+// Ρυθμίσεις καταλόγου (owner) — ελάχιστη παραγγελία, χρέωση delivery, σύνδεσμοι πλατφορμών
+export const apiUpdateCatalogSettings = (payload) =>
+  api.put("/settings/catalog", payload).then((r) => r.data);
 // Στοιχεία καταστήματος (owner) — όνομα, τηλέφωνο, διεύθυνση, τοποθεσία
 export const apiUpdateStoreDetails = (payload) =>
   api.put("/settings/store", payload).then((r) => r.data);

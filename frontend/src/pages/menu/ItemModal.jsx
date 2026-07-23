@@ -105,6 +105,7 @@ export default function ItemModal({
         option_groups: cleanGroups,
         photo_id: form.photo_id || null,
         allergens: (form.allergens || "").trim(),
+        code: (form.code || "").trim(),
       });
     } finally {
       setBusy(false);
@@ -251,6 +252,23 @@ export default function ItemModal({
                 {form.photo_id ? "Αλλαγή" : "Επιλογή"}
               </Button>
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+              Κωδικός (προαιρετικό)
+            </label>
+            <input
+              value={form.code || ""}
+              onChange={(e) => setForm({ ...form, code: e.target.value })}
+              maxLength={20}
+              placeholder="π.χ. 12"
+              data-testid="item-code-input"
+              className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+            />
+            <p className="text-xs text-neutral-500 mt-1">
+              Πληκτρολογώντας τον κωδικό στην αναζήτηση του ταμείου, το προϊόν επιλέγεται αμέσως
+            </p>
           </div>
 
           <div>

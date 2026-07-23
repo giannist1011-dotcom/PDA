@@ -89,7 +89,9 @@ class OrderCreate(BaseModel):
     subtotal: float
     total: float
     source: Literal["Ταμείο", "Τηλέφωνο", "efood", "Box", "Τραπέζι"]
-    note: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=300)
+    # Χρέωση delivery (€) — προστίθεται αυτόματα στις παραγγελίες παράδοσης όταν έχει οριστεί
+    delivery_fee: Optional[float] = Field(default=None, ge=0)
     delivery: Optional[DeliveryInfo] = None
     scheduled_at: Optional[str] = None  # ISO datetime — order fires later
     discount: Optional[DiscountInfo] = None

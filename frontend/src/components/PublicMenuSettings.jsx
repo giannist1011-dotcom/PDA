@@ -18,6 +18,7 @@ import {
   apiUpdatePublicSlug,
   apiSetStoreLogo,
   apiRemoveStoreLogo,
+  apiUpdateCatalogSettings,
   formatApiError,
 } from "@/lib/api";
 import { readFileAsDataUrl, shrinkDataUrl } from "@/lib/image";
@@ -31,9 +32,18 @@ export default function PublicMenuSettings() {
   const [savingSlug, setSavingSlug] = useState(false);
   const [savingToggle, setSavingToggle] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // Ελάχιστη παραγγελία / χρέωση delivery / σύνδεσμοι πλατφορμών — κρατιούνται ως strings
+  const [catalog, setCatalog] = useState({
+    min_order: "",
+    delivery_fee: "",
+    link_wolt: "",
+    link_efood: "",
+    link_box: "",
+  });
+  const [savingCatalog, setSavingCatalog] = useState(false);
   const inputRef = useRef(null);
   const qrRef = useRef(null);
-  const { setStoreLogo } = useAuth(); // header + favicon ενημερώνονται αμέσως
+  const { setStoreLogo, refreshMe } = useAuth(); // header + favicon ενημερώνονται αμέσως
 
   useEffect(() => {
     (async () => {
@@ -41,6 +51,13 @@ export default function PublicMenuSettings() {
         const s = await apiGetPublicMenuSettings();
         setState(s);
         setSlugInput(s.slug);
+        setCatalog({
+          min_order: s.min_order != null ? String(s.min_order).replace(".", ",") : "",
+          delivery_fee: s.delivery_fee != null ? String(s.delivery_fee).replace(".", ",") : "",
+          link_wolt: s.link_wolt || "",
+          link_efood: s.link_efood || "",
+          link_box: s.link_box || "",
+        });
       } catch (e) {
         toast.error(formatApiError(e));
       }
@@ -126,6 +143,31 @@ export default function PublicMenuSettings() {
       toast.success("Ο σύνδεσμος αντιγράφηκε");
     } catch {
       toast.error("Δεν ήταν δυνατή η αντιγραφή");
+    }
+  };
+
+  const saveCatalog = async () => {
+    const num = (v) => {
+      const t = String(v || "").trim();
+      if (!t) return null;
+      const n = parseFloat(t.replace(",", "."));
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    setSavingCatalog(true);
+    try {
+      await apiUpdateCatalogSettings({
+        min_order: num(catalog.min_order),
+        delivery_fee: num(catalog.delivery_fee),
+        link_wolt: catalog.link_wolt.trim(),
+        link_efood: catalog.link_efood.trim(),
+        link_box: catalog.link_box.trim(),
+      });
+      await refreshMe(); // το POS διαβάζει min_order/delivery_fee από το /auth/me
+      toast.success("Οι ρυθμίσεις καταλόγου αποθηκεύτηκαν");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setSavingCatalog(false);
     }
   };
 
@@ -297,6 +339,68 @@ export default function PublicMenuSettings() {
           >
             <QrCode className="w-4 h-4 mr-2" />
             Λήψη QR
+          </Button>
+        </div>
+      </div>
+
+      {/* Παραγγελίες & πλατφόρμες */}
+      <div className="px-4 py-4 bg-[#2A0E14] border border-[#723645] rounded-md">
+        <div className="font-semibold text-sm mb-1">Παραγγελίες & πλατφόρμες</div>
+        <div className="text-xs text-neutral-500 mb-3">
+          Εμφανίζονται στον δημόσιο κατάλογο. Η χρέωση delivery προστίθεται αυτόματα στις
+          παραγγελίες παράδοσης του ταμείου. Κενά πεδία = δεν εμφανίζονται.
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="block text-xs text-neutral-400 mb-1.5">Ελάχιστη παραγγελία (€)</label>
+            <input
+              value={catalog.min_order}
+              onChange={(e) => setCatalog((c) => ({ ...c, min_order: e.target.value }))}
+              inputMode="decimal"
+              placeholder="π.χ. 8,00"
+              data-testid="catalog-min-order-input"
+              className="w-full h-10 px-3 rounded-md bg-[#3D1620] border border-[#723645] focus:border-flame outline-none text-sm font-mono"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-neutral-400 mb-1.5">Χρέωση delivery (€)</label>
+            <input
+              value={catalog.delivery_fee}
+              onChange={(e) => setCatalog((c) => ({ ...c, delivery_fee: e.target.value }))}
+              inputMode="decimal"
+              placeholder="π.χ. 1,50"
+              data-testid="catalog-delivery-fee-input"
+              className="w-full h-10 px-3 rounded-md bg-[#3D1620] border border-[#723645] focus:border-flame outline-none text-sm font-mono"
+            />
+          </div>
+        </div>
+        <div className="space-y-3">
+          {[
+            { key: "link_wolt", label: "Σύνδεσμος Wolt", placeholder: "https://wolt.com/..." },
+            { key: "link_efood", label: "Σύνδεσμος efood", placeholder: "https://www.e-food.gr/..." },
+            { key: "link_box", label: "Σύνδεσμος Box", placeholder: "https://box.gr/..." },
+          ].map((f) => (
+            <div key={f.key}>
+              <label className="block text-xs text-neutral-400 mb-1.5">{f.label}</label>
+              <input
+                value={catalog[f.key]}
+                onChange={(e) => setCatalog((c) => ({ ...c, [f.key]: e.target.value }))}
+                maxLength={300}
+                placeholder={f.placeholder}
+                data-testid={`catalog-${f.key}-input`}
+                className="w-full h-10 px-3 rounded-md bg-[#3D1620] border border-[#723645] focus:border-flame outline-none text-sm"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end mt-4">
+          <Button
+            onClick={saveCatalog}
+            disabled={savingCatalog}
+            data-testid="catalog-save-btn"
+            className="h-10 bg-brand hover:bg-brand-hover font-bold"
+          >
+            {savingCatalog ? "Αποθήκευση..." : "Αποθήκευση"}
           </Button>
         </div>
       </div>

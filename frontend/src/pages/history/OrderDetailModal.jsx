@@ -93,6 +93,18 @@ export default function OrderDetailModal({ order, canManage, canCancel = true, o
             </div>
           )}
 
+          {order.note && (
+            <div
+              className="p-3 bg-[#2A0E14] border border-gold/40 rounded-md text-sm"
+              data-testid="order-detail-note"
+            >
+              <div className="text-xs font-bold uppercase tracking-widest text-gold mb-1">
+                Σημείωση
+              </div>
+              <div className="text-neutral-200">{order.note}</div>
+            </div>
+          )}
+
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">
               Προϊόντα
@@ -123,23 +135,31 @@ export default function OrderDetailModal({ order, canManage, canCancel = true, o
           </div>
 
           <div className="p-3 bg-[#2A0E14] border border-flame/40 rounded-md space-y-1">
+            {(order.discount?.amount > 0 || order.delivery_fee > 0) && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs uppercase tracking-widest text-neutral-500">
+                  Υποσύνολο
+                </span>
+                <span className="font-mono text-sm text-neutral-400">{eur(order.subtotal)}</span>
+              </div>
+            )}
             {order.discount?.amount > 0 && (
-              <>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs uppercase tracking-widest text-neutral-500">
-                    Υποσύνολο
-                  </span>
-                  <span className="font-mono text-sm text-neutral-400">{eur(order.subtotal)}</span>
-                </div>
-                <div className="flex justify-between items-center" data-testid="order-detail-discount">
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#00E676]">
-                    Έκπτωση{order.discount.type === "percent" ? ` ${order.discount.value}%` : ""}
-                  </span>
-                  <span className="font-mono text-sm font-bold text-[#00E676]">
-                    -{eur(order.discount.amount)}
-                  </span>
-                </div>
-              </>
+              <div className="flex justify-between items-center" data-testid="order-detail-discount">
+                <span className="text-xs font-bold uppercase tracking-widest text-[#00E676]">
+                  Έκπτωση{order.discount.type === "percent" ? ` ${order.discount.value}%` : ""}
+                </span>
+                <span className="font-mono text-sm font-bold text-[#00E676]">
+                  -{eur(order.discount.amount)}
+                </span>
+              </div>
+            )}
+            {order.delivery_fee > 0 && (
+              <div className="flex justify-between items-center" data-testid="order-detail-delivery-fee">
+                <span className="text-xs uppercase tracking-widest text-neutral-500">
+                  Χρέωση delivery
+                </span>
+                <span className="font-mono text-sm text-neutral-300">+{eur(order.delivery_fee)}</span>
+              </div>
             )}
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold uppercase tracking-widest text-neutral-400">

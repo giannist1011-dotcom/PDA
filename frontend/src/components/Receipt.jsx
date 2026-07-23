@@ -72,6 +72,21 @@ function ReceiptCopy({ order, label }) {
           {d.delivery_type === "delivery" && d.floor && <div>Όροφος: {d.floor}</div>}
         </>
       )}
+      {order.note && (
+        <>
+          <hr />
+          <div
+            style={{
+              border: "1px solid #000",
+              padding: "2px 4px",
+              fontWeight: 800,
+              fontSize: 12,
+            }}
+          >
+            ΣΗΜΕΙΩΣΗ: {order.note}
+          </div>
+        </>
+      )}
       <hr />
       {order.items.map((it, idx) => (
         <div key={idx} style={{ marginBottom: 4 }}>
@@ -85,19 +100,25 @@ function ReceiptCopy({ order, label }) {
         </div>
       ))}
       <hr />
+      {(order.discount?.amount > 0 || order.delivery_fee > 0) && (
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Υποσύνολο</span>
+          <span>{eur(order.subtotal)}</span>
+        </div>
+      )}
       {order.discount?.amount > 0 && (
-        <>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>Υποσύνολο</span>
-            <span>{eur(order.subtotal)}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>
-              Έκπτωση{order.discount.type === "percent" ? ` ${order.discount.value}%` : ""}
-            </span>
-            <span>-{eur(order.discount.amount)}</span>
-          </div>
-        </>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>
+            Έκπτωση{order.discount.type === "percent" ? ` ${order.discount.value}%` : ""}
+          </span>
+          <span>-{eur(order.discount.amount)}</span>
+        </div>
+      )}
+      {order.delivery_fee > 0 && (
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Χρέωση delivery</span>
+          <span>+{eur(order.delivery_fee)}</span>
+        </div>
       )}
       <div
         style={{

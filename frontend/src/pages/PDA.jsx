@@ -95,6 +95,7 @@ export default function PDA() {
   const [scheduledOpen, setScheduledOpen] = useState(false);
   const firingRef = useRef(false);
   const [discount, setDiscount] = useState(null); // {type: "percent"|"amount", value}
+  const [note, setNote] = useState(""); // ελεύθερη σημείωση παραγγελίας — τυπώνεται στην απόδειξη
   const [discountOpen, setDiscountOpen] = useState(false);
   const [pinGateOpen, setPinGateOpen] = useState(false);
   // Tablet-portrait / mobile: switch between menu and order panel (two-column on lg+)
@@ -112,6 +113,13 @@ export default function PDA() {
     : discount.type === "percent"
       ? Math.round(subtotal * discount.value) / 100
       : Math.min(discount.value, subtotal);
+
+  // Χρέωση delivery: αυτόματη γραμμή στις παραγγελίες παράδοσης όταν έχει οριστεί στις ρυθμίσεις
+  const deliveryFee =
+    source === "Τηλέφωνο" && delivery?.delivery_type === "delivery" && Number(user?.delivery_fee) > 0
+      ? Number(user.delivery_fee)
+      : 0;
+  const minOrder = Number(user?.min_order) > 0 ? Number(user.min_order) : 0;
 
   // Per-profile δικαίωμα έκπτωσης — όταν λείπει, το κουμπί «Έκπτωση» δεν εμφανίζεται καν
   const canDiscount = can(user, "discounts");
@@ -315,6 +323,7 @@ export default function PDA() {
   const clearOrder = () => {
     setItems([]);
     setDiscount(null);
+    setNote("");
   };
 
   const handleSubmit = async () => {
@@ -335,7 +344,9 @@ export default function PDA() {
       order_number: orderNumber,
       source,
       subtotal,
-      total: Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100),
+      total: Math.max(0, Math.round((subtotal - discountAmount + deliveryFee) * 100) / 100),
+      note: note.trim() || null,
+      delivery_fee: deliveryFee > 0 ? deliveryFee : null,
       discount:
         discount && discountAmount > 0
           ? { type: discount.type, value: discount.value, amount: discountAmount }
@@ -371,6 +382,7 @@ export default function PDA() {
       setItems([]);
       setDelivery(null);
       setDiscount(null);
+      setNote("");
       setScheduled({ enabled: false, date: "", time: "" });
       await loadNext();
     } catch (e) {
@@ -393,6 +405,7 @@ export default function PDA() {
           setItems([]);
           setDelivery(null);
           setDiscount(null);
+          setNote("");
           setScheduled({ enabled: false, date: "", time: "" });
           setOrderNumber(payload.order_number + 1);
         } catch {
@@ -453,6 +466,10 @@ export default function PDA() {
           discount={discount}
           discountAmount={discountAmount}
           onDiscountClick={canDiscount ? handleDiscountClick : null}
+          note={note}
+          setNote={setNote}
+          deliveryFee={deliveryFee}
+          minOrder={minOrder}
           onIncrement={(id) => updateQty(id, 1)}
           onDecrement={(id) => updateQty(id, -1)}
           onSetQuantity={setLineQuantity}

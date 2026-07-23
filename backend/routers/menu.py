@@ -46,6 +46,8 @@ class MenuItemIn(BaseModel):
     photo_id: Optional[str] = None
     # Αλλεργιογόνα/σύσταση — φαίνεται μόνο στον δημόσιο κατάλογο, όχι στο PDA
     allergens: str = Field(default="", max_length=200)
+    # Προαιρετικός κωδικός προϊόντος — γρήγορη επιλογή με πληκτρολόγηση στο ταμείο
+    code: str = Field(default="", max_length=20)
 
 
 class AvailabilityIn(BaseModel):
@@ -193,6 +195,7 @@ async def create_item(body: MenuItemIn, user: dict = Depends(require_feature("me
         "option_groups": [g.model_dump() for g in body.option_groups],
         "photo_id": body.photo_id,
         "allergens": body.allergens.strip(),
+        "code": body.code.strip(),
         "sort_order": sort_order,
     }
     await db.items.insert_one(doc)
@@ -215,6 +218,7 @@ async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(require_f
         "option_groups": [g.model_dump() for g in body.option_groups],
         "photo_id": body.photo_id,
         "allergens": body.allergens.strip(),
+        "code": body.code.strip(),
     }
     r = await db.items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
     if r.matched_count == 0:

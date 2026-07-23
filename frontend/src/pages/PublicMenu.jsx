@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { UtensilsCrossed, Info } from "lucide-react";
+import { UtensilsCrossed, Info, Star } from "lucide-react";
 import { apiGetPublicMenu, formatApiError } from "@/lib/api";
 import { eur } from "@/lib/format";
 import { setFavicon, resetFavicon } from "@/lib/favicon";
@@ -8,7 +8,13 @@ import LoadingScreen from "@/components/LoadingScreen";
 import HoursBadge from "./public-menu/HoursBadge";
 import HeaderContact from "./public-menu/HeaderContact";
 import CategoryBar from "./public-menu/CategoryBar";
-import StoreInfoSection from "./public-menu/StoreInfoSection";
+
+// Πλατφόρμες delivery — brand χρώματα για τα pills στην κορυφή του καταλόγου
+const PLATFORMS = [
+  { key: "link_wolt", label: "Wolt", bg: "#009DE0" },
+  { key: "link_efood", label: "efood", bg: "#E3173C" },
+  { key: "link_box", label: "Box", bg: "#E60000" },
+];
 
 export default function PublicMenu() {
   const { slug } = useParams();
@@ -86,6 +92,53 @@ export default function PublicMenu() {
           <div className="mt-3 inline-block w-16 h-1 rounded-full bg-gradient-to-r from-flame to-gold" />
           <HoursBadge hours={data.store_hours} />
           <HeaderContact data={data} />
+
+          {/* Ελάχιστη παραγγελία / χρέωση delivery */}
+          {(data.min_order > 0 || data.delivery_fee > 0) && (
+            <div className="mt-2 text-xs text-neutral-400" data-testid="order-terms">
+              {[
+                data.min_order > 0 ? `Ελάχιστη παραγγελία: ${eur(data.min_order)}` : null,
+                data.delivery_fee > 0 ? `Χρέωση delivery: ${eur(data.delivery_fee)}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+          )}
+
+          {/* Πλατφόρμες delivery */}
+          {PLATFORMS.some((p) => data[p.key]) && (
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2" data-testid="platform-links">
+              {PLATFORMS.filter((p) => data[p.key]).map((p) => (
+                <a
+                  key={p.key}
+                  href={data[p.key]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid={`platform-link-${p.label.toLowerCase()}`}
+                  style={{ backgroundColor: p.bg }}
+                  className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold text-white shadow-md hover:opacity-90 transition-opacity"
+                >
+                  {p.label}
+                </a>
+              ))}
+            </div>
+          )}
+
+          {/* Αξιολογήστε μας — συμπαγές, πάνω από τις κατηγορίες */}
+          {data.google_review_link && (
+            <div className="mt-3">
+              <a
+                href={data.google_review_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="review-link"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#3D1620] border border-[#723645] text-gold hover:border-gold transition-colors"
+              >
+                <Star className="w-3.5 h-3.5" />
+                Αξιολογήστε μας
+              </a>
+            </div>
+          )}
         </div>
       </header>
 
@@ -146,8 +199,6 @@ export default function PublicMenu() {
           </div>
         )}
       </main>
-
-      <StoreInfoSection data={data} />
 
       <footer className="max-w-2xl mx-auto px-5 pb-10 pt-2 text-center">
         <div className="text-xs text-neutral-600">Κατάλογος με OrderDeck</div>
