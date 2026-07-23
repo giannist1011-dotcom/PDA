@@ -19,7 +19,10 @@ export default function FleetSelect() {
 
   useEffect(() => {
     if (team && team !== false)
-      apiFleetMembers().then(setMembers).catch(() => setMembers([]));
+      apiFleetMembers()
+        // Διανομείς με προσωπικό λογαριασμό μπαίνουν από /fleet/driver-login (χωρίς PIN)
+        .then((ms) => setMembers(ms.filter((m) => !m.account_id)))
+        .catch(() => setMembers([]));
   }, [team]);
 
   if (team === undefined)

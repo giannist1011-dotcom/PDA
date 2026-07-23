@@ -109,8 +109,8 @@ export default function FleetLogin() {
             </div>
             <div>
               Είστε διανομέας;{" "}
-              <Link to="/fleet/join" data-testid="fleet-go-join" className="text-gold hover:underline font-semibold">
-                Είσοδος με κωδικό ομάδας
+              <Link to="/fleet/driver-login" data-testid="fleet-go-driver-login" className="text-gold hover:underline font-semibold">
+                Είσοδος διανομέα
               </Link>
             </div>
           </div>

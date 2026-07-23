@@ -39,10 +39,28 @@ PAYMENTS = ["cash", "card", "paid"]
 
 # Χωρίς διφορούμενους χαρακτήρες (0/O, 1/I) — γράφεται εύκολα από κινητό
 INVITE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+TEMP_PW_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
 
 
 def new_invite_code() -> str:
     return "".join(secrets.choice(INVITE_ALPHABET) for _ in range(6))
+
+
+def new_temp_password() -> str:
+    return "".join(secrets.choice(TEMP_PW_ALPHABET) for _ in range(6))
+
+
+def normalize_identifier(raw: str) -> tuple:
+    """Τηλέφωνο ή email διανομέα → (πεδίο, κανονικοποιημένη τιμή)."""
+    s = (raw or "").strip()
+    if "@" in s:
+        if "." not in s.split("@")[-1]:
+            raise HTTPException(400, "Μη έγκυρο email")
+        return "email", s.lower()
+    digits = "".join(c for c in s if c.isdigit())
+    if len(digits) < 10:
+        raise HTTPException(400, "Μη έγκυρο τηλέφωνο ή email")
+    return "phone", digits
 
 
 # ============ AUTH ============
@@ -108,6 +126,36 @@ async def require_fleet_admin(team: dict = Depends(get_fleet_member)) -> dict:
     if team.get("role") != "fleet_admin":
         raise HTTPException(403, "Απαιτείται πρόσβαση συντονιστή")
     return team
+
+
+def create_driver_token(account_id: str) -> str:
+    """Token προσωπικού λογαριασμού διανομέα (πριν την επιλογή εταιρείας)."""
+    payload = {
+        "sub": account_id,
+        "kind": "fleet_driver",
+        "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_TTL_HOURS),
+        "type": "access",
+    }
+    return pyjwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
+
+
+async def get_fleet_account(authorization: Optional[str] = Header(None)) -> dict:
+    """Auth προσωπικού λογαριασμού διανομέα (kind=fleet_driver)."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "Not authenticated")
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+    except pyjwt.ExpiredSignatureError:
+        raise HTTPException(401, "Token expired")
+    except pyjwt.InvalidTokenError:
+        raise HTTPException(401, "Invalid token")
+    if payload.get("kind") != "fleet_driver":
+        raise HTTPException(401, "Invalid token")
+    account = await db.fleet_accounts.find_one({"id": payload["sub"]}, {"_id": 0})
+    if not account:
+        raise HTTPException(401, "Ο λογαριασμός δεν βρέθηκε")
+    return account
 
 
 def public_team(t: dict, include_invite: bool = False) -> dict:
@@ -180,23 +228,21 @@ class MemberSelectIn(BaseModel):
 class MemberIn(BaseModel):
     name: str = Field(min_length=1, max_length=40)
     role: Literal["fleet_admin", "driver"]
-    pin: Optional[str] = None  # 4 ψηφία — υποχρεωτικό στη δημιουργία
+    pin: Optional[str] = None  # 4 ψηφία — συντονιστές (επιλογή μέλους στη συσκευή)
+    phone_or_email: Optional[str] = None  # διανομείς — προσωπικός λογαριασμός
 
 
-class InviteCodeIn(BaseModel):
-    invite_code: str = Field(min_length=1, max_length=12)
+class DriverLoginIn(BaseModel):
+    identifier: str = Field(min_length=3, max_length=80)  # τηλέφωνο ή email
+    password: str = Field(min_length=1, max_length=64)
 
 
-class JoinIn(BaseModel):
-    invite_code: str = Field(min_length=1, max_length=12)
-    name: str = Field(min_length=1, max_length=40)
-    pin: str = Field(min_length=4, max_length=4)
+class DriverPasswordIn(BaseModel):
+    password: str = Field(min_length=6, max_length=64)
 
 
-class CodeSelectIn(BaseModel):
-    invite_code: str = Field(min_length=1, max_length=12)
+class DriverSelectIn(BaseModel):
     member_id: str
-    pin: str = Field(min_length=4, max_length=4)
 
 
 class FleetOrderIn(BaseModel):
@@ -278,18 +324,70 @@ async def fleet_list_members(team: dict = Depends(get_fleet_team)):
 
 @router.post("/fleet/members")
 async def fleet_create_member(body: MemberIn, team: dict = Depends(require_fleet_admin)):
-    if not valid_pin(body.pin):
-        raise HTTPException(400, "Απαιτείται 4-ψήφιο PIN")
+    now = datetime.now(timezone.utc).isoformat()
     doc = {
         "id": str(uuid.uuid4())[:8],
         "team_id": team["id"],
         "name": body.name.strip(),
         "role": body.role,
-        "pin_hash": hash_password(body.pin),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": now,
     }
+    if body.role == "fleet_admin":
+        if not valid_pin(body.pin):
+            raise HTTPException(400, "Απαιτείται 4-ψήφιο PIN")
+        doc["pin_hash"] = hash_password(body.pin)
+        await db.fleet_members.insert_one(doc)
+        return public_member(doc)
+
+    # Διανομέας: η εταιρεία δημιουργεί λογαριασμό + σύνδεση (membership) σε ένα βήμα.
+    if not body.phone_or_email:
+        raise HTTPException(400, "Απαιτείται τηλέφωνο ή email διανομέα")
+    field, value = normalize_identifier(body.phone_or_email)
+    account = await db.fleet_accounts.find_one({field: value})
+    temp_password = None
+    if account:
+        # Υπάρχων λογαριασμός (π.χ. από άλλη εταιρεία) → μόνο νέα σύνδεση, όχι διπλότυπο
+        if await db.fleet_members.find_one(
+            {"team_id": team["id"], "account_id": account["id"]}
+        ):
+            raise HTTPException(400, "Ο διανομέας είναι ήδη μέλος της εταιρίας σας")
+    else:
+        temp_password = new_temp_password()
+        account = {
+            "id": str(uuid.uuid4()),
+            "account_type": "driver",
+            field: value,  # μόνο το πεδίο που δόθηκε — τα sparse unique indexes δεν δέχονται null
+            "name": doc["name"],
+            "password_hash": hash_password(temp_password),
+            "must_change_password": True,
+            "created_at": now,
+        }
+        await db.fleet_accounts.insert_one(account)
+    doc["account_id"] = account["id"]
+    doc["identifier"] = value
     await db.fleet_members.insert_one(doc)
-    return public_member(doc)
+    await add_event(team["id"], f"Ο/Η {doc['name']} προστέθηκε στην ομάδα")
+    return {
+        **public_member(doc),
+        "existing_account": temp_password is None,
+        "temp_password": temp_password,
+    }
+
+
+@router.post("/fleet/members/{mid}/reset-password")
+async def fleet_reset_member_password(mid: str, team: dict = Depends(require_fleet_admin)):
+    """Νέος προσωρινός κωδικός διανομέα — υποχρεωτική αλλαγή στην επόμενη είσοδο."""
+    m = await db.fleet_members.find_one({"id": mid, "team_id": team["id"]})
+    if not m:
+        raise HTTPException(404, "Το μέλος δεν βρέθηκε")
+    if not m.get("account_id"):
+        raise HTTPException(400, "Το μέλος δεν έχει προσωπικό λογαριασμό διανομέα")
+    temp = new_temp_password()
+    await db.fleet_accounts.update_one(
+        {"id": m["account_id"]},
+        {"$set": {"password_hash": hash_password(temp), "must_change_password": True}},
+    )
+    return {"temp_password": temp, "identifier": m.get("identifier")}
 
 
 @router.put("/fleet/members/{mid}")
@@ -366,59 +464,68 @@ async def fleet_member_exit(team: dict = Depends(get_fleet_team)):
     return {"token": create_fleet_token(team["id"])}
 
 
-# ============ DRIVER JOIN (public — invite code από το κινητό) ============
-@router.post("/fleet/code")
-async def fleet_code_lookup(body: InviteCodeIn, request: Request):
-    """Έλεγχος invite code: όνομα εταιρείας + λίστα οδηγών για επανασύνδεση."""
-    rate_limit(request, "fleet_code", limit=20, window_seconds=300)
-    team = await db.fleet_teams.find_one({"invite_code": body.invite_code.strip().upper()})
-    if not team or team.get("disabled"):
-        raise HTTPException(404, "Ο κωδικός πρόσκλησης δεν βρέθηκε")
-    drivers = await db.fleet_members.find(
-        {"team_id": team["id"], "role": "driver"}, {"_id": 0, "id": 1, "name": 1}
-    ).sort("created_at", 1).to_list(200)
-    return {"team_name": team["name"], "city": team.get("city") or "", "drivers": drivers}
+# ============ DRIVER ACCOUNT (προσωπικός λογαριασμός — είσοδος από το κινητό) ============
+# Σημ.: το invite-code self-signup αφαιρέθηκε από τη ροή οδηγών — η παραγωγή
+# invite codes (fleet_teams.invite_code) παραμένει για μελλοντικό self-service.
+async def driver_memberships(account_id: str) -> list:
+    """Ενεργές συνδέσεις του λογαριασμού με εταιρείες (χωρίς απενεργοποιημένες)."""
+    ms = await db.fleet_members.find(
+        {"account_id": account_id}, {"_id": 0, "id": 1, "team_id": 1, "name": 1}
+    ).sort("created_at", 1).to_list(50)
+    out = []
+    for m in ms:
+        t = await db.fleet_teams.find_one(
+            {"id": m["team_id"]}, {"_id": 0, "name": 1, "city": 1, "disabled": 1}
+        )
+        if t and not t.get("disabled"):
+            out.append({
+                "member_id": m["id"],
+                "team_name": t["name"],
+                "city": t.get("city") or "",
+            })
+    return out
 
 
-@router.post("/fleet/join")
-async def fleet_join(body: JoinIn, request: Request):
-    """Νέος οδηγός: invite code + όνομα + PIN → μπαίνει κατευθείαν συνδεδεμένος."""
-    rate_limit(request, "fleet_join", limit=10, window_seconds=3600)
-    team = await db.fleet_teams.find_one({"invite_code": body.invite_code.strip().upper()})
-    if not team or team.get("disabled"):
-        raise HTTPException(404, "Ο κωδικός πρόσκλησης δεν βρέθηκε")
-    if not valid_pin(body.pin):
-        raise HTTPException(400, "Το PIN πρέπει να είναι 4 ψηφία")
-    name = body.name.strip()
-    if await db.fleet_members.find_one({"team_id": team["id"], "name": name}):
-        raise HTTPException(400, "Υπάρχει ήδη μέλος με αυτό το όνομα — επιλέξτε το από τη λίστα")
-    doc = {
-        "id": str(uuid.uuid4())[:8],
-        "team_id": team["id"],
-        "name": name,
-        "role": "driver",
-        "pin_hash": hash_password(body.pin),
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    await db.fleet_members.insert_one(doc)
-    await add_event(team["id"], f"Ο/Η {name} μπήκε στην ομάδα")
+@router.post("/fleet/driver/login")
+async def fleet_driver_login(body: DriverLoginIn, request: Request):
+    """Είσοδος διανομέα με τηλέφωνο/email + κωδικό (προσωρινό ή δικό του)."""
+    rate_limit(request, "fleet_driver_login", limit=10, window_seconds=60)
+    field, value = normalize_identifier(body.identifier)
+    account = await db.fleet_accounts.find_one({field: value})
+    if not account or not verify_password(body.password, account["password_hash"]):
+        raise HTTPException(401, "Λάθος στοιχεία σύνδεσης")
     return {
-        "token": create_fleet_token(team["id"], doc["id"], "driver", name),
-        "team_name": team["name"],
-        "member_name": name,
+        "token": create_driver_token(account["id"]),
+        "name": account["name"],
+        "must_change_password": bool(account.get("must_change_password")),
+        "memberships": await driver_memberships(account["id"]),
     }
 
 
-@router.post("/fleet/code/select")
-async def fleet_code_select(body: CodeSelectIn, request: Request):
-    """Επανασύνδεση οδηγού από το κινητό: invite code + επιλογή ονόματος + PIN."""
-    rate_limit(request, "fleet_code", limit=20, window_seconds=300)
-    team = await db.fleet_teams.find_one({"invite_code": body.invite_code.strip().upper()})
+@router.post("/fleet/driver/change-password")
+async def fleet_driver_change_password(
+    body: DriverPasswordIn, account: dict = Depends(get_fleet_account)
+):
+    await db.fleet_accounts.update_one(
+        {"id": account["id"]},
+        {"$set": {"password_hash": hash_password(body.password), "must_change_password": False}},
+    )
+    return {"ok": True}
+
+
+@router.post("/fleet/driver/select")
+async def fleet_driver_select(body: DriverSelectIn, account: dict = Depends(get_fleet_account)):
+    """Επιλογή εταιρείας → πλήρες fleet token (team + member), ίδιο με το PIN select."""
+    if account.get("must_change_password"):
+        raise HTTPException(403, "Απαιτείται αλλαγή κωδικού πρώτα")
+    m = await db.fleet_members.find_one({"id": body.member_id, "account_id": account["id"]})
+    if not m:
+        raise HTTPException(404, "Η σύνδεση με την εταιρεία δεν βρέθηκε")
+    team = await db.fleet_teams.find_one({"id": m["team_id"]}, {"_id": 0})
     if not team or team.get("disabled"):
-        raise HTTPException(404, "Ο κωδικός πρόσκλησης δεν βρέθηκε")
-    m = await select_member_with_pin(team["id"], body.member_id, body.pin)
+        raise HTTPException(403, "Η εταιρεία δεν είναι διαθέσιμη")
     return {
-        "token": create_fleet_token(team["id"], m["id"], m["role"], m["name"]),
+        "token": create_fleet_token(m["team_id"], m["id"], m["role"], m["name"]),
         "team_name": team["name"],
         "member_name": m["name"],
     }

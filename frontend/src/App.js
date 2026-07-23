@@ -36,7 +36,7 @@ import PublicMenu from "@/pages/PublicMenu";
 import { FleetAuthProvider, FleetProtected } from "@/context/FleetAuthContext";
 import FleetLogin from "@/pages/FleetLogin";
 import FleetRegister from "@/pages/FleetRegister";
-import FleetJoin from "@/pages/FleetJoin";
+import FleetDriverLogin from "@/pages/FleetDriverLogin";
 import FleetSelect from "@/pages/FleetSelect";
 import FleetDispatch from "@/pages/FleetDispatch";
 import FleetDriver from "@/pages/FleetDriver";
@@ -68,7 +68,9 @@ function FleetRoutes() {
       <Routes>
         <Route path="login" element={<FleetLogin />} />
         <Route path="register" element={<FleetRegister />} />
-        <Route path="join" element={<FleetJoin />} />
+        <Route path="driver-login" element={<FleetDriverLogin />} />
+        {/* Παλιά ροή invite-code — τα bookmarks πάνε στη νέα είσοδο διανομέα */}
+        <Route path="join" element={<Navigate to="/fleet/driver-login" replace />} />
         <Route path="select" element={<FleetSelect />} />
         <Route
           index

@@ -9,7 +9,8 @@ export const fleetApi = axios.create({ baseURL: `${BACKEND_URL}/api` });
 
 fleetApi.interceptors.request.use((cfg) => {
   const t = localStorage.getItem(FLEET_TOKEN_KEY);
-  if (t) cfg.headers.Authorization = `Bearer ${t}`;
+  // Ρητό token (π.χ. ροή driver login πριν αποθηκευτεί session) έχει προτεραιότητα
+  if (t && !cfg.headers.Authorization) cfg.headers.Authorization = `Bearer ${t}`;
   return cfg;
 });
 
@@ -38,16 +39,18 @@ export const apiFleetSelectMember = (memberId, pin) =>
   fleetApi.post("/fleet/member/select", { member_id: memberId, pin }).then((r) => r.data);
 export const apiFleetExitMember = () =>
   fleetApi.post("/fleet/member/exit").then((r) => r.data);
+export const apiFleetResetMemberPassword = (id) =>
+  fleetApi.post(`/fleet/members/${id}/reset-password`).then((r) => r.data);
 
-// ΟΔΗΓΟΙ — είσοδος με invite code (public, χωρίς team login)
-export const apiFleetCodeLookup = (code) =>
-  fleetApi.post("/fleet/code", { invite_code: code }).then((r) => r.data);
-export const apiFleetJoin = (code, name, pin) =>
-  fleetApi.post("/fleet/join", { invite_code: code, name, pin }).then((r) => r.data);
-export const apiFleetCodeSelect = (code, memberId, pin) =>
-  fleetApi
-    .post("/fleet/code/select", { invite_code: code, member_id: memberId, pin })
-    .then((r) => r.data);
+// ΔΙΑΝΟΜΕΙΣ — προσωπικός λογαριασμός (τηλέφωνο/email + κωδικός). Το token της
+// ροής περνιέται ρητά μέχρι την τελική επιλογή εταιρείας (adoptToken).
+const bearer = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
+export const apiFleetDriverLogin = (identifier, password) =>
+  fleetApi.post("/fleet/driver/login", { identifier, password }).then((r) => r.data);
+export const apiFleetDriverChangePassword = (token, password) =>
+  fleetApi.post("/fleet/driver/change-password", { password }, bearer(token)).then((r) => r.data);
+export const apiFleetDriverSelect = (token, memberId) =>
+  fleetApi.post("/fleet/driver/select", { member_id: memberId }, bearer(token)).then((r) => r.data);
 
 // ΠΑΡΑΓΓΕΛΙΕΣ
 export const apiFleetCreateOrder = (payload) =>

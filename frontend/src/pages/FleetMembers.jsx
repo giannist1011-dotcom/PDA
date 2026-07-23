@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Pencil, Trash2, ShieldCheck, UserRound } from "lucide-react";
-import { useFleet } from "@/context/FleetAuthContext";
+import { Copy, KeyRound, Pencil, Trash2, ShieldCheck, UserRound } from "lucide-react";
 import {
   apiFleetMembers,
   apiFleetCreateMember,
   apiFleetUpdateMember,
   apiFleetDeleteMember,
+  apiFleetResetMemberPassword,
 } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
 import FleetShell from "@/pages/fleet/FleetShell";
@@ -15,14 +15,15 @@ import { Button } from "@/components/ui/button";
 const inputCls =
   "w-full h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame";
 
-// Διαχείριση μελών ομάδας (συντονιστής): κωδικός πρόσκλησης οδηγών +
-// δημιουργία/επεξεργασία/διαγραφή προφίλ συντονιστών & οδηγών.
+// Διαχείριση μελών (συντονιστής). Διανομείς: η εταιρεία δημιουργεί τον προσωπικό
+// λογαριασμό (τηλέφωνο/email) — ο προσωρινός κωδικός εμφανίζεται ΜΙΑ φορά εδώ.
 export default function FleetMembers() {
-  const { team } = useFleet();
   const [members, setMembers] = useState([]);
   const [editing, setEditing] = useState(null); // null | {} (νέο) | member
-  const [form, setForm] = useState({ name: "", role: "driver", pin: "" });
+  const [form, setForm] = useState({ name: "", role: "driver", pin: "", identifier: "" });
   const [busy, setBusy] = useState(false);
+  // Προσωρινός κωδικός που μόλις εκδόθηκε: {name, identifier, password}
+  const [issued, setIssued] = useState(null);
 
   const load = () => apiFleetMembers().then(setMembers).catch(() => {});
   useEffect(() => {
@@ -32,27 +33,63 @@ export default function FleetMembers() {
 
   const openEdit = (m) => {
     setEditing(m || {});
-    setForm(m ? { name: m.name, role: m.role, pin: "" } : { name: "", role: "driver", pin: "" });
+    setForm(
+      m
+        ? { name: m.name, role: m.role, pin: "", identifier: m.identifier || "" }
+        : { name: "", role: "driver", pin: "", identifier: "" }
+    );
   };
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!editing.id && !/^\d{4}$/.test(form.pin)) {
+    const isNew = !editing.id;
+    if (isNew && form.role === "fleet_admin" && !/^\d{4}$/.test(form.pin)) {
       toast.error("Απαιτείται 4-ψήφιο PIN");
+      return;
+    }
+    if (isNew && form.role === "driver" && !form.identifier.trim()) {
+      toast.error("Απαιτείται τηλέφωνο ή email διανομέα");
       return;
     }
     setBusy(true);
     try {
-      const payload = { name: form.name.trim(), role: form.role, pin: form.pin || null };
-      if (editing.id) await apiFleetUpdateMember(editing.id, payload);
-      else await apiFleetCreateMember(payload);
+      if (isNew) {
+        const res = await apiFleetCreateMember({
+          name: form.name.trim(),
+          role: form.role,
+          pin: form.pin || null,
+          phone_or_email: form.role === "driver" ? form.identifier.trim() : null,
+        });
+        if (res.temp_password) {
+          setIssued({ name: res.name, identifier: res.identifier, password: res.temp_password });
+        } else if (res.existing_account) {
+          toast.success("Ο διανομέας υπάρχει ήδη — συνδέθηκε με την εταιρία σας");
+        }
+      } else {
+        await apiFleetUpdateMember(editing.id, {
+          name: form.name.trim(),
+          role: form.role,
+          pin: form.pin || null,
+        });
+      }
       setEditing(null);
       load();
-      toast.success("Αποθηκεύτηκε");
+      if (!isNew) toast.success("Αποθηκεύτηκε");
     } catch (err) {
       toast.error(formatApiError(err));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const resetPassword = async (m) => {
+    if (!window.confirm(`Νέος προσωρινός κωδικός για τον/την «${m.name}»; Ο παλιός παύει να ισχύει.`))
+      return;
+    try {
+      const res = await apiFleetResetMemberPassword(m.id);
+      setIssued({ name: m.name, identifier: res.identifier, password: res.temp_password });
+    } catch (err) {
+      toast.error(formatApiError(err));
     }
   };
 
@@ -66,39 +103,48 @@ export default function FleetMembers() {
     }
   };
 
-  const copyInvite = () => {
-    navigator.clipboard?.writeText(team?.invite_code || "");
-    toast.success("Ο κωδικός αντιγράφηκε");
+  const copyIssued = () => {
+    navigator.clipboard?.writeText(`${issued.identifier} / ${issued.password}`);
+    toast.success("Αντιγράφηκε");
   };
 
   return (
     <FleetShell title="Μέλη ομάδας">
       <div className="max-w-2xl space-y-4">
-        <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-4">
-          <div className="text-xs uppercase tracking-widest font-bold text-neutral-400 mb-1">
-            Κωδικός πρόσκλησης οδηγών
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className="font-mono text-2xl font-bold tracking-[0.3em] text-gold"
-              data-testid="fleet-invite-code"
-            >
-              {team?.invite_code || "—"}
-            </span>
+        {issued && (
+          <div
+            className="bg-[#3D1620] border border-gold rounded-lg p-4"
+            data-testid="fleet-temp-password"
+          >
+            <div className="text-xs uppercase tracking-widest font-bold text-neutral-400 mb-1">
+              Προσωρινός κωδικός — εμφανίζεται μόνο τώρα
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-neutral-300">Δώσε στον διανομέα:</span>
+              <span className="font-mono text-lg font-bold text-gold">
+                {issued.identifier} / {issued.password}
+              </span>
+              <button
+                onClick={copyIssued}
+                className="p-2 rounded-md hover:bg-white/5 text-neutral-300"
+                title="Αντιγραφή"
+                data-testid="fleet-temp-password-copy"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-neutral-400 mt-2">
+              Ο/Η {issued.name} συνδέεται στο <span className="text-white">/fleet/driver-login</span> και
+              ορίζει δικό του κωδικό στην πρώτη είσοδο.
+            </p>
             <button
-              onClick={copyInvite}
-              className="p-2 rounded-md hover:bg-white/5 text-neutral-300"
-              title="Αντιγραφή"
-              data-testid="fleet-invite-copy"
+              onClick={() => setIssued(null)}
+              className="mt-2 text-xs text-neutral-400 hover:text-white underline"
             >
-              <Copy className="w-4 h-4" />
+              Το έδωσα — απόκρυψη
             </button>
           </div>
-          <p className="text-xs text-neutral-400 mt-2">
-            Οι οδηγοί μπαίνουν από το κινητό τους στο <span className="text-white">/fleet/join</span> με
-            αυτόν τον κωδικό — δημιουργούν όνομα και PIN μόνοι τους.
-          </p>
-        </div>
+        )}
 
         <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-4">
           <div className="flex items-center mb-3">
@@ -119,11 +165,24 @@ export default function FleetMembers() {
                 ) : (
                   <UserRound className="w-4 h-4 text-flame shrink-0" />
                 )}
-                <span className="font-semibold truncate">{m.name}</span>
-                <span className="text-xs text-neutral-500">
-                  {m.role === "fleet_admin" ? "Συντονιστής" : "Οδηγός"}
-                </span>
+                <div className="min-w-0">
+                  <span className="font-semibold truncate block leading-tight">{m.name}</span>
+                  <span className="text-xs text-neutral-500 leading-tight">
+                    {m.role === "fleet_admin" ? "Συντονιστής" : "Οδηγός"}
+                    {m.identifier ? ` · ${m.identifier}` : ""}
+                  </span>
+                </div>
                 <div className="ml-auto flex gap-1">
+                  {m.account_id && (
+                    <button
+                      onClick={() => resetPassword(m)}
+                      className="p-1.5 rounded-md hover:bg-white/5 text-gold"
+                      title="Νέος προσωρινός κωδικός"
+                      data-testid={`fleet-member-resetpw-${m.id}`}
+                    >
+                      <KeyRound className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => openEdit(m)}
                     className="p-1.5 rounded-md hover:bg-white/5 text-neutral-400"
@@ -162,36 +221,56 @@ export default function FleetMembers() {
               className={inputCls}
               data-testid="fleet-member-name"
             />
-            <div className="flex gap-2">
-              {[
-                ["driver", "Οδηγός"],
-                ["fleet_admin", "Συντονιστής"],
-              ].map(([k, label]) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, role: k }))}
-                  className={`flex-1 h-11 rounded-md border text-sm font-semibold ${
-                    form.role === k
-                      ? "border-flame bg-[#4A1B27] text-white"
-                      : "border-[#723645] bg-[#2A0E14] text-neutral-400"
-                  }`}
-                  data-testid={`fleet-member-role-${k}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <input
-              inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
-              placeholder={editing.id ? "Νέο PIN (κενό = χωρίς αλλαγή)" : "PIN (4 ψηφία)"}
-              value={form.pin}
-              onChange={(e) => setForm((f) => ({ ...f, pin: e.target.value.replace(/\D/g, "") }))}
-              className={`${inputCls} text-center tracking-[0.4em]`}
-              data-testid="fleet-member-pin"
-            />
+            {!editing.id && (
+              <div className="flex gap-2">
+                {[
+                  ["driver", "Οδηγός"],
+                  ["fleet_admin", "Συντονιστής"],
+                ].map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, role: k }))}
+                    className={`flex-1 h-11 rounded-md border text-sm font-semibold ${
+                      form.role === k
+                        ? "border-flame bg-[#4A1B27] text-white"
+                        : "border-[#723645] bg-[#2A0E14] text-neutral-400"
+                    }`}
+                    data-testid={`fleet-member-role-${k}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!editing.id && form.role === "driver" ? (
+              <>
+                <input
+                  required
+                  maxLength={80}
+                  placeholder="Τηλέφωνο ή email διανομέα"
+                  value={form.identifier}
+                  onChange={(e) => setForm((f) => ({ ...f, identifier: e.target.value }))}
+                  className={inputCls}
+                  data-testid="fleet-member-identifier"
+                />
+                <p className="text-xs text-neutral-400">
+                  Θα δημιουργηθεί λογαριασμός με προσωρινό κωδικό — αν ο διανομέας έχει ήδη
+                  λογαριασμό (π.χ. από άλλη εταιρεία), απλώς θα συνδεθεί με την εταιρία σας.
+                </p>
+              </>
+            ) : (
+              <input
+                inputMode="numeric"
+                pattern="\d{4}"
+                maxLength={4}
+                placeholder={editing.id ? "Νέο PIN (κενό = χωρίς αλλαγή)" : "PIN (4 ψηφία)"}
+                value={form.pin}
+                onChange={(e) => setForm((f) => ({ ...f, pin: e.target.value.replace(/\D/g, "") }))}
+                className={`${inputCls} text-center tracking-[0.4em]`}
+                data-testid="fleet-member-pin"
+              />
+            )}
             <div className="flex gap-2">
               <Button
                 type="submit"
