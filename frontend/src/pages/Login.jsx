@@ -3,8 +3,13 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Mail, Lock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { formatApiError } from "@/lib/api";
+import { formatApiError, apiFleetExchange } from "@/lib/api";
+import { setFleetToken } from "@/lib/fleetApi";
 import { Button } from "@/components/ui/button";
+
+// Λογαριασμοί χωρίς POS (εταιρείες διανομής ή μαγαζιά με πλάνο μόνο Fleet)
+// προσγειώνονται στον πίνακα διανομής αντί για το ταμείο
+const isFleetOnly = (u) => u?.account_type === "fleet_company" || u?.plan === "fleet";
 
 export default function Login() {
   const { user, login } = useAuth();
@@ -14,16 +19,27 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  if (user && user !== false) return <Navigate to="/app" replace />;
+  if (user && user !== false && !busy)
+    return <Navigate to={isFleetOnly(user) ? "/fleet" : "/app"} replace />;
 
   const submit = async (e) => {
     e.preventDefault();
     setError(null);
     setBusy(true);
     try {
-      await login(email, password);
+      const u = await login(email, password);
       toast.success("Καλωσήρθατε!");
-      navigate("/app");
+      if (isFleetOnly(u)) {
+        try {
+          const ex = await apiFleetExchange();
+          setFleetToken(ex.token);
+        } catch {
+          // αποτυχία exchange → το /fleet θα ζητήσει σύνδεση
+        }
+        navigate("/fleet/select");
+      } else {
+        navigate("/app");
+      }
     } catch (err) {
       // err.offline: μήνυμα από την τοπική (offline) επαλήθευση credentials —
       // είτε "πρώτη είσοδος απαιτεί δίκτυο" είτε "λάθος κωδικός"

@@ -2,12 +2,12 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Mail, Lock, Truck } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
-import { formatApiError } from "@/lib/api";
+import { apiLogin, apiFleetExchange, formatApiError, setToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
 // Σύνδεση εταιρείας διανομής (email + password) — OrderDeck Fleet branding.
 export default function FleetLogin() {
-  const { team, login } = useFleet();
+  const { team, login, adoptToken } = useFleet();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +25,18 @@ export default function FleetLogin() {
       await login(email, password);
       navigate("/fleet/select");
     } catch (err) {
-      setError(formatApiError(err));
+      // Unified λογαριασμοί (εγγραφή μέσω /fleet/signup ή μαγαζί με πλάνο Fleet):
+      // δεν υπάρχουν στα fleet_teams credentials — δοκιμή στο κύριο auth + exchange
+      try {
+        const { token } = await apiLogin({ email, password });
+        setToken(token);
+        const ex = await apiFleetExchange();
+        await adoptToken(ex.token);
+        navigate("/fleet/select");
+        return;
+      } catch {
+        setError(formatApiError(err));
+      }
     } finally {
       setBusy(false);
     }
@@ -103,7 +114,7 @@ export default function FleetLogin() {
           <div className="mt-6 text-sm text-neutral-400 text-center space-y-2">
             <div>
               Νέα εταιρεία;{" "}
-              <Link to="/fleet/register" data-testid="fleet-go-register" className="text-flame hover:underline font-semibold">
+              <Link to="/fleet/signup" data-testid="fleet-go-register" className="text-flame hover:underline font-semibold">
                 Εγγραφή
               </Link>
             </div>

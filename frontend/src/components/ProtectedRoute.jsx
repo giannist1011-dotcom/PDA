@@ -20,6 +20,9 @@ export default function ProtectedRoute({
   // Όσο εκκρεμεί το /auth/me το branded StartupOverlay (App.js) καλύπτει την οθόνη
   if (user === null) return null;
   if (user === false) return <Navigate to="/app/login" replace />;
+  // Λογαριασμοί χωρίς POS (fleet_company / πλάνο μόνο Fleet) → πίνακας διανομής
+  if (user.account_type === "fleet_company" || user.plan === "fleet")
+    return <Navigate to="/fleet" replace />;
   if (!hasProfile) return <Navigate to="/app/select-profile" replace />;
   const allowed = requireOwner ? ["owner"] : roles;
   if (allowed && !allowed.includes(role)) {

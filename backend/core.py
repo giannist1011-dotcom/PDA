@@ -210,6 +210,9 @@ def public_user(u: dict) -> dict:
         "id": u["id"],
         "email": u["email"],
         "restaurant_name": u["restaurant_name"],
+        # Πλάνο λογαριασμού — τα υπάρχοντα μαγαζιά είναι by default OrderDeck (μόνο POS)
+        "account_type": u.get("account_type") or "store",
+        "plan": u.get("plan") or "orderdeck",
         "created_at": u.get("created_at"),
         "profile": u.get("profile"),  # role (legacy key)
         "role": u.get("role") or u.get("profile"),

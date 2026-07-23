@@ -21,8 +21,9 @@ export const setFleetToken = (t) => {
 export const getFleetToken = () => localStorage.getItem(FLEET_TOKEN_KEY);
 
 // AUTH (εταιρεία)
-export const apiFleetRegister = (payload) =>
-  fleetApi.post("/fleet/register", payload).then((r) => r.data);
+// Νέα εγγραφή εταιρείας: unified λογαριασμός (users, account_type=fleet_company)
+export const apiFleetSignup = (payload) =>
+  fleetApi.post("/fleet/signup", payload).then((r) => r.data);
 export const apiFleetLogin = (payload) =>
   fleetApi.post("/fleet/login", payload).then((r) => r.data);
 export const apiFleetMe = () => fleetApi.get("/fleet/me").then((r) => r.data);

@@ -349,6 +349,10 @@ export const apiRequestBillingChange = (addon, action) =>
 export const apiCancelBillingRequest = () =>
   api.delete("/billing/request-change").then((r) => r.data);
 
+// Unified auth → OrderDeck Fleet: ανταλλαγή του token λογαριασμού με team-level
+// fleet token (λογαριασμοί fleet_company ή store plan fleet/orderdeck_fleet)
+export const apiFleetExchange = () => api.post("/fleet/exchange").then((r) => r.data);
+
 // Error helper
 export function formatApiError(e) {
   const d = e?.response?.data?.detail;

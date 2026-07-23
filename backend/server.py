@@ -126,6 +126,8 @@ async def on_startup():
     # OrderDeck Fleet (αυτόνομες εταιρείες διανομής)
     await db.fleet_teams.create_index("email", unique=True)
     await db.fleet_teams.create_index("invite_code", unique=True)
+    # Unified auth: ομάδα ↔ λογαριασμός users (fleet_company ή store plan με Fleet)
+    await db.fleet_teams.create_index("owner_user_id", unique=True, sparse=True)
     await db.fleet_members.create_index([("team_id", 1), ("created_at", 1)])
     await db.fleet_members.create_index("account_id")
     await db.fleet_accounts.create_index("phone", unique=True, sparse=True)

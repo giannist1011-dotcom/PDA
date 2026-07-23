@@ -3,14 +3,22 @@ import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { formatApiError, apiValidatePromo } from "@/lib/api";
+import { formatApiError, apiValidatePromo, apiFleetExchange } from "@/lib/api";
+import { setFleetToken } from "@/lib/fleetApi";
 import { Button } from "@/components/ui/button";
 import StepAccount from "./register/StepAccount";
 import StepBusiness from "./register/StepBusiness";
+import StepPlan from "./register/StepPlan";
 import StepOperation from "./register/StepOperation";
 import StepPin from "./register/StepPin";
 
-const STEPS = ["Λογαριασμός", "Επιχείρηση", "Λειτουργία", "PIN"];
+const ALL_STEPS = [
+  { key: "account", label: "Λογαριασμός" },
+  { key: "business", label: "Επιχείρηση" },
+  { key: "plan", label: "Πλάνο" },
+  { key: "operation", label: "Λειτουργία" },
+  { key: "pin", label: "PIN" },
+];
 
 export default function Register() {
   const { user, register } = useAuth();
@@ -31,30 +39,36 @@ export default function Register() {
     city: "",
     website: "",
     business_type: "souvlaki",
+    plan: "orderdeck",
     has_tables: true,
     has_waiters: false,
     owner_pin: "",
     owner_pin2: "",
   });
 
+  // Fleet-only πλάνο: το βήμα «Λειτουργία» (τραπέζια/σερβιτόροι) δεν έχει νόημα
+  const steps = form.plan === "fleet" ? ALL_STEPS.filter((s) => s.key !== "operation") : ALL_STEPS;
+  const stepKey = steps[Math.min(step, steps.length - 1)].key;
+
   // Οι δοκιμαστικοί (demo) χρήστες επιτρέπεται να περάσουν στο wizard για πλήρη εγγραφή
-  if (user && user !== false && !user.is_demo) return <Navigate to="/app" replace />;
+  // (όχι redirect όσο τρέχει το submit — για fleet πλάνο πλοηγούμαστε χειροκίνητα στο /fleet)
+  if (user && user !== false && !user.is_demo && !busy) return <Navigate to="/app" replace />;
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const validateStep = () => {
     setError(null);
-    if (step === 0) {
+    if (stepKey === "account") {
       if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) return "Εισάγετε έγκυρο email";
       if (form.password.length < 4) return "Ο κωδικός πρέπει να έχει τουλάχιστον 4 χαρακτήρες";
       if (form.password !== form.password2) return "Οι κωδικοί δεν ταιριάζουν";
       if (!form.full_name.trim()) return "Εισάγετε ονοματεπώνυμο";
       if (!form.phone.trim()) return "Εισάγετε τηλέφωνο";
     }
-    if (step === 1) {
+    if (stepKey === "business") {
       if (!form.restaurant_name.trim()) return "Εισάγετε όνομα επιχείρησης";
     }
-    if (step === 3) {
+    if (stepKey === "pin") {
       if (!/^\d{4}$/.test(form.owner_pin)) return "Το PIN πρέπει να είναι 4 ψηφία";
       if (form.owner_pin !== form.owner_pin2) return "Τα PIN δεν ταιριάζουν";
     }
@@ -68,7 +82,7 @@ export default function Register() {
       return;
     }
     // Έλεγχος εκπτωτικού κωδικού πριν προχωρήσουμε από το πρώτο βήμα
-    if (step === 0 && form.promo_code.trim()) {
+    if (stepKey === "account" && form.promo_code.trim()) {
       if (!promoInfo || promoInfo.code !== form.promo_code.trim().toUpperCase()) {
         setBusy(true);
         try {
@@ -82,7 +96,7 @@ export default function Register() {
         }
       }
     }
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep((s) => Math.min(s + 1, steps.length - 1));
   };
 
   const back = () => {
@@ -108,13 +122,25 @@ export default function Register() {
         city: form.city.trim(),
         website: form.website.trim(),
         business_type: form.business_type,
-        has_tables: form.has_tables,
-        has_waiters: form.has_waiters,
+        plan: form.plan,
+        has_tables: form.plan !== "fleet" && form.has_tables,
+        has_waiters: form.plan !== "fleet" && form.has_waiters,
         owner_pin: form.owner_pin,
         promo_code: form.promo_code.trim() || null,
       });
       toast.success("Ο λογαριασμός δημιουργήθηκε — καλωσήρθατε!");
-      navigate("/app");
+      if (form.plan === "fleet") {
+        // Fleet-only: κατευθείαν στον πίνακα διανομής — το fleet token βγαίνει από το exchange
+        try {
+          const ex = await apiFleetExchange();
+          setFleetToken(ex.token);
+        } catch {
+          // αποτυχία exchange → το /fleet θα ζητήσει σύνδεση
+        }
+        navigate("/fleet/select");
+      } else {
+        navigate("/app");
+      }
     } catch (e) {
       setError(formatApiError(e));
     } finally {
@@ -131,8 +157,8 @@ export default function Register() {
 
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-1.5 mb-6" data-testid="register-steps">
-          {STEPS.map((label, i) => (
-            <div key={label} className="flex items-center gap-1.5">
+          {steps.map(({ key, label }, i) => (
+            <div key={key} className="flex items-center gap-1.5">
               <div
                 className={`flex items-center gap-1.5 px-2.5 h-8 rounded-full text-xs font-bold ${
                   i === step
@@ -145,25 +171,19 @@ export default function Register() {
                 {i < step ? <Check className="w-3.5 h-3.5" /> : <span>{i + 1}</span>}
                 <span className="hidden sm:inline">{label}</span>
               </div>
-              {i < STEPS.length - 1 && <div className="w-4 h-px bg-[#723645]" />}
+              {i < steps.length - 1 && <div className="w-4 h-px bg-[#723645]" />}
             </div>
           ))}
         </div>
 
         <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-6 md:p-8">
-          {/* STEP 1 — Λογαριασμός */}
-          {step === 0 && (
+          {stepKey === "account" && (
             <StepAccount form={form} set={set} promoInfo={promoInfo} setPromoInfo={setPromoInfo} />
           )}
-
-          {/* STEP 2 — Επιχείρηση */}
-          {step === 1 && <StepBusiness form={form} set={set} />}
-
-          {/* STEP 3 — Λειτουργία */}
-          {step === 2 && <StepOperation form={form} set={set} />}
-
-          {/* STEP 4 — PIN */}
-          {step === 3 && <StepPin form={form} set={set} promoInfo={promoInfo} />}
+          {stepKey === "business" && <StepBusiness form={form} set={set} />}
+          {stepKey === "plan" && <StepPlan form={form} set={set} />}
+          {stepKey === "operation" && <StepOperation form={form} set={set} />}
+          {stepKey === "pin" && <StepPin form={form} set={set} promoInfo={promoInfo} />}
 
           {error && (
             <div
@@ -187,7 +207,7 @@ export default function Register() {
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             )}
-            {step < STEPS.length - 1 ? (
+            {step < steps.length - 1 ? (
               <Button
                 type="button"
                 onClick={next}

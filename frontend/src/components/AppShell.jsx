@@ -28,11 +28,15 @@ import {
   Bot,
   FileText,
   Download,
+  Truck,
 } from "lucide-react";
+import { toast } from "sonner";
 import DeckPilotChat from "@/components/DeckPilotChat";
 import OfflineBanner from "@/components/OfflineBanner";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import { useOfflineStatus } from "@/lib/offline";
+import { apiFleetExchange, formatApiError } from "@/lib/api";
+import { setFleetToken } from "@/lib/fleetApi";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
 import { can } from "@/lib/perms";
@@ -165,6 +169,19 @@ export default function AppShell({ title, children }) {
   const handleLogout = () => {
     logout();
     navigate("/app/login");
+  };
+
+  // Πλάνο OrderDeck + Fleet: μετάβαση στον πίνακα διανομής με το unified token
+  // (exchange → fleet token) — η επιλογή μέλους με PIN γίνεται εκεί
+  const openFleet = async () => {
+    try {
+      const ex = await apiFleetExchange();
+      setFleetToken(ex.token);
+      setOpen(false);
+      navigate("/fleet");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
   };
 
   const handleSwitchProfile = async () => {
@@ -393,6 +410,16 @@ export default function AppShell({ title, children }) {
                     </div>
                   )}
                 </div>
+              )}
+              {user?.plan === "orderdeck_fleet" && canManage && (
+                <button
+                  onClick={openFleet}
+                  data-testid="drawer-link-fleet"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-md mb-1 text-neutral-200 hover:bg-[#3D1620] border border-transparent"
+                >
+                  <Truck className="w-5 h-5" />
+                  <span className="font-semibold">OrderDeck Fleet</span>
+                </button>
               )}
               {role === "owner" && installPrompt && (
                 <button

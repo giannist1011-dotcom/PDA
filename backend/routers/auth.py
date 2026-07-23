@@ -27,6 +27,7 @@ from core import (
 )
 from presets import PRESETS
 from routers.promo import redeem_promo, promo_description, require_admin
+from routers.fleet import ensure_fleet_team_for_user
 
 router = APIRouter()
 
@@ -45,6 +46,9 @@ class RegisterIn(BaseModel):
     has_waiters: bool = False
     owner_pin: Optional[str] = None  # 4 digits — the wizard always sends it
     promo_code: Optional[str] = Field(default=None, max_length=40)
+    # Πλάνο λογαριασμού: orderdeck=μόνο POS, fleet=μόνο διαχείριση διανομέων,
+    # orderdeck_fleet=και τα δύο. Τιμολόγηση χειροκίνητη (όπως η συνδρομή).
+    plan: Literal["orderdeck", "fleet", "orderdeck_fleet"] = "orderdeck"
 
 
 class LoginIn(BaseModel):
@@ -93,6 +97,8 @@ async def register(body: RegisterIn, request: Request):
         "id": uid,
         "email": email,
         "password_hash": hash_password(body.password),
+        "account_type": "store",
+        "plan": body.plan,
         "restaurant_name": body.restaurant_name.strip(),
         "full_name": body.full_name.strip(),
         "phone": body.phone.strip(),
@@ -113,8 +119,10 @@ async def register(body: RegisterIn, request: Request):
         "created_at": now,
     }
     await db.users.insert_one(doc)
-    # Seed menu + stock categories + default tables from the chosen preset
-    await seed_account_from_preset(uid, preset, body.has_tables)
+    # Fleet-only πλάνο: χωρίς POS — δεν χρειάζεται seed μενού ούτε προφίλ προσωπικού
+    if body.plan != "fleet":
+        # Seed menu + stock categories + default tables from the chosen preset
+        await seed_account_from_preset(uid, preset, body.has_tables)
     # Profiles: owner with the chosen PIN, a default employee, waiter if requested
     profiles = [
         {
@@ -125,16 +133,17 @@ async def register(body: RegisterIn, request: Request):
             "pin_hash": hash_password(owner_pin),
             "created_at": now,
         },
-        {
+    ]
+    if body.plan != "fleet":
+        profiles.append({
             "id": str(uuid.uuid4())[:8],
             "user_id": uid,
             "name": "Υπάλληλος",
             "role": "employee",
             "pin_hash": hash_password("0000"),
             "created_at": now,
-        },
-    ]
-    if body.has_waiters:
+        })
+    if body.has_waiters and body.plan != "fleet":
         profiles.append({
             "id": str(uuid.uuid4())[:8],
             "user_id": uid,
@@ -144,6 +153,9 @@ async def register(body: RegisterIn, request: Request):
             "created_at": now,
         })
     await db.profiles.insert_many(profiles)
+    # Πλάνα με Fleet: έτοιμη ομάδα διανομής + μέλος-συντονιστής (PIN = PIN ιδιοκτήτη)
+    if body.plan in ("fleet", "orderdeck_fleet"):
+        await ensure_fleet_team_for_user(doc)
     token = create_token(uid, email)
     return {"token": token, "user": public_user(doc)}
 

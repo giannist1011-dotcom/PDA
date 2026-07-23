@@ -19,11 +19,14 @@ from core import (
     JWT_SECRET,
     JWT_TTL_HOURS,
     athens_today,
+    create_token,
     db,
+    get_current_user,
     hash_password,
     local_day_range,
     pin_lock_message,
     pin_locked_for,
+    public_user,
     rate_limit,
     register_pin_attempt,
     verify_password,
@@ -261,6 +264,123 @@ class AssignIn(BaseModel):
     member_id: Optional[str] = None  # None → επιστροφή σε αναμονή (αποδέσμευση)
 
 
+# ============ UNIFIED AUTH (account_type στους users — όχι παράλληλο σύστημα) ============
+async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Συντονιστής") -> dict:
+    """Βρίσκει ή δημιουργεί το fleet_team ενός unified λογαριασμού (users.account_type).
+
+    Καλείται από την εγγραφή (store plan με Fleet, /fleet/signup) και lazily από το
+    /fleet/exchange — καλύπτει και λογαριασμούς που παίρνουν Fleet αργότερα από τον admin.
+    Το πρώτο μέλος-συντονιστής κληρονομεί το PIN ιδιοκτήτη του λογαριασμού.
+    """
+    team = await db.fleet_teams.find_one({"owner_user_id": u["id"]}, {"_id": 0})
+    if team:
+        return team
+    email = u["email"]
+    if await db.fleet_teams.find_one({"email": email}):
+        # Legacy standalone εταιρεία με το ίδιο email — δεν την υιοθετούμε σιωπηλά
+        raise HTTPException(
+            409, "Υπάρχει ήδη εταιρεία Fleet με αυτό το email — επικοινωνήστε με την υποστήριξη"
+        )
+    now = datetime.now(timezone.utc).isoformat()
+    invite = new_invite_code()
+    while await db.fleet_teams.find_one({"invite_code": invite}):
+        invite = new_invite_code()
+    team = {
+        "id": str(uuid.uuid4()),
+        "name": u.get("restaurant_name") or "Ομάδα διανομής",
+        "city": u.get("store_city") or u.get("city") or "",
+        "email": email,
+        "owner_user_id": u["id"],
+        "invite_code": invite,
+        "created_at": now,
+    }
+    await db.fleet_teams.insert_one(team)
+    team.pop("_id", None)
+    await db.fleet_members.insert_one({
+        "id": str(uuid.uuid4())[:8],
+        "team_id": team["id"],
+        "name": (admin_name or "").strip() or "Συντονιστής",
+        "role": "fleet_admin",
+        "pin_hash": u.get("owner_pin_hash") or hash_password("0000"),
+        "created_at": now,
+    })
+    return team
+
+
+class FleetSignupIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    city: str = Field(default="", max_length=60)
+    contact_name: str = Field(default="", max_length=80)
+    phone: str = Field(default="", max_length=20)
+    email: EmailStr
+    password: str = Field(min_length=4)
+    plan: Literal["fleet15", "fleet30"] = "fleet15"
+    admin_pin: str = Field(min_length=4, max_length=4)
+
+
+@router.post("/fleet/signup")
+async def fleet_signup(body: FleetSignupIn, request: Request):
+    """Εγγραφή εταιρείας διανομής στο ΕΝΙΑΙΟ auth (users, account_type=fleet_company).
+
+    Δημιουργεί λογαριασμό users + fleet_team + μέλος-συντονιστή. Τιμολόγηση χειροκίνητη
+    (όπως η συνδρομή μαγαζιών) — κανένα payment εδώ.
+    """
+    rate_limit(request, "fleet_signup", limit=5, window_seconds=3600)
+    email = body.email.lower()
+    if not valid_pin(body.admin_pin):
+        raise HTTPException(400, "Το PIN συντονιστή πρέπει να είναι 4 ψηφία")
+    if await db.users.find_one({"email": email}):
+        raise HTTPException(400, "Το email χρησιμοποιείται ήδη")
+    if await db.fleet_teams.find_one({"email": email}):
+        raise HTTPException(400, "Το email χρησιμοποιείται ήδη")
+    now = datetime.now(timezone.utc).isoformat()
+    uid = str(uuid.uuid4())
+    doc = {
+        "id": uid,
+        "email": email,
+        "password_hash": hash_password(body.password),
+        "account_type": "fleet_company",
+        "plan": body.plan,
+        "restaurant_name": body.name.strip(),  # όνομα εταιρείας — κοινό πεδίο εμφάνισης
+        "full_name": body.contact_name.strip(),
+        "phone": body.phone.strip(),
+        "city": body.city.strip(),
+        "store_city": body.city.strip(),
+        "website": "",
+        "tables_enabled": False,
+        "customization": {},
+        "owner_pin_hash": hash_password(body.admin_pin),
+        "employee_pin_hash": hash_password("0000"),
+        "owner_pin_set": True,
+        "employee_pin_set": False,
+        "created_at": now,
+    }
+    await db.users.insert_one(doc)
+    team = await ensure_fleet_team_for_user(doc, admin_name=body.contact_name)
+    return {
+        "token": create_token(uid, email),
+        "fleet_token": create_fleet_token(team["id"]),
+        "team": public_team(team),
+        "user": public_user(doc),
+    }
+
+
+@router.post("/fleet/exchange")
+async def fleet_exchange(user: dict = Depends(get_current_user)):
+    """Unified JWT (users) → team-level fleet token, χωρίς δεύτερο login.
+
+    Επιτρέπεται μόνο σε λογαριασμούς που περιλαμβάνουν Fleet (fleet_company ή
+    store plan fleet/orderdeck_fleet). Η επιλογή μέλους με PIN παραμένει μετά.
+    """
+    if user.get("account_type") != "fleet_company" and user.get("plan") not in (
+        "fleet",
+        "orderdeck_fleet",
+    ):
+        raise HTTPException(403, "Ο λογαριασμός σας δεν περιλαμβάνει το OrderDeck Fleet")
+    team = await ensure_fleet_team_for_user(user)
+    return {"token": create_fleet_token(team["id"]), "team": public_team(team)}
+
+
 # ============ TEAM AUTH ROUTES ============
 @router.post("/fleet/register")
 async def fleet_register(body: FleetRegisterIn, request: Request):
@@ -301,7 +421,8 @@ async def fleet_register(body: FleetRegisterIn, request: Request):
 async def fleet_login(body: FleetLoginIn, request: Request):
     rate_limit(request, "fleet_login", limit=10, window_seconds=60)
     team = await db.fleet_teams.find_one({"email": body.email.lower()})
-    if not team or not verify_password(body.password, team["password_hash"]):
+    # Unified ομάδες (owner_user_id) δεν έχουν δικό τους password — μπαίνουν από το κύριο login
+    if not team or not team.get("password_hash") or not verify_password(body.password, team["password_hash"]):
         raise HTTPException(401, "Λάθος email ή κωδικός")
     if team.get("disabled"):
         raise HTTPException(403, "Ο λογαριασμός έχει απενεργοποιηθεί")
