@@ -63,13 +63,15 @@ export function AuthProvider({ children }) {
   // panel της πλατφόρμας — εκεί πάντα OrderDeck, ακόμα κι αν υπάρχει store session
   const { pathname } = useLocation();
   const onAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+  // Το /fleet (OrderDeck Fleet) έχει δικό του branding — ποτέ tenant favicon/title
+  const onFleet = pathname === "/fleet" || pathname.startsWith("/fleet/");
 
   // Dynamic favicon: λογότυπο μαγαζιού όσο υπάρχει, OrderDeck default αλλιώς/στο logout
   useEffect(() => {
-    if (!storeLogo || onAdmin) return undefined;
+    if (!storeLogo || onAdmin || onFleet) return undefined;
     setFavicon(storeLogo);
     return () => resetFavicon();
-  }, [storeLogo, onAdmin]);
+  }, [storeLogo, onAdmin, onFleet]);
 
   // Dynamic τίτλος tab: όνομα μαγαζιού όσο υπάρχει session, OrderDeck στο logout
   const storeName = user && user !== false ? user.restaurant_name : null;
@@ -80,12 +82,13 @@ export function AuthProvider({ children }) {
         document.title = "OrderDeck — POS για την εστίασή σου";
       };
     }
+    if (onFleet) return undefined; // το FleetShell ορίζει τον δικό του τίτλο
     if (!storeName) return undefined;
     document.title = storeName;
     return () => {
       document.title = "OrderDeck — POS για την εστίασή σου";
     };
-  }, [storeName, onAdmin]);
+  }, [storeName, onAdmin, onFleet]);
 
   useEffect(() => {
     (async () => {

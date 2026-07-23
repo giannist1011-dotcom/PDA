@@ -91,6 +91,9 @@ export default function AddressAutocomplete({
   placeholder,
   testId,
   className = "",
+  // Πηγή "γνωστών διευθύνσεων" — default το address book του μαγαζιού·
+  // το Fleet περνάει το δικό του (ίδιο σχήμα: [{address, name, lat, lng}])
+  fetchBook = getAddressBookCached,
 }) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
@@ -104,12 +107,15 @@ export default function AddressAutocomplete({
   // Η κανονικοποίηση (norm) γίνεται ΜΙΑ φορά εδώ — όχι σε όλη τη λίστα ανά πλήκτρο.
   useEffect(() => {
     let alive = true;
-    getAddressBookCached().then((b) => {
-      if (alive) setBook((b || []).map((e) => ({ ...e, normAddress: norm(e.address) })));
-    });
+    fetchBook()
+      .then((b) => {
+        if (alive) setBook((b || []).map((e) => ({ ...e, normAddress: norm(e.address) })));
+      })
+      .catch(() => {});
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const q = (value || "").trim();

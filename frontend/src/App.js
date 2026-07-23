@@ -33,6 +33,14 @@ import AdminSubscriptions from "@/pages/AdminSubscriptions";
 import AdminLeads from "@/pages/AdminLeads";
 import AdminAnnouncements from "@/pages/AdminAnnouncements";
 import PublicMenu from "@/pages/PublicMenu";
+import { FleetAuthProvider, FleetProtected } from "@/context/FleetAuthContext";
+import FleetLogin from "@/pages/FleetLogin";
+import FleetRegister from "@/pages/FleetRegister";
+import FleetJoin from "@/pages/FleetJoin";
+import FleetSelect from "@/pages/FleetSelect";
+import FleetDispatch from "@/pages/FleetDispatch";
+import FleetDriver from "@/pages/FleetDriver";
+import FleetMembers from "@/pages/FleetMembers";
 
 // Old top-level app paths now live under /app — keep old links/bookmarks working.
 const LEGACY_PATHS = [
@@ -51,6 +59,46 @@ const LEGACY_PATHS = [
   "/expenses",
   "/settings",
 ];
+
+// OrderDeck Fleet — αυτόνομες εταιρείες διανομής: δικό τους auth context/token,
+// εντελώς εκτός των sessions μαγαζιών. Branding πάντα OrderDeck Fleet.
+function FleetRoutes() {
+  return (
+    <FleetAuthProvider>
+      <Routes>
+        <Route path="login" element={<FleetLogin />} />
+        <Route path="register" element={<FleetRegister />} />
+        <Route path="join" element={<FleetJoin />} />
+        <Route path="select" element={<FleetSelect />} />
+        <Route
+          index
+          element={
+            <FleetProtected roles={["fleet_admin"]}>
+              <FleetDispatch />
+            </FleetProtected>
+          }
+        />
+        <Route
+          path="members"
+          element={
+            <FleetProtected roles={["fleet_admin"]}>
+              <FleetMembers />
+            </FleetProtected>
+          }
+        />
+        <Route
+          path="driver"
+          element={
+            <FleetProtected>
+              <FleetDriver />
+            </FleetProtected>
+          }
+        />
+        <Route path="*" element={<Navigate to="/fleet" replace />} />
+      </Routes>
+    </FleetAuthProvider>
+  );
+}
 
 function LegacyRedirect() {
   const location = useLocation();
@@ -79,6 +127,9 @@ function App() {
             <Route path="/admin/promo" element={<AdminPromo />} />
             <Route path="/admin/announcements" element={<AdminAnnouncements />} />
             <Route path="/admin/stock-photos" element={<AdminStockPhotos />} />
+
+            {/* OrderDeck Fleet — εταιρείες διανομής (standalone) */}
+            <Route path="/fleet/*" element={<FleetRoutes />} />
 
             {/* Auth */}
             <Route path="/app/login" element={<Login />} />
