@@ -710,10 +710,11 @@ async def fleet_driver_board(team: dict = Depends(get_fleet_member)):
         {**day_q, "driver_id": team["member_id"], "status": {"$in": ["pickup", "enroute"]}},
         {"_id": 0, "team_id": 0},
     ).sort("created_at", 1).to_list(200)
-    delivered = await db.fleet_orders.count_documents(
-        {**day_q, "driver_id": team["member_id"], "status": "delivered"}
-    )
-    return {"available": available, "mine": mine, "delivered_today": delivered}
+    delivered = await db.fleet_orders.find(
+        {**day_q, "driver_id": team["member_id"], "status": "delivered"},
+        {"_id": 0, "team_id": 0},
+    ).sort("created_at", -1).to_list(200)
+    return {"available": available, "mine": mine, "delivered": delivered, "delivered_today": len(delivered)}
 
 
 @router.post("/fleet/orders/{oid}/claim")
