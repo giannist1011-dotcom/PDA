@@ -10,6 +10,7 @@ import {
   apiGetBranding,
   setToken,
   getToken,
+  decodeJwtPayload,
 } from "@/lib/api";
 import { setFavicon, resetFavicon } from "@/lib/favicon";
 import {
@@ -92,7 +93,15 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     (async () => {
-      if (!getToken()) {
+      const t = getToken();
+      if (!t) {
+        setUser(false);
+        return;
+      }
+      // Token άλλης επιφάνειας (kind=fleet/fleet_driver) δεν είναι ποτέ έγκυρο
+      // store session — καθάρισε και ζήτα login αντί να δείξει λάθος ταυτότητα
+      if (decodeJwtPayload(t)?.kind) {
+        setToken(null);
         setUser(false);
         return;
       }

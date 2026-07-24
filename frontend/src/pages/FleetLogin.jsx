@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Mail, Lock, Truck } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
-import { apiLogin, apiFleetExchange, formatApiError, setToken } from "@/lib/api";
+import { apiLogin, apiFleetExchange, formatApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
 // Σύνδεση εταιρείας διανομής (email + password) — OrderDeck Fleet branding.
@@ -26,11 +26,11 @@ export default function FleetLogin() {
       navigate("/fleet/select");
     } catch (err) {
       // Unified λογαριασμοί (εγγραφή μέσω /fleet/signup ή μαγαζί με πλάνο Fleet):
-      // δεν υπάρχουν στα fleet_teams credentials — δοκιμή στο κύριο auth + exchange
+      // δεν υπάρχουν στα fleet_teams credentials — δοκιμή στο κύριο auth + exchange.
+      // Το unified token περνιέται ΡΗΤΑ: δεν αγγίζει το store session του browser.
       try {
         const { token } = await apiLogin({ email, password });
-        setToken(token);
-        const ex = await apiFleetExchange();
+        const ex = await apiFleetExchange(token);
         await adoptToken(ex.token);
         navigate("/fleet/select");
         return;

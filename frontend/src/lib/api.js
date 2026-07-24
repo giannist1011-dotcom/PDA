@@ -6,10 +6,10 @@ const TOKEN_KEY = "peinokio_token";
 
 export const api = axios.create({ baseURL: API });
 
-// attach token if present
+// attach token if present — ρητό Authorization header (π.χ. exchange με άλλο token) έχει προτεραιότητα
 api.interceptors.request.use((cfg) => {
   const t = localStorage.getItem(TOKEN_KEY);
-  if (t) cfg.headers.Authorization = `Bearer ${t}`;
+  if (t && !cfg.headers.Authorization) cfg.headers.Authorization = `Bearer ${t}`;
   return cfg;
 });
 
@@ -19,6 +19,19 @@ export const setToken = (t) => {
 };
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
+
+// Αποκωδικοποίηση payload JWT ΧΩΡΙΣ επαλήθευση υπογραφής — μόνο για client-side
+// έλεγχο σε ποια επιφάνεια (store/fleet/driver) ανήκει ένα αποθηκευμένο token.
+// null αν το string δεν είναι έγκυρο JWT.
+export const decodeJwtPayload = (t) => {
+  try {
+    const base64 = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+};
 
 // AUTH
 export const apiRegister = (payload) => api.post("/auth/register", payload).then((r) => r.data);
@@ -395,7 +408,12 @@ export const apiCancelBillingRequest = () =>
 
 // Unified auth → OrderDeck Fleet: ανταλλαγή του token λογαριασμού με team-level
 // fleet token (λογαριασμοί fleet_company ή store plan fleet/orderdeck_fleet)
-export const apiFleetExchange = () => api.post("/fleet/exchange").then((r) => r.data);
+// Προαιρετικό ρητό token: το FleetLogin ανταλλάσσει unified credentials ΧΩΡΙΣ να
+// αγγίξει το αποθηκευμένο store session αυτού του browser
+export const apiFleetExchange = (token) =>
+  api
+    .post("/fleet/exchange", null, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+    .then((r) => r.data);
 
 // Error helper
 export function formatApiError(e) {
