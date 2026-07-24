@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { X, Sparkles, Copy } from "lucide-react";
+import { X, Sparkles } from "lucide-react";
 import { apiAdminCreateDemo, formatApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { useAdminPw } from "@/components/AdminShell";
+import { CredRow } from "./DemoCredentials";
 import { inputCls } from "./utils";
 
 const TYPES = [
@@ -17,26 +18,6 @@ const BUSINESS_TYPES = [
   { key: "pizzeria", label: "Πιτσαρία" },
   { key: "burger", label: "Burger" },
 ];
-
-// Γραμμή credential με κουμπί αντιγραφής — τα στοιχεία εμφανίζονται ΜΙΑ φορά
-const CredRow = ({ label, value }) => (
-  <div className="flex items-center justify-between gap-2 text-sm py-1">
-    <span className="text-neutral-400">{label}</span>
-    <span className="flex items-center gap-1.5 font-mono text-white">
-      {value}
-      <button
-        type="button"
-        onClick={() => {
-          navigator.clipboard?.writeText(value);
-          toast.success("Αντιγράφηκε");
-        }}
-        className="p-1 rounded hover:bg-[#3D1620] text-neutral-400 hover:text-white"
-      >
-        <Copy className="w-3.5 h-3.5" />
-      </button>
-    </span>
-  </div>
-);
 
 // Δημιουργία demo λογαριασμού (μαγαζί ή εταιρία delivery) από τον admin
 export default function CreateDemoModal({ defaultType = "store", onClose }) {
@@ -98,7 +79,7 @@ export default function CreateDemoModal({ defaultType = "store", onClose }) {
             </p>
             <div className="bg-[#2A0E14] border border-gold/40 rounded-lg p-4">
               <div className="text-xs uppercase tracking-widest font-bold text-gold mb-2">
-                Στοιχεία σύνδεσης — εμφανίζονται μόνο τώρα
+                Στοιχεία σύνδεσης — διαθέσιμα και στην καρτέλα του demo
               </div>
               <CredRow label="Email" value={result.email} />
               <CredRow label="Κωδικός" value={result.password} />

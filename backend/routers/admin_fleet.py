@@ -149,6 +149,13 @@ async def admin_fleet_detail(uid: str, ctx: dict = Depends(get_admin_ctx)):
             u["orders_30d"] = r["n30"]
             u["last_activity"] = r["last"]
     u["drivers_count"] = sum(1 for m in u["members"] if m["role"] == "driver")
+    # Στοιχεία σύνδεσης demo — ΜΟΝΟ demo λογαριασμοί και ΜΟΝΟ master/manage
+    # (τα view-only sub-admins δεν βλέπουν ποτέ κωδικούς)
+    if u.get("is_demo") and (ctx["is_master"] or ctx["rights"] == "manage"):
+        creds = await db.users.find_one(
+            {"id": uid, "is_demo": True}, {"_id": 0, "demo_credentials": 1}
+        )
+        u["demo_credentials"] = (creds or {}).get("demo_credentials")
     return u
 
 
@@ -258,6 +265,16 @@ def _rand(n: int) -> str:
     return "".join(secrets.choice(CRED_ALPHABET) for _ in range(n))
 
 
+async def set_demo_credentials(uid: str, fields: dict) -> None:
+    """Αποθήκευση ανακτήσιμων credentials στο demo_credentials. ΣΚΛΗΡΟΣ ΚΑΝΟΝΑΣ:
+    γράφεται ΜΟΝΟ σε demo λογαριασμούς — το φίλτρο is_demo=True το επιβάλλει στη
+    βάση, οπότε για κανονικό λογαριασμό το update δεν ταιριάζει ποτέ."""
+    await db.users.update_one(
+        {"id": uid, "is_demo": True},
+        {"$set": {f"demo_credentials.{k}": v for k, v in fields.items()}},
+    )
+
+
 DEMO_DRIVERS = ["Γιώργος Κ.", "Μαρία Π.", "Νίκος Δ."]
 
 # (κατάστημα παραλαβής, διεύθυνση, ποσό, πληρωμή, κατάσταση, index οδηγού|None, πριν από λεπτά)
@@ -290,7 +307,8 @@ async def _unique_demo_phone() -> str:
 
 async def seed_fleet_demo(team_id: str) -> list:
     """Δείγμα οδηγών + παραγγελιών/γεγονότων ώστε πίνακας συντονιστή και οθόνη οδηγού
-    να δείχνουν ζωντανά. Επιστρέφει τα credentials των demo οδηγών (εμφανίζονται μία φορά)."""
+    να δείχνουν ζωντανά. Επιστρέφει τα credentials των demo οδηγών (ο καλών τα
+    αποθηκεύει στο demo_credentials ώστε να φαίνονται και στην καρτέλα του demo)."""
     now = datetime.now(timezone.utc)
     now_iso = now.isoformat()
     driver_creds, driver_members = [], []
@@ -382,7 +400,7 @@ class DemoCreateIn(BaseModel):
 async def admin_create_demo(body: DemoCreateIn, x_admin_password: Optional[str] = Header(None)):
     """Demo λογαριασμός από τον admin — μαγαζί (με preset μενού) ή εταιρία delivery
     (με δείγμα οδηγών/παραγγελιών). Συνδέεται από το κανονικό login· τα credentials
-    επιστρέφονται ΜΙΑ φορά εδώ (αποθηκεύεται μόνο hash)."""
+    μένουν ανακτήσιμα στο demo_credentials (ΜΟΝΟ για is_demo — ποτέ σε κανονικούς)."""
     require_admin(x_admin_password)
     now_iso = datetime.now(timezone.utc).isoformat()
     uid = str(uuid.uuid4())
@@ -403,6 +421,8 @@ async def admin_create_demo(body: DemoCreateIn, x_admin_password: Optional[str] 
         "owner_pin_set": True,
         "employee_pin_set": False,
         "is_demo": True,  # χωρίς demo_expires_at → δεν τον αγγίζει το cron cleanup
+        # Ανακτήσιμα credentials — επιτρέπονται ΜΟΝΟ επειδή is_demo=True στο ίδιο doc
+        "demo_credentials": {"email": email, "password": password},
         "ai_features_enabled": True,  # κανόνας demo: τα AI features πάντα ενεργά
         "created_at": now_iso,
     }
@@ -429,6 +449,7 @@ async def admin_create_demo(body: DemoCreateIn, x_admin_password: Optional[str] 
     await db.users.insert_one(doc)
     team = await ensure_fleet_team_for_user(doc, admin_name="Συντονιστής")
     drivers = await seed_fleet_demo(team["id"])
+    await set_demo_credentials(uid, {"drivers": drivers})
     return {
         "id": uid, "type": "fleet", "email": email, "password": password,
         "pin": "0000", "drivers": drivers,
@@ -458,6 +479,7 @@ async def admin_reset_demo(uid: str, x_admin_password: Optional[str] = Header(No
             "created_at": now_iso,
         })
         drivers = await seed_fleet_demo(team["id"])
+        await set_demo_credentials(uid, {"drivers": drivers})
         return {"ok": True, "type": "fleet", "drivers": drivers}
 
     preset = PRESETS.get(u.get("business_type"), PRESETS["souvlaki"])
@@ -466,6 +488,31 @@ async def admin_reset_demo(uid: str, x_admin_password: Optional[str] = Header(No
     await seed_account_from_preset(uid, preset, has_tables=True)
     await _seed_store_profiles(uid, now_iso)
     return {"ok": True, "type": "store"}
+
+
+@router.post("/admin/demos/{uid}/reset-password")
+async def admin_reset_demo_password(uid: str, ctx: dict = Depends(get_admin_ctx)):
+    """Νέος κωδικός demo λογαριασμού: ενημερώνει το hash ΚΑΙ το ορατό demo_credentials.
+    Επιτρέπεται σε master και sub-admin με rights=manage (μέσα στο scope του) —
+    λειτουργεί ΜΟΝΟ σε is_demo λογαριασμούς."""
+    require_manage(ctx)
+    u = await db.users.find_one(
+        {"id": uid},
+        {"_id": 0, "id": 1, "is_demo": 1, "account_type": 1,
+         "restaurant_name": 1, "store_city": 1, "city": 1},
+    )
+    if not u or not u.get("is_demo"):
+        raise HTTPException(404, "Ο demo λογαριασμός δεν βρέθηκε")
+    require_product(ctx, "fleet" if u.get("account_type") == "fleet_company" else "orderdeck")
+    check_city(ctx, u)
+    password = _rand(8)
+    await db.users.update_one(
+        {"id": uid, "is_demo": True},
+        {"$set": {"password_hash": hash_password(password)}},
+    )
+    await set_demo_credentials(uid, {"password": password})
+    await audit_subadmin(ctx, "reset_demo_password", uid, u.get("restaurant_name") or "")
+    return {"ok": True, "password": password}
 
 
 @router.delete("/admin/demos/{uid}")

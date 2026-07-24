@@ -230,6 +230,13 @@ async def admin_shop_detail(uid: str, ctx: dict = Depends(get_admin_ctx)):
     u["items_count"] = await db.items.count_documents({"user_id": uid})
     u["uses_deckpilot"] = bool(await db.ai_usage.find_one({"user_id": uid}, {"_id": 1}))
     u["onboarding"] = await fetch_onboarding(uid)
+    # Στοιχεία σύνδεσης demo — ΜΟΝΟ demo λογαριασμοί και ΜΟΝΟ master/manage
+    # (τα view-only sub-admins δεν βλέπουν ποτέ κωδικούς)
+    if u.get("is_demo") and (ctx["is_master"] or ctx["rights"] == "manage"):
+        creds = await db.users.find_one(
+            {"id": uid, "is_demo": True}, {"_id": 0, "demo_credentials": 1}
+        )
+        u["demo_credentials"] = (creds or {}).get("demo_credentials")
     return u
 
 

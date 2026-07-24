@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import DatePicker from "@/components/DatePicker";
 import { useAdminInfo } from "@/components/AdminShell";
 import { StatusBadge } from "../admin-shops/Badges";
+import DemoCredentials from "../admin-shops/DemoCredentials";
 import { inputCls, PAYMENT_LABELS } from "../admin-shops/utils";
 import { FLEET_PLAN_LABELS } from "./utils";
 
@@ -30,7 +31,6 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
   const [busy, setBusy] = useState(false);
   const [edit, setEdit] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null); // null | "" | typed text
-  const [demoDrivers, setDemoDrivers] = useState(null); // νέα credentials μετά από reset
 
   const load = useCallback(() => {
     apiAdminFleetDetail(pw, companyId)
@@ -85,8 +85,8 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
   const resetDemo = async () => {
     setBusy(true);
     try {
-      const res = await apiAdminResetDemo(pw, companyId);
-      setDemoDrivers(res.drivers || null);
+      // Τα νέα credentials οδηγών αποθηκεύονται στο demo_credentials — τα φέρνει το load()
+      await apiAdminResetDemo(pw, companyId);
       toast.success("Το demo επαναφέρθηκε στην αρχική κατάσταση");
       onChanged();
       load();
@@ -162,18 +162,15 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
               </div>
             )}
 
-            {/* ΝΕΑ CREDENTIALS ΟΔΗΓΩΝ ΜΕΤΑ ΑΠΟ RESET — εμφανίζονται μόνο τώρα */}
-            {demoDrivers && (
-              <div className="mx-5 mt-5 p-4 bg-gold/10 border border-gold/50 rounded-lg text-sm">
-                <div className="font-bold text-gold mb-2">
-                  Νέοι demo οδηγοί — τα στοιχεία εμφανίζονται μόνο τώρα
-                </div>
-                {demoDrivers.map((d) => (
-                  <div key={d.phone} className="font-mono text-xs text-neutral-200">
-                    {d.name} · {d.phone} · {d.password}
-                  </div>
-                ))}
-              </div>
+            {/* ΣΤΟΙΧΕΙΑ ΣΥΝΔΕΣΗΣ DEMO — το backend τα στέλνει μόνο για demo + master/manage */}
+            {company.demo_credentials !== undefined && (
+              <DemoCredentials
+                pw={pw}
+                accountId={companyId}
+                email={company.email}
+                credentials={company.demo_credentials}
+                onChanged={load}
+              />
             )}
 
             <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">

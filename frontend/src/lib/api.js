@@ -336,6 +336,8 @@ export const apiAdminCreateDemo = (pw, payload) =>
   api.post("/admin/demos", payload, adminHeaders(pw)).then((r) => r.data);
 export const apiAdminResetDemo = (pw, id) =>
   api.post(`/admin/demos/${id}/reset`, {}, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminResetDemoPassword = (pw, id) =>
+  api.post(`/admin/demos/${id}/reset-password`, {}, adminHeaders(pw)).then((r) => r.data);
 export const apiAdminDeleteDemo = (pw, id) =>
   api.delete(`/admin/demos/${id}`, adminHeaders(pw)).then((r) => r.data);
 

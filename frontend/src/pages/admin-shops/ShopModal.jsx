@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import DatePicker from "@/components/DatePicker";
 import { useAdminInfo } from "@/components/AdminShell";
 import { StatusBadge } from "./Badges";
+import DemoCredentials from "./DemoCredentials";
 import PinResetSection from "./PinResetSection";
 import { inputCls, PLAN_LABELS, PAYMENT_LABELS } from "./utils";
 
@@ -207,6 +208,17 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
                   </Button>
                 </div>
               </div>
+            )}
+
+            {/* ΣΤΟΙΧΕΙΑ ΣΥΝΔΕΣΗΣ DEMO — το backend τα στέλνει μόνο για demo + master/manage */}
+            {shop.demo_credentials !== undefined && (
+              <DemoCredentials
+                pw={pw}
+                accountId={shopId}
+                email={shop.email}
+                credentials={shop.demo_credentials}
+                onChanged={load}
+              />
             )}
 
             <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
