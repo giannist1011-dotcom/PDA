@@ -142,6 +142,9 @@ async def on_startup():
     # Βάρδιες οδηγών (ώρες στα στατιστικά οδηγού)
     await db.fleet_shifts.create_index([("team_id", 1), ("member_id", 1), ("ended_at", -1)])
     await db.fleet_counters.create_index([("team_id", 1), ("day", 1)], unique=True)
+    # Web Push συνδρομές (FleetDeck): εύρεση ανά ομάδα/επιφάνεια + μοναδικό endpoint
+    await db.push_subscriptions.create_index([("team_id", 1), ("surface", 1)])
+    await db.push_subscriptions.create_index("endpoint", unique=True)
     # Audit log ενεργειών admin panel (π.χ. reset PIN) — ανά μαγαζί, πιο πρόσφατα πρώτα
     await db.admin_audit.create_index([("user_id", 1), ("created_at", -1)])
     # Sub-admin λογαριασμοί (master panel «Διαχειριστές») + λίστα audit για τον master

@@ -135,6 +135,14 @@ export const apiFleetAdminDriverMode = () =>
 export const apiFleetSetAdminName = (name) =>
   fleetApi.post("/fleet/admin/display-name", { name }).then((r) => r.data);
 
+// WEB PUSH — συνδρομές ειδοποιήσεων (βλ. lib/push.js για τη ροή subscribe)
+export const apiFleetPushVapidKey = () =>
+  fleetApi.get("/fleet/push/vapid-key").then((r) => r.data);
+export const apiFleetPushSubscribe = (surface, subscription) =>
+  fleetApi.post("/fleet/push/subscribe", { surface, subscription }).then((r) => r.data);
+export const apiFleetPushUnsubscribe = (endpoint) =>
+  fleetApi.post("/fleet/push/unsubscribe", { endpoint }).then((r) => r.data);
+
 // AUTOCOMPLETE + ΣΥΝΟΛΑ
 export const apiFleetPickupNames = () =>
   fleetApi.get("/fleet/pickup-names").then((r) => r.data);

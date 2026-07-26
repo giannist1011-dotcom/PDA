@@ -14,7 +14,9 @@ import { DriverCard, EmptyState } from "@/pages/fleet/DriverCard";
 import DriverStats from "@/pages/fleet/DriverStats";
 import DriverHistory from "@/pages/fleet/DriverHistory";
 import ProblemModal from "@/pages/fleet/ProblemModal";
+import PushToggle from "@/pages/fleet/PushToggle";
 import { notify, isMuted, setMuted } from "@/pages/fleet/alerts";
+import { ensurePushOnShiftStart, pushSupport } from "@/lib/push";
 
 const POLL_MS = 5000;
 const QUEUE_KEY = "orderdeck_fleet_status_queue";
@@ -199,6 +201,22 @@ export default function FleetDriver() {
       const r = await apiFleetDriverShift(!board.on_shift);
       setBoard((b) => b && { ...b, on_shift: r.on_shift });
       toast.success(r.on_shift ? "Καλή βάρδια! 🛵" : "Τέλος βάρδιας — καλή ξεκούραση");
+      if (r.on_shift) {
+        // Έναρξη βάρδιας (user gesture) → άδεια + συνδρομή push, εκτός αν ο
+        // οδηγός το έχει κλείσει ρητά. Σε μη υποστηριζόμενο setup (π.χ. iOS
+        // χωρίς εγκατάσταση) μία διακριτική υπόδειξη ανά συσκευή.
+        const support = pushSupport();
+        if (!support.ok) {
+          if (!localStorage.getItem("orderdeck_fleet_push_notice")) {
+            localStorage.setItem("orderdeck_fleet_push_notice", "1");
+            toast.message(support.reason);
+          }
+        } else {
+          ensurePushOnShiftStart("driver").then(() =>
+            window.dispatchEvent(new Event("orderdeck-push-changed"))
+          );
+        }
+      }
     } catch (err) {
       toast.error(formatApiError(err));
     } finally {
@@ -237,6 +255,7 @@ export default function FleetDriver() {
               <CloudOff className="w-3.5 h-3.5" /> {pending}
             </span>
           )}
+          <PushToggle surface="driver" />
           <button
             onClick={toggleMute}
             title={muted ? "Ενεργοποίηση ήχου ειδοποιήσεων" : "Σίγαση ειδοποιήσεων"}

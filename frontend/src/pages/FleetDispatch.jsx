@@ -4,6 +4,7 @@ import { useFleet } from "@/context/FleetAuthContext";
 import { apiFleetBoard } from "@/lib/fleetApi";
 import FleetShell from "@/pages/fleet/FleetShell";
 import NewOrderForm from "@/pages/fleet/NewOrderForm";
+import PushToggle from "@/pages/fleet/PushToggle";
 import OrderCard from "@/pages/fleet/OrderCard";
 import DayTotals from "@/pages/fleet/DayTotals";
 import { fmtTime } from "@/pages/fleet/utils";
@@ -83,7 +84,7 @@ export default function FleetDispatch() {
     );
 
   return (
-    <FleetShell>
+    <FleetShell actions={<PushToggle surface="dispatcher" />}>
       <div className="space-y-4">
         <NewOrderForm city={team?.city || ""} onCreated={load} />
 

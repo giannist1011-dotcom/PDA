@@ -31,6 +31,13 @@ from core import (
     register_pin_attempt,
     verify_password,
 )
+from push import (
+    VAPID_PUBLIC_KEY,
+    delete_subscription,
+    notify_push,
+    push_enabled,
+    save_subscription,
+)
 
 router = APIRouter()
 
@@ -205,6 +212,29 @@ async def add_event(team_id: str, text: str):
         "text": text,
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
+
+
+# URLs που ανοίγει το tap στην ειδοποίηση (notificationclick στο sw.js)
+DRIVER_URL = "/fleet/driver"
+DISPATCH_URL = "/fleet"
+
+
+def order_push_body(o: dict) -> str:
+    """Σύντομο σώμα ειδοποίησης: κατάστημα παραλαβής · διεύθυνση."""
+    return " · ".join(x for x in [o.get("pickup_name"), o.get("address")] if x)
+
+
+async def push_on_shift_drivers(team_id: str, title: str, body: str):
+    """Push σε ΟΛΟΥΣ τους οδηγούς της ομάδας που είναι σε βάρδια."""
+    if not push_enabled():
+        return
+    ids = [
+        m["id"]
+        async for m in db.fleet_members.find(
+            {"team_id": team_id, "role": "driver", "on_shift": True}, {"id": 1}
+        )
+    ]
+    await notify_push(team_id, "driver", title, body, DRIVER_URL, member_ids=ids)
 
 
 async def next_order_number(team_id: str) -> int:
@@ -791,6 +821,7 @@ async def fleet_create_order(body: FleetOrderIn, team: dict = Depends(require_fl
     await db.fleet_orders.insert_one(doc)
     prefix = "⚡ Επείγουσα παραγγελία" if doc["urgent"] else "Νέα παραγγελία"
     await add_event(team["id"], f"{prefix} #{number} · {doc['pickup_name']}")
+    await push_on_shift_drivers(team["id"], f"{prefix} #{number}", order_push_body(doc))
     return public_order(doc)
 
 
@@ -927,6 +958,13 @@ async def fleet_assign_order(oid: str, body: AssignIn, team: dict = Depends(requ
         }},
     )
     await add_event(team["id"], f"Η #{o['number']} ανατέθηκε στον/στην {m['name']}")
+    await notify_push(
+        team["id"], "driver",
+        f"Σας ανατέθηκε η #{o['number']}",
+        order_push_body(o),
+        DRIVER_URL,
+        member_ids=[m["id"]],
+    )
     return {"ok": True}
 
 
@@ -941,6 +979,22 @@ async def fleet_cancel_order(oid: str, team: dict = Depends(require_fleet_admin)
         {"id": oid, "team_id": team["id"]}, {"$set": {"status": "cancelled"}}
     )
     await add_event(team["id"], f"Η #{o['number']} ακυρώθηκε")
+    # Μετά το claim: ενημέρωση του οδηγού της + των υπόλοιπων συσκευών διαχείρισης
+    if o.get("driver_id"):
+        await notify_push(
+            team["id"], "driver",
+            f"Η #{o['number']} ακυρώθηκε",
+            order_push_body(o),
+            DRIVER_URL,
+            member_ids=[o["driver_id"]],
+        )
+        await notify_push(
+            team["id"], "dispatcher",
+            f"Η #{o['number']} ακυρώθηκε",
+            order_push_body(o),
+            DISPATCH_URL,
+            exclude_member_id=team["member_id"],
+        )
     return {"ok": True}
 
 
@@ -969,6 +1023,14 @@ async def fleet_edit_order(
     await db.fleet_orders.update_one({"id": oid, "team_id": team["id"]}, {"$set": update})
     labels = ", ".join(EDIT_FIELD_LABELS[f] for f in changed)
     await add_event(team["id"], f"Η #{o['number']} ενημερώθηκε ({labels})")
+    if o.get("driver_id"):
+        await notify_push(
+            team["id"], "driver",
+            f"Η #{o['number']} ενημερώθηκε",
+            f"Άλλαξε: {labels}",
+            DRIVER_URL,
+            member_ids=[o["driver_id"]],
+        )
     return {"ok": True, "changed": changed}
 
 
@@ -985,6 +1047,13 @@ async def fleet_set_urgent(oid: str, body: UrgentIn, team: dict = Depends(requir
     )
     if body.urgent:
         await add_event(team["id"], f"⚡ Η #{o['number']} σημάνθηκε ως επείγουσα")
+        # Push μόνο όσο είναι ελεύθερη — αν έχει ήδη οδηγό δεν αφορά τους άλλους
+        if o["status"] == "waiting":
+            await push_on_shift_drivers(
+                team["id"],
+                f"⚡ Η #{o['number']} είναι πλέον επείγουσα",
+                order_push_body(o),
+            )
     else:
         await add_event(team["id"], f"Η #{o['number']} δεν είναι πια επείγουσα")
     return {"ok": True, "urgent": bool(body.urgent)}
@@ -1016,6 +1085,12 @@ async def fleet_report_problem(oid: str, body: ProblemIn, team: dict = Depends(g
     extra = f" — {problem['text']}" if problem["text"] else ""
     await add_event(
         team["id"], f"⚠️ Πρόβλημα στην #{o['number']}: {label}{extra} ({team['member_name']})"
+    )
+    await notify_push(
+        team["id"], "dispatcher",
+        f"⚠️ Πρόβλημα στην #{o['number']}",
+        f"{label}{extra} — {team['member_name']}",
+        DISPATCH_URL,
     )
     return {"ok": True}
 
@@ -1231,3 +1306,34 @@ async def fleet_day_summary(
         if m["id"] not in seen
     )
     return {"date": day_from, "date_to": day_to, "drivers": out}
+
+
+# ============ WEB PUSH ============
+class PushSubscribeIn(BaseModel):
+    surface: Literal["driver", "dispatcher"]
+    subscription: dict
+
+
+class PushUnsubscribeIn(BaseModel):
+    endpoint: str
+
+
+@router.get("/fleet/push/vapid-key")
+async def fleet_push_vapid_key(team: dict = Depends(get_fleet_member)):
+    """Δημόσιο VAPID κλειδί για το pushManager.subscribe — null όταν το feature
+    δεν έχει ρυθμιστεί στο env (το frontend κρύβει το UI)."""
+    return {"key": VAPID_PUBLIC_KEY or None}
+
+
+@router.post("/fleet/push/subscribe")
+async def fleet_push_subscribe(body: PushSubscribeIn, team: dict = Depends(get_fleet_member)):
+    if not push_enabled():
+        raise HTTPException(503, "Οι ειδοποιήσεις push δεν είναι διαθέσιμες")
+    await save_subscription(team["id"], team["member_id"], body.surface, body.subscription)
+    return {"ok": True}
+
+
+@router.post("/fleet/push/unsubscribe")
+async def fleet_push_unsubscribe(body: PushUnsubscribeIn, team: dict = Depends(get_fleet_member)):
+    await delete_subscription(team["id"], body.endpoint)
+    return {"ok": True}
