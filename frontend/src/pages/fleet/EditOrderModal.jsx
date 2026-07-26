@@ -4,6 +4,7 @@ import { Pencil, X } from "lucide-react";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { apiFleetEditOrder, apiFleetAddressBook } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
+import { geocodeFleetAddress } from "./utils";
 
 const inputCls =
   "w-full h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame";
@@ -13,6 +14,11 @@ const inputCls =
 export default function EditOrderModal({ order, city, onClose, onSaved }) {
   const [pickup, setPickup] = useState(order.pickup_name || "");
   const [address, setAddress] = useState(order.address || "");
+  // Pin της διεύθυνσης: ξεκινά από την παραγγελία, καθαρίζει σε πληκτρολόγηση,
+  // ξαναγεμίζει από επιλογή πρότασης ή auto-geocode στην αποθήκευση
+  const [coords, setCoords] = useState(
+    order.lat != null && order.lng != null ? { lat: order.lat, lng: order.lng } : null
+  );
   const [notes, setNotes] = useState(order.notes || "");
   const [busy, setBusy] = useState(false);
 
@@ -20,10 +26,13 @@ export default function EditOrderModal({ order, city, onClose, onSaved }) {
     e.preventDefault();
     setBusy(true);
     try {
+      const c = coords || (await geocodeFleetAddress(address.trim(), city));
       const res = await apiFleetEditOrder(order.id, {
         pickup_name: pickup.trim(),
         address: address.trim(),
         notes: notes.trim(),
+        lat: c?.lat ?? null,
+        lng: c?.lng ?? null,
       });
       toast.success(
         res.changed?.length && order.driver_name
@@ -76,7 +85,11 @@ export default function EditOrderModal({ order, city, onClose, onSaved }) {
           </label>
           <AddressAutocomplete
             value={address}
-            onChange={setAddress}
+            onChange={(v) => {
+              setAddress(v);
+              setCoords(null);
+            }}
+            onPick={setCoords}
             city={city}
             fetchBook={apiFleetAddressBook}
             placeholder="Οδός και αριθμός"

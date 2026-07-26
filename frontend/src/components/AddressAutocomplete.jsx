@@ -94,6 +94,9 @@ export default function AddressAutocomplete({
   // Πηγή "γνωστών διευθύνσεων" — default το address book του μαγαζιού·
   // το Fleet περνάει το δικό του (ίδιο σχήμα: [{address, name, lat, lng}])
   fetchBook = getAddressBookCached,
+  // Καλείται στην επιλογή πρότασης με {lat, lng} (ή null αν η πρόταση δεν έχει
+  // συντεταγμένες) — για φόρμες που αποθηκεύουν pin μαζί με τη διεύθυνση
+  onPick = null,
 }) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
@@ -144,6 +147,8 @@ export default function AddressAutocomplete({
         label: stripCity(e.address, city),
         sub: e.name || null,
         local: true,
+        lat: e.lat ?? null,
+        lng: e.lng ?? null,
       }));
   }, [q, book, city, hasZone, storeLat, storeLng, zoneKm]);
 
@@ -190,7 +195,7 @@ export default function AddressAutocomplete({
               !places.length ||
               places.some((v) => norm(v).includes(cityN) || cityN.includes(norm(v)));
             const [flon, flat] = f.geometry?.coordinates || [];
-            return { key: `photon:${label}`, label, sub: null, local: false, inCity, lat: flat, lon: flon };
+            return { key: `photon:${label}`, label, sub: null, local: false, inCity, lat: flat, lon: flon, lng: flon };
           })
           .filter(Boolean);
         // Φίλτρο ζώνης διανομής: haversine από το pin του μαγαζιού — ό,τι είναι
@@ -257,6 +262,7 @@ export default function AddressAutocomplete({
   const select = (s) => {
     const next = `${s.label} `;
     onChange(next);
+    if (onPick) onPick(s.lat != null && s.lng != null ? { lat: s.lat, lng: s.lng } : null);
     setOpen(false);
     setHighlight(-1);
     requestAnimationFrame(() => {

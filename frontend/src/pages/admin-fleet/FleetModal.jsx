@@ -273,7 +273,7 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
               </div>
             </div>
 
-            {/* ΜΕΛΗ (ΣΥΝΤΟΝΙΣΤΕΣ & ΟΔΗΓΟΙ) */}
+            {/* ΜΕΛΗ (ΔΙΑΧΕΙΡΙΣΤΕΣ & ΟΔΗΓΟΙ) */}
             <div className="px-5 pb-5">
               <h3 className="text-xs uppercase tracking-widest font-bold text-neutral-400 mb-2">
                 Μέλη ομάδας ({company.members.length})

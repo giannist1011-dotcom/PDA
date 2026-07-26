@@ -201,6 +201,22 @@ def public_order(o: dict) -> dict:
     return {k: v for k, v in o.items() if k not in ("_id", "team_id")}
 
 
+# Γενικές ετικέτες ρόλου — ΔΕΝ εμφανίζονται ποτέ ως ταυτότητα σε οδηγούς/παραγγελίες
+GENERIC_ADMIN_LABELS = ("Διαχείριση", "Διαχειριστής", "Συντονιστής", "Συντονίστρια")
+
+
+def admin_identity(team: dict) -> str:
+    """Πώς υπογράφει η διαχείριση σε ό,τι βλέπουν οδηγοί/παραγγελίες (created_by,
+    ροή, προβλήματα): προσωπικό όνομα («Το όνομά μου») → μη γενικό όνομα μέλους →
+    όνομα εταιρείας. Ποτέ ετικέτα ρόλου."""
+    name = (team.get("admin_display_name") or "").strip()
+    if not name:
+        mn = (team.get("member_name") or "").strip()
+        if mn and mn not in GENERIC_ADMIN_LABELS:
+            name = mn
+    return name or (team.get("name") or "").strip() or "Διαχείριση"
+
+
 def valid_pin(pin: Optional[str]) -> bool:
     return bool(pin) and pin.isdigit() and len(pin) == 4
 
@@ -295,12 +311,18 @@ class FleetOrderIn(BaseModel):
     address: str = Field(min_length=1, max_length=160)
     notes: str = Field(default="", max_length=300)
     urgent: bool = False
+    # Συντεταγμένες της διεύθυνσης (από επιλογή πρότασης ή auto-geocode στη
+    # φόρμα) — None όταν η διεύθυνση δεν βρέθηκε: η παραγγελία μένει εκτός χάρτη
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 
 class FleetOrderEditIn(BaseModel):
     pickup_name: str = Field(min_length=1, max_length=80)
     address: str = Field(min_length=1, max_length=160)
     notes: str = Field(default="", max_length=300)
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 
 class StatusIn(BaseModel):
@@ -759,7 +781,7 @@ async def fleet_admin_driver_mode(team: dict = Depends(require_fleet_admin)):
     name = (team.get("admin_display_name") or "").strip()
     if not name:
         name = (team.get("member_name") or "").strip()
-        if name in ("Διαχείριση", "Διαχειριστής"):
+        if name in GENERIC_ADMIN_LABELS:
             name = ""
     if not name and team.get("owner_user_id"):
         u = await db.users.find_one(
@@ -767,7 +789,8 @@ async def fleet_admin_driver_mode(team: dict = Depends(require_fleet_admin)):
         )
         name = ((u or {}).get("full_name") or "").strip()
     if not name:
-        name = "Διαχειριστής"
+        # Χωρίς προσωπικό όνομα πουθενά → όνομα εταιρείας, ποτέ ετικέτα ρόλου
+        name = (team.get("name") or "").strip() or "Διαχείριση"
     m = await db.fleet_members.find_one(
         {"team_id": team["id"], "admin_member_id": team["member_id"]}, {"_id": 0}
     )
@@ -813,7 +836,9 @@ async def fleet_create_order(body: FleetOrderIn, team: dict = Depends(require_fl
         "status": "waiting",
         "driver_id": None,
         "driver_name": None,
-        "created_by": team.get("member_name") or "",
+        "created_by": admin_identity(team),
+        "lat": body.lat,
+        "lng": body.lng,
         "created_at": now,
         "claimed_at": None,
         "delivered_at": None,
@@ -923,7 +948,9 @@ async def fleet_order_status(oid: str, body: StatusIn, team: dict = Depends(get_
     await db.fleet_orders.update_one({"id": oid, "team_id": team["id"]}, {"$set": update})
     labels = {"waiting": "σε αναμονή", "pickup": "σε παραλαβή",
               "enroute": "σε διαδρομή", "delivered": "παραδόθηκε"}
-    who = o.get("driver_name") or team["member_name"]
+    who = o.get("driver_name") or (
+        admin_identity(team) if team["role"] == "fleet_admin" else team["member_name"]
+    )
     await add_event(team["id"], f"Η #{o['number']} {labels[body.status]} ({who})")
     return {"ok": True, "status": body.status}
 
@@ -1015,8 +1042,19 @@ async def fleet_edit_order(
         if getattr(body, f).strip() != (o.get(f) or "")
     ]
     if not changed:
+        # Ίδιο κείμενο αλλά ήρθαν (νέες) συντεταγμένες — π.χ. re-save για να
+        # αποκτήσει pin παλιά παραγγελία: αποθήκευση χωρίς ειδοποίηση οδηγού
+        if body.lat is not None and (o.get("lat") != body.lat or o.get("lng") != body.lng):
+            await db.fleet_orders.update_one(
+                {"id": oid, "team_id": team["id"]},
+                {"$set": {"lat": body.lat, "lng": body.lng}},
+            )
         return {"ok": True, "changed": []}
     update = {f: getattr(body, f).strip() for f in changed}
+    if "address" in changed:
+        # Νέα διεύθυνση → νέες συντεταγμένες (ή None αν δεν βρέθηκε — εκτός χάρτη)
+        update["lat"] = body.lat
+        update["lng"] = body.lng
     if o.get("driver_id"):
         update["updated_at"] = datetime.now(timezone.utc).isoformat()
         update["updated_fields"] = changed
@@ -1072,10 +1110,11 @@ async def fleet_report_problem(oid: str, body: ProblemIn, team: dict = Depends(g
         raise HTTPException(400, "Η παραγγελία δεν είναι σε εξέλιξη")
     if team["role"] != "fleet_admin" and o.get("driver_id") != team["member_id"]:
         raise HTTPException(403, "Δεν είναι δική σας παραγγελία")
+    who = admin_identity(team) if team["role"] == "fleet_admin" else team["member_name"]
     problem = {
         "reason": body.reason,
         "text": body.text.strip(),
-        "by": team["member_name"],
+        "by": who,
         "at": datetime.now(timezone.utc).isoformat(),
     }
     await db.fleet_orders.update_one(
@@ -1084,12 +1123,12 @@ async def fleet_report_problem(oid: str, body: ProblemIn, team: dict = Depends(g
     label = PROBLEM_LABELS[body.reason]
     extra = f" — {problem['text']}" if problem["text"] else ""
     await add_event(
-        team["id"], f"⚠️ Πρόβλημα στην #{o['number']}: {label}{extra} ({team['member_name']})"
+        team["id"], f"⚠️ Πρόβλημα στην #{o['number']}: {label}{extra} ({who})"
     )
     await notify_push(
         team["id"], "dispatcher",
         f"⚠️ Πρόβλημα στην #{o['number']}",
-        f"{label}{extra} — {team['member_name']}",
+        f"{label}{extra} — {who}",
         DISPATCH_URL,
     )
     return {"ok": True}
@@ -1247,14 +1286,14 @@ async def fleet_pickup_names(team: dict = Depends(get_fleet_member)):
 async def fleet_address_book(team: dict = Depends(get_fleet_member)):
     """Πρόσφατες διευθύνσεις της ομάδας για το AddressAutocomplete (μορφή address book)."""
     docs = await db.fleet_orders.find(
-        {"team_id": team["id"]}, {"_id": 0, "address": 1}
+        {"team_id": team["id"]}, {"_id": 0, "address": 1, "lat": 1, "lng": 1}
     ).sort("created_at", -1).to_list(400)
     seen, out = set(), []
     for d in docs:
         a = (d.get("address") or "").strip()
         if a and a.lower() not in seen:
             seen.add(a.lower())
-            out.append({"address": a, "name": None, "lat": None, "lng": None})
+            out.append({"address": a, "name": None, "lat": d.get("lat"), "lng": d.get("lng")})
         if len(out) >= 200:
             break
     return out

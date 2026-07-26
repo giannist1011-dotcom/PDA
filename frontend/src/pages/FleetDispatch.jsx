@@ -6,6 +6,7 @@ import FleetShell from "@/pages/fleet/FleetShell";
 import NewOrderForm from "@/pages/fleet/NewOrderForm";
 import PushToggle from "@/pages/fleet/PushToggle";
 import OrderCard from "@/pages/fleet/OrderCard";
+import FleetOrdersMap from "@/pages/fleet/FleetOrdersMap";
 import DayTotals from "@/pages/fleet/DayTotals";
 import { fmtTime } from "@/pages/fleet/utils";
 
@@ -114,14 +115,24 @@ export default function FleetDispatch() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {tabBtn("active", "Παραγγελίες", active.length)}
+          {tabBtn("map", "Χάρτης", active.filter((o) => o.lat != null && o.lng != null).length)}
           {tabBtn("done", "Ολοκληρωμένες", completed.length)}
         </div>
 
         {tab === "active" && (
           <section data-testid="fleet-tab-panel-active">
             {cardsGrid(active, "Καμία ενεργή παραγγελία")}
+          </section>
+        )}
+
+        {/* Χάρτης: όλες οι ενεργές (🔴🟡🟢) ως pins ανά κατάσταση — tap σε pin
+            ανοίγει την κάρτα (popup)· ανανεώνεται με το ίδιο polling, τα 🔵
+            παραδομένα φεύγουν μόνα τους (δεν είναι πια στις ενεργές) */}
+        {tab === "map" && (
+          <section data-testid="fleet-tab-panel-map">
+            <FleetOrdersMap orders={active} />
           </section>
         )}
 

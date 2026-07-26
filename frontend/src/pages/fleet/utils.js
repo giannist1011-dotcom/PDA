@@ -1,4 +1,19 @@
 // Κοινά για τις σελίδες Fleet: καταστάσεις, πληρωμές, μορφοποίηση.
+import { photonSearch } from "@/lib/api";
+
+// Auto-geocode όταν ο χρήστης ΔΕΝ διάλεξε πρόταση/pin: πρώτο αποτέλεσμα του
+// Photon για «διεύθυνση, πόλη». null σε αποτυχία/offline — η παραγγελία
+// αποθηκεύεται κανονικά, απλώς μένει εκτός χάρτη.
+export const geocodeFleetAddress = async (address, city) => {
+  try {
+    const q = city ? `${address}, ${city}` : address;
+    const data = await photonSearch(q);
+    const [lon, lat] = data?.features?.[0]?.geometry?.coordinates || [];
+    return lat != null && lon != null ? { lat, lng: lon } : null;
+  } catch {
+    return null;
+  }
+};
 
 export const STATUS_META = {
   waiting: { label: "Αναμονή", emoji: "🔴", dot: "#FF3B30", text: "text-[#FF6961]", badge: "bg-[#FF3B30]/15 text-[#FF6961] border-[#FF3B30]/40" },
@@ -20,6 +35,12 @@ export const EDIT_FIELD_LABELS = {
   pickup_name: "Παραλαβή",
   address: "Διεύθυνση",
   notes: "Σημείωση",
+};
+
+// Επόμενο βήμα της ροής οδηγού ανά κατάσταση (κουμπί προόδου στις «Δικές μου»)
+export const NEXT_ACTION = {
+  pickup: { status: "enroute", label: "Ξεκινάω διαδρομή 🟢" },
+  enroute: { status: "delivered", label: "Παραδόθηκε 🔵" },
 };
 
 // Λεπτά που πέρασαν από ένα ISO timestamp (ηλικία παραγγελίας/claim)

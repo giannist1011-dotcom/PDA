@@ -11,7 +11,7 @@ import {
 // Κάρτα παραγγελίας οδηγού — module-level ώστε να μην γίνεται remount σε κάθε poll.
 // Χρονόμετρο ηλικίας: σε αναμονή → από την καταχώρηση (με χρώμα όσο περιμένει),
 // σε claimed → από το claim. Ανανεώνεται με το υπάρχον polling.
-export function DriverCard({ o, city, dim = false, showStatus = false, children }) {
+export function DriverCard({ o, city, dim = false, showStatus = false, highlight = false, children }) {
   const ageIso = o.status === "waiting" ? o.created_at : o.claimed_at;
   const mins = ["waiting", "pickup", "enroute"].includes(o.status) ? minutesSince(ageIso) : null;
   const ageCls = o.status === "waiting" ? ageColorClass(mins) : "text-neutral-500";
@@ -19,9 +19,9 @@ export function DriverCard({ o, city, dim = false, showStatus = false, children 
   const edited = ["pickup", "enroute"].includes(o.status) && o.updated_fields?.length;
   return (
     <div
-      className={`bg-[#3D1620] border rounded-lg p-4 ${dim ? "opacity-60" : ""} ${
+      className={`bg-[#3D1620] border rounded-lg p-4 transition-shadow ${dim ? "opacity-60" : ""} ${
         urgent ? "border-gold ring-1 ring-gold/40" : "border-[#723645]"
-      }`}
+      } ${highlight ? "ring-2 ring-flame border-flame" : ""}`}
       data-testid={`fleet-drv-order-${o.id}`}
     >
       {urgent && (

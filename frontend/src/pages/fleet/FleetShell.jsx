@@ -126,8 +126,9 @@ export default function FleetShell({ title, children, actions = null }) {
             <div className="font-heading font-bold leading-tight truncate">
               {team && team !== false ? team.name : "FleetDeck"}
             </div>
+            {/* Στη διαχείριση σταθερή ένδειξη «Διαχείριση» — ποτέ όνομα μέλους/ρόλου */}
             <div className="text-[11px] text-neutral-400 leading-tight">
-              FleetDeck{team?.member_name ? ` · ${team.member_name}` : ""}
+              FleetDeck{isAdmin ? " — Διαχείριση" : team?.member_name ? ` · ${team.member_name}` : ""}
             </div>
           </div>
           <div className="ml-auto flex items-center gap-1">
@@ -169,7 +170,7 @@ export default function FleetShell({ title, children, actions = null }) {
                   {/* Στο προφίλ οδηγού το chip δείχνει το ΟΝΟΜΑ του ανθρώπου (όπως
                       κάθε διανομέας) — όχι γενική ετικέτα */}
                   <span className="max-w-[110px] truncate">
-                    {isDriver ? team.member_name || "Οδηγός" : "Διαχειριστής"}
+                    {isDriver ? team.member_name || "Οδηγός" : "Διαχείριση"}
                   </span>
                   <ChevronDown
                     className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${
@@ -191,7 +192,7 @@ export default function FleetShell({ title, children, actions = null }) {
                       data-testid="fleet-profile-admin"
                     >
                       <ShieldCheck className="w-4 h-4 text-gold shrink-0" />
-                      <span className="font-semibold">Διαχειριστής</span>
+                      <span className="font-semibold">Διαχείριση</span>
                       {isAdmin && <Check className="w-4 h-4 ml-auto text-flame shrink-0" />}
                     </button>
                     <button

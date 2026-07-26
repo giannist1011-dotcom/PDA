@@ -4,6 +4,7 @@ import { Plus, Zap } from "lucide-react";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { apiFleetCreateOrder, apiFleetPickupNames, apiFleetAddressBook } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
+import { geocodeFleetAddress } from "./utils";
 import { Button } from "@/components/ui/button";
 
 const inputCls =
@@ -15,6 +16,8 @@ const inputCls =
 export default function NewOrderForm({ city, onCreated }) {
   const [pickup, setPickup] = useState("");
   const [address, setAddress] = useState("");
+  // Pin της διεύθυνσης: από επιλογή πρότασης· καθαρίζει σε κάθε πληκτρολόγηση
+  const [coords, setCoords] = useState(null);
   const [notes, setNotes] = useState("");
   const [urgent, setUrgent] = useState(false);
   const [names, setNames] = useState([]);
@@ -28,14 +31,20 @@ export default function NewOrderForm({ city, onCreated }) {
     e.preventDefault();
     setBusy(true);
     try {
+      // Χωρίς επιλεγμένο pin → auto-geocode της πρώτης πρότασης, ώστε κάθε
+      // παραγγελία να βγαίνει στον χάρτη όποτε η διεύθυνση βρίσκεται
+      const c = coords || (await geocodeFleetAddress(address.trim(), city));
       await apiFleetCreateOrder({
         pickup_name: pickup.trim(),
         address: address.trim(),
         notes: notes.trim(),
         urgent,
+        lat: c?.lat ?? null,
+        lng: c?.lng ?? null,
       });
       setPickup("");
       setAddress("");
+      setCoords(null);
       setNotes("");
       setUrgent(false);
       if (!names.includes(pickup.trim())) setNames((n) => [...n, pickup.trim()].sort());
@@ -80,7 +89,11 @@ export default function NewOrderForm({ city, onCreated }) {
         </label>
         <AddressAutocomplete
           value={address}
-          onChange={setAddress}
+          onChange={(v) => {
+            setAddress(v);
+            setCoords(null);
+          }}
+          onPick={setCoords}
           city={city}
           fetchBook={apiFleetAddressBook}
           placeholder="Οδός και αριθμός"
