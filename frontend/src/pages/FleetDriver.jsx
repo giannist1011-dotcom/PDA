@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { MapPin, StickyNote, CloudOff, ChevronDown } from "lucide-react";
+import { CloudOff, ChevronDown } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
 import { apiFleetDriverBoard, apiFleetClaimOrder, apiFleetOrderStatus } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
 import FleetShell from "@/pages/fleet/FleetShell";
-import { PAYMENT_LABELS, fmtMoney, fmtTime, mapsUrl } from "@/pages/fleet/utils";
+import { DriverCard, EmptyState } from "@/pages/fleet/DriverCard";
+import DriverStats from "@/pages/fleet/DriverStats";
+import DriverHistory from "@/pages/fleet/DriverHistory";
 
 const POLL_MS = 5000;
 const QUEUE_KEY = "orderdeck_fleet_status_queue";
@@ -27,53 +29,9 @@ const NEXT_ACTION = {
   enroute: { status: "delivered", label: "Παραδόθηκε 🔵" },
 };
 
-// Κάρτα παραγγελίας οδηγού — module-level ώστε να μην γίνεται remount σε κάθε poll
-function DriverCard({ o, city, dim = false, children }) {
-  return (
-    <div
-      className={`bg-[#3D1620] border border-[#723645] rounded-lg p-4 ${dim ? "opacity-60" : ""}`}
-      data-testid={`fleet-drv-order-${o.id}`}
-    >
-      <div className="flex items-center gap-2">
-        <span className="font-bold text-lg">#{o.number}</span>
-        <span className="truncate text-neutral-300">{o.pickup_name}</span>
-        <span className="ml-auto text-xs text-neutral-500">{fmtTime(o.created_at)}</span>
-      </div>
-      <a
-        href={mapsUrl(o.address, city)}
-        target="_blank"
-        rel="noreferrer"
-        className="flex items-center gap-2 mt-2 text-white active:text-flame"
-      >
-        <MapPin className="w-4 h-4 text-flame shrink-0" />
-        <span className="underline underline-offset-2">{o.address}</span>
-      </a>
-      <div className="flex items-center gap-2 mt-2">
-        <span className="font-bold text-gold text-lg">{fmtMoney(o.amount)}</span>
-        <span className="text-sm text-neutral-400">{PAYMENT_LABELS[o.payment]}</span>
-      </div>
-      {o.notes && (
-        <div className="flex items-start gap-1.5 mt-2 text-sm text-neutral-400">
-          <StickyNote className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{o.notes}</span>
-        </div>
-      )}
-      {children}
-    </div>
-  );
-}
-
-function EmptyState({ text }) {
-  return (
-    <div className="border border-dashed border-[#723645]/60 rounded-lg p-6 text-center text-sm text-neutral-500">
-      {text}
-    </div>
-  );
-}
-
-// Η οθόνη του οδηγού (κινητό), σε δύο tabs: «Ελεύθερες» (μεγάλο «Την παίρνω»)
-// και «Οι παραγγελίες μου» (κουμπιά προόδου + παραδομένες σήμερα στο κάτω μέρος).
-// Tap στη διεύθυνση → Google Maps.
+// Η οθόνη του οδηγού (κινητό), σε τρία tabs: «Ελεύθερες» (μεγάλο «Την παίρνω»),
+// «Δικές μου» (κουμπιά προόδου + παραδομένες σήμερα + ιστορικό με φίλτρο
+// περιόδου) και «Στατιστικά». Tap στη διεύθυνση → Google Maps.
 export default function FleetDriver() {
   const { team } = useFleet();
   const [board, setBoard] = useState(null);
@@ -81,6 +39,7 @@ export default function FleetDriver() {
   const [pending, setPending] = useState(readQueue().length);
   const [tab, setTab] = useState(null); // null μέχρι το πρώτο board → default ανά ενεργές
   const [showDelivered, setShowDelivered] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const flushQueue = useCallback(async () => {
     const q = readQueue();
@@ -120,7 +79,7 @@ export default function FleetDriver() {
     try {
       const doc = await apiFleetClaimOrder(o.id);
       toast.success(`Η #${o.number} είναι δική σας`);
-      // Άμεση μετακίνηση στο «Οι παραγγελίες μου» + αλλαγή tab, πριν το επόμενο poll
+      // Άμεση μετακίνηση στο «Δικές μου» + αλλαγή tab, πριν το επόμενο poll
       setBoard((b) =>
         b && {
           ...b,
@@ -179,17 +138,20 @@ export default function FleetDriver() {
   const mine = board?.mine || [];
   const delivered = board?.delivered || [];
 
-  const tabBtn = (key, label, count) => (
+  const tabBtn = (key, label, count = null) => (
     <button
       onClick={() => setTab(key)}
       data-testid={`fleet-drv-tab-${key}`}
-      className={`h-14 rounded-lg font-bold text-base transition-colors ${
+      className={`h-14 rounded-lg font-bold text-sm transition-colors ${
         tab === key
           ? "bg-brand text-white"
           : "bg-[#3D1620] border border-[#723645] text-neutral-300 active:bg-[#4a1c28]"
       }`}
     >
-      {label} <span className={tab === key ? "text-white/80" : "text-neutral-500"}>({count})</span>
+      {label}
+      {count !== null && (
+        <span className={tab === key ? "text-white/80" : "text-neutral-500"}> ({count})</span>
+      )}
     </button>
   );
 
@@ -204,12 +166,13 @@ export default function FleetDriver() {
       }
     >
       <div className="max-w-md mx-auto space-y-4">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {tabBtn("free", "Ελεύθερες 🔴", available.length)}
-          {tabBtn("mine", "Οι παραγγελίες μου", mine.length)}
+          {tabBtn("mine", "Δικές μου", mine.length)}
+          {tabBtn("stats", "Στατιστικά")}
         </div>
 
-        {board && (
+        {board && tab !== "stats" && (
           <div className="text-xs text-neutral-400 text-center">
             Σημερινές παραδόσεις σας: <span className="text-white font-bold">{board.delivered_today}</span>
           </div>
@@ -278,8 +241,26 @@ export default function FleetDriver() {
                 )}
               </div>
             )}
+
+            <div>
+              <button
+                onClick={() => setShowHistory((v) => !v)}
+                data-testid="fleet-drv-history-toggle"
+                className="w-full h-12 rounded-lg border border-[#723645]/60 text-sm text-neutral-400 flex items-center justify-center gap-2 active:bg-[#3D1620]"
+              >
+                Ιστορικό παραγγελιών
+                <ChevronDown className={`w-4 h-4 transition-transform ${showHistory ? "rotate-180" : ""}`} />
+              </button>
+              {showHistory && (
+                <div className="mt-3">
+                  <DriverHistory city={team?.city || ""} />
+                </div>
+              )}
+            </div>
           </section>
         )}
+
+        {tab === "stats" && <DriverStats />}
       </div>
     </FleetShell>
   );

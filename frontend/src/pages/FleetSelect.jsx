@@ -20,8 +20,9 @@ export default function FleetSelect() {
   useEffect(() => {
     if (team && team !== false)
       apiFleetMembers()
-        // Διανομείς με προσωπικό λογαριασμό μπαίνουν από /fleet/driver-login (χωρίς PIN)
-        .then((ms) => setMembers(ms.filter((m) => !m.account_id)))
+        // Διανομείς με προσωπικό λογαριασμό μπαίνουν από /fleet/driver-login (χωρίς
+        // PIN)· τα driver προφίλ συντονιστών (admin_member_id) δεν έχουν δικό τους PIN
+        .then((ms) => setMembers(ms.filter((m) => !m.account_id && !m.admin_member_id)))
         .catch(() => setMembers([]));
   }, [team]);
 

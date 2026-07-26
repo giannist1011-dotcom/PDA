@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { MapPin, StickyNote, XCircle, RotateCcw, CheckCircle2 } from "lucide-react";
 import { apiFleetAssignOrder, apiFleetOrderStatus, apiFleetCancelOrder } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
-import { PAYMENT_LABELS, fmtMoney, fmtTime, mapsUrl } from "./utils";
+import { fmtTime, mapsUrl } from "./utils";
 
 // Κάρτα παραγγελίας στον πίνακα του συντονιστή: στοιχεία + ενέργειες
 // (ανάθεση/αλλαγή οδηγού, επιστροφή σε αναμονή, παράδοση, ακύρωση).
@@ -45,13 +45,9 @@ export default function OrderCard({ order, drivers, city, onChanged }) {
         <MapPin className="w-3.5 h-3.5 text-flame shrink-0" />
         <span className="truncate">{order.address}</span>
       </a>
-      <div className="flex items-center gap-2 mt-1.5">
-        <span className="font-semibold text-gold">{fmtMoney(order.amount)}</span>
-        <span className="text-xs text-neutral-400">{PAYMENT_LABELS[order.payment]}</span>
-        {order.driver_name && (
-          <span className="ml-auto text-xs text-neutral-300 truncate">🛵 {order.driver_name}</span>
-        )}
-      </div>
+      {order.driver_name && (
+        <div className="mt-1.5 text-xs text-neutral-300 truncate">🛵 {order.driver_name}</div>
+      )}
       {order.notes && (
         <div className="flex items-start gap-1.5 mt-1.5 text-xs text-neutral-400">
           <StickyNote className="w-3.5 h-3.5 shrink-0 mt-0.5" />

@@ -1,14 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Truck, LogOut, Users, LayoutGrid } from "lucide-react";
+import { toast } from "sonner";
+import { Truck, LogOut, Users, LayoutGrid, Bike } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
+import { apiFleetAdminDriverMode, setFleetToken } from "@/lib/fleetApi";
+import { formatApiError } from "@/lib/api";
 
 // Κοινό κέλυφος των Fleet σελίδων: OrderDeck Fleet branding + δυναμικό όνομα
 // εταιρείας στο header. Δεν χρησιμοποιεί το AppShell των μαγαζιών.
 export default function FleetShell({ title, children, actions = null }) {
   const { team, logout, exitMember } = useFleet();
   const navigate = useNavigate();
+  const [busyDriverMode, setBusyDriverMode] = useState(false);
   const isAdmin = team && team.role === "fleet_admin";
+  const isDriver = team && team.role === "driver";
 
   // Τίτλος tab: όνομα εταιρείας — OrderDeck Fleet
   useEffect(() => {
@@ -22,6 +27,21 @@ export default function FleetShell({ title, children, actions = null }) {
   const changeMember = async () => {
     await exitMember();
     navigate("/fleet/select");
+  };
+
+  // «Λειτουργία διανομέα»: driver token του συντονιστή → driver κλειδί (κατά
+  // ρόλο token) — το session συντονιστή μένει άθικτο στο δικό του κλειδί.
+  const enterDriverMode = async () => {
+    setBusyDriverMode(true);
+    try {
+      const data = await apiFleetAdminDriverMode();
+      setFleetToken(data.token);
+      navigate("/fleet/driver");
+    } catch (err) {
+      toast.error(formatApiError(err));
+    } finally {
+      setBusyDriverMode(false);
+    }
   };
 
   return (
@@ -57,19 +77,45 @@ export default function FleetShell({ title, children, actions = null }) {
                 >
                   <Users className="w-4 h-4" />
                 </Link>
+                <button
+                  onClick={enterDriverMode}
+                  disabled={busyDriverMode}
+                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-white/5 text-xs text-neutral-300 disabled:opacity-60"
+                  title="Δουλέψτε ως οδηγός — claim και καταστάσεις όπως κάθε διανομέας"
+                  data-testid="fleet-driver-mode"
+                >
+                  <Bike className="w-4 h-4" />
+                  <span className="hidden sm:inline">Λειτουργία διανομέα</span>
+                </button>
               </>
             )}
-            <button
-              onClick={changeMember}
-              className="px-2 py-1.5 rounded-md hover:bg-white/5 text-xs text-neutral-300"
-              data-testid="fleet-change-member"
-            >
-              Αλλαγή μέλους
-            </button>
+            {/* Επιστροφή συντονιστή από τη λειτουργία διανομέα — το admin session
+                ζει στο δικό του κλειδί, απλή αλλαγή επιφάνειας */}
+            {isDriver && team.is_admin_driver && (
+              <button
+                onClick={() => navigate("/fleet")}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-white/5 text-xs text-neutral-300"
+                data-testid="fleet-back-to-dispatch"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                Συντονιστής
+              </button>
+            )}
+            {/* Αλλαγή μέλους μόνο στο dashboard — ο οδηγός μπαίνει πάντα στη
+                μία εταιρεία του λογαριασμού του, χωρίς switcher */}
+            {!isDriver && (
+              <button
+                onClick={changeMember}
+                className="px-2 py-1.5 rounded-md hover:bg-white/5 text-xs text-neutral-300"
+                data-testid="fleet-change-member"
+              >
+                Αλλαγή μέλους
+              </button>
+            )}
             <button
               onClick={() => {
                 logout();
-                navigate("/fleet/login");
+                navigate(isDriver ? "/fleet/driver-login" : "/fleet/login");
               }}
               className="p-2 rounded-md hover:bg-white/5 text-neutral-300"
               title="Αποσύνδεση"

@@ -10,10 +10,16 @@ export const STATUS_META = {
 
 export const BOARD_COLUMNS = ["waiting", "pickup", "enroute", "delivered"];
 
-export const PAYMENT_LABELS = { cash: "Μετρητά", card: "Κάρτα", paid: "Πληρωμένη" };
+// Λεπτά που πέρασαν από ένα ISO timestamp (ηλικία παραγγελίας/claim)
+export const minutesSince = (iso) => {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  return Number.isNaN(ms) ? null : Math.max(0, Math.floor(ms / 60000));
+};
 
-export const fmtMoney = (n) =>
-  `${Number(n || 0).toFixed(2).replace(".", ",")} €`;
+// Χρώμα ηλικίας για παραγγελίες σε αναμονή: >15' πορτοκαλί, >25' κόκκινο
+export const ageColorClass = (mins) =>
+  mins > 25 ? "text-[#FF6961]" : mins > 15 ? "text-gold" : "text-neutral-500";
 
 export const fmtTime = (iso) => {
   if (!iso) return "";

@@ -25,7 +25,12 @@ export default function FleetMembers() {
   // Προσωρινός κωδικός που μόλις εκδόθηκε: {name, identifier, password}
   const [issued, setIssued] = useState(null);
 
-  const load = () => apiFleetMembers().then(setMembers).catch(() => {});
+  // Τα αυτόματα driver προφίλ συντονιστών («Λειτουργία διανομέα») δεν
+  // διαχειρίζονται από εδώ — δημιουργούνται/χρησιμοποιούνται αυτόματα
+  const load = () =>
+    apiFleetMembers()
+      .then((ms) => setMembers(ms.filter((m) => !m.admin_member_id)))
+      .catch(() => {});
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps

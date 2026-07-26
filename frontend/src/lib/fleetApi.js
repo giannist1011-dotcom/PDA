@@ -109,10 +109,25 @@ export const apiFleetAssignOrder = (id, memberId) =>
 export const apiFleetCancelOrder = (id) =>
   fleetApi.post(`/fleet/orders/${id}/cancel`).then((r) => r.data);
 
+// ΟΔΗΓΟΣ: ΣΤΑΤΙΣΤΙΚΑ + ΙΣΤΟΡΙΚΟ
+export const apiFleetDriverStats = () =>
+  fleetApi.get("/fleet/driver/stats").then((r) => r.data);
+export const apiFleetDriverOrders = (params) =>
+  fleetApi.get("/fleet/driver/orders", { params }).then((r) => r.data);
+
+// ΣΥΝΤΟΝΙΣΤΗΣ ΩΣ ΟΔΗΓΟΣ — το token που επιστρέφει είναι driver token και
+// αποθηκεύεται στο driver κλειδί (setFleetToken κατά ρόλο), το admin session μένει
+export const apiFleetAdminDriverMode = () =>
+  fleetApi.post("/fleet/admin/driver-mode").then((r) => r.data);
+
 // AUTOCOMPLETE + ΣΥΝΟΛΑ
 export const apiFleetPickupNames = () =>
   fleetApi.get("/fleet/pickup-names").then((r) => r.data);
 export const apiFleetAddressBook = () =>
   fleetApi.get("/fleet/address-book").then((r) => r.data);
-export const apiFleetDaySummary = (date) =>
-  fleetApi.get("/fleet/day-summary", { params: date ? { date } : {} }).then((r) => r.data);
+export const apiFleetDaySummary = (date, dateTo) =>
+  fleetApi
+    .get("/fleet/day-summary", {
+      params: { ...(date ? { date } : {}), ...(dateTo ? { date_to: dateTo } : {}) },
+    })
+    .then((r) => r.data);

@@ -7,7 +7,7 @@
 """
 import secrets
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import date as date_cls, datetime, timezone, timedelta
 from typing import Literal, Optional
 
 import jwt as pyjwt
@@ -38,7 +38,6 @@ FLEET_ROLES = ["fleet_admin", "driver"]
 ORDER_STATUSES = ["waiting", "pickup", "enroute", "delivered", "cancelled"]
 # Ροή οδηγού: παραλαβή → διαδρομή → παραδόθηκε
 DRIVER_NEXT = {"pickup": "enroute", "enroute": "delivered"}
-PAYMENTS = ["cash", "card", "paid"]
 
 # Χωρίς διφορούμενους χαρακτήρες (0/O, 1/I) — γράφεται εύκολα από κινητό
 INVITE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -106,16 +105,20 @@ async def get_fleet_team(authorization: Optional[str] = Header(None)) -> dict:
     member_id = payload.get("member_id")
     role = payload.get("role")
     member_name = payload.get("member_name")
+    is_admin_driver = False
     if member_id:
         m = await db.fleet_members.find_one({"id": member_id, "team_id": team["id"]}, {"_id": 0})
         if m:
             role, member_name = m["role"], m["name"]
+            # Προφίλ οδηγού που ανήκει σε συντονιστή («Λειτουργία διανομέα»)
+            is_admin_driver = bool(m.get("admin_member_id"))
         else:
             # Το μέλος διαγράφηκε όσο ζούσε το token → επιστροφή σε επιλογή μέλους
             member_id = role = member_name = None
     team["member_id"] = member_id
     team["role"] = role
     team["member_name"] = member_name
+    team["is_admin_driver"] = is_admin_driver
     return team
 
 
@@ -170,6 +173,7 @@ def public_team(t: dict, include_invite: bool = False) -> dict:
         "member_id": t.get("member_id"),
         "role": t.get("role"),
         "member_name": t.get("member_name"),
+        "is_admin_driver": bool(t.get("is_admin_driver")),
     }
     if include_invite:
         out["invite_code"] = t.get("invite_code")
@@ -248,11 +252,11 @@ class DriverSelectIn(BaseModel):
     member_id: str
 
 
+# Χωρίς ποσό/πληρωμή: τα χρήματα είναι υπόθεση του μαγαζιού, όχι της εταιρείας.
+# Παλιές παραγγελίες με amount/payment στη βάση απλώς δεν τα εμφανίζουν πια.
 class FleetOrderIn(BaseModel):
     pickup_name: str = Field(min_length=1, max_length=80)
     address: str = Field(min_length=1, max_length=160)
-    amount: float = Field(ge=0)
-    payment: Literal["cash", "card", "paid"] = "cash"
     notes: str = Field(default="", max_length=300)
 
 
@@ -652,6 +656,34 @@ async def fleet_driver_select(body: DriverSelectIn, account: dict = Depends(get_
     }
 
 
+# ============ ADMIN ΩΣ ΟΔΗΓΟΣ ============
+@router.post("/fleet/admin/driver-mode")
+async def fleet_admin_driver_mode(team: dict = Depends(require_fleet_admin)):
+    """«Λειτουργία διανομέα»: βρίσκει ή δημιουργεί το προσωπικό driver membership
+    του συντονιστή (σημαδεμένο με admin_member_id) και επιστρέφει driver token.
+    Το session συντονιστή μένει ανέπαφο — ξεχωριστό κλειδί ανά επιφάνεια στο frontend."""
+    m = await db.fleet_members.find_one(
+        {"team_id": team["id"], "admin_member_id": team["member_id"]}, {"_id": 0}
+    )
+    if not m:
+        m = {
+            "id": str(uuid.uuid4())[:8],
+            "team_id": team["id"],
+            "name": team["member_name"] or "Συντονιστής",
+            "role": "driver",
+            "admin_member_id": team["member_id"],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.fleet_members.insert_one(m)
+        m.pop("_id", None)
+        await add_event(team["id"], f"Ο/Η {m['name']} μπήκε σε λειτουργία διανομέα")
+    return {
+        "token": create_fleet_token(team["id"], m["id"], "driver", m["name"]),
+        "member_id": m["id"],
+        "member_name": m["name"],
+    }
+
+
 # ============ ORDERS ============
 @router.post("/fleet/orders")
 async def fleet_create_order(body: FleetOrderIn, team: dict = Depends(require_fleet_admin)):
@@ -663,8 +695,6 @@ async def fleet_create_order(body: FleetOrderIn, team: dict = Depends(require_fl
         "number": number,
         "pickup_name": body.pickup_name.strip(),
         "address": body.address.strip(),
-        "amount": round(float(body.amount), 2),
-        "payment": body.payment,
         "notes": body.notes.strip(),
         "status": "waiting",
         "driver_id": None,
@@ -813,6 +843,70 @@ async def fleet_cancel_order(oid: str, team: dict = Depends(require_fleet_admin)
     return {"ok": True}
 
 
+# ============ ΟΔΗΓΟΣ: ΣΤΑΤΙΣΤΙΚΑ & ΙΣΤΟΡΙΚΟ ============
+@router.get("/fleet/driver/stats")
+async def fleet_driver_stats(team: dict = Depends(get_fleet_member)):
+    """Στατιστικά του ίδιου του οδηγού: σύνολο παραδόσεων, σήμερα/εβδομάδα,
+    κορυφαία καταστήματα παραλαβής (όλων των εποχών)."""
+    q = {"team_id": team["id"], "driver_id": team["member_id"], "status": "delivered"}
+    total = await db.fleet_orders.count_documents(q)
+    today = athens_today()
+    t_start, t_end = local_day_range(today)
+    d = date_cls.fromisoformat(today)
+    week_start = (d - timedelta(days=d.weekday())).isoformat()
+    w_start, _ = local_day_range(week_start)
+    today_n = await db.fleet_orders.count_documents(
+        {**q, "created_at": {"$gte": t_start, "$lt": t_end}}
+    )
+    week_n = await db.fleet_orders.count_documents(
+        {**q, "created_at": {"$gte": w_start, "$lt": t_end}}
+    )
+    top = await db.fleet_orders.aggregate([
+        {"$match": q},
+        {"$group": {"_id": "$pickup_name", "orders": {"$sum": 1}}},
+        {"$sort": {"orders": -1, "_id": 1}},
+        {"$limit": 8},
+    ]).to_list(8)
+    return {
+        "total": total,
+        "today": today_n,
+        "week": week_n,
+        "top_stores": [{"name": r["_id"] or "—", "orders": r["orders"]} for r in top],
+    }
+
+
+@router.get("/fleet/driver/orders")
+async def fleet_driver_orders(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 30,
+    team: dict = Depends(get_fleet_member),
+):
+    """Ιστορικό παραγγελιών του οδηγού (claimed/παραδομένες) με φίλτρο ημέρας ή
+    εύρους + pagination — όχι μόνο οι σημερινές."""
+    q = {
+        "team_id": team["id"],
+        "driver_id": team["member_id"],
+        "status": {"$in": ["pickup", "enroute", "delivered"]},
+    }
+    # Μερικό εύρος επιτρεπτό: μόνο «από» ή μόνο «έως» (όπως το PeriodFilter)
+    if date_from and date_to:
+        start, end = local_day_range(date_from, date_to)
+        q["created_at"] = {"$gte": start, "$lt": end}
+    elif date_from:
+        q["created_at"] = {"$gte": local_day_range(date_from)[0]}
+    elif date_to:
+        q["created_at"] = {"$lt": local_day_range(date_to)[1]}
+    skip = max(0, skip)
+    limit = max(1, min(limit, 100))
+    total = await db.fleet_orders.count_documents(q)
+    docs = await db.fleet_orders.find(q, {"_id": 0, "team_id": 0}).sort(
+        "created_at", -1
+    ).skip(skip).limit(limit).to_list(limit)
+    return {"orders": docs, "total": total}
+
+
 # ============ AUTOCOMPLETE ============
 @router.get("/fleet/pickup-names")
 async def fleet_pickup_names(team: dict = Depends(get_fleet_member)):
@@ -840,34 +934,47 @@ async def fleet_address_book(team: dict = Depends(get_fleet_member)):
 
 # ============ DAY SUMMARY ============
 @router.get("/fleet/day-summary")
-async def fleet_day_summary(date: Optional[str] = None, team: dict = Depends(require_fleet_admin)):
-    """Απλά σύνολα ημέρας ανά οδηγό: παραδόσεις + μετρητά που μάζεψε."""
-    day = date or athens_today()
-    start, end = local_day_range(day)
+async def fleet_day_summary(
+    date: Optional[str] = None,
+    date_to: Optional[str] = None,
+    team: dict = Depends(require_fleet_admin),
+):
+    """Πλήθη παραγγελιών ανά οδηγό για ημέρα ή εύρος ημερών — χωρίς ποσά (τα
+    χρήματα είναι υπόθεση του μαγαζιού). Περιλαμβάνει και οδηγούς χωρίς
+    παραγγελίες στην περίοδο (π.χ. το driver προφίλ του συντονιστή)."""
+    day_from = date or athens_today()
+    day_to = date_to or day_from
+    start, end = local_day_range(day_from, day_to)
     rows = await db.fleet_orders.aggregate([
         {"$match": {
             "team_id": team["id"],
-            "status": "delivered",
+            "driver_id": {"$ne": None},
+            "status": {"$ne": "cancelled"},
             "created_at": {"$gte": start, "$lt": end},
         }},
         {"$group": {
             "_id": {"driver_id": "$driver_id", "driver_name": "$driver_name"},
             "orders": {"$sum": 1},
-            "total": {"$sum": "$amount"},
-            "cash": {"$sum": {"$cond": [{"$eq": ["$payment", "cash"]}, "$amount", 0]}},
+            "delivered": {"$sum": {"$cond": [{"$eq": ["$status", "delivered"]}, 1, 0]}},
         }},
         {"$sort": {"orders": -1}},
     ]).to_list(200)
-    return {
-        "date": day,
-        "drivers": [
-            {
-                "driver_id": r["_id"].get("driver_id"),
-                "driver_name": r["_id"].get("driver_name") or "—",
-                "orders": r["orders"],
-                "total": round(r["total"], 2),
-                "cash": round(r["cash"], 2),
-            }
-            for r in rows
-        ],
-    }
+    out = [
+        {
+            "driver_id": r["_id"].get("driver_id"),
+            "driver_name": r["_id"].get("driver_name") or "—",
+            "orders": r["orders"],
+            "delivered": r["delivered"],
+        }
+        for r in rows
+    ]
+    seen = {r["driver_id"] for r in out}
+    members = await db.fleet_members.find(
+        {"team_id": team["id"], "role": "driver"}, {"_id": 0, "id": 1, "name": 1}
+    ).sort("created_at", 1).to_list(200)
+    out.extend(
+        {"driver_id": m["id"], "driver_name": m["name"], "orders": 0, "delivered": 0}
+        for m in members
+        if m["id"] not in seen
+    )
+    return {"date": day_from, "date_to": day_to, "drivers": out}
