@@ -34,7 +34,7 @@ const PLANS = [
 ];
 
 // Εγγραφή εταιρείας διανομής: unified λογαριασμός (ίδιο auth με τα μαγαζιά,
-// account_type=fleet_company) → κατευθείαν στον πίνακα συντονιστή.
+// account_type=fleet_company) → κατευθείαν στον πίνακα διαχειριστή.
 export default function FleetSignup() {
   const { adoptToken } = useFleet();
   const navigate = useNavigate();
@@ -61,7 +61,7 @@ export default function FleetSignup() {
     if (form.password.length < 4)
       return setError("Ο κωδικός πρέπει να έχει τουλάχιστον 4 χαρακτήρες");
     if (!/^\d{4}$/.test(form.admin_pin))
-      return setError("Το PIN διαχείρισης πρέπει να είναι 4 ψηφία");
+      return setError("Το PIN διαχειριστή πρέπει να είναι 4 ψηφία");
     setStep(1);
   };
 
@@ -104,7 +104,7 @@ export default function FleetSignup() {
             <>
               <h1 className="font-heading text-2xl font-bold mb-1">Εγγραφή εταιρείας</h1>
               <p className="text-sm text-neutral-400 mb-6">
-                Στοιχεία της εταιρείας διανομής και της διαχείρισης
+                Στοιχεία της εταιρείας διανομής και του διαχειριστή
               </p>
 
               <div className="space-y-4">
@@ -172,7 +172,7 @@ export default function FleetSignup() {
                       className={inputCls}
                     />
                   </Field>
-                  <Field label="PIN διαχείρισης">
+                  <Field label="PIN διαχειριστή">
                     <input
                       required
                       inputMode="numeric"

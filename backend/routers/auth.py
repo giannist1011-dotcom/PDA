@@ -153,7 +153,7 @@ async def register(body: RegisterIn, request: Request):
             "created_at": now,
         })
     await db.profiles.insert_many(profiles)
-    # Πλάνα με Fleet: έτοιμη ομάδα διανομής + μέλος-συντονιστής (PIN = PIN ιδιοκτήτη)
+    # Πλάνα με Fleet: έτοιμη ομάδα διανομής + μέλος-διαχειριστής (PIN = PIN ιδιοκτήτη)
     if body.plan in ("fleet", "orderdeck_fleet"):
         await ensure_fleet_team_for_user(doc)
     token = create_token(uid, email)

@@ -14,7 +14,7 @@ import {
 
 // Auth context του OrderDeck Fleet — εντελώς ανεξάρτητο από το AuthContext των
 // μαγαζιών. Δύο ΕΠΙΦΑΝΕΙΕΣ με ξεχωριστά sessions (ξεχωριστά κλειδιά storage):
-// driver PWA (/fleet/driver*) και dashboard συντονιστή (υπόλοιπα /fleet) —
+// driver PWA (/fleet/driver*) και dashboard διαχειριστή (υπόλοιπα /fleet) —
 // login στη μία δεν πατάει ποτέ το session της άλλης στον ίδιο browser.
 // team: undefined=φορτώνει, false=χωρίς session.
 const FleetAuthContext = createContext(null);
@@ -39,7 +39,7 @@ export function FleetAuthProvider({ children }) {
   // Session ΣΦΡΑΓΙΣΜΕΝΟ με την επιφάνειά του: σε αλλαγή επιφάνειας το team
   // διαβάζεται undefined (φόρτωση) στο ΙΔΙΟ render. Αλλιώς το FleetProtected
   // βλέπει για ένα render το team της προηγούμενης επιφάνειας και κάνει redirect
-  // πριν προλάβει το rehydrate — π.χ. οδηγός → «Διαχείριση» γύριζε αμέσως πίσω
+  // πριν προλάβει το rehydrate — π.χ. οδηγός → «Διαχειριστής» γύριζε αμέσως πίσω
   // στο /fleet/driver (ο εναλλάκτης δούλευε μόνο προς τη μία κατεύθυνση).
   const [session, setSession] = useState({ surface: null, team: undefined });
   const team = session.surface === surface ? session.team : undefined;
@@ -108,7 +108,7 @@ export function FleetAuthProvider({ children }) {
     }
     // Driver επιφάνεια: καθάρισε ΜΟΝΟ το driver session. Το team token γράφεται
     // στο κλειδί dashboard μόνο αν δεν υπάρχει ήδη session εκεί (tablet ροή PIN),
-    // ώστε να μην πατηθεί ενεργό session συντονιστή σε άλλο tab.
+    // ώστε να μην πατηθεί ενεργό session διαχειριστή σε άλλο tab.
     setFleetToken(null);
     if (!hasFleetSession("fleet_admin")) setFleetToken(data.token);
     // Το navigate στο /fleet/select αλλάζει επιφάνεια και κάνει rehydrate

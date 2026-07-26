@@ -8,7 +8,7 @@ import { formatApiError } from "@/lib/api";
 const inputCls =
   "w-full h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame";
 
-// Επεξεργασία παραγγελίας από τον συντονιστή. Αν έχει ήδη οδηγό, η αποθήκευση
+// Επεξεργασία παραγγελίας από τον διαχειριστή. Αν έχει ήδη οδηγό, η αποθήκευση
 // τον ειδοποιεί («Η #Χ ενημερώθηκε») με τα αλλαγμένα πεδία μαρκαρισμένα.
 export default function EditOrderModal({ order, city, onClose, onSaved }) {
   const [pickup, setPickup] = useState(order.pickup_name || "");

@@ -4,8 +4,8 @@ import { apiFleetDaySummary } from "@/lib/fleetApi";
 const dateCls =
   "h-8 px-2 bg-[#2A0E14] border border-[#723645] rounded-md text-xs text-white focus:outline-none focus:border-flame";
 
-// Πλήθη παραγγελιών ανά οδηγό (σήμερα ή επιλεγόμενο εύρος) για τον συντονιστή —
-// χωρίς ποσά/μετρητά. Περιλαμβάνει και το driver προφίλ του συντονιστή.
+// Πλήθη παραγγελιών ανά οδηγό (σήμερα ή επιλεγόμενο εύρος) για τον διαχειριστή —
+// χωρίς ποσά/μετρητά. Περιλαμβάνει και το driver προφίλ του διαχειριστή.
 export default function DayTotals({ refreshKey }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");

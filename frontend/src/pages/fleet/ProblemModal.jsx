@@ -11,7 +11,7 @@ const REASONS = [
 ];
 
 // Αναφορά προβλήματος από τον οδηγό σε claimed παραγγελία — η σημαία φτάνει
-// στον πίνακα του συντονιστή, που αποφασίζει (επεξεργασία/αποδέσμευση/ακύρωση).
+// στον πίνακα του διαχειριστή, που αποφασίζει (επεξεργασία/αποδέσμευση/ακύρωση).
 export default function ProblemModal({ order, onClose, onReported }) {
   const [reason, setReason] = useState("no_answer");
   const [text, setText] = useState("");

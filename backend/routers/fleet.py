@@ -106,12 +106,16 @@ async def get_fleet_team(authorization: Optional[str] = Header(None)) -> dict:
     role = payload.get("role")
     member_name = payload.get("member_name")
     is_admin_driver = False
+    admin_display_name = None
     if member_id:
         m = await db.fleet_members.find_one({"id": member_id, "team_id": team["id"]}, {"_id": 0})
         if m:
             role, member_name = m["role"], m["name"]
-            # Προφίλ οδηγού που ανήκει σε συντονιστή («Λειτουργία διανομέα»)
+            # Προφίλ οδηγού που ανήκει σε διαχειριστή («Λειτουργία διανομέα»)
             is_admin_driver = bool(m.get("admin_member_id"))
+            # Προσωπικό όνομα διαχειριστή — η ταυτότητα του driver προφίλ του
+            if m["role"] == "fleet_admin":
+                admin_display_name = (m.get("display_name") or "").strip()
         else:
             # Το μέλος διαγράφηκε όσο ζούσε το token → επιστροφή σε επιλογή μέλους
             member_id = role = member_name = None
@@ -119,6 +123,7 @@ async def get_fleet_team(authorization: Optional[str] = Header(None)) -> dict:
     team["role"] = role
     team["member_name"] = member_name
     team["is_admin_driver"] = is_admin_driver
+    team["admin_display_name"] = admin_display_name
     return team
 
 
@@ -174,6 +179,7 @@ def public_team(t: dict, include_invite: bool = False) -> dict:
         "role": t.get("role"),
         "member_name": t.get("member_name"),
         "is_admin_driver": bool(t.get("is_admin_driver")),
+        "admin_display_name": t.get("admin_display_name") or "",
     }
     if include_invite:
         out["invite_code"] = t.get("invite_code")
@@ -218,7 +224,7 @@ class FleetRegisterIn(BaseModel):
     city: str = Field(default="", max_length=60)
     email: EmailStr
     password: str = Field(min_length=4)
-    admin_name: str = Field(default="Διαχείριση", max_length=40)
+    admin_name: str = Field(default="Διαχειριστής", max_length=40)
     admin_pin: str = Field(min_length=4, max_length=4)
 
 
@@ -235,7 +241,7 @@ class MemberSelectIn(BaseModel):
 class MemberIn(BaseModel):
     name: str = Field(min_length=1, max_length=40)
     role: Literal["fleet_admin", "driver"]
-    pin: Optional[str] = None  # 4 ψηφία — συντονιστές (επιλογή μέλους στη συσκευή)
+    pin: Optional[str] = None  # 4 ψηφία — διαχειριστές (επιλογή μέλους στη συσκευή)
     phone_or_email: Optional[str] = None  # διανομείς — προσωπικός λογαριασμός
 
 
@@ -301,12 +307,12 @@ EDIT_FIELD_LABELS = {
 
 
 # ============ UNIFIED AUTH (account_type στους users — όχι παράλληλο σύστημα) ============
-async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Διαχείριση") -> dict:
+async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Διαχειριστής") -> dict:
     """Βρίσκει ή δημιουργεί το fleet_team ενός unified λογαριασμού (users.account_type).
 
     Καλείται από την εγγραφή (store plan με Fleet, /fleet/signup) και lazily από το
     /fleet/exchange — καλύπτει και λογαριασμούς που παίρνουν Fleet αργότερα από τον admin.
-    Το πρώτο μέλος-συντονιστής κληρονομεί το PIN ιδιοκτήτη του λογαριασμού.
+    Το πρώτο μέλος-διαχειριστής κληρονομεί το PIN ιδιοκτήτη του λογαριασμού.
     """
     team = await db.fleet_teams.find_one({"owner_user_id": u["id"]}, {"_id": 0})
     if team:
@@ -335,7 +341,7 @@ async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Διαχείρ�
     await db.fleet_members.insert_one({
         "id": str(uuid.uuid4())[:8],
         "team_id": team["id"],
-        "name": (admin_name or "").strip() or "Διαχείριση",
+        "name": (admin_name or "").strip() or "Διαχειριστής",
         "role": "fleet_admin",
         "pin_hash": u.get("owner_pin_hash") or hash_password("0000"),
         "created_at": now,
@@ -358,13 +364,13 @@ class FleetSignupIn(BaseModel):
 async def fleet_signup(body: FleetSignupIn, request: Request):
     """Εγγραφή εταιρείας διανομής στο ΕΝΙΑΙΟ auth (users, account_type=fleet_company).
 
-    Δημιουργεί λογαριασμό users + fleet_team + μέλος-συντονιστή. Τιμολόγηση χειροκίνητη
+    Δημιουργεί λογαριασμό users + fleet_team + μέλος-διαχειριστή. Τιμολόγηση χειροκίνητη
     (όπως η συνδρομή μαγαζιών) — κανένα payment εδώ.
     """
     rate_limit(request, "fleet_signup", limit=5, window_seconds=3600)
     email = body.email.lower()
     if not valid_pin(body.admin_pin):
-        raise HTTPException(400, "Το PIN διαχείρισης πρέπει να είναι 4 ψηφία")
+        raise HTTPException(400, "Το PIN διαχειριστή πρέπει να είναι 4 ψηφία")
     if await db.users.find_one({"email": email}):
         raise HTTPException(400, "Το email χρησιμοποιείται ήδη")
     if await db.fleet_teams.find_one({"email": email}):
@@ -445,7 +451,7 @@ async def fleet_register(body: FleetRegisterIn, request: Request):
     await db.fleet_members.insert_one({
         "id": str(uuid.uuid4())[:8],
         "team_id": tid,
-        "name": body.admin_name.strip() or "Διαχείριση",
+        "name": body.admin_name.strip() or "Διαχειριστής",
         "role": "fleet_admin",
         "pin_hash": hash_password(body.admin_pin),
         "created_at": now,
@@ -689,25 +695,49 @@ async def fleet_driver_select(body: DriverSelectIn, account: dict = Depends(get_
 
 
 # ============ ADMIN ΩΣ ΟΔΗΓΟΣ ============
+class AdminDisplayNameIn(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+
+
+@router.post("/fleet/admin/display-name")
+async def fleet_admin_display_name(
+    body: AdminDisplayNameIn, team: dict = Depends(require_fleet_admin)
+):
+    """Προσωπικό όνομα του διαχειριστή («Το όνομά μου») — ΞΕΧΩΡΙΣΤΟ από το όνομα
+    εταιρείας. Είναι η ταυτότητα του driver προφίλ του (header, πίνακας, ροή,
+    στατιστικά). Συγχρονίζει και το ήδη δημιουργημένο driver προφίλ του."""
+    name = body.name.strip()
+    await db.fleet_members.update_one(
+        {"id": team["member_id"], "team_id": team["id"]},
+        {"$set": {"display_name": name}},
+    )
+    await db.fleet_members.update_one(
+        {"team_id": team["id"], "admin_member_id": team["member_id"]},
+        {"$set": {"name": name}},
+    )
+    return {"ok": True, "admin_display_name": name}
+
+
 @router.post("/fleet/admin/driver-mode")
 async def fleet_admin_driver_mode(team: dict = Depends(require_fleet_admin)):
     """«Λειτουργία διανομέα»: βρίσκει ή δημιουργεί το προσωπικό driver membership
-    του συντονιστή (σημαδεμένο με admin_member_id) και επιστρέφει driver token.
-    Το session συντονιστή μένει ανέπαφο — ξεχωριστό κλειδί ανά επιφάνεια στο frontend."""
-    # Το προφίλ οδηγού φέρει το ΟΝΟΜΑ του ανθρώπου (όπως κάθε διανομέας) — όχι
-    # «Διαχείριση». Αν το προφίλ διαχείρισης έχει το γενικό όνομα, προτιμάται το
-    # ονοματεπώνυμο επαφής του unified λογαριασμού.
-    name = (team.get("member_name") or "").strip()
-    if not name or name == "Διαχείριση":
-        if team.get("owner_user_id"):
-            u = await db.users.find_one(
-                {"id": team["owner_user_id"]}, {"_id": 0, "full_name": 1}
-            )
-            full = ((u or {}).get("full_name") or "").strip()
-            if full:
-                name = full
+    του διαχειριστή (σημαδεμένο με admin_member_id) και επιστρέφει driver token.
+    Το session διαχειριστή μένει ανέπαφο — ξεχωριστό κλειδί ανά επιφάνεια στο frontend."""
+    # Το προφίλ οδηγού φέρει το ΟΝΟΜΑ του ανθρώπου (όπως κάθε διανομέας) — ποτέ
+    # το όνομα εταιρείας ή τη γενική ετικέτα. Προτεραιότητα: display_name («Το
+    # όνομά μου») → μη γενικό όνομα μέλους → ονοματεπώνυμο επαφής του λογαριασμού.
+    name = (team.get("admin_display_name") or "").strip()
     if not name:
-        name = "Διαχείριση"
+        name = (team.get("member_name") or "").strip()
+        if name in ("Διαχείριση", "Διαχειριστής"):
+            name = ""
+    if not name and team.get("owner_user_id"):
+        u = await db.users.find_one(
+            {"id": team["owner_user_id"]}, {"_id": 0, "full_name": 1}
+        )
+        name = ((u or {}).get("full_name") or "").strip()
+    if not name:
+        name = "Διαχειριστής"
     m = await db.fleet_members.find_one(
         {"team_id": team["id"], "admin_member_id": team["member_id"]}, {"_id": 0}
     )
@@ -724,7 +754,7 @@ async def fleet_admin_driver_mode(team: dict = Depends(require_fleet_admin)):
         m.pop("_id", None)
         await add_event(team["id"], f"Ο/Η {m['name']} μπήκε σε λειτουργία διανομέα")
     elif m.get("name") != name:
-        # Ο συντονιστής μετονομάστηκε — το προσωπικό driver προφίλ ακολουθεί
+        # Ο διαχειριστής μετονομάστηκε — το προσωπικό driver προφίλ ακολουθεί
         await db.fleet_members.update_one(
             {"id": m["id"], "team_id": team["id"]}, {"$set": {"name": name}}
         )
@@ -766,7 +796,7 @@ async def fleet_create_order(body: FleetOrderIn, team: dict = Depends(require_fl
 
 @router.get("/fleet/board")
 async def fleet_board(date: Optional[str] = None, team: dict = Depends(require_fleet_admin)):
-    """Ο πίνακας του συντονιστή: παραγγελίες ημέρας + feed + οδηγοί (ένα poll)."""
+    """Ο πίνακας του διαχειριστή: παραγγελίες ημέρας + feed + οδηγοί (ένα poll)."""
     day = date or athens_today()
     start, end = local_day_range(day)
     orders = await db.fleet_orders.find(
@@ -918,7 +948,7 @@ async def fleet_cancel_order(oid: str, team: dict = Depends(require_fleet_admin)
 async def fleet_edit_order(
     oid: str, body: FleetOrderEditIn, team: dict = Depends(require_fleet_admin)
 ):
-    """Επεξεργασία παραγγελίας από τον συντονιστή. Πριν το claim ελεύθερη· μετά,
+    """Επεξεργασία παραγγελίας από τον διαχειριστή. Πριν το claim ελεύθερη· μετά,
     η αποθήκευση σημαδεύει updated_at/updated_fields ώστε ο οδηγός να δει
     ειδοποίηση («Η #Χ ενημερώθηκε») με τα αλλαγμένα πεδία στο επόμενο poll."""
     o = await db.fleet_orders.find_one({"id": oid, "team_id": team["id"]})
@@ -965,7 +995,7 @@ async def fleet_set_urgent(oid: str, body: UrgentIn, team: dict = Depends(requir
 async def fleet_report_problem(oid: str, body: ProblemIn, team: dict = Depends(get_fleet_member)):
     """Ο οδηγός σημαίνει πρόβλημα σε claimed παραγγελία του (Δεν απαντάει /
     Λάθος διεύθυνση / Άλλο + κείμενο) → σημαία στον πίνακα + ροή. Η επίλυση
-    γίνεται από τον συντονιστή (επεξεργασία, αποδέσμευση ή ακύρωση)."""
+    γίνεται από τον διαχειριστή (επεξεργασία, αποδέσμευση ή ακύρωση)."""
     o = await db.fleet_orders.find_one({"id": oid, "team_id": team["id"]})
     if not o:
         raise HTTPException(404, "Η παραγγελία δεν βρέθηκε")
@@ -1164,7 +1194,7 @@ async def fleet_day_summary(
 ):
     """Πλήθη παραγγελιών ανά οδηγό για ημέρα ή εύρος ημερών — χωρίς ποσά (τα
     χρήματα είναι υπόθεση του μαγαζιού). Περιλαμβάνει και οδηγούς χωρίς
-    παραγγελίες στην περίοδο (π.χ. το driver προφίλ του συντονιστή)."""
+    παραγγελίες στην περίοδο (π.χ. το driver προφίλ του διαχειριστή)."""
     day_from = date or athens_today()
     day_to = date_to or day_from
     start, end = local_day_range(day_from, day_to)

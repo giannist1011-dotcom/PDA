@@ -18,7 +18,7 @@ import DemoCredentials from "../admin-shops/DemoCredentials";
 import { inputCls, PAYMENT_LABELS } from "../admin-shops/utils";
 import { FLEET_PLAN_LABELS } from "./utils";
 
-const ROLE_LABELS = { fleet_admin: "Διαχείριση", driver: "Οδηγός" };
+const ROLE_LABELS = { fleet_admin: "Διαχειριστής", driver: "Οδηγός" };
 
 // ============ DETAIL / EDIT MODAL ΕΤΑΙΡΙΑΣ DELIVERY ============
 function FleetModal({ pw, companyId, onClose, onChanged }) {

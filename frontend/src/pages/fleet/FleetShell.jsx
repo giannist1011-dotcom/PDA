@@ -12,21 +12,25 @@ import {
   Check,
 } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
-import { apiFleetAdminDriverMode, setFleetToken } from "@/lib/fleetApi";
+import { apiFleetAdminDriverMode, apiFleetSetAdminName, setFleetToken } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
 
 // Κοινό κέλυφος των FleetDeck σελίδων: FleetDeck branding + δυναμικό όνομα
 // εταιρείας στο header. Δεν χρησιμοποιεί το AppShell των μαγαζιών.
 export default function FleetShell({ title, children, actions = null }) {
-  const { team, logout, exitMember } = useFleet();
+  const { team, refresh, logout, exitMember } = useFleet();
   const navigate = useNavigate();
   const [busyDriverMode, setBusyDriverMode] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  // Μία φορά: αν ο διαχειριστής δεν έχει ορίσει προσωπικό όνομα, ζητείται πριν
+  // την πρώτη εναλλαγή σε προφίλ οδηγού (αποθηκεύεται στο ίδιο πεδίο των ρυθμίσεων)
+  const [nameModal, setNameModal] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
   const switcherRef = useRef(null);
   const isAdmin = team && team.role === "fleet_admin";
   const isDriver = team && team.role === "driver";
-  // Ο γρήγορος εναλλάκτης προφίλ (όπως στο POS) εμφανίζεται στη διαχείριση και
-  // στο προσωπικό driver προφίλ της διαχείρισης — όχι σε απλούς οδηγούς
+  // Ο γρήγορος εναλλάκτης προφίλ (όπως στο POS) εμφανίζεται στον διαχειριστή και
+  // στο προσωπικό driver προφίλ του — όχι σε απλούς οδηγούς
   const canSwitch = isAdmin || (isDriver && team.is_admin_driver);
 
   // Τίτλος tab: όνομα εταιρείας — FleetDeck. Και δικό του PWA manifest ώστε η
@@ -58,15 +62,15 @@ export default function FleetShell({ title, children, actions = null }) {
     navigate("/fleet/select");
   };
 
-  // Προφίλ «Οδηγός»: driver token της διαχείρισης → driver κλειδί (κατά ρόλο
-  // token) — το session διαχείρισης μένει άθικτο στο δικό του κλειδί.
-  const switchToDriver = async () => {
-    if (isDriver) return setSwitcherOpen(false);
+  // Προφίλ «Οδηγός»: driver token του διαχειριστή → driver κλειδί (κατά ρόλο
+  // token) — το session διαχειριστή μένει άθικτο στο δικό του κλειδί.
+  const enterDriverMode = async () => {
     setBusyDriverMode(true);
     try {
       const data = await apiFleetAdminDriverMode();
       setFleetToken(data.token);
       setSwitcherOpen(false);
+      setNameModal(false);
       navigate("/fleet/driver");
     } catch (err) {
       toast.error(formatApiError(err));
@@ -75,7 +79,35 @@ export default function FleetShell({ title, children, actions = null }) {
     }
   };
 
-  // Προφίλ «Διαχείριση»: το admin session ζει στο δικό του κλειδί — απλή
+  const switchToDriver = async () => {
+    if (isDriver) return setSwitcherOpen(false);
+    // Χωρίς προσωπικό όνομα ακόμα → one-time prompt πριν την πρώτη εναλλαγή
+    if (isAdmin && !team.admin_display_name) {
+      setNameDraft("");
+      setSwitcherOpen(false);
+      setNameModal(true);
+      return;
+    }
+    await enterDriverMode();
+  };
+
+  const saveNameAndSwitch = async (e) => {
+    e.preventDefault();
+    const name = nameDraft.trim();
+    if (!name) return;
+    setBusyDriverMode(true);
+    try {
+      await apiFleetSetAdminName(name);
+      await refresh();
+    } catch (err) {
+      toast.error(formatApiError(err));
+      setBusyDriverMode(false);
+      return;
+    }
+    await enterDriverMode();
+  };
+
+  // Προφίλ «Διαχειριστής»: το admin session ζει στο δικό του κλειδί — απλή
   // αλλαγή επιφάνειας, ο provider επαναφορτώνει το σωστό token
   const switchToAdmin = () => {
     setSwitcherOpen(false);
@@ -121,7 +153,7 @@ export default function FleetShell({ title, children, actions = null }) {
               </>
             )}
             {/* Chip προφίλ (πάνω δεξιά, όπως στο POS): tap → επιλογή προφίλ.
-                Εναλλαγή Διαχείριση ↔ προσωπικό προφίλ οδηγού, χωρίς logout */}
+                Εναλλαγή Διαχειριστής ↔ προσωπικό προφίλ οδηγού, χωρίς logout */}
             {canSwitch && (
               <div className="relative" ref={switcherRef}>
                 <button
@@ -137,7 +169,7 @@ export default function FleetShell({ title, children, actions = null }) {
                   {/* Στο προφίλ οδηγού το chip δείχνει το ΟΝΟΜΑ του ανθρώπου (όπως
                       κάθε διανομέας) — όχι γενική ετικέτα */}
                   <span className="max-w-[110px] truncate">
-                    {isDriver ? team.member_name || "Οδηγός" : "Διαχείριση"}
+                    {isDriver ? team.member_name || "Οδηγός" : "Διαχειριστής"}
                   </span>
                   <ChevronDown
                     className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${
@@ -159,7 +191,7 @@ export default function FleetShell({ title, children, actions = null }) {
                       data-testid="fleet-profile-admin"
                     >
                       <ShieldCheck className="w-4 h-4 text-gold shrink-0" />
-                      <span className="font-semibold">Διαχείριση</span>
+                      <span className="font-semibold">Διαχειριστής</span>
                       {isAdmin && <Check className="w-4 h-4 ml-auto text-flame shrink-0" />}
                     </button>
                     <button
@@ -212,6 +244,49 @@ export default function FleetShell({ title, children, actions = null }) {
         </div>
       )}
       <main className="max-w-6xl mx-auto px-4 py-4">{children}</main>
+      {nameModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <form
+            onSubmit={saveNameAndSwitch}
+            className="w-full max-w-sm bg-[#3D1620] border border-[#723645] rounded-lg p-4 space-y-3"
+            data-testid="fleet-admin-name-modal"
+          >
+            <h3 className="font-heading font-bold">Το όνομά σας</h3>
+            <p className="text-xs text-neutral-400">
+              Στο προφίλ οδηγού εμφανίζεστε με το προσωπικό σας όνομα (όπως κάθε
+              διανομέας) — όχι με το όνομα της εταιρείας. Ορίστε το μία φορά·
+              αλλάζει από τα «Μέλη ομάδας».
+            </p>
+            <input
+              autoFocus
+              required
+              maxLength={40}
+              placeholder="π.χ. Γιάννης"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              className="w-full h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame"
+              data-testid="fleet-admin-name-input"
+            />
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={busyDriverMode || !nameDraft.trim()}
+                className="flex-1 h-11 rounded-md bg-brand hover:bg-brand-hover text-white text-sm font-bold disabled:opacity-60"
+                data-testid="fleet-admin-name-save"
+              >
+                Αποθήκευση & συνέχεια
+              </button>
+              <button
+                type="button"
+                onClick={() => setNameModal(false)}
+                className="h-11 px-4 rounded-md border border-[#723645] text-neutral-300 text-sm hover:bg-white/5"
+              >
+                Άκυρο
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

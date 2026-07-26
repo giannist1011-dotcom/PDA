@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 const inputCls =
   "w-full h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame";
 
-// Γρήγορη καταχώρηση παραγγελίας από τον συντονιστή: κατάστημα παραλαβής
+// Γρήγορη καταχώρηση παραγγελίας από τον διαχειριστή: κατάστημα παραλαβής
 // (autocomplete από προηγούμενα ονόματα), διεύθυνση (AddressAutocomplete),
 // σημείωση. Χωρίς ποσά/πληρωμή — υπόθεση του μαγαζιού, όχι της εταιρείας.
 export default function NewOrderForm({ city, onCreated }) {

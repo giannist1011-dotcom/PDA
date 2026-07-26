@@ -75,7 +75,7 @@ export default function FleetDriver() {
   }, []);
 
   // Σύγκριση με το προηγούμενο poll → ήχος/δόνηση για νέα ελεύθερη (μόνο σε
-  // βάρδια), απευθείας ανάθεση από συντονιστή, ή επεξεργασία claimed παραγγελίας
+  // βάρδια), απευθείας ανάθεση από διαχειριστή, ή επεξεργασία claimed παραγγελίας
   const detectChanges = useCallback((b) => {
     const prev = seenRef.current;
     if (prev) {
@@ -88,7 +88,7 @@ export default function FleetDriver() {
       }
       for (const o of b.mine) {
         // Το δικό μας claim μπαίνει στο seenRef άμεσα (στο claim) — ό,τι νέο
-        // εμφανίζεται εδώ είναι απευθείας ανάθεση από τον συντονιστή
+        // εμφανίζεται εδώ είναι απευθείας ανάθεση από τον διαχειριστή
         if (!prev.mine.has(o.id)) {
           toast.message(`Σας ανατέθηκε η #${o.number}`);
           ring = true;
@@ -323,7 +323,7 @@ export default function FleetDriver() {
                     </button>
                     {o.problem ? (
                       <div className="mt-2 text-xs text-gold text-center font-semibold">
-                        ⚠️ Το πρόβλημα στάλθηκε — περιμένετε τη διαχείριση
+                        ⚠️ Το πρόβλημα στάλθηκε — περιμένετε τον διαχειριστή
                       </div>
                     ) : (
                       <button

@@ -5,7 +5,7 @@ import { decodeJwtPayload } from "./api";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 // Ξεχωριστό κλειδί ΑΝΑ ΕΠΙΦΑΝΕΙΑ: το login του driver PWA δεν πατάει ποτέ το
-// session του dashboard συντονιστή (και αντίστροφα) στον ίδιο browser.
+// session του dashboard διαχειριστή (και αντίστροφα) στον ίδιο browser.
 const TOKEN_KEYS = {
   fleet_admin: "orderdeck_fleet_admin_token",
   driver: "orderdeck_fleet_driver_token",
@@ -127,10 +127,13 @@ export const apiFleetDriverStats = () =>
 export const apiFleetDriverOrders = (params) =>
   fleetApi.get("/fleet/driver/orders", { params }).then((r) => r.data);
 
-// ΣΥΝΤΟΝΙΣΤΗΣ ΩΣ ΟΔΗΓΟΣ — το token που επιστρέφει είναι driver token και
+// ΔΙΑΧΕΙΡΙΣΤΗΣ ΩΣ ΟΔΗΓΟΣ — το token που επιστρέφει είναι driver token και
 // αποθηκεύεται στο driver κλειδί (setFleetToken κατά ρόλο), το admin session μένει
 export const apiFleetAdminDriverMode = () =>
   fleetApi.post("/fleet/admin/driver-mode").then((r) => r.data);
+// Προσωπικό όνομα διαχειριστή («Το όνομά μου») — η ταυτότητα του driver προφίλ του
+export const apiFleetSetAdminName = (name) =>
+  fleetApi.post("/fleet/admin/display-name", { name }).then((r) => r.data);
 
 // AUTOCOMPLETE + ΣΥΝΟΛΑ
 export const apiFleetPickupNames = () =>

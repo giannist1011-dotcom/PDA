@@ -7,25 +7,32 @@ import {
   apiFleetUpdateMember,
   apiFleetDeleteMember,
   apiFleetResetMemberPassword,
+  apiFleetSetAdminName,
 } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
+import { useFleet } from "@/context/FleetAuthContext";
 import FleetShell from "@/pages/fleet/FleetShell";
 import { Button } from "@/components/ui/button";
 
 const inputCls =
   "w-full h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame";
 
-// Διαχείριση μελών (συντονιστής). Διανομείς: η εταιρεία δημιουργεί τον προσωπικό
+// Διαχείριση μελών (διαχειριστής). Διανομείς: η εταιρεία δημιουργεί τον προσωπικό
 // λογαριασμό (τηλέφωνο/email) — ο προσωρινός κωδικός εμφανίζεται ΜΙΑ φορά εδώ.
 export default function FleetMembers() {
+  const { team, refresh } = useFleet();
   const [members, setMembers] = useState([]);
+  // «Το όνομά μου»: προσωπικό όνομα διαχειριστή — η ταυτότητα του driver
+  // προφίλ του (ΞΕΧΩΡΙΣΤΟ από το όνομα εταιρείας)
+  const [myName, setMyName] = useState(team?.admin_display_name || "");
+  const [savingName, setSavingName] = useState(false);
   const [editing, setEditing] = useState(null); // null | {} (νέο) | member
   const [form, setForm] = useState({ name: "", role: "driver", pin: "", identifier: "" });
   const [busy, setBusy] = useState(false);
   // Προσωρινός κωδικός που μόλις εκδόθηκε: {name, identifier, password}
   const [issued, setIssued] = useState(null);
 
-  // Τα αυτόματα driver προφίλ συντονιστών («Λειτουργία διανομέα») δεν
+  // Τα αυτόματα driver προφίλ διαχειριστών («Λειτουργία διανομέα») δεν
   // διαχειρίζονται από εδώ — δημιουργούνται/χρησιμοποιούνται αυτόματα
   const load = () =>
     apiFleetMembers()
@@ -113,6 +120,22 @@ export default function FleetMembers() {
     toast.success("Αντιγράφηκε");
   };
 
+  const saveMyName = async (e) => {
+    e.preventDefault();
+    const name = myName.trim();
+    if (!name) return;
+    setSavingName(true);
+    try {
+      await apiFleetSetAdminName(name);
+      await refresh();
+      toast.success("Αποθηκεύτηκε");
+    } catch (err) {
+      toast.error(formatApiError(err));
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   return (
     <FleetShell title="Μέλη ομάδας">
       <div className="max-w-2xl space-y-4">
@@ -151,6 +174,38 @@ export default function FleetMembers() {
           </div>
         )}
 
+        {/* Στοιχεία διαχειριστή: το προσωπικό όνομα εμφανίζεται στο driver προφίλ
+            του (header, πίνακας, ροή, στατιστικά) — ποτέ το όνομα εταιρείας */}
+        <form
+          onSubmit={saveMyName}
+          className="bg-[#3D1620] border border-[#723645] rounded-lg p-4"
+          data-testid="fleet-admin-name-section"
+        >
+          <h2 className="font-heading font-bold text-sm mb-1">Στοιχεία διαχειριστή</h2>
+          <p className="text-xs text-neutral-400 mb-3">
+            Το όνομά μου — με αυτό εμφανίζεστε όταν περνάτε στο προφίλ οδηγού
+            (όπως κάθε διανομέας). Ξεχωριστό από το όνομα της εταιρείας.
+          </p>
+          <div className="flex gap-2">
+            <input
+              maxLength={40}
+              placeholder="π.χ. Γιάννης"
+              value={myName}
+              onChange={(e) => setMyName(e.target.value)}
+              className={inputCls}
+              data-testid="fleet-my-name"
+            />
+            <Button
+              type="submit"
+              disabled={savingName || !myName.trim() || myName.trim() === (team?.admin_display_name || "")}
+              className="h-11 px-4 bg-brand hover:bg-brand-hover text-white text-xs font-bold shrink-0"
+              data-testid="fleet-my-name-save"
+            >
+              Αποθήκευση
+            </Button>
+          </div>
+        </form>
+
         <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-4">
           <div className="flex items-center mb-3">
             <h2 className="font-heading font-bold text-sm">Μέλη ({members.length})</h2>
@@ -173,7 +228,7 @@ export default function FleetMembers() {
                 <div className="min-w-0">
                   <span className="font-semibold truncate block leading-tight">{m.name}</span>
                   <span className="text-xs text-neutral-500 leading-tight">
-                    {m.role === "fleet_admin" ? "Διαχείριση" : "Οδηγός"}
+                    {m.role === "fleet_admin" ? "Διαχειριστής" : "Οδηγός"}
                     {m.identifier ? ` · ${m.identifier}` : ""}
                   </span>
                 </div>
@@ -230,7 +285,7 @@ export default function FleetMembers() {
               <div className="flex gap-2">
                 {[
                   ["driver", "Οδηγός"],
-                  ["fleet_admin", "Διαχείριση"],
+                  ["fleet_admin", "Διαχειριστής"],
                 ].map(([k, label]) => (
                   <button
                     key={k}

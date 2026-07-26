@@ -36,7 +36,7 @@ export default function FleetDriverLogin() {
 
   const proceed = async (s) => {
     if (s.memberships.length === 0) {
-      setError("Δεν υπάρχει ενεργή συνεργασία με εταιρεία — μιλήστε με τη διαχείριση της ομάδας σας");
+      setError("Δεν υπάρχει ενεργή συνεργασία με εταιρεία — μιλήστε με τον διαχειριστή της ομάδας σας");
       setStep("login");
       return;
     }

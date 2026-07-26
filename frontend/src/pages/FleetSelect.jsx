@@ -21,7 +21,7 @@ export default function FleetSelect() {
     if (team && team !== false)
       apiFleetMembers()
         // Διανομείς με προσωπικό λογαριασμό μπαίνουν από /fleet/driver-login (χωρίς
-        // PIN)· τα driver προφίλ συντονιστών (admin_member_id) δεν έχουν δικό τους PIN
+        // PIN)· τα driver προφίλ διαχειριστών (admin_member_id) δεν έχουν δικό τους PIN
         .then((ms) => setMembers(ms.filter((m) => !m.account_id && !m.admin_member_id)))
         .catch(() => setMembers([]));
   }, [team]);
@@ -93,7 +93,7 @@ export default function FleetSelect() {
                     <span className="font-semibold truncate">{m.name}</span>
                   </div>
                   <div className="text-[11px] text-neutral-400 mt-1">
-                    {m.role === "fleet_admin" ? "Διαχείριση" : "Οδηγός"}
+                    {m.role === "fleet_admin" ? "Διαχειριστής" : "Οδηγός"}
                   </div>
                 </button>
               ))}
