@@ -36,7 +36,16 @@ export function FleetAuthProvider({ children }) {
   const surfaceRef = useRef(surface);
   surfaceRef.current = surface;
 
-  const [team, setTeam] = useState(undefined);
+  // Session ΣΦΡΑΓΙΣΜΕΝΟ με την επιφάνειά του: σε αλλαγή επιφάνειας το team
+  // διαβάζεται undefined (φόρτωση) στο ΙΔΙΟ render. Αλλιώς το FleetProtected
+  // βλέπει για ένα render το team της προηγούμενης επιφάνειας και κάνει redirect
+  // πριν προλάβει το rehydrate — π.χ. οδηγός → «Διαχείριση» γύριζε αμέσως πίσω
+  // στο /fleet/driver (ο εναλλάκτης δούλευε μόνο προς τη μία κατεύθυνση).
+  const [session, setSession] = useState({ surface: null, team: undefined });
+  const team = session.surface === surface ? session.team : undefined;
+  const setTeam = useCallback((t, sfc) => {
+    setSession({ surface: sfc ?? surfaceRef.current, team: t });
+  }, []);
 
   // (Επανα)φόρτωση session επιφάνειας: token → /fleet/me → έλεγχος ρόλου.
   // Σε mismatch καθαρίζει το κλειδί και γυρνά σε login αντί να δείξει λάθος ταυτότητα.
@@ -44,7 +53,7 @@ export function FleetAuthProvider({ children }) {
     const t = getFleetToken();
     if (!t || fleetTokenSurface(t) !== sfc) {
       if (t) setFleetToken(null);
-      setTeam(false);
+      setTeam(false, sfc);
       return;
     }
     try {
@@ -52,18 +61,17 @@ export function FleetAuthProvider({ children }) {
       if (!roleMatchesSurface(sfc, me.role || null)) {
         // π.χ. ο ρόλος του μέλους άλλαξε server-side όσο ζούσε το token
         setFleetToken(null);
-        setTeam(false);
+        setTeam(false, sfc);
         return;
       }
-      setTeam(me);
+      setTeam(me, sfc);
     } catch {
       setFleetToken(null);
-      setTeam(false);
+      setTeam(false, sfc);
     }
-  }, []);
+  }, [setTeam]);
 
   useEffect(() => {
-    setTeam(undefined);
     hydrate(surface);
   }, [surface, hydrate]);
 
@@ -89,7 +97,7 @@ export function FleetAuthProvider({ children }) {
       setTeam(await apiFleetMe(data.token));
     }
     return data;
-  }, []);
+  }, [setTeam]);
 
   const exitMember = useCallback(async () => {
     const data = await apiFleetExitMember();
@@ -104,7 +112,7 @@ export function FleetAuthProvider({ children }) {
     setFleetToken(null);
     if (!hasFleetSession("fleet_admin")) setFleetToken(data.token);
     // Το navigate στο /fleet/select αλλάζει επιφάνεια και κάνει rehydrate
-  }, []);
+  }, [setTeam]);
 
   // Είσοδος με έτοιμο token (register / join / driver select)
   const adoptToken = useCallback(async (token) => {
@@ -112,12 +120,12 @@ export function FleetAuthProvider({ children }) {
     const me = await apiFleetMe(token);
     if (roleMatchesSurface(surfaceRef.current, me.role || null)) setTeam(me);
     return me;
-  }, []);
+  }, [setTeam]);
 
   const logout = useCallback(() => {
     setFleetToken(null); // μόνο το κλειδί της τρέχουσας επιφάνειας
     setTeam(false);
-  }, []);
+  }, [setTeam]);
 
   return (
     <FleetAuthContext.Provider

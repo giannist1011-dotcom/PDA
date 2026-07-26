@@ -694,6 +694,20 @@ async def fleet_admin_driver_mode(team: dict = Depends(require_fleet_admin)):
     """«Λειτουργία διανομέα»: βρίσκει ή δημιουργεί το προσωπικό driver membership
     του συντονιστή (σημαδεμένο με admin_member_id) και επιστρέφει driver token.
     Το session συντονιστή μένει ανέπαφο — ξεχωριστό κλειδί ανά επιφάνεια στο frontend."""
+    # Το προφίλ οδηγού φέρει το ΟΝΟΜΑ του ανθρώπου (όπως κάθε διανομέας) — όχι
+    # «Διαχείριση». Αν το προφίλ διαχείρισης έχει το γενικό όνομα, προτιμάται το
+    # ονοματεπώνυμο επαφής του unified λογαριασμού.
+    name = (team.get("member_name") or "").strip()
+    if not name or name == "Διαχείριση":
+        if team.get("owner_user_id"):
+            u = await db.users.find_one(
+                {"id": team["owner_user_id"]}, {"_id": 0, "full_name": 1}
+            )
+            full = ((u or {}).get("full_name") or "").strip()
+            if full:
+                name = full
+    if not name:
+        name = "Διαχείριση"
     m = await db.fleet_members.find_one(
         {"team_id": team["id"], "admin_member_id": team["member_id"]}, {"_id": 0}
     )
@@ -701,7 +715,7 @@ async def fleet_admin_driver_mode(team: dict = Depends(require_fleet_admin)):
         m = {
             "id": str(uuid.uuid4())[:8],
             "team_id": team["id"],
-            "name": team["member_name"] or "Διαχείριση",
+            "name": name,
             "role": "driver",
             "admin_member_id": team["member_id"],
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -709,6 +723,12 @@ async def fleet_admin_driver_mode(team: dict = Depends(require_fleet_admin)):
         await db.fleet_members.insert_one(m)
         m.pop("_id", None)
         await add_event(team["id"], f"Ο/Η {m['name']} μπήκε σε λειτουργία διανομέα")
+    elif m.get("name") != name:
+        # Ο συντονιστής μετονομάστηκε — το προσωπικό driver προφίλ ακολουθεί
+        await db.fleet_members.update_one(
+            {"id": m["id"], "team_id": team["id"]}, {"$set": {"name": name}}
+        )
+        m["name"] = name
     return {
         "token": create_fleet_token(team["id"], m["id"], "driver", m["name"]),
         "member_id": m["id"],

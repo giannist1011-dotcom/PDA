@@ -134,7 +134,11 @@ export default function FleetShell({ title, children, actions = null }) {
                   ) : (
                     <ShieldCheck className="w-3.5 h-3.5 text-gold" />
                   )}
-                  <span className="hidden sm:inline">{isDriver ? "Οδηγός" : "Διαχείριση"}</span>
+                  {/* Στο προφίλ οδηγού το chip δείχνει το ΟΝΟΜΑ του ανθρώπου (όπως
+                      κάθε διανομέας) — όχι γενική ετικέτα */}
+                  <span className="max-w-[110px] truncate">
+                    {isDriver ? team.member_name || "Οδηγός" : "Διαχείριση"}
+                  </span>
                   <ChevronDown
                     className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${
                       switcherOpen ? "rotate-180" : ""

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, KeyRound, RefreshCw } from "lucide-react";
+import { ChevronDown, Copy, KeyRound, RefreshCw } from "lucide-react";
 import { apiAdminResetDemoPassword, formatApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
@@ -32,6 +32,7 @@ export const CredRow = ({ label, value }) => (
 // demo λογαριασμούς και μόνο σε master/manage scope — εδώ απλώς τα εμφανίζουμε.
 export default function DemoCredentials({ pw, accountId, email, credentials, onChanged }) {
   const [busy, setBusy] = useState(false);
+  const [driversOpen, setDriversOpen] = useState(false);
 
   const resetPassword = async () => {
     setBusy(true);
@@ -75,16 +76,34 @@ export default function DemoCredentials({ pw, accountId, email, credentials, onC
       )}
       {credentials?.drivers?.length > 0 && (
         <div className="mt-3 pt-3 border-t border-[#723645]/40">
-          <div className="text-xs uppercase tracking-widest font-bold text-neutral-400 mb-1">
-            Demo οδηγοί (είσοδος οδηγού από κινητό)
-          </div>
-          {credentials.drivers.map((d) => (
-            <div key={d.phone} className="py-1 border-b border-[#723645]/40 last:border-0">
-              <div className="text-sm font-semibold">{d.name}</div>
-              <CredRow label="Τηλέφωνο" value={d.phone} />
-              <CredRow label="Κωδικός" value={d.password} />
+          <button
+            type="button"
+            onClick={() => setDriversOpen((v) => !v)}
+            data-testid="demo-drivers-toggle"
+            className="w-full flex items-center justify-between text-xs uppercase tracking-widest font-bold text-neutral-400 hover:text-white"
+          >
+            <span>Κωδικοί διανομέων ({credentials.drivers.length})</span>
+            <ChevronDown
+              className={`w-4 h-4 transition-transform ${driversOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {driversOpen && (
+            <div className="mt-1" data-testid="demo-drivers-list">
+              {credentials.drivers.map((d) => (
+                <div
+                  key={d.phone || d.email || d.name}
+                  className="py-1 border-b border-[#723645]/40 last:border-0"
+                >
+                  <div className="text-sm font-semibold">{d.name}</div>
+                  <CredRow label={d.phone ? "Τηλέφωνο" : "Email"} value={d.phone || d.email} />
+                  <CredRow label="Κωδικός" value={d.password} />
+                </div>
+              ))}
+              <p className="text-xs text-neutral-500 mt-1.5">
+                Είσοδος οδηγού από κινητό: /fleet/driver-login
+              </p>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
