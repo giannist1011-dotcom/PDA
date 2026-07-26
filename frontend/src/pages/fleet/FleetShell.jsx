@@ -1,7 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Truck, LogOut, Users, LayoutGrid, Bike } from "lucide-react";
+import {
+  Truck,
+  LogOut,
+  Users,
+  LayoutGrid,
+  Bike,
+  ShieldCheck,
+  ChevronDown,
+  Check,
+} from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
 import { apiFleetAdminDriverMode, setFleetToken } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
@@ -12,8 +21,13 @@ export default function FleetShell({ title, children, actions = null }) {
   const { team, logout, exitMember } = useFleet();
   const navigate = useNavigate();
   const [busyDriverMode, setBusyDriverMode] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const switcherRef = useRef(null);
   const isAdmin = team && team.role === "fleet_admin";
   const isDriver = team && team.role === "driver";
+  // Ο γρήγορος εναλλάκτης προφίλ (όπως στο POS) εμφανίζεται στη διαχείριση και
+  // στο προσωπικό driver προφίλ της διαχείρισης — όχι σε απλούς οδηγούς
+  const canSwitch = isAdmin || (isDriver && team.is_admin_driver);
 
   // Τίτλος tab: όνομα εταιρείας — FleetDeck. Και δικό του PWA manifest ώστε η
   // εγκατεστημένη εφαρμογή οδηγού να λέγεται FleetDeck (όχι OrderDeck).
@@ -29,18 +43,30 @@ export default function FleetShell({ title, children, actions = null }) {
     };
   }, [team]);
 
+  // Κλείσιμο του switcher με click εκτός
+  useEffect(() => {
+    if (!switcherOpen) return;
+    const onDown = (e) => {
+      if (switcherRef.current && !switcherRef.current.contains(e.target)) setSwitcherOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [switcherOpen]);
+
   const changeMember = async () => {
     await exitMember();
     navigate("/fleet/select");
   };
 
-  // «Λειτουργία διανομέα»: driver token του συντονιστή → driver κλειδί (κατά
-  // ρόλο token) — το session συντονιστή μένει άθικτο στο δικό του κλειδί.
-  const enterDriverMode = async () => {
+  // Προφίλ «Οδηγός»: driver token της διαχείρισης → driver κλειδί (κατά ρόλο
+  // token) — το session διαχείρισης μένει άθικτο στο δικό του κλειδί.
+  const switchToDriver = async () => {
+    if (isDriver) return setSwitcherOpen(false);
     setBusyDriverMode(true);
     try {
       const data = await apiFleetAdminDriverMode();
       setFleetToken(data.token);
+      setSwitcherOpen(false);
       navigate("/fleet/driver");
     } catch (err) {
       toast.error(formatApiError(err));
@@ -48,6 +74,16 @@ export default function FleetShell({ title, children, actions = null }) {
       setBusyDriverMode(false);
     }
   };
+
+  // Προφίλ «Διαχείριση»: το admin session ζει στο δικό του κλειδί — απλή
+  // αλλαγή επιφάνειας, ο provider επαναφορτώνει το σωστό token
+  const switchToAdmin = () => {
+    setSwitcherOpen(false);
+    if (!isAdmin) navigate("/fleet");
+  };
+
+  const menuItem =
+    "w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-white/5 disabled:opacity-60";
 
   return (
     <div className="min-h-screen bg-[#2A0E14] text-white">
@@ -82,29 +118,64 @@ export default function FleetShell({ title, children, actions = null }) {
                 >
                   <Users className="w-4 h-4" />
                 </Link>
-                <button
-                  onClick={enterDriverMode}
-                  disabled={busyDriverMode}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-white/5 text-xs text-neutral-300 disabled:opacity-60"
-                  title="Δουλέψτε ως οδηγός — claim και καταστάσεις όπως κάθε διανομέας"
-                  data-testid="fleet-driver-mode"
-                >
-                  <Bike className="w-4 h-4" />
-                  <span className="hidden sm:inline">Λειτουργία διανομέα</span>
-                </button>
               </>
             )}
-            {/* Επιστροφή συντονιστή από τη λειτουργία διανομέα — το admin session
-                ζει στο δικό του κλειδί, απλή αλλαγή επιφάνειας */}
-            {isDriver && team.is_admin_driver && (
-              <button
-                onClick={() => navigate("/fleet")}
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-white/5 text-xs text-neutral-300"
-                data-testid="fleet-back-to-dispatch"
-              >
-                <LayoutGrid className="w-4 h-4" />
-                Συντονιστής
-              </button>
+            {/* Chip προφίλ (πάνω δεξιά, όπως στο POS): tap → επιλογή προφίλ.
+                Εναλλαγή Διαχείριση ↔ προσωπικό προφίλ οδηγού, χωρίς logout */}
+            {canSwitch && (
+              <div className="relative" ref={switcherRef}>
+                <button
+                  onClick={() => setSwitcherOpen((v) => !v)}
+                  data-testid="fleet-profile-chip"
+                  className="flex items-center gap-1.5 px-2.5 h-9 rounded-md border border-[#723645] hover:border-flame text-xs font-bold transition-colors"
+                >
+                  {isDriver ? (
+                    <Bike className="w-3.5 h-3.5 text-flame" />
+                  ) : (
+                    <ShieldCheck className="w-3.5 h-3.5 text-gold" />
+                  )}
+                  <span className="hidden sm:inline">{isDriver ? "Οδηγός" : "Διαχείριση"}</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${
+                      switcherOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {switcherOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-1.5 w-52 bg-[#3D1620] border border-[#723645] rounded-lg shadow-xl shadow-black/40 overflow-hidden z-50"
+                    data-testid="fleet-profile-menu"
+                  >
+                    <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-widest font-bold text-neutral-500">
+                      Προφίλ
+                    </div>
+                    <button
+                      onClick={switchToAdmin}
+                      className={menuItem}
+                      data-testid="fleet-profile-admin"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-gold shrink-0" />
+                      <span className="font-semibold">Διαχείριση</span>
+                      {isAdmin && <Check className="w-4 h-4 ml-auto text-flame shrink-0" />}
+                    </button>
+                    <button
+                      onClick={switchToDriver}
+                      disabled={busyDriverMode}
+                      className={menuItem}
+                      data-testid="fleet-profile-driver"
+                    >
+                      <Bike className="w-4 h-4 text-flame shrink-0" />
+                      <div className="min-w-0">
+                        <span className="font-semibold block leading-tight">Οδηγός</span>
+                        <span className="text-[11px] text-neutral-500 block leading-tight">
+                          Claim & παραδόσεις όπως κάθε διανομέας
+                        </span>
+                      </div>
+                      {isDriver && <Check className="w-4 h-4 ml-auto text-flame shrink-0" />}
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
             {/* Αλλαγή μέλους μόνο στο dashboard — ο οδηγός μπαίνει πάντα στη
                 μία εταιρεία του λογαριασμού του, χωρίς switcher */}

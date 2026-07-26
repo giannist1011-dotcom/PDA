@@ -323,7 +323,7 @@ export default function FleetDriver() {
                     </button>
                     {o.problem ? (
                       <div className="mt-2 text-xs text-gold text-center font-semibold">
-                        ⚠️ Το πρόβλημα στάλθηκε — περιμένετε τον συντονιστή
+                        ⚠️ Το πρόβλημα στάλθηκε — περιμένετε τη διαχείριση
                       </div>
                     ) : (
                       <button

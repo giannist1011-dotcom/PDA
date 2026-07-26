@@ -311,7 +311,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - DeckPilot.jsx (13 γρ): DeckPilot@4
 - DeckView.jsx (269 γρ): BigCard@21, Panel@39, DeckView@49
 - Expenses.jsx (397 γρ): Expenses@32
-- FleetDispatch.jsx (146 γρ): FleetDispatch@14
+- FleetDispatch.jsx (195 γρ): FleetDispatch@17
 - FleetDriver.jsx (394 γρ): FleetDriver@42
 - FleetDriverLogin.jsx (249 γρ): FleetDriverLogin@19
 - FleetLogin.jsx (133 γρ): FleetLogin@9
@@ -370,12 +370,12 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - fleet/DriverHistory.jsx (92 γρ): DriverHistory@12
 - fleet/DriverStats.jsx (79 γρ): DriverStats@7
 - fleet/EditOrderModal.jsx (116 γρ): EditOrderModal@13
-- fleet/FleetShell.jsx (143 γρ): FleetShell@11
+- fleet/FleetShell.jsx (214 γρ): FleetShell@20
 - fleet/NewOrderForm.jsx (130 γρ): NewOrderForm@15
-- fleet/OrderCard.jsx (210 γρ): OrderCard@28
+- fleet/OrderCard.jsx (234 γρ): OrderCard@29
 - fleet/ProblemModal.jsx (81 γρ): ProblemModal@15
 - fleet/alerts.js (51 γρ)
-- fleet/utils.js (56 γρ)
+- fleet/utils.js (54 γρ)
 - history/CustomerDetailModal.jsx (119 γρ): CustomerDetailModal@5
 - history/CustomersTab.jsx (84 γρ): CustomersTab@4
 - history/OrderDetailModal.jsx (242 γρ): OrderDetailModal@32

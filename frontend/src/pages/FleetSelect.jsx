@@ -93,7 +93,7 @@ export default function FleetSelect() {
                     <span className="font-semibold truncate">{m.name}</span>
                   </div>
                   <div className="text-[11px] text-neutral-400 mt-1">
-                    {m.role === "fleet_admin" ? "Συντονιστής" : "Οδηγός"}
+                    {m.role === "fleet_admin" ? "Διαχείριση" : "Οδηγός"}
                   </div>
                 </button>
               ))}

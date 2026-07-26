@@ -23,7 +23,7 @@ const PLANS = [
     key: "fleet15",
     title: "Έως 15 προφίλ",
     price: "30 € / μήνα",
-    desc: "Για ομάδες μέχρι 15 διανομείς/συντονιστές.",
+    desc: "Για ομάδες μέχρι 15 προφίλ (διανομείς & διαχείριση).",
   },
   {
     key: "fleet30",
@@ -61,7 +61,7 @@ export default function FleetSignup() {
     if (form.password.length < 4)
       return setError("Ο κωδικός πρέπει να έχει τουλάχιστον 4 χαρακτήρες");
     if (!/^\d{4}$/.test(form.admin_pin))
-      return setError("Το PIN συντονιστή πρέπει να είναι 4 ψηφία");
+      return setError("Το PIN διαχείρισης πρέπει να είναι 4 ψηφία");
     setStep(1);
   };
 
@@ -104,7 +104,7 @@ export default function FleetSignup() {
             <>
               <h1 className="font-heading text-2xl font-bold mb-1">Εγγραφή εταιρείας</h1>
               <p className="text-sm text-neutral-400 mb-6">
-                Στοιχεία της εταιρείας διανομής και του συντονιστή
+                Στοιχεία της εταιρείας διανομής και της διαχείρισης
               </p>
 
               <div className="space-y-4">
@@ -172,7 +172,7 @@ export default function FleetSignup() {
                       className={inputCls}
                     />
                   </Field>
-                  <Field label="PIN συντονιστή">
+                  <Field label="PIN διαχείρισης">
                     <input
                       required
                       inputMode="numeric"

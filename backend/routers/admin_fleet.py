@@ -354,7 +354,7 @@ async def seed_fleet_demo(team_id: str) -> list:
             "status": status,
             "driver_id": driver["id"] if driver else None,
             "driver_name": driver["name"] if driver else None,
-            "created_by": "Συντονιστής",
+            "created_by": "Διαχείριση",
             "created_at": created,
             "claimed_at": created if driver else None,
             "delivered_at": (now - timedelta(minutes=max(mins - 20, 1))).isoformat()
@@ -447,7 +447,7 @@ async def admin_create_demo(body: DemoCreateIn, x_admin_password: Optional[str] 
         "customization": {},
     }
     await db.users.insert_one(doc)
-    team = await ensure_fleet_team_for_user(doc, admin_name="Συντονιστής")
+    team = await ensure_fleet_team_for_user(doc, admin_name="Διαχείριση")
     drivers = await seed_fleet_demo(team["id"])
     await set_demo_credentials(uid, {"drivers": drivers})
     return {
@@ -473,7 +473,7 @@ async def admin_reset_demo(uid: str, x_admin_password: Optional[str] = Header(No
         await db.fleet_members.insert_one({
             "id": str(uuid.uuid4())[:8],
             "team_id": team["id"],
-            "name": "Συντονιστής",
+            "name": "Διαχείριση",
             "role": "fleet_admin",
             "pin_hash": u.get("owner_pin_hash") or hash_password("0000"),
             "created_at": now_iso,

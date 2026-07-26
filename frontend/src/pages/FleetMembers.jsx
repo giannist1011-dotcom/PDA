@@ -173,7 +173,7 @@ export default function FleetMembers() {
                 <div className="min-w-0">
                   <span className="font-semibold truncate block leading-tight">{m.name}</span>
                   <span className="text-xs text-neutral-500 leading-tight">
-                    {m.role === "fleet_admin" ? "Συντονιστής" : "Οδηγός"}
+                    {m.role === "fleet_admin" ? "Διαχείριση" : "Οδηγός"}
                     {m.identifier ? ` · ${m.identifier}` : ""}
                   </span>
                 </div>
@@ -230,7 +230,7 @@ export default function FleetMembers() {
               <div className="flex gap-2">
                 {[
                   ["driver", "Οδηγός"],
-                  ["fleet_admin", "Συντονιστής"],
+                  ["fleet_admin", "Διαχείριση"],
                 ].map(([k, label]) => (
                   <button
                     key={k}

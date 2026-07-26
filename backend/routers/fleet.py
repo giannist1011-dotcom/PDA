@@ -130,7 +130,7 @@ async def get_fleet_member(team: dict = Depends(get_fleet_team)) -> dict:
 
 async def require_fleet_admin(team: dict = Depends(get_fleet_member)) -> dict:
     if team.get("role") != "fleet_admin":
-        raise HTTPException(403, "Απαιτείται πρόσβαση συντονιστή")
+        raise HTTPException(403, "Απαιτείται πρόσβαση διαχείρισης")
     return team
 
 
@@ -218,7 +218,7 @@ class FleetRegisterIn(BaseModel):
     city: str = Field(default="", max_length=60)
     email: EmailStr
     password: str = Field(min_length=4)
-    admin_name: str = Field(default="Συντονιστής", max_length=40)
+    admin_name: str = Field(default="Διαχείριση", max_length=40)
     admin_pin: str = Field(min_length=4, max_length=4)
 
 
@@ -301,7 +301,7 @@ EDIT_FIELD_LABELS = {
 
 
 # ============ UNIFIED AUTH (account_type στους users — όχι παράλληλο σύστημα) ============
-async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Συντονιστής") -> dict:
+async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Διαχείριση") -> dict:
     """Βρίσκει ή δημιουργεί το fleet_team ενός unified λογαριασμού (users.account_type).
 
     Καλείται από την εγγραφή (store plan με Fleet, /fleet/signup) και lazily από το
@@ -335,7 +335,7 @@ async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Συντονι�
     await db.fleet_members.insert_one({
         "id": str(uuid.uuid4())[:8],
         "team_id": team["id"],
-        "name": (admin_name or "").strip() or "Συντονιστής",
+        "name": (admin_name or "").strip() or "Διαχείριση",
         "role": "fleet_admin",
         "pin_hash": u.get("owner_pin_hash") or hash_password("0000"),
         "created_at": now,
@@ -364,7 +364,7 @@ async def fleet_signup(body: FleetSignupIn, request: Request):
     rate_limit(request, "fleet_signup", limit=5, window_seconds=3600)
     email = body.email.lower()
     if not valid_pin(body.admin_pin):
-        raise HTTPException(400, "Το PIN συντονιστή πρέπει να είναι 4 ψηφία")
+        raise HTTPException(400, "Το PIN διαχείρισης πρέπει να είναι 4 ψηφία")
     if await db.users.find_one({"email": email}):
         raise HTTPException(400, "Το email χρησιμοποιείται ήδη")
     if await db.fleet_teams.find_one({"email": email}):
@@ -445,7 +445,7 @@ async def fleet_register(body: FleetRegisterIn, request: Request):
     await db.fleet_members.insert_one({
         "id": str(uuid.uuid4())[:8],
         "team_id": tid,
-        "name": body.admin_name.strip() or "Συντονιστής",
+        "name": body.admin_name.strip() or "Διαχείριση",
         "role": "fleet_admin",
         "pin_hash": hash_password(body.admin_pin),
         "created_at": now,
@@ -557,7 +557,7 @@ async def fleet_update_member(mid: str, body: MemberIn, team: dict = Depends(req
             {"team_id": team["id"], "role": "fleet_admin"}
         )
         if admins <= 1:
-            raise HTTPException(400, "Πρέπει να υπάρχει τουλάχιστον ένας συντονιστής")
+            raise HTTPException(400, "Πρέπει να υπάρχει τουλάχιστον ένα προφίλ διαχείρισης")
     update = {"name": body.name.strip(), "role": body.role}
     if body.pin:
         if not valid_pin(body.pin):
@@ -579,7 +579,7 @@ async def fleet_delete_member(mid: str, team: dict = Depends(require_fleet_admin
             {"team_id": team["id"], "role": "fleet_admin"}
         )
         if admins <= 1:
-            raise HTTPException(400, "Δεν μπορεί να διαγραφεί ο τελευταίος συντονιστής")
+            raise HTTPException(400, "Δεν μπορεί να διαγραφεί το τελευταίο προφίλ διαχείρισης")
     await db.fleet_members.delete_one({"id": mid, "team_id": team["id"]})
     return {"ok": True}
 
@@ -701,7 +701,7 @@ async def fleet_admin_driver_mode(team: dict = Depends(require_fleet_admin)):
         m = {
             "id": str(uuid.uuid4())[:8],
             "team_id": team["id"],
-            "name": team["member_name"] or "Συντονιστής",
+            "name": team["member_name"] or "Διαχείριση",
             "role": "driver",
             "admin_member_id": team["member_id"],
             "created_at": datetime.now(timezone.utc).isoformat(),

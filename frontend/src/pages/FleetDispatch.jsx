@@ -1,20 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
 import { apiFleetBoard } from "@/lib/fleetApi";
 import FleetShell from "@/pages/fleet/FleetShell";
 import NewOrderForm from "@/pages/fleet/NewOrderForm";
 import OrderCard from "@/pages/fleet/OrderCard";
 import DayTotals from "@/pages/fleet/DayTotals";
-import { BOARD_COLUMNS, STATUS_META, fmtTime } from "@/pages/fleet/utils";
+import { fmtTime } from "@/pages/fleet/utils";
 
 const POLL_MS = 6000;
+const ACTIVE_STATUSES = ["waiting", "pickup", "enroute"];
 
-// Ο πίνακας λειτουργίας του συντονιστή: καταχώρηση παραγγελίας, στήλες ανά
-// κατάσταση (🔴→🟡→🟢→🔵), live feed γεγονότων, σύνολα ημέρας. Polling 6''.
+// Ο πίνακας διαχείρισης: καταχώρηση παραγγελίας, δύο tabs («Παραγγελίες» =
+// ενεργές 🔴🟡🟢, «Ολοκληρωμένες» = 🔵 σήμερα) με κάρτες, συμπτυσσόμενη
+// ζωντανή ροή κάτω από τα tabs, σύνολα ημέρας. Polling 6''.
 export default function FleetDispatch() {
   const { team } = useFleet();
   const [board, setBoard] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [tab, setTab] = useState("active");
+  const [showEvents, setShowEvents] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
 
   const load = useCallback(() => {
     apiFleetBoard()
@@ -34,7 +40,47 @@ export default function FleetDispatch() {
   const orders = board?.orders || [];
   const drivers = board?.drivers || [];
   const events = board?.events || [];
+  // Ενεργές: νεότερες πρώτα, ⚡ επείγουσες καρφιτσωμένες στην κορυφή
+  const active = orders
+    .filter((o) => ACTIVE_STATUSES.includes(o.status))
+    .sort((a, b) =>
+      !!b.urgent !== !!a.urgent ? (b.urgent ? 1 : -1) : b.created_at.localeCompare(a.created_at)
+    );
+  // Ολοκληρωμένες: πιο πρόσφατα παραδομένες πρώτα
+  const completed = orders
+    .filter((o) => o.status === "delivered")
+    .sort((a, b) =>
+      (b.delivered_at || b.created_at).localeCompare(a.delivered_at || a.created_at)
+    );
   const cancelled = orders.filter((o) => o.status === "cancelled");
+
+  const tabBtn = (key, label, count) => (
+    <button
+      onClick={() => setTab(key)}
+      data-testid={`fleet-tab-${key}`}
+      className={`h-12 rounded-lg font-bold text-sm transition-colors ${
+        tab === key
+          ? "bg-brand text-white"
+          : "bg-[#3D1620] border border-[#723645] text-neutral-300 hover:bg-[#4a1c28]"
+      }`}
+    >
+      {label}
+      <span className={tab === key ? "text-white/80" : "text-neutral-500"}> ({count})</span>
+    </button>
+  );
+
+  const cardsGrid = (list, empty) =>
+    list.length === 0 ? (
+      <div className="border border-dashed border-[#723645]/60 rounded-lg p-6 text-center text-sm text-neutral-500">
+        {empty}
+      </div>
+    ) : (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {list.map((o) => (
+          <OrderCard key={o.id} order={o} drivers={drivers} city={team?.city || ""} onChanged={load} />
+        ))}
+      </div>
+    );
 
   return (
     <FleetShell>
@@ -67,78 +113,81 @@ export default function FleetDispatch() {
           </div>
         )}
 
-        <div className="grid gap-4 lg:grid-cols-4">
-          {BOARD_COLUMNS.map((status) => {
-            const meta = STATUS_META[status];
-            const list = orders.filter((o) => o.status === status);
-            return (
-              <div key={status} data-testid={`fleet-column-${status}`}>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <span>{meta.emoji}</span>
-                  <span className="text-sm font-bold">{meta.label}</span>
-                  <span className="text-xs text-neutral-500">({list.length})</span>
-                </div>
-                <div className="space-y-2">
-                  {list.length === 0 ? (
-                    <div className="border border-dashed border-[#723645]/60 rounded-lg p-4 text-center text-xs text-neutral-600">
-                      Καμία παραγγελία
-                    </div>
-                  ) : (
-                    list.map((o) => (
-                      <OrderCard
-                        key={o.id}
-                        order={o}
-                        drivers={drivers}
-                        city={team?.city || ""}
-                        onChanged={load}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-2 gap-2">
+          {tabBtn("active", "Παραγγελίες", active.length)}
+          {tabBtn("done", "Ολοκληρωμένες", completed.length)}
         </div>
 
-        {cancelled.length > 0 && (
-          <div>
-            <div className="text-sm font-bold mb-2 text-neutral-400">
-              ⚪ Ακυρωμένες ({cancelled.length})
-            </div>
-            <div className="grid gap-2 md:grid-cols-4">
-              {cancelled.map((o) => (
-                <OrderCard
-                  key={o.id}
-                  order={o}
-                  drivers={drivers}
-                  city={team?.city || ""}
-                  onChanged={load}
-                />
-              ))}
-            </div>
-          </div>
+        {tab === "active" && (
+          <section data-testid="fleet-tab-panel-active">
+            {cardsGrid(active, "Καμία ενεργή παραγγελία")}
+          </section>
         )}
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <DayTotals refreshKey={refreshKey} />
-          <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-4">
-            <h2 className="font-heading font-bold text-sm mb-3">Ζωντανή ροή</h2>
-            {events.length === 0 ? (
-              <div className="text-xs text-neutral-500">Κανένα γεγονός σήμερα</div>
-            ) : (
-              <ul className="space-y-1.5 max-h-64 overflow-y-auto" data-testid="fleet-events">
-                {events.map((ev) => (
-                  <li key={ev.id} className="text-sm text-neutral-300 flex gap-2">
-                    <span className="text-xs text-neutral-500 shrink-0 w-10">
-                      {fmtTime(ev.created_at)}
-                    </span>
-                    <span>{ev.text}</span>
-                  </li>
-                ))}
-              </ul>
+        {tab === "done" && (
+          <section className="space-y-3" data-testid="fleet-tab-panel-done">
+            {cardsGrid(completed, "Καμία ολοκληρωμένη παραγγελία σήμερα")}
+            {cancelled.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setShowCancelled((v) => !v)}
+                  data-testid="fleet-cancelled-toggle"
+                  className="w-full h-11 rounded-lg border border-[#723645]/60 text-sm text-neutral-400 flex items-center justify-center gap-2 hover:bg-[#3D1620]"
+                >
+                  ⚪ Ακυρωμένες ({cancelled.length})
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${showCancelled ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {showCancelled && <div className="mt-3">{cardsGrid(cancelled, "")}</div>}
+              </div>
             )}
-          </div>
+          </section>
+        )}
+
+        {/* Ζωντανή ροή γεγονότων — συμπαγής συμπτυσσόμενη λωρίδα κάτω από τα
+            tabs (κλειστή δείχνει το τελευταίο γεγονός), όχι μαζί με τις κάρτες */}
+        <div className="bg-[#3D1620] border border-[#723645] rounded-lg">
+          <button
+            onClick={() => setShowEvents((v) => !v)}
+            data-testid="fleet-events-toggle"
+            className="w-full px-4 h-11 flex items-center gap-2 text-sm"
+          >
+            <span className="font-heading font-bold shrink-0">
+              Ζωντανή ροή{events.length ? ` (${events.length})` : ""}
+            </span>
+            {!showEvents && events.length > 0 && (
+              <span className="truncate text-xs text-neutral-400">
+                {fmtTime(events[0].created_at)} · {events[0].text}
+              </span>
+            )}
+            <ChevronDown
+              className={`w-4 h-4 ml-auto shrink-0 text-neutral-400 transition-transform ${
+                showEvents ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+          {showEvents && (
+            <div className="px-4 pb-3">
+              {events.length === 0 ? (
+                <div className="text-xs text-neutral-500">Κανένα γεγονός σήμερα</div>
+              ) : (
+                <ul className="space-y-1.5 max-h-64 overflow-y-auto" data-testid="fleet-events">
+                  {events.map((ev) => (
+                    <li key={ev.id} className="text-sm text-neutral-300 flex gap-2">
+                      <span className="text-xs text-neutral-500 shrink-0 w-10">
+                        {fmtTime(ev.created_at)}
+                      </span>
+                      <span>{ev.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
+
+        <DayTotals refreshKey={refreshKey} />
       </div>
     </FleetShell>
   );

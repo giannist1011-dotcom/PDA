@@ -21,7 +21,7 @@ export default function ProblemModal({ order, onClose, onReported }) {
     setBusy(true);
     try {
       await apiFleetReportProblem(order.id, reason, text.trim());
-      toast.success("Το πρόβλημα στάλθηκε στον συντονιστή");
+      toast.success("Το πρόβλημα στάλθηκε στη διαχείριση");
       onReported?.();
       onClose();
     } catch (err) {
@@ -72,7 +72,7 @@ export default function ProblemModal({ order, onClose, onReported }) {
           data-testid="fleet-problem-submit"
           className="w-full h-12 mt-3 rounded-lg bg-brand hover:bg-brand-hover text-white font-bold disabled:opacity-60"
         >
-          Αποστολή στον συντονιστή
+          Αποστολή στη διαχείριση
         </button>
       </div>
     </div>
