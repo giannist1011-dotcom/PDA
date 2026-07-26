@@ -41,6 +41,32 @@ export default function FleetDispatch() {
       <div className="space-y-4">
         <NewOrderForm city={team?.city || ""} onCreated={load} />
 
+        {drivers.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2" data-testid="fleet-drivers-strip">
+            <span className="text-[11px] uppercase tracking-widest font-bold text-neutral-500">
+              Οδηγοί
+            </span>
+            {drivers.map((d) => (
+              <span
+                key={d.id}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs ${
+                  d.on_shift
+                    ? "border-[#34C759]/50 bg-[#34C759]/10 text-white"
+                    : "border-[#723645] text-neutral-500"
+                }`}
+                title={d.on_shift ? "Σε βάρδια" : "Εκτός βάρδιας"}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    d.on_shift ? "bg-[#34C759]" : "bg-neutral-600"
+                  }`}
+                />
+                {d.name}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="grid gap-4 lg:grid-cols-4">
           {BOARD_COLUMNS.map((status) => {
             const meta = STATUS_META[status];

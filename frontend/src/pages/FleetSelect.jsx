@@ -58,7 +58,7 @@ export default function FleetSelect() {
           <span className="font-heading text-xl font-bold">{team.name}</span>
         </div>
         <p className="text-center text-sm text-neutral-400 mb-6">
-          OrderDeck Fleet — επιλέξτε μέλος
+          FleetDeck — επιλέξτε μέλος
         </p>
 
         <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-6">

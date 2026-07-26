@@ -355,7 +355,7 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
                   />
                 </div>
                 <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#2A0E14] border border-[#723645] rounded-md">
-                  <div className="text-sm font-semibold">Add-on: Fleet (5,00 €/μήνα)</div>
+                  <div className="text-sm font-semibold">Add-on: FleetDeck (5,00 €/μήνα)</div>
                   <Switch
                     checked={!!shop.addons?.fleet}
                     disabled={busy}

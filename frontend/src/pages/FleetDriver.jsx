@@ -1,13 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { CloudOff, ChevronDown } from "lucide-react";
+import { CloudOff, ChevronDown, Volume2, VolumeX, AlertTriangle } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
-import { apiFleetDriverBoard, apiFleetClaimOrder, apiFleetOrderStatus } from "@/lib/fleetApi";
+import {
+  apiFleetDriverBoard,
+  apiFleetClaimOrder,
+  apiFleetOrderStatus,
+  apiFleetDriverShift,
+} from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
 import FleetShell from "@/pages/fleet/FleetShell";
 import { DriverCard, EmptyState } from "@/pages/fleet/DriverCard";
 import DriverStats from "@/pages/fleet/DriverStats";
 import DriverHistory from "@/pages/fleet/DriverHistory";
+import ProblemModal from "@/pages/fleet/ProblemModal";
+import { notify, isMuted, setMuted } from "@/pages/fleet/alerts";
 
 const POLL_MS = 5000;
 const QUEUE_KEY = "orderdeck_fleet_status_queue";
@@ -40,6 +47,16 @@ export default function FleetDriver() {
   const [tab, setTab] = useState(null); // null μέχρι το πρώτο board → default ανά ενεργές
   const [showDelivered, setShowDelivered] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [muted, setMutedState] = useState(isMuted());
+  const [shiftBusy, setShiftBusy] = useState(false);
+  const [problemOrder, setProblemOrder] = useState(null);
+  // Γνωστή κατάσταση για ανίχνευση αλλαγών μεταξύ polls (ειδοποιήσεις)
+  const seenRef = useRef(null); // {available:Set, mine:Set, updated:Map(id→updated_at)}
+
+  const toggleMute = () => {
+    setMuted(!muted);
+    setMutedState(!muted);
+  };
 
   const flushQueue = useCallback(async () => {
     const q = readQueue();
@@ -57,16 +74,52 @@ export default function FleetDriver() {
     setPending(rest.length);
   }, []);
 
+  // Σύγκριση με το προηγούμενο poll → ήχος/δόνηση για νέα ελεύθερη (μόνο σε
+  // βάρδια), απευθείας ανάθεση από συντονιστή, ή επεξεργασία claimed παραγγελίας
+  const detectChanges = useCallback((b) => {
+    const prev = seenRef.current;
+    if (prev) {
+      let ring = false;
+      for (const o of b.available) {
+        if (!prev.available.has(o.id) && !prev.mine.has(o.id) && b.on_shift) {
+          toast.message(o.urgent ? `⚡ Επείγουσα παραγγελία #${o.number}` : `Νέα παραγγελία #${o.number}`);
+          ring = true;
+        }
+      }
+      for (const o of b.mine) {
+        // Το δικό μας claim μπαίνει στο seenRef άμεσα (στο claim) — ό,τι νέο
+        // εμφανίζεται εδώ είναι απευθείας ανάθεση από τον συντονιστή
+        if (!prev.mine.has(o.id)) {
+          toast.message(`Σας ανατέθηκε η #${o.number}`);
+          ring = true;
+        } else if (prev.mine.has(o.id)) {
+          const prevUpd = prev.updated.get(o.id);
+          if (o.updated_at && o.updated_at !== prevUpd) {
+            toast.message(`Η #${o.number} ενημερώθηκε`);
+            ring = true;
+          }
+        }
+      }
+      if (ring) notify();
+    }
+    seenRef.current = {
+      available: new Set(b.available.map((o) => o.id)),
+      mine: new Set(b.mine.map((o) => o.id)),
+      updated: new Map(b.mine.map((o) => [o.id, o.updated_at])),
+    };
+  }, []);
+
   const load = useCallback(() => {
     flushQueue().then(() =>
       apiFleetDriverBoard()
         .then((b) => {
+          detectChanges(b);
           setBoard(b);
           setTab((t) => t ?? (b.mine.length ? "mine" : "free"));
         })
         .catch(() => {})
     );
-  }, [flushQueue]);
+  }, [flushQueue, detectChanges]);
 
   useEffect(() => {
     load();
@@ -79,6 +132,11 @@ export default function FleetDriver() {
     try {
       const doc = await apiFleetClaimOrder(o.id);
       toast.success(`Η #${o.number} είναι δική σας`);
+      // Στο seenRef αμέσως — να μην ηχήσει «Σας ανατέθηκε» στο επόμενο poll
+      if (seenRef.current) {
+        seenRef.current.mine.add(o.id);
+        seenRef.current.available.delete(o.id);
+      }
       // Άμεση μετακίνηση στο «Δικές μου» + αλλαγή tab, πριν το επόμενο poll
       setBoard((b) =>
         b && {
@@ -134,9 +192,24 @@ export default function FleetDriver() {
     }
   };
 
+  const toggleShift = async () => {
+    if (!board) return;
+    setShiftBusy(true);
+    try {
+      const r = await apiFleetDriverShift(!board.on_shift);
+      setBoard((b) => b && { ...b, on_shift: r.on_shift });
+      toast.success(r.on_shift ? "Καλή βάρδια! 🛵" : "Τέλος βάρδιας — καλή ξεκούραση");
+    } catch (err) {
+      toast.error(formatApiError(err));
+    } finally {
+      setShiftBusy(false);
+    }
+  };
+
   const available = board?.available || [];
   const mine = board?.mine || [];
   const delivered = board?.delivered || [];
+  const onShift = !!board?.on_shift;
 
   const tabBtn = (key, label, count = null) => (
     <button
@@ -158,14 +231,45 @@ export default function FleetDriver() {
   return (
     <FleetShell
       actions={
-        pending > 0 ? (
-          <span className="flex items-center gap-1 text-[11px] text-gold px-2">
-            <CloudOff className="w-3.5 h-3.5" /> {pending}
-          </span>
-        ) : null
+        <>
+          {pending > 0 && (
+            <span className="flex items-center gap-1 text-[11px] text-gold px-2">
+              <CloudOff className="w-3.5 h-3.5" /> {pending}
+            </span>
+          )}
+          <button
+            onClick={toggleMute}
+            title={muted ? "Ενεργοποίηση ήχου ειδοποιήσεων" : "Σίγαση ειδοποιήσεων"}
+            data-testid="fleet-drv-mute"
+            className={`p-2 rounded-md hover:bg-white/5 ${muted ? "text-neutral-500" : "text-gold"}`}
+          >
+            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+        </>
       }
     >
       <div className="max-w-md mx-auto space-y-4">
+        {board && (
+          <button
+            onClick={toggleShift}
+            disabled={shiftBusy}
+            data-testid="fleet-drv-shift"
+            className={`w-full h-12 rounded-lg font-bold text-sm border transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${
+              onShift
+                ? "border-[#34C759]/50 bg-[#34C759]/10 text-[#5BD778]"
+                : "border-[#723645] bg-[#3D1620] text-neutral-300"
+            }`}
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${onShift ? "bg-[#34C759]" : "bg-neutral-600"}`} />
+            {onShift ? "Σε βάρδια — Τέλος βάρδιας;" : "Ξεκινάω βάρδια 🛵"}
+          </button>
+        )}
+        {board && !onShift && (
+          <div className="text-[11px] text-neutral-500 text-center -mt-2">
+            Εκτός βάρδιας δεν θα ακούτε ειδοποιήσεις για νέες παραγγελίες
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-2">
           {tabBtn("free", "Ελεύθερες 🔴", available.length)}
           {tabBtn("mine", "Δικές μου", mine.length)}
@@ -217,6 +321,20 @@ export default function FleetDriver() {
                     >
                       {NEXT_ACTION[o.status]?.label}
                     </button>
+                    {o.problem ? (
+                      <div className="mt-2 text-xs text-gold text-center font-semibold">
+                        ⚠️ Το πρόβλημα στάλθηκε — περιμένετε τον συντονιστή
+                      </div>
+                    ) : (
+                      <button
+                        disabled={busyId === o.id}
+                        onClick={() => setProblemOrder(o)}
+                        data-testid={`fleet-problem-btn-${o.id}`}
+                        className="w-full h-10 mt-2 rounded-lg border border-[#723645]/60 text-xs text-neutral-400 flex items-center justify-center gap-1.5 active:bg-[#3D1620]"
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5" /> Πρόβλημα
+                      </button>
+                    )}
                   </DriverCard>
                 ))}
               </div>
@@ -262,6 +380,14 @@ export default function FleetDriver() {
 
         {tab === "stats" && <DriverStats />}
       </div>
+
+      {problemOrder && (
+        <ProblemModal
+          order={problemOrder}
+          onClose={() => setProblemOrder(null)}
+          onReported={load}
+        />
+      )}
     </FleetShell>
   );
 }

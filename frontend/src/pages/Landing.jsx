@@ -357,7 +357,7 @@ export default function Landing() {
           <div className="flex-1">
             <h3 className="font-heading font-bold text-xl mb-1">Είσαι εταιρία delivery;</h3>
             <p className="text-sm md:text-base text-neutral-400 leading-relaxed">
-              Το OrderDeck Fleet οργανώνει τους διανομείς σου: παραγγελίες ημέρας, ανάθεση με ένα
+              Το FleetDeck οργανώνει τους διανομείς σου: παραγγελίες ημέρας, ανάθεση με ένα
               tap και σύνολα ανά οδηγό — όλα από το κινητό.
             </p>
           </div>
@@ -366,7 +366,7 @@ export default function Landing() {
             data-testid="landing-fleet-cta"
             className="h-12 px-6 rounded-xl border border-flame/50 hover:border-flame text-flame font-bold flex items-center justify-center gap-2 transition-colors shrink-0"
           >
-            Ξεκίνα με το Fleet
+            Ξεκίνα με το FleetDeck
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

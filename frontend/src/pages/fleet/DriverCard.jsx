@@ -1,5 +1,12 @@
-import { MapPin, StickyNote, Timer } from "lucide-react";
-import { STATUS_META, ageColorClass, fmtTime, mapsUrl, minutesSince } from "./utils";
+import { MapPin, StickyNote, Timer, Zap, Pencil } from "lucide-react";
+import {
+  STATUS_META,
+  EDIT_FIELD_LABELS,
+  ageColorClass,
+  fmtTime,
+  mapsUrl,
+  minutesSince,
+} from "./utils";
 
 // Κάρτα παραγγελίας οδηγού — module-level ώστε να μην γίνεται remount σε κάθε poll.
 // Χρονόμετρο ηλικίας: σε αναμονή → από την καταχώρηση (με χρώμα όσο περιμένει),
@@ -8,11 +15,20 @@ export function DriverCard({ o, city, dim = false, showStatus = false, children 
   const ageIso = o.status === "waiting" ? o.created_at : o.claimed_at;
   const mins = ["waiting", "pickup", "enroute"].includes(o.status) ? minutesSince(ageIso) : null;
   const ageCls = o.status === "waiting" ? ageColorClass(mins) : "text-neutral-500";
+  const urgent = o.urgent && o.status === "waiting";
+  const edited = ["pickup", "enroute"].includes(o.status) && o.updated_fields?.length;
   return (
     <div
-      className={`bg-[#3D1620] border border-[#723645] rounded-lg p-4 ${dim ? "opacity-60" : ""}`}
+      className={`bg-[#3D1620] border rounded-lg p-4 ${dim ? "opacity-60" : ""} ${
+        urgent ? "border-gold ring-1 ring-gold/40" : "border-[#723645]"
+      }`}
       data-testid={`fleet-drv-order-${o.id}`}
     >
+      {urgent && (
+        <div className="flex items-center gap-1 mb-1.5 text-xs font-bold text-gold">
+          <Zap className="w-3.5 h-3.5" /> ΕΠΕΙΓΟΝ
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <span className="font-bold text-lg">#{o.number}</span>
         <span className="truncate text-neutral-300">{o.pickup_name}</span>
@@ -42,6 +58,15 @@ export function DriverCard({ o, city, dim = false, showStatus = false, children 
           {STATUS_META[o.status]?.emoji} {STATUS_META[o.status]?.label}
         </span>
       )}
+      {edited ? (
+        <div
+          className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-gold"
+          data-testid={`fleet-drv-updated-${o.id}`}
+        >
+          <Pencil className="w-3.5 h-3.5" />
+          Ενημερώθηκε: {o.updated_fields.map((f) => EDIT_FIELD_LABELS[f] || f).join(", ")}
+        </div>
+      ) : null}
       {o.notes && (
         <div className="flex items-start gap-1.5 mt-2 text-sm text-neutral-400">
           <StickyNote className="w-4 h-4 shrink-0 mt-0.5" />

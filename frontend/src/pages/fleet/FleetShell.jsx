@@ -6,7 +6,7 @@ import { useFleet } from "@/context/FleetAuthContext";
 import { apiFleetAdminDriverMode, setFleetToken } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
 
-// Κοινό κέλυφος των Fleet σελίδων: OrderDeck Fleet branding + δυναμικό όνομα
+// Κοινό κέλυφος των FleetDeck σελίδων: FleetDeck branding + δυναμικό όνομα
 // εταιρείας στο header. Δεν χρησιμοποιεί το AppShell των μαγαζιών.
 export default function FleetShell({ title, children, actions = null }) {
   const { team, logout, exitMember } = useFleet();
@@ -15,12 +15,17 @@ export default function FleetShell({ title, children, actions = null }) {
   const isAdmin = team && team.role === "fleet_admin";
   const isDriver = team && team.role === "driver";
 
-  // Τίτλος tab: όνομα εταιρείας — OrderDeck Fleet
+  // Τίτλος tab: όνομα εταιρείας — FleetDeck. Και δικό του PWA manifest ώστε η
+  // εγκατεστημένη εφαρμογή οδηγού να λέγεται FleetDeck (όχι OrderDeck).
   useEffect(() => {
     const name = team && team !== false ? team.name : null;
-    document.title = name ? `${name} — OrderDeck Fleet` : "OrderDeck Fleet";
+    document.title = name ? `${name} — FleetDeck` : "FleetDeck";
+    const link = document.querySelector('link[rel="manifest"]');
+    const prev = link?.getAttribute("href");
+    if (link) link.setAttribute("href", "/manifest-fleet.json");
     return () => {
       document.title = "OrderDeck — POS για την εστίασή σου";
+      if (link && prev) link.setAttribute("href", prev);
     };
   }, [team]);
 
@@ -51,10 +56,10 @@ export default function FleetShell({ title, children, actions = null }) {
           <Truck className="w-5 h-5 text-flame shrink-0" />
           <div className="min-w-0">
             <div className="font-heading font-bold leading-tight truncate">
-              {team && team !== false ? team.name : "OrderDeck Fleet"}
+              {team && team !== false ? team.name : "FleetDeck"}
             </div>
             <div className="text-[11px] text-neutral-400 leading-tight">
-              OrderDeck Fleet{team?.member_name ? ` · ${team.member_name}` : ""}
+              FleetDeck{team?.member_name ? ` · ${team.member_name}` : ""}
             </div>
           </div>
           <div className="ml-auto flex items-center gap-1">

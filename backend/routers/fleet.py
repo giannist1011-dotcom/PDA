@@ -258,6 +258,13 @@ class FleetOrderIn(BaseModel):
     pickup_name: str = Field(min_length=1, max_length=80)
     address: str = Field(min_length=1, max_length=160)
     notes: str = Field(default="", max_length=300)
+    urgent: bool = False
+
+
+class FleetOrderEditIn(BaseModel):
+    pickup_name: str = Field(min_length=1, max_length=80)
+    address: str = Field(min_length=1, max_length=160)
+    notes: str = Field(default="", max_length=300)
 
 
 class StatusIn(BaseModel):
@@ -266,6 +273,31 @@ class StatusIn(BaseModel):
 
 class AssignIn(BaseModel):
     member_id: Optional[str] = None  # None → επιστροφή σε αναμονή (αποδέσμευση)
+
+
+class UrgentIn(BaseModel):
+    urgent: bool
+
+
+class ShiftIn(BaseModel):
+    on: bool
+
+
+class ProblemIn(BaseModel):
+    reason: Literal["no_answer", "wrong_address", "other"]
+    text: str = Field(default="", max_length=300)
+
+
+PROBLEM_LABELS = {
+    "no_answer": "Δεν απαντάει",
+    "wrong_address": "Λάθος διεύθυνση",
+    "other": "Άλλο",
+}
+EDIT_FIELD_LABELS = {
+    "pickup_name": "Παραλαβή",
+    "address": "Διεύθυνση",
+    "notes": "Σημείωση",
+}
 
 
 # ============ UNIFIED AUTH (account_type στους users — όχι παράλληλο σύστημα) ============
@@ -283,7 +315,7 @@ async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Συντονι�
     if await db.fleet_teams.find_one({"email": email}):
         # Legacy standalone εταιρεία με το ίδιο email — δεν την υιοθετούμε σιωπηλά
         raise HTTPException(
-            409, "Υπάρχει ήδη εταιρεία Fleet με αυτό το email — επικοινωνήστε με την υποστήριξη"
+            409, "Υπάρχει ήδη εταιρεία FleetDeck με αυτό το email — επικοινωνήστε με την υποστήριξη"
         )
     now = datetime.now(timezone.utc).isoformat()
     invite = new_invite_code()
@@ -380,7 +412,7 @@ async def fleet_exchange(user: dict = Depends(get_current_user)):
         "fleet",
         "orderdeck_fleet",
     ):
-        raise HTTPException(403, "Ο λογαριασμός σας δεν περιλαμβάνει το OrderDeck Fleet")
+        raise HTTPException(403, "Ο λογαριασμός σας δεν περιλαμβάνει το FleetDeck")
     team = await ensure_fleet_team_for_user(user)
     return {"token": create_fleet_token(team["id"]), "team": public_team(team)}
 
@@ -696,6 +728,8 @@ async def fleet_create_order(body: FleetOrderIn, team: dict = Depends(require_fl
         "pickup_name": body.pickup_name.strip(),
         "address": body.address.strip(),
         "notes": body.notes.strip(),
+        "urgent": bool(body.urgent),
+        "problem": None,
         "status": "waiting",
         "driver_id": None,
         "driver_name": None,
@@ -705,7 +739,8 @@ async def fleet_create_order(body: FleetOrderIn, team: dict = Depends(require_fl
         "delivered_at": None,
     }
     await db.fleet_orders.insert_one(doc)
-    await add_event(team["id"], f"Νέα παραγγελία #{number} · {doc['pickup_name']}")
+    prefix = "⚡ Επείγουσα παραγγελία" if doc["urgent"] else "Νέα παραγγελία"
+    await add_event(team["id"], f"{prefix} #{number} · {doc['pickup_name']}")
     return public_order(doc)
 
 
@@ -723,8 +758,11 @@ async def fleet_board(date: Optional[str] = None, team: dict = Depends(require_f
         {"_id": 0, "team_id": 0},
     ).sort("created_at", -1).to_list(40)
     drivers = await db.fleet_members.find(
-        {"team_id": team["id"], "role": "driver"}, {"_id": 0, "id": 1, "name": 1}
+        {"team_id": team["id"], "role": "driver"},
+        {"_id": 0, "id": 1, "name": 1, "on_shift": 1},
     ).sort("created_at", 1).to_list(200)
+    for d in drivers:
+        d["on_shift"] = bool(d.get("on_shift"))
     return {"date": day, "orders": orders, "events": events, "drivers": drivers}
 
 
@@ -733,9 +771,10 @@ async def fleet_driver_board(team: dict = Depends(get_fleet_member)):
     """Η οθόνη του οδηγού: ελεύθερες + δικές του σημερινές παραγγελίες (ένα poll)."""
     start, end = local_day_range(athens_today())
     day_q = {"team_id": team["id"], "created_at": {"$gte": start, "$lt": end}}
+    # Οι επείγουσες (⚡) πρώτες, μετά οι παλαιότερες
     available = await db.fleet_orders.find(
         {**day_q, "status": "waiting"}, {"_id": 0, "team_id": 0}
-    ).sort("created_at", 1).to_list(200)
+    ).sort([("urgent", -1), ("created_at", 1)]).to_list(200)
     mine = await db.fleet_orders.find(
         {**day_q, "driver_id": team["member_id"], "status": {"$in": ["pickup", "enroute"]}},
         {"_id": 0, "team_id": 0},
@@ -744,7 +783,16 @@ async def fleet_driver_board(team: dict = Depends(get_fleet_member)):
         {**day_q, "driver_id": team["member_id"], "status": "delivered"},
         {"_id": 0, "team_id": 0},
     ).sort("created_at", -1).to_list(200)
-    return {"available": available, "mine": mine, "delivered": delivered, "delivered_today": len(delivered)}
+    me = await db.fleet_members.find_one(
+        {"id": team["member_id"], "team_id": team["id"]}, {"_id": 0, "on_shift": 1}
+    )
+    return {
+        "available": available,
+        "mine": mine,
+        "delivered": delivered,
+        "delivered_today": len(delivered),
+        "on_shift": bool(me and me.get("on_shift")),
+    }
 
 
 @router.post("/fleet/orders/{oid}/claim")
@@ -787,9 +835,10 @@ async def fleet_order_status(oid: str, body: StatusIn, team: dict = Depends(get_
     update = {"status": body.status}
     if body.status == "delivered":
         update["delivered_at"] = datetime.now(timezone.utc).isoformat()
+        update["problem"] = None  # η παράδοση κλείνει και τυχόν ανοιχτό πρόβλημα
     if body.status == "waiting":
-        # Επιστροφή σε αναμονή (admin) → αποδέσμευση οδηγού
-        update.update({"driver_id": None, "driver_name": None, "claimed_at": None})
+        # Επιστροφή σε αναμονή (admin) → αποδέσμευση οδηγού + καθαρό πρόβλημα
+        update.update({"driver_id": None, "driver_name": None, "claimed_at": None, "problem": None})
     await db.fleet_orders.update_one({"id": oid, "team_id": team["id"]}, {"$set": update})
     labels = {"waiting": "σε αναμονή", "pickup": "σε παραλαβή",
               "enroute": "σε διαδρομή", "delivered": "παραδόθηκε"}
@@ -808,7 +857,8 @@ async def fleet_assign_order(oid: str, body: AssignIn, team: dict = Depends(requ
     if body.member_id is None:
         await db.fleet_orders.update_one(
             {"id": oid, "team_id": team["id"]},
-            {"$set": {"status": "waiting", "driver_id": None, "driver_name": None, "claimed_at": None}},
+            {"$set": {"status": "waiting", "driver_id": None, "driver_name": None,
+                      "claimed_at": None, "problem": None}},
         )
         await add_event(team["id"], f"Η #{o['number']} επέστρεψε σε αναμονή")
         return {"ok": True}
@@ -821,6 +871,7 @@ async def fleet_assign_order(oid: str, body: AssignIn, team: dict = Depends(requ
             "driver_id": m["id"],
             "driver_name": m["name"],
             "claimed_at": datetime.now(timezone.utc).isoformat(),
+            "problem": None,  # νέος οδηγός → καθαρή αρχή
             # Αν ήταν σε αναμονή, η ανάθεση την προχωράει σε παραλαβή
             **({"status": "pickup"} if o["status"] == "waiting" else {}),
         }},
@@ -841,6 +892,130 @@ async def fleet_cancel_order(oid: str, team: dict = Depends(require_fleet_admin)
     )
     await add_event(team["id"], f"Η #{o['number']} ακυρώθηκε")
     return {"ok": True}
+
+
+@router.put("/fleet/orders/{oid}")
+async def fleet_edit_order(
+    oid: str, body: FleetOrderEditIn, team: dict = Depends(require_fleet_admin)
+):
+    """Επεξεργασία παραγγελίας από τον συντονιστή. Πριν το claim ελεύθερη· μετά,
+    η αποθήκευση σημαδεύει updated_at/updated_fields ώστε ο οδηγός να δει
+    ειδοποίηση («Η #Χ ενημερώθηκε») με τα αλλαγμένα πεδία στο επόμενο poll."""
+    o = await db.fleet_orders.find_one({"id": oid, "team_id": team["id"]})
+    if not o:
+        raise HTTPException(404, "Η παραγγελία δεν βρέθηκε")
+    if o["status"] in ("delivered", "cancelled"):
+        raise HTTPException(400, "Η παραγγελία έχει ολοκληρωθεί")
+    changed = [
+        f for f in EDIT_FIELD_LABELS
+        if getattr(body, f).strip() != (o.get(f) or "")
+    ]
+    if not changed:
+        return {"ok": True, "changed": []}
+    update = {f: getattr(body, f).strip() for f in changed}
+    if o.get("driver_id"):
+        update["updated_at"] = datetime.now(timezone.utc).isoformat()
+        update["updated_fields"] = changed
+    await db.fleet_orders.update_one({"id": oid, "team_id": team["id"]}, {"$set": update})
+    labels = ", ".join(EDIT_FIELD_LABELS[f] for f in changed)
+    await add_event(team["id"], f"Η #{o['number']} ενημερώθηκε ({labels})")
+    return {"ok": True, "changed": changed}
+
+
+@router.post("/fleet/orders/{oid}/urgent")
+async def fleet_set_urgent(oid: str, body: UrgentIn, team: dict = Depends(require_fleet_admin)):
+    """«⚡ Επείγον»: καρφιτσώνει την παραγγελία πρώτη στις «Ελεύθερες» των οδηγών."""
+    o = await db.fleet_orders.find_one({"id": oid, "team_id": team["id"]})
+    if not o:
+        raise HTTPException(404, "Η παραγγελία δεν βρέθηκε")
+    if o["status"] in ("delivered", "cancelled"):
+        raise HTTPException(400, "Η παραγγελία έχει ολοκληρωθεί")
+    await db.fleet_orders.update_one(
+        {"id": oid, "team_id": team["id"]}, {"$set": {"urgent": bool(body.urgent)}}
+    )
+    if body.urgent:
+        await add_event(team["id"], f"⚡ Η #{o['number']} σημάνθηκε ως επείγουσα")
+    else:
+        await add_event(team["id"], f"Η #{o['number']} δεν είναι πια επείγουσα")
+    return {"ok": True, "urgent": bool(body.urgent)}
+
+
+# ============ ΠΡΟΒΛΗΜΑΤΑ ΠΑΡΑΔΟΣΗΣ ============
+@router.post("/fleet/orders/{oid}/problem")
+async def fleet_report_problem(oid: str, body: ProblemIn, team: dict = Depends(get_fleet_member)):
+    """Ο οδηγός σημαίνει πρόβλημα σε claimed παραγγελία του (Δεν απαντάει /
+    Λάθος διεύθυνση / Άλλο + κείμενο) → σημαία στον πίνακα + ροή. Η επίλυση
+    γίνεται από τον συντονιστή (επεξεργασία, αποδέσμευση ή ακύρωση)."""
+    o = await db.fleet_orders.find_one({"id": oid, "team_id": team["id"]})
+    if not o:
+        raise HTTPException(404, "Η παραγγελία δεν βρέθηκε")
+    if o["status"] not in ("pickup", "enroute"):
+        raise HTTPException(400, "Η παραγγελία δεν είναι σε εξέλιξη")
+    if team["role"] != "fleet_admin" and o.get("driver_id") != team["member_id"]:
+        raise HTTPException(403, "Δεν είναι δική σας παραγγελία")
+    problem = {
+        "reason": body.reason,
+        "text": body.text.strip(),
+        "by": team["member_name"],
+        "at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.fleet_orders.update_one(
+        {"id": oid, "team_id": team["id"]}, {"$set": {"problem": problem}}
+    )
+    label = PROBLEM_LABELS[body.reason]
+    extra = f" — {problem['text']}" if problem["text"] else ""
+    await add_event(
+        team["id"], f"⚠️ Πρόβλημα στην #{o['number']}: {label}{extra} ({team['member_name']})"
+    )
+    return {"ok": True}
+
+
+@router.post("/fleet/orders/{oid}/problem/resolve")
+async def fleet_resolve_problem(oid: str, team: dict = Depends(require_fleet_admin)):
+    o = await db.fleet_orders.find_one({"id": oid, "team_id": team["id"]})
+    if not o:
+        raise HTTPException(404, "Η παραγγελία δεν βρέθηκε")
+    if not o.get("problem"):
+        return {"ok": True}
+    await db.fleet_orders.update_one(
+        {"id": oid, "team_id": team["id"]}, {"$set": {"problem": None}}
+    )
+    await add_event(team["id"], f"Το πρόβλημα της #{o['number']} επιλύθηκε")
+    return {"ok": True}
+
+
+# ============ ΒΑΡΔΙΕΣ ΟΔΗΓΩΝ ============
+@router.post("/fleet/driver/shift")
+async def fleet_driver_shift(body: ShiftIn, team: dict = Depends(get_fleet_member)):
+    """«Ξεκινάω/Τέλος βάρδιας»: on_shift στο μέλος (πράσινη κουκκίδα στον πίνακα,
+    ειδοποιήσεις νέων παραγγελιών μόνο σε βάρδια). Οι ολοκληρωμένες βάρδιες
+    γράφονται στο fleet_shifts και τροφοδοτούν τα στατιστικά του οδηγού."""
+    m = await db.fleet_members.find_one({"id": team["member_id"], "team_id": team["id"]})
+    if not m:
+        raise HTTPException(404, "Το μέλος δεν βρέθηκε")
+    now = datetime.now(timezone.utc).isoformat()
+    if body.on and not m.get("on_shift"):
+        await db.fleet_members.update_one(
+            {"id": m["id"], "team_id": team["id"]},
+            {"$set": {"on_shift": True, "shift_started_at": now}},
+        )
+        await add_event(team["id"], f"🟢 Ο/Η {team['member_name']} ξεκίνησε βάρδια")
+    elif not body.on and m.get("on_shift"):
+        await db.fleet_members.update_one(
+            {"id": m["id"], "team_id": team["id"]},
+            {"$set": {"on_shift": False, "shift_started_at": None}},
+        )
+        if m.get("shift_started_at"):
+            await db.fleet_shifts.insert_one({
+                "id": str(uuid.uuid4()),
+                "team_id": team["id"],
+                "member_id": m["id"],
+                "member_name": team["member_name"],
+                "started_at": m["shift_started_at"],
+                "ended_at": now,
+            })
+        await add_event(team["id"], f"Ο/Η {team['member_name']} τελείωσε τη βάρδια")
+    return {"on_shift": bool(body.on)}
 
 
 # ============ ΟΔΗΓΟΣ: ΣΤΑΤΙΣΤΙΚΑ & ΙΣΤΟΡΙΚΟ ============
@@ -867,10 +1042,38 @@ async def fleet_driver_stats(team: dict = Depends(get_fleet_member)):
         {"$sort": {"orders": -1, "_id": 1}},
         {"$limit": 8},
     ]).to_list(8)
+
+    # Ώρες βάρδιας (σήμερα/εβδομάδα): κλειστές βάρδιες + η τρέχουσα ανοιχτή
+    def _hours(sessions, floor_iso):
+        secs = 0
+        for s in sessions:
+            try:
+                a = datetime.fromisoformat(max(s["started_at"], floor_iso))
+                b = datetime.fromisoformat(s["ended_at"])
+                secs += max(0, (b - a).total_seconds())
+            except (KeyError, ValueError, TypeError):
+                continue
+        return round(secs / 3600, 1)
+
+    shifts = await db.fleet_shifts.find(
+        {"team_id": team["id"], "member_id": team["member_id"], "ended_at": {"$gte": w_start}},
+        {"_id": 0, "started_at": 1, "ended_at": 1},
+    ).to_list(200)
+    me = await db.fleet_members.find_one(
+        {"id": team["member_id"], "team_id": team["id"]},
+        {"_id": 0, "on_shift": 1, "shift_started_at": 1},
+    )
+    if me and me.get("on_shift") and me.get("shift_started_at"):
+        shifts.append({
+            "started_at": me["shift_started_at"],
+            "ended_at": datetime.now(timezone.utc).isoformat(),
+        })
     return {
         "total": total,
         "today": today_n,
         "week": week_n,
+        "shift_hours_today": _hours([s for s in shifts if s["ended_at"] >= t_start], t_start),
+        "shift_hours_week": _hours(shifts, w_start),
         "top_stores": [{"name": r["_id"] or "—", "orders": r["orders"]} for r in top],
     }
 

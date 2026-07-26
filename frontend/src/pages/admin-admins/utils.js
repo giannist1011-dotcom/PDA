@@ -1,4 +1,4 @@
-export const PRODUCT_LABELS = { orderdeck: "OrderDeck", fleet: "Fleet" };
+export const PRODUCT_LABELS = { orderdeck: "OrderDeck", fleet: "FleetDeck" };
 export const RIGHTS_LABELS = { view: "Μόνο προβολή", manage: "Διαχείριση" };
 export const AUDIT_ACTION_LABELS = {
   update_shop: "Αλλαγή μαγαζιού",

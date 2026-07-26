@@ -12,7 +12,7 @@ const PLANS = [
   },
   {
     key: "fleet",
-    title: "OrderDeck Fleet",
+    title: "FleetDeck",
     price: "30 € / μήνα έως 15 διανομείς",
     badge: "50 € / μήνα για περισσότερους",
     desc: "Μόνο διαχείριση διανομέων: πίνακας συντονιστή, οθόνη οδηγού, σύνολα ημέρας — χωρίς POS.",
@@ -20,7 +20,7 @@ const PLANS = [
   },
   {
     key: "orderdeck_fleet",
-    title: "OrderDeck + Fleet",
+    title: "OrderDeck Fleet",
     price: "POS + διαχείριση διανομέων",
     badge: "Συνδυαστική τιμολόγηση",
     desc: "Ό,τι περιλαμβάνουν και τα δύο — ταμείο και πίνακας διανομής στον ίδιο λογαριασμό.",

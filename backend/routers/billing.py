@@ -18,7 +18,7 @@ router = APIRouter()
 PLAN_PRICE_EUR = "20,00"
 ADDONS = {
     "deckpilot": {"label": "DeckPilot AI", "price_eur": "9,90"},
-    "fleet": {"label": "Fleet", "price_eur": "5,00"},
+    "fleet": {"label": "FleetDeck", "price_eur": "5,00"},
 }
 
 

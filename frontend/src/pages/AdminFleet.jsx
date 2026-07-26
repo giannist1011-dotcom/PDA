@@ -11,7 +11,7 @@ export default function AdminFleet() {
   return (
     <AdminShell
       title="Εταιρίες Delivery"
-      subtitle="Λογαριασμοί OrderDeck Fleet (εταιρείες διανομής)"
+      subtitle="Λογαριασμοί FleetDeck (εταιρείες διανομής)"
       actions={
         <>
           {/* Δημιουργία demo: master-only ενέργεια */}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Zap } from "lucide-react";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { apiFleetCreateOrder, apiFleetPickupNames, apiFleetAddressBook } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
@@ -16,6 +16,7 @@ export default function NewOrderForm({ city, onCreated }) {
   const [pickup, setPickup] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [urgent, setUrgent] = useState(false);
   const [names, setNames] = useState([]);
   const [busy, setBusy] = useState(false);
 
@@ -31,10 +32,12 @@ export default function NewOrderForm({ city, onCreated }) {
         pickup_name: pickup.trim(),
         address: address.trim(),
         notes: notes.trim(),
+        urgent,
       });
       setPickup("");
       setAddress("");
       setNotes("");
+      setUrgent(false);
       if (!names.includes(pickup.trim())) setNames((n) => [...n, pickup.trim()].sort());
       onCreated();
       toast.success("Η παραγγελία καταχωρήθηκε");
@@ -99,6 +102,19 @@ export default function NewOrderForm({ city, onCreated }) {
             className={`${inputCls} mt-1`}
           />
         </div>
+        <button
+          type="button"
+          onClick={() => setUrgent((v) => !v)}
+          title="⚡ Επείγον — πρώτη στις Ελεύθερες των οδηγών"
+          data-testid="fleet-order-urgent"
+          className={`h-11 w-11 self-end shrink-0 rounded-md border flex items-center justify-center transition-colors ${
+            urgent
+              ? "border-gold bg-gold/15 text-gold"
+              : "border-[#723645] text-neutral-500 hover:border-gold/60"
+          }`}
+        >
+          <Zap className="w-4 h-4" />
+        </button>
         <Button
           type="submit"
           disabled={busy}

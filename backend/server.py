@@ -139,6 +139,8 @@ async def on_startup():
     await db.fleet_orders.create_index([("team_id", 1), ("created_at", -1)])
     await db.fleet_orders.create_index([("team_id", 1), ("driver_id", 1), ("created_at", -1)])
     await db.fleet_events.create_index([("team_id", 1), ("created_at", -1)])
+    # Βάρδιες οδηγών (ώρες στα στατιστικά οδηγού)
+    await db.fleet_shifts.create_index([("team_id", 1), ("member_id", 1), ("ended_at", -1)])
     await db.fleet_counters.create_index([("team_id", 1), ("day", 1)], unique=True)
     # Audit log ενεργειών admin panel (π.χ. reset PIN) — ανά μαγαζί, πιο πρόσφατα πρώτα
     await db.admin_audit.create_index([("user_id", 1), ("created_at", -1)])

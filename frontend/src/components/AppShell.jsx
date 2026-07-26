@@ -418,7 +418,7 @@ export default function AppShell({ title, children }) {
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-md mb-1 text-neutral-200 hover:bg-[#3D1620] border border-transparent"
                 >
                   <Truck className="w-5 h-5" />
-                  <span className="font-semibold">OrderDeck Fleet</span>
+                  <span className="font-semibold">FleetDeck</span>
                 </button>
               )}
               {role === "owner" && installPrompt && (

@@ -108,6 +108,18 @@ export const apiFleetAssignOrder = (id, memberId) =>
   fleetApi.post(`/fleet/orders/${id}/assign`, { member_id: memberId }).then((r) => r.data);
 export const apiFleetCancelOrder = (id) =>
   fleetApi.post(`/fleet/orders/${id}/cancel`).then((r) => r.data);
+export const apiFleetEditOrder = (id, payload) =>
+  fleetApi.put(`/fleet/orders/${id}`, payload).then((r) => r.data);
+export const apiFleetSetUrgent = (id, urgent) =>
+  fleetApi.post(`/fleet/orders/${id}/urgent`, { urgent }).then((r) => r.data);
+export const apiFleetReportProblem = (id, reason, text) =>
+  fleetApi.post(`/fleet/orders/${id}/problem`, { reason, text }).then((r) => r.data);
+export const apiFleetResolveProblem = (id) =>
+  fleetApi.post(`/fleet/orders/${id}/problem/resolve`).then((r) => r.data);
+
+// ΒΑΡΔΙΑ ΟΔΗΓΟΥ
+export const apiFleetDriverShift = (on) =>
+  fleetApi.post("/fleet/driver/shift", { on }).then((r) => r.data);
 
 // ΟΔΗΓΟΣ: ΣΤΑΤΙΣΤΙΚΑ + ΙΣΤΟΡΙΚΟ
 export const apiFleetDriverStats = () =>

@@ -96,7 +96,7 @@ export default function FleetSignup() {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <Truck className="w-8 h-8 text-flame" />
-          <span className="font-heading text-2xl font-bold">OrderDeck Fleet</span>
+          <span className="font-heading text-2xl font-bold">FleetDeck</span>
         </div>
 
         <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-8">

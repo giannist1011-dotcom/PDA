@@ -10,6 +10,20 @@ export const STATUS_META = {
 
 export const BOARD_COLUMNS = ["waiting", "pickup", "enroute", "delivered"];
 
+// Αιτίες προβλήματος παράδοσης (ίδια keys με το backend)
+export const PROBLEM_LABELS = {
+  no_answer: "Δεν απαντάει",
+  wrong_address: "Λάθος διεύθυνση",
+  other: "Άλλο",
+};
+
+// Ετικέτες πεδίων στην ειδοποίηση «Η #Χ ενημερώθηκε» του οδηγού
+export const EDIT_FIELD_LABELS = {
+  pickup_name: "Παραλαβή",
+  address: "Διεύθυνση",
+  notes: "Σημείωση",
+};
+
 // Λεπτά που πέρασαν από ένα ISO timestamp (ηλικία παραγγελίας/claim)
 export const minutesSince = (iso) => {
   if (!iso) return null;
