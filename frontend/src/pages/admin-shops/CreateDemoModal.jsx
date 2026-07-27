@@ -12,6 +12,25 @@ const TYPES = [
   { key: "fleet", label: "Εταιρία Delivery" },
 ];
 
+// Ποια εφαρμογή θα δείχνει το store demo — αντιστοιχεί στα τρία πλάνα καταστημάτων
+const STORE_PLANS = [
+  {
+    key: "orderdeck",
+    label: "OrderDeck",
+    desc: "POS demo με έτοιμο μενού από preset, τραπέζια και προφίλ (PIN 0000).",
+  },
+  {
+    key: "fleet",
+    label: "FleetDeck",
+    desc: "Μόνο delivery: ενεργή συνεργασία με demo εταιρεία διανομής (δημιουργείται αν δεν υπάρχει) και δείγμα ανεβασμένων παραγγελιών.",
+  },
+  {
+    key: "orderdeck_fleet",
+    label: "OrderDeck Fleet",
+    desc: "Λογαριασμός στο συνδυαστικό πλάνο (POS + δική του ομάδα διανομής) — η ενιαία επιφάνεια ολοκληρώνεται.",
+  },
+];
+
 const BUSINESS_TYPES = [
   { key: "souvlaki", label: "Σουβλατζίδικο" },
   { key: "cafe", label: "Καφετέρια" },
@@ -23,6 +42,7 @@ const BUSINESS_TYPES = [
 export default function CreateDemoModal({ defaultType = "store", onClose }) {
   const pw = useAdminPw();
   const [type, setType] = useState(defaultType);
+  const [plan, setPlan] = useState("orderdeck");
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [businessType, setBusinessType] = useState("souvlaki");
@@ -35,6 +55,7 @@ export default function CreateDemoModal({ defaultType = "store", onClose }) {
     try {
       const res = await apiAdminCreateDemo(pw, {
         type,
+        plan,
         name: name.trim(),
         city: city.trim(),
         business_type: businessType,
@@ -85,6 +106,13 @@ export default function CreateDemoModal({ defaultType = "store", onClose }) {
               <CredRow label="Κωδικός" value={result.password} />
               <CredRow label="PIN προφίλ" value={result.pin} />
             </div>
+            {result.partner_company && (
+              <p className="text-xs text-neutral-400">
+                Συνεργασία με τη demo εταιρεία διανομής{" "}
+                <span className="font-bold text-white">{result.partner_company}</span> — έτοιμη
+                για ανέβασμα παραγγελιών.
+              </p>
+            )}
             {result.drivers?.length > 0 && (
               <div className="bg-[#2A0E14] border border-[#723645] rounded-lg p-4">
                 <div className="text-xs uppercase tracking-widest font-bold text-neutral-400 mb-2">
@@ -152,6 +180,28 @@ export default function CreateDemoModal({ defaultType = "store", onClose }) {
             </div>
             {type === "store" && (
               <div>
+                <label className="text-xs text-neutral-400 font-semibold">Εφαρμογή (πλάνο)</label>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  {STORE_PLANS.map((p) => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => setPlan(p.key)}
+                      data-testid={`demo-plan-${p.key}`}
+                      className={`h-10 rounded-md border text-xs font-bold ${
+                        plan === p.key
+                          ? "bg-brand border-brand text-white"
+                          : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {type === "store" && plan !== "fleet" && (
+              <div>
                 <label className="text-xs text-neutral-400 font-semibold">Preset μενού</label>
                 <select
                   value={businessType}
@@ -167,7 +217,7 @@ export default function CreateDemoModal({ defaultType = "store", onClose }) {
             )}
             <p className="text-xs text-neutral-500">
               {type === "store"
-                ? "Θα δημιουργηθεί μαγαζί με έτοιμο μενού από το preset, τραπέζια και προφίλ (PIN 0000)."
+                ? STORE_PLANS.find((p) => p.key === plan)?.desc
                 : "Θα δημιουργηθεί εταιρία με 3 demo οδηγούς και δείγμα παραγγελιών ώστε ο πίνακας να δείχνει ζωντανός."}
             </p>
             <Button

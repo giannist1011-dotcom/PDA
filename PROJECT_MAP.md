@@ -5,15 +5,15 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 
 ## BACKEND — endpoints (backend/routers/*.py)
 ### admin.py
-- GET /admin/ping → admin_ping @58 — Έλεγχος admin auth (master password ή sub-admin token)…
-- GET /admin/overview → admin_overview @74
-- GET /admin/shops → admin_list_shops @122
-- GET /admin/shops/{uid} → admin_shop_detail @203
-- POST /admin/shops/{uid}/profiles/{pid}/reset-pin → admin_reset_profile_pin @248 — Επαναφορά PIN προφίλ από τον διαχειριστή πλατφόρμας: προσωρινό…
-- PATCH /admin/shops/{uid} → admin_update_shop @313
-- DELETE /admin/shops/{uid} → admin_delete_shop @352
-- GET /admin/subscriptions/expiring → admin_expiring_subscriptions @367 — Συνδρομές/δοκιμές που λήγουν στις επόμενες 7 ημέρες (για…
-- GET /admin/leads → admin_leads @389
+- GET /admin/ping → admin_ping @61 — Έλεγχος admin auth (master password ή sub-admin token)…
+- GET /admin/overview → admin_overview @77
+- GET /admin/shops → admin_list_shops @125
+- GET /admin/shops/{uid} → admin_shop_detail @209
+- POST /admin/shops/{uid}/profiles/{pid}/reset-pin → admin_reset_profile_pin @254 — Επαναφορά PIN προφίλ από τον διαχειριστή πλατφόρμας: προσωρινό…
+- PATCH /admin/shops/{uid} → admin_update_shop @318
+- DELETE /admin/shops/{uid} → admin_delete_shop @355
+- GET /admin/subscriptions/expiring → admin_expiring_subscriptions @370 — Συνδρομές/δοκιμές που λήγουν στις επόμενες 7 ημέρες (για…
+- GET /admin/leads → admin_leads @392
 ### admin_admins.py
 - POST /admin/auth/login → admin_sub_login @142
 - POST /admin/auth/change-password → admin_sub_change_password @178 — Αλλαγή κωδικού sub-admin — υποχρεωτική μετά από προσωρινό…
@@ -28,10 +28,10 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - GET /admin/fleet/{uid} → admin_fleet_detail @117
 - PATCH /admin/fleet/{uid} → admin_update_fleet @176
 - DELETE /admin/fleet/{uid} → admin_delete_fleet @244
-- POST /admin/demos → admin_create_demo @400 — Demo λογαριασμός από τον admin — μαγαζί (με…
-- POST /admin/demos/{uid}/reset → admin_reset_demo @460 — Επαναφορά demo στην αρχική seeded κατάσταση — τα…
-- POST /admin/demos/{uid}/reset-password → admin_reset_demo_password @494 — Νέος κωδικός demo λογαριασμού: ενημερώνει το hash ΚΑΙ…
-- DELETE /admin/demos/{uid} → admin_delete_demo @519 — Οριστική διαγραφή demo λογαριασμού (χωρίς επιβεβαίωση ονόματος —…
+- POST /admin/demos → admin_create_demo @529 — Demo λογαριασμός από τον admin — μαγαζί (με…
+- POST /admin/demos/{uid}/reset → admin_reset_demo @591 — Επαναφορά demo στην αρχική seeded κατάσταση — τα…
+- POST /admin/demos/{uid}/reset-password → admin_reset_demo_password @635 — Νέος κωδικός demo λογαριασμού: ενημερώνει το hash ΚΑΙ…
+- DELETE /admin/demos/{uid} → admin_delete_demo @660 — Οριστική διαγραφή demo λογαριασμού (χωρίς επιβεβαίωση ονόματος —…
 ### ai.py
 - POST /ai/chat → ai_chat @199
 - GET /ai/brief → get_brief @275 — Επιστρέφει cached brief της ημέρας αν υπάρχει, αλλιώς…
@@ -58,9 +58,9 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - POST /profile/exit → profile_exit @442 — Return a token with profile cleared (used for…
 - POST /auth/verify-owner-pin → verify_owner_pin @454
 ### billing.py
-- GET /billing/subscription → get_subscription @47
-- POST /billing/request-change → request_billing_change @62 — Αίτημα ενεργοποίησης/απενεργοποίησης add-on — εγκρίνεται χειροκίνητα από τον
-- DELETE /billing/request-change → cancel_billing_request @78 — Ακύρωση του εκκρεμούς αιτήματος από τον ίδιο τον…
+- GET /billing/subscription → get_subscription @44
+- POST /billing/request-change → request_billing_change @59 — Αίτημα ενεργοποίησης/απενεργοποίησης add-on — εγκρίνεται χειροκίνητα από τον
+- DELETE /billing/request-change → cancel_billing_request @77 — Ακύρωση του εκκρεμούς αιτήματος από τον ίδιο τον…
 ### checklist.py
 - GET /checklist/templates → list_templates @45
 - POST /checklist/templates → create_template @63
@@ -250,8 +250,8 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - fleet_counters: routers/admin_fleet.py, routers/fleet.py, server.py
 - fleet_events: routers/admin_fleet.py, routers/fleet.py, server.py
 - fleet_members: routers/admin_fleet.py, routers/fleet.py, routers/store_fleet.py, server.py
-- fleet_orders: routers/admin_fleet.py, routers/fleet.py, routers/store_fleet.py, server.py
-- fleet_partnerships: routers/fleet.py, routers/store_fleet.py, server.py
+- fleet_orders: core.py, routers/admin_fleet.py, routers/fleet.py, routers/store_fleet.py, server.py
+- fleet_partnerships: core.py, routers/admin_fleet.py, routers/fleet.py, routers/store_fleet.py, server.py
 - fleet_shifts: routers/fleet.py, server.py
 - fleet_teams: routers/admin_fleet.py, routers/fleet.py, routers/store_fleet.py, server.py
 - geocode_cache: routers/orders.py, routers/tables.py, server.py
@@ -366,11 +366,11 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - admin-fleet/FleetModal.jsx (421 γρ): FleetModal@24
 - admin-fleet/utils.js (5 γρ)
 - admin-shops/Badges.jsx (30 γρ): OnboardingCell@8, StatusBadge@22
-- admin-shops/CreateDemoModal.jsx (187 γρ): CreateDemoModal@23
+- admin-shops/CreateDemoModal.jsx (237 γρ): CreateDemoModal@42
 - admin-shops/DemoCredentials.jsx (112 γρ): CredRow@8, DemoCredentials@33
 - admin-shops/PinResetSection.jsx (112 γρ): PinResetSection@12
-- admin-shops/ShopModal.jsx (469 γρ): ShopModal@26
-- admin-shops/ShopsContent.jsx (215 γρ): ShopsContent@17
+- admin-shops/ShopModal.jsx (466 γρ): ShopModal@26
+- admin-shops/ShopsContent.jsx (231 γρ): ShopsContent@17
 - admin-shops/utils.js (15 γρ)
 - analytics/AddressHeatmap.jsx (177 γρ): AddressHeatmap@16
 - analytics/ChangeBadge.jsx (26 γρ): ChangeBadge@3
@@ -449,7 +449,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - schedule/ShareDialog.jsx (41 γρ): ShareDialog@11
 - schedule/ShiftModal.jsx (111 γρ): ShiftModal@16
 - schedule/utils.js (114 γρ)
-- settings/SubscriptionSettings.jsx (170 γρ): SubscriptionSettings@22
+- settings/SubscriptionSettings.jsx (146 γρ): SubscriptionSettings@20
 - settings/TablesSettings.jsx (65 γρ): TablesSettings@8
 - stock/AddItemModal.jsx (78 γρ): AddItemModal@5
 - stock/CategoryModal.jsx (61 γρ): CategoryModal@5

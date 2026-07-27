@@ -34,12 +34,12 @@ PUBLISH_DELAYS = (0, 5, 10, 20, 25)
 
 # ============ AUTH ============
 async def get_fleet_store(user: dict = Depends(get_current_user)) -> dict:
-    """Κατάστημα με πρόσβαση στο FleetDeck καταστήματος: πλάνο «fleet» ή ενεργό
-    add-on fleet. Απαιτεί επιλεγμένο προφίλ (Ιδιοκτήτης/Υπάλληλος)."""
+    """Κατάστημα με πρόσβαση στο FleetDeck καταστήματος: πλάνο «fleet» (FleetDeck)
+    ή «orderdeck_fleet» (OrderDeck Fleet — μέχρι να ολοκληρωθεί η ενιαία επιφάνεια
+    κρατά και την πρόσβαση εδώ). Απαιτεί επιλεγμένο προφίλ (Ιδιοκτήτης/Υπάλληλος)."""
     if user.get("account_type") == "fleet_company":
         raise HTTPException(403, "Οι εταιρείες διανομής χρησιμοποιούν τον πίνακα FleetDeck")
-    addons = user.get("addons") or {}
-    if (user.get("plan") or "orderdeck") != "fleet" and not addons.get("fleet"):
+    if (user.get("plan") or "orderdeck") not in ("fleet", "orderdeck_fleet"):
         raise HTTPException(403, "Ο λογαριασμός σας δεν περιλαμβάνει το FleetDeck")
     if not user.get("role"):
         raise HTTPException(403, "Απαιτείται επιλογή προφίλ")

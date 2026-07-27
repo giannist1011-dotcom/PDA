@@ -14,29 +14,26 @@ from core import db, require_owner
 
 router = APIRouter()
 
-# Τιμοκατάλογος (πληροφοριακά — η χρέωση γίνεται χειροκίνητα από τον διαχειριστή)
-PLAN_PRICE_EUR = "20,00"
+# Τιμοκατάλογος (πληροφοριακά — η χρέωση γίνεται χειροκίνητα από τον διαχειριστή).
+# FleetDeck/OrderDeck Fleet: χωρίς σταθερή τιμή εδώ (κλιμακωτή/συνδυαστική) → None.
+PLAN_PRICES_EUR = {"orderdeck": "20,00"}
+# Το FleetDeck έγινε αυτόνομο πλάνο — μοναδικό add-on πλέον το DeckPilot AI,
+# «Σύντομα διαθέσιμο»: χωρίς τιμή στο UI μέχρι να βγει ο AI βοηθός.
 ADDONS = {
-    "deckpilot": {"label": "DeckPilot AI", "price_eur": "9,90"},
-    "fleet": {"label": "FleetDeck", "price_eur": "5,00"},
+    "deckpilot": {"label": "DeckPilot AI", "coming_soon": True},
 }
 
 
 def _subscription_view(u: dict) -> dict:
     addons_state = u.get("addons") or {}
-    plan = u.get("plan") or "trial"
+    plan = u.get("plan") or "orderdeck"
     return {
         "plan": plan,
-        "plan_price_eur": PLAN_PRICE_EUR,
+        "plan_price_eur": PLAN_PRICES_EUR.get(plan),
         "subscription_expires_at": u.get("subscription_expires_at"),
         "payment_status": u.get("payment_status") or "pending",
         "addons": {
-            key: {
-                **meta,
-                # Το παλιό πλάνο "pro_deckpilot" μετρά ως ενεργό DeckPilot add-on
-                "active": bool(addons_state.get(key))
-                or (key == "deckpilot" and plan == "pro_deckpilot"),
-            }
+            key: {**meta, "active": bool(addons_state.get(key))}
             for key, meta in ADDONS.items()
         },
         "pending_request": u.get("billing_request"),
@@ -54,7 +51,7 @@ async def get_subscription(user: dict = Depends(require_owner)):
 
 
 class BillingChangeIn(BaseModel):
-    addon: Literal["deckpilot", "fleet"]
+    addon: Literal["deckpilot"]
     action: Literal["add", "remove"]
 
 
@@ -62,6 +59,8 @@ class BillingChangeIn(BaseModel):
 async def request_billing_change(body: BillingChangeIn, user: dict = Depends(require_owner)):
     """Αίτημα ενεργοποίησης/απενεργοποίησης add-on — εγκρίνεται χειροκίνητα από τον
     διαχειριστή της πλατφόρμας. Ένα εκκρεμές αίτημα κάθε φορά (το νέο αντικαθιστά)."""
+    if ADDONS[body.addon].get("coming_soon"):
+        raise HTTPException(400, "Το add-on θα είναι σύντομα διαθέσιμο")
     req = {
         "id": str(uuid.uuid4())[:8],
         "addon": body.addon,

@@ -21,6 +21,7 @@ function ShopsContent() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [businessType, setBusinessType] = useState("all");
+  const [plan, setPlan] = useState("all");
   const [regFrom, setRegFrom] = useState("");
   const [regTo, setRegTo] = useState("");
   const [selected, setSelected] = useState(null);
@@ -30,6 +31,7 @@ function ShopsContent() {
       search,
       status,
       business_type: businessType,
+      plan,
       reg_from: regFrom,
       reg_to: regTo,
       page,
@@ -37,7 +39,7 @@ function ShopsContent() {
     })
       .then(setData)
       .catch((e) => toast.error(formatApiError(e)));
-  }, [pw, search, status, businessType, regFrom, regTo, page]);
+  }, [pw, search, status, businessType, plan, regFrom, regTo, page]);
 
   useEffect(() => {
     const t = setTimeout(load, search ? 300 : 0);
@@ -49,7 +51,7 @@ function ShopsContent() {
   return (
     <div className="space-y-4">
       {/* FILTERS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
         <div className="relative lg:col-span-2">
           <Search className="w-4 h-4 absolute left-3 top-3 text-neutral-500" />
           <input
@@ -91,6 +93,20 @@ function ShopsContent() {
           <option value="cafe">Καφετέρια</option>
           <option value="pizzeria">Πιτσαρία</option>
           <option value="burger">Burger</option>
+        </select>
+        <select
+          value={plan}
+          onChange={(e) => {
+            setPlan(e.target.value);
+            setPage(1);
+          }}
+          data-testid="shops-filter-plan"
+          className={inputCls}
+        >
+          <option value="all">Όλα τα πλάνα</option>
+          {Object.entries(PLAN_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
         </select>
         <div className="flex gap-2">
           <DatePicker

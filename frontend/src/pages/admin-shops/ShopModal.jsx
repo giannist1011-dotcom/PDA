@@ -40,7 +40,7 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
         setShop(s);
         setEdit({
           admin_notes: s.admin_notes || "",
-          plan: s.plan || "trial",
+          plan: s.plan || "orderdeck",
           subscription_expires_at: s.subscription_expires_at || "",
           payment_status: s.payment_status || "pending",
         });
@@ -345,22 +345,19 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
                     data-testid="shop-ai-toggle"
                   />
                 </div>
+                {/* Μοναδικό add-on: DeckPilot AI — τιμή θα οριστεί όταν βγει ο AI βοηθός */}
                 <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#2A0E14] border border-[#723645] rounded-md">
-                  <div className="text-sm font-semibold">Add-on: DeckPilot AI (9,90 €/μήνα)</div>
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    Add-on: DeckPilot AI
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-gold/15 text-gold">
+                      Σύντομα διαθέσιμο
+                    </span>
+                  </div>
                   <Switch
                     checked={!!shop.addons?.deckpilot}
                     disabled={busy}
                     onCheckedChange={(v) => patch({ addon_deckpilot: !!v }, "Αποθηκεύτηκε")}
                     data-testid="shop-addon-deckpilot"
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#2A0E14] border border-[#723645] rounded-md">
-                  <div className="text-sm font-semibold">Add-on: FleetDeck (5,00 €/μήνα)</div>
-                  <Switch
-                    checked={!!shop.addons?.fleet}
-                    disabled={busy}
-                    onCheckedChange={(v) => patch({ addon_fleet: !!v }, "Αποθηκεύτηκε")}
-                    data-testid="shop-addon-fleet"
                   />
                 </div>
               </div>

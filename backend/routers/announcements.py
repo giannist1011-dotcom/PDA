@@ -25,7 +25,7 @@ class AnnouncementIn(BaseModel):
     active: bool = True
     # Στόχευση: None/"all" = όλα τα μαγαζιά
     target_business_type: Optional[str] = None  # souvlaki/cafe/pizzeria/burger
-    target_plan: Optional[str] = None  # trial/pro/pro_deckpilot
+    target_plan: Optional[str] = None  # orderdeck/fleet/orderdeck_fleet
 
 
 class AnnouncementPatch(BaseModel):
@@ -109,7 +109,7 @@ async def active_announcement(user: dict = Depends(get_current_user)):
     """Η πιο πρόσφατη ενεργή ανακοίνωση που αφορά αυτό το μαγαζί (ή null)."""
     today = athens_today()
     biz = user.get("business_type") or "souvlaki"
-    plan = user.get("plan") or "trial"
+    plan = user.get("plan") or "orderdeck"
     match = {
         "active": True,
         "$and": [

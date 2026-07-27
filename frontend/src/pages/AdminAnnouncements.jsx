@@ -30,9 +30,9 @@ const BIZ_LABELS = {
 };
 const PLAN_LABELS = {
   all: "Όλα τα πλάνα",
-  trial: "Trial",
-  pro: "Pro",
-  pro_deckpilot: "Pro + DeckPilot",
+  orderdeck: "OrderDeck",
+  fleet: "FleetDeck",
+  orderdeck_fleet: "OrderDeck Fleet",
 };
 
 const inputCls =

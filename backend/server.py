@@ -168,6 +168,29 @@ async def on_startup():
         },
         [{"$set": {"store_city": "$city"}}],
     )
+    # Μία φορά: μετανάστευση πλάνων καταστημάτων στα τρία νέα (orderdeck / fleet /
+    # orderdeck_fleet). Το add-on Fleet καταργήθηκε — όποιο μαγαζί το είχε περνά στο
+    # πλάνο OrderDeck Fleet· το παλιό pro_deckpilot γίνεται OrderDeck + add-on DeckPilot.
+    stores = {"account_type": {"$ne": "fleet_company"}}
+    await db.users.update_many(
+        {**stores, "addons.fleet": True},
+        {"$set": {"plan": "orderdeck_fleet"}, "$unset": {"addons.fleet": ""}},
+    )
+    await db.users.update_many(
+        {**stores, "addons.fleet": {"$exists": True}}, {"$unset": {"addons.fleet": ""}}
+    )
+    await db.users.update_many(
+        {**stores, "plan": "pro_deckpilot"},
+        {"$set": {"plan": "orderdeck", "addons.deckpilot": True}},
+    )
+    # trial/pro/χωρίς πεδίο ($in με None πιάνει και null και missing) → orderdeck
+    await db.users.update_many(
+        {**stores, "plan": {"$in": ["trial", "pro", None]}}, {"$set": {"plan": "orderdeck"}}
+    )
+    # Εκκρεμή αιτήματα για το καταργημένο add-on Fleet → καθαρισμός
+    await db.users.update_many(
+        {"billing_request.addon": "fleet"}, {"$set": {"billing_request": None}}
+    )
     await migrate_items_sort_order()
     await ensure_demo_account()
 

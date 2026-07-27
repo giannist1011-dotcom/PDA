@@ -27,7 +27,10 @@ router = APIRouter()
 
 ATHENS = ZoneInfo("Europe/Athens")
 
-PLANS = ("trial", "pro", "pro_deckpilot")
+# Πλάνα καταστημάτων: OrderDeck (POS), FleetDeck (μόνο ανέβασμα σε εταιρείες
+# διανομής), OrderDeck Fleet (POS + δική του ομάδα διανομής). Τα παλιά
+# trial/pro/pro_deckpilot + add-on fleet μεταναστεύονται στο startup (server.py).
+PLANS = ("orderdeck", "fleet", "orderdeck_fleet")
 PAYMENT_STATUSES = ("paid", "pending", "expired")
 
 # Whitelist πεδίων χρήστη που επιστρέφονται στο admin panel (ποτέ hashes/logo)
@@ -124,6 +127,7 @@ async def admin_list_shops(
     search: str = "",
     status: Literal["all", "active", "disabled", "demo"] = "all",
     business_type: str = "all",
+    plan: str = "all",
     reg_from: str = "",  # ISO date (YYYY-MM-DD)
     reg_to: str = "",
     page: int = Query(1, ge=1),
@@ -142,6 +146,8 @@ async def admin_list_shops(
         match["disabled"] = {"$ne": True}
     if business_type != "all":
         match["business_type"] = business_type
+    if plan in PLANS:
+        match["plan"] = plan
     if search.strip():
         q = search.strip()
         match["$or"] = [
@@ -295,12 +301,11 @@ async def admin_reset_profile_pin(
 class ShopUpdateIn(BaseModel):
     disabled: Optional[bool] = None
     admin_notes: Optional[str] = Field(default=None, max_length=5000)
-    plan: Optional[Literal["trial", "pro", "pro_deckpilot"]] = None
+    plan: Optional[Literal["orderdeck", "fleet", "orderdeck_fleet"]] = None
     subscription_expires_at: Optional[str] = None  # ISO date, "" = καθαρισμός
     payment_status: Optional[Literal["paid", "pending", "expired"]] = None
     ai_features_enabled: Optional[bool] = None  # toggle AI features (DeckPilot/Brief)
     addon_deckpilot: Optional[bool] = None      # add-on DeckPilot AI (χειροκίνητη χρέωση)
-    addon_fleet: Optional[bool] = None          # add-on Fleet
     clear_billing_request: Optional[bool] = None  # καθαρισμός εκκρεμούς αιτήματος συνδρομής
 
 
@@ -336,8 +341,6 @@ async def admin_update_shop(
     # Add-ons: αποθηκεύονται στο nested "addons" — όχι ως top-level πεδία
     if "addon_deckpilot" in update:
         update["addons.deckpilot"] = bool(update.pop("addon_deckpilot"))
-    if "addon_fleet" in update:
-        update["addons.fleet"] = bool(update.pop("addon_fleet"))
     if update.pop("clear_billing_request", None):
         update["billing_request"] = None
     if not update:

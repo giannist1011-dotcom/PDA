@@ -503,6 +503,9 @@ async def purge_user_data(user_id: str) -> None:
     """Διαγράφει ΟΛΑ τα δεδομένα ενός λογαριασμού από όλα τα collections + τον ίδιο τον χρήστη."""
     for coll in PER_USER_COLLECTIONS:
         await db[coll].delete_many({"user_id": user_id})
+    # FleetDeck καταστήματος: συνεργασίες + ανεβασμένες παραγγελίες (store_user_id scope)
+    await db.fleet_partnerships.delete_many({"store_user_id": user_id})
+    await db.fleet_orders.delete_many({"store_user_id": user_id})
     await db.users.delete_one({"id": user_id})
 
 

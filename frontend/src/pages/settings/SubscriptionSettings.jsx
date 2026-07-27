@@ -1,21 +1,19 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Bot, Truck, Check, Clock, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Bot, Check, Clock, X } from "lucide-react";
 import {
   apiGetSubscription,
-  apiRequestBillingChange,
   apiCancelBillingRequest,
   formatApiError,
 } from "@/lib/api";
 
 const PLAN_LABELS = {
-  trial: "Δοκιμαστική περίοδος",
-  pro: "Pro",
-  pro_deckpilot: "Pro + DeckPilot",
+  orderdeck: "OrderDeck",
+  fleet: "FleetDeck",
+  orderdeck_fleet: "OrderDeck Fleet",
 };
 
-const ADDON_ICONS = { deckpilot: Bot, fleet: Truck };
+const ADDON_ICONS = { deckpilot: Bot };
 
 // Συνδρομή: τρέχον πλάνο + add-ons. Η αλλαγή γίνεται με αίτημα προς τον
 // διαχειριστή της πλατφόρμας (χειροκίνητη χρέωση μέχρι να μπει Stripe).
@@ -34,19 +32,6 @@ export default function SubscriptionSettings() {
   useEffect(() => {
     load();
   }, []);
-
-  const requestChange = async (addon, action) => {
-    setBusy(true);
-    try {
-      const r = await apiRequestBillingChange(addon, action);
-      setSub((s) => ({ ...s, pending_request: r.pending_request }));
-      toast.success("Το αίτημα εστάλη — θα ενεργοποιηθεί από την ομάδα του OrderDeck");
-    } catch (e) {
-      toast.error(formatApiError(e));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const cancelRequest = async () => {
     setBusy(true);
@@ -77,10 +62,12 @@ export default function SubscriptionSettings() {
             {PLAN_LABELS[sub.plan] || sub.plan}
           </div>
         </div>
-        <div className="text-right">
-          <div className="font-mono text-xl font-bold text-gold">{sub.plan_price_eur} €</div>
-          <div className="text-xs text-neutral-500">/ μήνα</div>
-        </div>
+        {sub.plan_price_eur && (
+          <div className="text-right">
+            <div className="font-mono text-xl font-bold text-gold">{sub.plan_price_eur} €</div>
+            <div className="text-xs text-neutral-500">/ μήνα</div>
+          </div>
+        )}
       </div>
 
       {/* Εκκρεμές αίτημα */}
@@ -114,7 +101,6 @@ export default function SubscriptionSettings() {
         </div>
         {Object.entries(sub.addons).map(([key, addon]) => {
           const Icon = ADDON_ICONS[key] || Bot;
-          const isPendingThis = pending && pending.addon === key;
           return (
             <div
               key={key}
@@ -127,33 +113,23 @@ export default function SubscriptionSettings() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">{addon.label}</span>
-                  {addon.active ? (
+                  {addon.active && (
                     <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#00E676]/15 text-[#00E676]">
                       <Check className="w-3 h-3" /> Ενεργό
                     </span>
-                  ) : (
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#723645]/50 text-neutral-400">
-                      Ανενεργό
-                    </span>
                   )}
                 </div>
-                <div className="text-xs text-neutral-500">{addon.price_eur} € / μήνα</div>
+                {addon.coming_soon && !addon.active && (
+                  <div className="text-xs text-neutral-500">
+                    Ο AI βοηθός του OrderDeck έρχεται — η τιμολόγηση θα ανακοινωθεί με τη
+                    διάθεσή του.
+                  </div>
+                )}
               </div>
-              {isPendingThis ? (
-                <span className="text-xs text-gold font-bold shrink-0">Σε αναμονή</span>
-              ) : (
-                <Button
-                  onClick={() => requestChange(key, addon.active ? "remove" : "add")}
-                  disabled={busy || !!pending}
-                  data-testid={`sub-addon-${key}-btn`}
-                  className={`h-9 px-3 text-xs font-bold shrink-0 ${
-                    addon.active
-                      ? "bg-[#2A0E14] border border-[#723645] hover:border-[#FF3B30] text-neutral-300"
-                      : "bg-brand hover:bg-brand-hover text-white"
-                  }`}
-                >
-                  {addon.active ? "Αίτημα απενεργοποίησης" : "Αίτημα ενεργοποίησης"}
-                </Button>
+              {addon.coming_soon && !addon.active && (
+                <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded bg-gold/15 text-gold">
+                  Σύντομα διαθέσιμο
+                </span>
               )}
             </div>
           );
