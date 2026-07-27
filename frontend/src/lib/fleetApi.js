@@ -117,6 +117,12 @@ export const apiFleetReportProblem = (id, reason, text) =>
 export const apiFleetResolveProblem = (id) =>
   fleetApi.post(`/fleet/orders/${id}/problem/resolve`).then((r) => r.data);
 
+// ΣΥΝΕΡΓΑΣΙΕΣ ΚΑΤΑΣΤΗΜΑΤΩΝ — αιτήματα από μαγαζιά (FleetDeck καταστήματος)
+export const apiFleetPartnerships = () =>
+  fleetApi.get("/fleet/partnerships").then((r) => r.data);
+export const apiFleetRespondPartnership = (id, accept) =>
+  fleetApi.post(`/fleet/partnerships/${id}/respond`, { accept }).then((r) => r.data);
+
 // ΒΑΡΔΙΑ ΟΔΗΓΟΥ
 export const apiFleetDriverShift = (on) =>
   fleetApi.post("/fleet/driver/shift", { on }).then((r) => r.data);

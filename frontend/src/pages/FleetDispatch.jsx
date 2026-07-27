@@ -6,6 +6,7 @@ import FleetShell from "@/pages/fleet/FleetShell";
 import NewOrderForm from "@/pages/fleet/NewOrderForm";
 import PushToggle from "@/pages/fleet/PushToggle";
 import OrderCard from "@/pages/fleet/OrderCard";
+import PartnershipRequests from "@/pages/fleet/PartnershipRequests";
 import FleetOrdersMap from "@/pages/fleet/FleetOrdersMap";
 import DayTotals from "@/pages/fleet/DayTotals";
 import { fmtTime } from "@/pages/fleet/utils";
@@ -87,6 +88,9 @@ export default function FleetDispatch() {
   return (
     <FleetShell actions={<PushToggle surface="dispatcher" />}>
       <div className="space-y-4">
+        {/* Αιτήματα συνεργασίας καταστημάτων — πάνω από τη φόρμα όταν υπάρχουν */}
+        <PartnershipRequests requests={board?.partnership_requests} onChanged={load} />
+
         <NewOrderForm city={team?.city || ""} onCreated={load} />
 
         {drivers.length > 0 && (

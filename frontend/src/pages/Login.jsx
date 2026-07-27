@@ -7,9 +7,10 @@ import { formatApiError, apiFleetExchange } from "@/lib/api";
 import { setFleetToken } from "@/lib/fleetApi";
 import { Button } from "@/components/ui/button";
 
-// Λογαριασμοί χωρίς POS (εταιρείες διανομής ή μαγαζιά με πλάνο μόνο Fleet)
-// προσγειώνονται στον πίνακα διανομής αντί για το ταμείο
-const isFleetOnly = (u) => u?.account_type === "fleet_company" || u?.plan === "fleet";
+// Εταιρείες διανομής (fleet_company) προσγειώνονται στον πίνακα διανομής.
+// Καταστήματα με πλάνο «fleet» (FleetDeck καταστήματος) πάνε στο /app —
+// το ProtectedRoute τα οδηγεί στο /app/fleet μετά την επιλογή προφίλ.
+const isFleetCompany = (u) => u?.account_type === "fleet_company";
 
 export default function Login() {
   const { user, login } = useAuth();
@@ -20,7 +21,7 @@ export default function Login() {
   const [error, setError] = useState(null);
 
   if (user && user !== false && !busy)
-    return <Navigate to={isFleetOnly(user) ? "/fleet" : "/app"} replace />;
+    return <Navigate to={isFleetCompany(user) ? "/fleet" : "/app"} replace />;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -29,7 +30,7 @@ export default function Login() {
     try {
       const u = await login(email, password);
       toast.success("Καλωσήρθατε!");
-      if (isFleetOnly(u)) {
+      if (isFleetCompany(u)) {
         try {
           const ex = await apiFleetExchange();
           setFleetToken(ex.token);

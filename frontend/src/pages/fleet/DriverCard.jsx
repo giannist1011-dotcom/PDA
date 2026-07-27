@@ -1,4 +1,4 @@
-import { MapPin, StickyNote, Timer, Zap, Pencil } from "lucide-react";
+import { MapPin, Phone, StickyNote, Timer, Zap, Pencil } from "lucide-react";
 import {
   STATUS_META,
   EDIT_FIELD_LABELS,
@@ -51,6 +51,17 @@ export function DriverCard({ o, city, dim = false, showStatus = false, highlight
         <MapPin className="w-4 h-4 text-flame shrink-0" />
         <span className="underline underline-offset-2">{o.address}</span>
       </a>
+      {/* Τηλέφωνο πελάτη (παραγγελίες καταστημάτων) — tap για κλήση */}
+      {o.phone && (
+        <a
+          href={`tel:${o.phone}`}
+          className="flex items-center gap-2 mt-1.5 text-sm text-neutral-300 active:text-flame"
+          data-testid={`fleet-drv-phone-${o.id}`}
+        >
+          <Phone className="w-4 h-4 text-flame shrink-0" />
+          {o.phone}
+        </a>
+      )}
       {showStatus && (
         <span
           className={`inline-block mt-2 px-2 py-0.5 rounded border text-[11px] font-semibold ${STATUS_META[o.status]?.badge || ""}`}

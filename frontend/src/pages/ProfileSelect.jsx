@@ -161,12 +161,12 @@ export default function ProfileSelect() {
         profile={forcePinProfile}
         onDone={() => {
           setForcePinProfile(null);
-          navigate(homePathFor(forcePinProfile.role));
+          navigate(homePathFor(forcePinProfile.role, user?.plan));
         }}
       />
     );
   }
-  if (hasProfile) return <Navigate to={homePathFor(user.role)} replace />;
+  if (hasProfile) return <Navigate to={homePathFor(user.role, user.plan)} replace />;
 
   const handleSubmit = async (pin) => {
     setBusy(true);
@@ -177,7 +177,7 @@ export default function ProfileSelect() {
         return;
       }
       toast.success(`Καλωσήρθες, ${chosen.name}`);
-      navigate(homePathFor(chosen.role));
+      navigate(homePathFor(chosen.role, user?.plan));
     } finally {
       setBusy(false);
     }

@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { can } from "@/lib/perms";
 
@@ -17,13 +17,17 @@ export default function ProtectedRoute({
   requiresAI = false,
 }) {
   const { user, hasProfile, role } = useAuth();
+  const { pathname } = useLocation();
   // Όσο εκκρεμεί το /auth/me το branded StartupOverlay (App.js) καλύπτει την οθόνη
   if (user === null) return null;
   if (user === false) return <Navigate to="/app/login" replace />;
-  // Λογαριασμοί χωρίς POS (fleet_company / πλάνο μόνο Fleet) → πίνακας διανομής
-  if (user.account_type === "fleet_company" || user.plan === "fleet")
-    return <Navigate to="/fleet" replace />;
+  // Εταιρείες διανομής (fleet_company) → ο δικός τους πίνακας FleetDeck
+  if (user.account_type === "fleet_company") return <Navigate to="/fleet" replace />;
   if (!hasProfile) return <Navigate to="/app/select-profile" replace />;
+  // Καταστήματα με πλάνο «fleet» (FleetDeck καταστήματος): χωρίς POS — μόνο οι
+  // σελίδες /app/fleet/* (παραγγελίες, στατιστικά, συνεργασίες, ρυθμίσεις)
+  if (user.plan === "fleet" && !pathname.startsWith("/app/fleet"))
+    return <Navigate to="/app/fleet" replace />;
   const allowed = requireOwner ? ["owner"] : roles;
   if (allowed && !allowed.includes(role)) {
     // waiters have no access to the cash PDA — their home is the tables page

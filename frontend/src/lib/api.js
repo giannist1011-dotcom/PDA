@@ -415,6 +415,27 @@ export const apiFleetExchange = (token) =>
     .post("/fleet/exchange", null, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
     .then((r) => r.data);
 
+// FLEETDECK ΚΑΤΑΣΤΗΜΑΤΟΣ (πλάνο «fleet») — store JWT, όχι fleet token:
+// συνεργασίες με εταιρείες διανομής + ανέβασμα παραγγελιών στους οδηγούς τους
+export const apiStoreFleetCompanies = () =>
+  api.get("/store/fleet/companies").then((r) => r.data);
+export const apiStoreFleetRequestPartner = (teamId) =>
+  api.post(`/store/fleet/partners/${teamId}/request`).then((r) => r.data);
+export const apiStoreFleetEndPartnership = (pid) =>
+  api.post(`/store/fleet/partnerships/${pid}/end`).then((r) => r.data);
+export const apiStoreFleetBoard = (teamId) =>
+  api
+    .get("/store/fleet/board", { params: teamId ? { team_id: teamId } : {} })
+    .then((r) => r.data);
+export const apiStoreFleetCreateOrder = (payload) =>
+  api.post("/store/fleet/orders", payload).then((r) => r.data);
+export const apiStoreFleetCancelOrder = (id) =>
+  api.post(`/store/fleet/orders/${id}/cancel`).then((r) => r.data);
+export const apiStoreFleetAddressBook = () =>
+  api.get("/store/fleet/address-book").then((r) => r.data);
+export const apiStoreFleetStats = (params) =>
+  api.get("/store/fleet/stats", { params }).then((r) => r.data);
+
 // Error helper
 export function formatApiError(e) {
   const d = e?.response?.data?.detail;

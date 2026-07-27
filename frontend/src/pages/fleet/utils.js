@@ -21,6 +21,8 @@ export const STATUS_META = {
   enroute: { label: "Σε διαδρομή", emoji: "🟢", dot: "#34C759", text: "text-[#5BD778]", badge: "bg-[#34C759]/10 text-[#5BD778] border-[#34C759]/40" },
   delivered: { label: "Παραδόθηκε", emoji: "🔵", dot: "#0A84FF", text: "text-[#5CA8FF]", badge: "bg-[#0A84FF]/10 text-[#5CA8FF] border-[#0A84FF]/40" },
   cancelled: { label: "Ακυρώθηκε", emoji: "⚪", dot: "#8E8E93", text: "text-neutral-400", badge: "bg-white/5 text-neutral-400 border-white/15" },
+  // Προγραμματισμένη δημοσίευση (FleetDeck καταστήματος) — δεν την βλέπουν ακόμα οι οδηγοί
+  scheduled: { label: "Προγραμματισμένη", emoji: "⏳", dot: "#B48CFF", text: "text-[#C9A8FF]", badge: "bg-[#B48CFF]/10 text-[#C9A8FF] border-[#B48CFF]/40" },
 };
 
 // Αιτίες προβλήματος παράδοσης (ίδια keys με το backend)

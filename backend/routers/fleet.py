@@ -264,6 +264,29 @@ async def next_order_number(team_id: str) -> int:
     return int(doc["seq"]) if doc else 1
 
 
+async def publish_due_scheduled(match: dict):
+    """Δημοσιεύει προγραμματισμένες παραγγελίες καταστημάτων που έφτασε η ώρα τους
+    (status scheduled → waiting + αριθμός + push). Καλείται lazily από τα polling
+    endpoints (πίνακας καταστήματος, πίνακας εταιρείας, οθόνη οδηγού) ώστε η
+    δημοσίευση να γίνεται και με κλειστό το tab του καταστήματος. Το update_one
+    φιλτράρει σε status=scheduled — δύο ταυτόχρονα polls δεν τη δημοσιεύουν διπλά."""
+    now = datetime.now(timezone.utc).isoformat()
+    due = await db.fleet_orders.find(
+        {**match, "status": "scheduled", "publish_at": {"$lte": now}}, {"_id": 0}
+    ).to_list(100)
+    for o in due:
+        number = await next_order_number(o["team_id"])
+        res = await db.fleet_orders.update_one(
+            {"id": o["id"], "status": "scheduled"},
+            {"$set": {"status": "waiting", "number": number, "created_at": now}},
+        )
+        if not res.modified_count:
+            continue
+        prefix = "⚡ Επείγουσα παραγγελία" if o.get("urgent") else "Νέα παραγγελία"
+        await add_event(o["team_id"], f"{prefix} #{number} · {o['pickup_name']}")
+        await push_on_shift_drivers(o["team_id"], f"{prefix} #{number}", order_push_body(o))
+
+
 # ============ MODELS ============
 class FleetRegisterIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
@@ -463,13 +486,12 @@ async def fleet_signup(body: FleetSignupIn, request: Request):
 async def fleet_exchange(user: dict = Depends(get_current_user)):
     """Unified JWT (users) → team-level fleet token, χωρίς δεύτερο login.
 
-    Επιτρέπεται μόνο σε λογαριασμούς που περιλαμβάνουν Fleet (fleet_company ή
-    store plan fleet/orderdeck_fleet). Η επιλογή μέλους με PIN παραμένει μετά.
+    Επιτρέπεται μόνο σε λογαριασμούς που περιλαμβάνουν ΔΙΚΗ ΤΟΥΣ ομάδα διανομής
+    (fleet_company ή store plan orderdeck_fleet). Τα καταστήματα με πλάνο «fleet»
+    ΔΕΝ έχουν δική τους ομάδα — χρησιμοποιούν το FleetDeck καταστήματος
+    (/store/fleet, routers/store_fleet.py) με συνεργαζόμενες εταιρείες.
     """
-    if user.get("account_type") != "fleet_company" and user.get("plan") not in (
-        "fleet",
-        "orderdeck_fleet",
-    ):
+    if user.get("account_type") != "fleet_company" and user.get("plan") != "orderdeck_fleet":
         raise HTTPException(403, "Ο λογαριασμός σας δεν περιλαμβάνει το FleetDeck")
     team = await ensure_fleet_team_for_user(user)
     return {"token": create_fleet_token(team["id"]), "team": public_team(team)}
@@ -852,13 +874,23 @@ async def fleet_create_order(body: FleetOrderIn, team: dict = Depends(require_fl
 
 @router.get("/fleet/board")
 async def fleet_board(date: Optional[str] = None, team: dict = Depends(require_fleet_admin)):
-    """Ο πίνακας του διαχειριστή: παραγγελίες ημέρας + feed + οδηγοί (ένα poll)."""
+    """Ο πίνακας του διαχειριστή: παραγγελίες ημέρας + feed + οδηγοί + εκκρεμή
+    αιτήματα συνεργασίας καταστημάτων (ένα poll)."""
+    await publish_due_scheduled({"team_id": team["id"]})
     day = date or athens_today()
     start, end = local_day_range(day)
+    # Οι «scheduled» (προγραμματισμένες καταστημάτων) δεν εμφανίζονται πριν δημοσιευτούν
     orders = await db.fleet_orders.find(
-        {"team_id": team["id"], "created_at": {"$gte": start, "$lt": end}},
+        {
+            "team_id": team["id"],
+            "status": {"$ne": "scheduled"},
+            "created_at": {"$gte": start, "$lt": end},
+        },
         {"_id": 0, "team_id": 0},
     ).sort("created_at", -1).to_list(500)
+    partnership_requests = await db.fleet_partnerships.find(
+        {"team_id": team["id"], "status": "pending"}, {"_id": 0}
+    ).sort("requested_at", 1).to_list(50)
     events = await db.fleet_events.find(
         {"team_id": team["id"], "created_at": {"$gte": start, "$lt": end}},
         {"_id": 0, "team_id": 0},
@@ -869,12 +901,59 @@ async def fleet_board(date: Optional[str] = None, team: dict = Depends(require_f
     ).sort("created_at", 1).to_list(200)
     for d in drivers:
         d["on_shift"] = bool(d.get("on_shift"))
-    return {"date": day, "orders": orders, "events": events, "drivers": drivers}
+    return {
+        "date": day,
+        "orders": orders,
+        "events": events,
+        "drivers": drivers,
+        "partnership_requests": partnership_requests,
+    }
+
+
+# ============ ΣΥΝΕΡΓΑΣΙΕΣ ΚΑΤΑΣΤΗΜΑΤΩΝ ============
+class PartnershipRespondIn(BaseModel):
+    accept: bool
+
+
+@router.get("/fleet/partnerships")
+async def fleet_partnerships(team: dict = Depends(require_fleet_admin)):
+    """Αιτήματα & ενεργές συνεργασίες καταστημάτων της εταιρείας."""
+    docs = await db.fleet_partnerships.find(
+        {"team_id": team["id"], "status": {"$in": ["pending", "active"]}}, {"_id": 0}
+    ).sort("requested_at", 1).to_list(200)
+    return {
+        "pending": [p for p in docs if p["status"] == "pending"],
+        "active": [p for p in docs if p["status"] == "active"],
+    }
+
+
+@router.post("/fleet/partnerships/{pid}/respond")
+async def fleet_respond_partnership(
+    pid: str, body: PartnershipRespondIn, team: dict = Depends(require_fleet_admin)
+):
+    """Αποδοχή/απόρριψη αιτήματος συνεργασίας καταστήματος. Με αποδοχή η
+    συνεργασία είναι ενεργή — το κατάστημα μπορεί να ανεβάζει παραγγελίες."""
+    p = await db.fleet_partnerships.find_one(
+        {"id": pid, "team_id": team["id"], "status": "pending"}, {"_id": 0}
+    )
+    if not p:
+        raise HTTPException(404, "Το αίτημα δεν βρέθηκε")
+    status = "active" if body.accept else "declined"
+    await db.fleet_partnerships.update_one(
+        {"id": pid, "team_id": team["id"]},
+        {"$set": {"status": status, "responded_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    if body.accept:
+        await add_event(team["id"], f"🤝 Ενεργή συνεργασία με «{p['store_name']}»")
+    else:
+        await add_event(team["id"], f"Το αίτημα συνεργασίας του «{p['store_name']}» απορρίφθηκε")
+    return {"ok": True, "status": status}
 
 
 @router.get("/fleet/driver/board")
 async def fleet_driver_board(team: dict = Depends(get_fleet_member)):
     """Η οθόνη του οδηγού: ελεύθερες + δικές του σημερινές παραγγελίες (ένα poll)."""
+    await publish_due_scheduled({"team_id": team["id"]})
     start, end = local_day_range(athens_today())
     day_q = {"team_id": team["id"], "created_at": {"$gte": start, "$lt": end}}
     # Οι επείγουσες (⚡) πρώτες, μετά οι παλαιότερες

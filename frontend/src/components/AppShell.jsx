@@ -29,6 +29,7 @@ import {
   FileText,
   Download,
   Truck,
+  Handshake,
 } from "lucide-react";
 import { toast } from "sonner";
 import DeckPilotChat from "@/components/DeckPilotChat";
@@ -70,6 +71,15 @@ const NAV_STORE = [
   { to: "/app/expenses", label: "Έξοδα", icon: Wallet, testId: "drawer-link-expenses", roles: ["owner"], perm: "expenses" },
   { to: "/app/photos", label: "Βιβλιοθήκη φωτογραφιών", icon: ImageIcon, testId: "drawer-link-photos", roles: MANAGERS, perm: "menu" },
   { to: "/app/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-settings", roles: ["owner"], perm: "settings" },
+];
+
+// Πλάνο «fleet» (FleetDeck καταστήματος): χωρίς POS — μόνο αυτές οι ενότητες.
+// Ρόλοι: Ιδιοκτήτης όλα, Υπάλληλος μόνο Παραγγελίες (όπως τα permissions του POS).
+const NAV_FLEET_STORE = [
+  { to: "/app/fleet", label: "Παραγγελίες", icon: Truck, testId: "drawer-link-fleet-orders", roles: ["owner", "employee"] },
+  { to: "/app/fleet/stats", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-fleet-stats", roles: ["owner"] },
+  { to: "/app/fleet/partners", label: "Αίτημα συνεργασίας", icon: Handshake, testId: "drawer-link-fleet-partners", roles: ["owner"] },
+  { to: "/app/fleet/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-fleet-settings", roles: ["owner"] },
 ];
 
 const STORE_GROUP_KEY = "orderdeck-nav-store-open";
@@ -246,13 +256,15 @@ export default function AppShell({ title, children }) {
     (!n.perm || can(user, n.perm)) &&
     (!n.requiresAI || user?.ai_features_enabled);
 
-  const nav = NAV_ALL.filter(navVisible).map((n) => {
+  // FleetDeck καταστήματος: δικό του μενού, χωρίς την ομάδα «Κατάστημα» του POS
+  const isFleetStore = user && user !== false && user.plan === "fleet";
+  const nav = (isFleetStore ? NAV_FLEET_STORE : NAV_ALL).filter(navVisible).map((n) => {
     // Non-managers see the schedule read-only
     if (!canManage && n.to === "/schedule") return { ...n, label: "Πρόγραμμα (προβολή)" };
     return n;
   });
 
-  const storeNav = NAV_STORE.filter(navVisible);
+  const storeNav = isFleetStore ? [] : NAV_STORE.filter(navVisible);
   const storeActive = storeNav.some((n) => location.pathname === n.to);
 
   const renderNavLink = (n) => {

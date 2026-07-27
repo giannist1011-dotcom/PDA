@@ -9,7 +9,7 @@ from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, ensure_demo_account, migrate_items_sort_order
-from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, admin_admins, admin_fleet, announcements, onboarding, billing, fleet
+from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, admin_admins, admin_fleet, announcements, onboarding, billing, fleet, store_fleet
 
 app = FastAPI(title="OrderDeck")
 
@@ -49,6 +49,7 @@ api.include_router(announcements.router)
 api.include_router(onboarding.router)
 api.include_router(billing.router)
 api.include_router(fleet.router)
+api.include_router(store_fleet.router)
 
 app.include_router(api)
 
@@ -142,6 +143,12 @@ async def on_startup():
     # Βάρδιες οδηγών (ώρες στα στατιστικά οδηγού)
     await db.fleet_shifts.create_index([("team_id", 1), ("member_id", 1), ("ended_at", -1)])
     await db.fleet_counters.create_index([("team_id", 1), ("day", 1)], unique=True)
+    # FleetDeck καταστημάτων: συνεργασίες κατάστημα ↔ εταιρεία + παραγγελίες ανά κατάστημα
+    await db.fleet_partnerships.create_index([("store_user_id", 1), ("status", 1)])
+    await db.fleet_partnerships.create_index([("team_id", 1), ("status", 1)])
+    await db.fleet_orders.create_index([("store_user_id", 1), ("created_at", -1)], sparse=True)
+    # Lazy δημοσίευση προγραμματισμένων παραγγελιών καταστημάτων (status=scheduled)
+    await db.fleet_orders.create_index([("status", 1), ("publish_at", 1)], sparse=True)
     # Web Push συνδρομές (FleetDeck): εύρεση ανά ομάδα/επιφάνεια + μοναδικό endpoint
     await db.push_subscriptions.create_index([("team_id", 1), ("surface", 1)])
     await db.push_subscriptions.create_index("endpoint", unique=True)

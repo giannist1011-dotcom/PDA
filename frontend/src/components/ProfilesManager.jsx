@@ -15,7 +15,9 @@ import { FEATURES } from "@/lib/perms";
 import { Switch } from "@/components/ui/switch";
 
 // waiterOnly: manager view — only Σερβιτόρος profiles, role locked.
-function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
+// allowedRoles: περιορισμός διαθέσιμων ρόλων (π.χ. FleetDeck καταστήματος:
+// μόνο Ιδιοκτήτης/Υπάλληλος) — null = όλοι οι ρόλοι.
+function ProfileModal({ open, initial, waiterOnly, allowedRoles, onClose, onSave }) {
   const [name, setName] = useState("");
   const [role, setRole] = useState(waiterOnly ? "waiter" : "employee");
   const [pin, setPin] = useState("");
@@ -92,7 +94,9 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
             data-testid="profile-role-select"
             className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
           >
-            {Object.entries(ROLE_LABELS).map(([r, label]) => (
+            {Object.entries(ROLE_LABELS)
+              .filter(([r]) => !allowedRoles || allowedRoles.includes(r))
+              .map(([r, label]) => (
               <option key={r} value={r}>
                 {label}
               </option>
@@ -169,7 +173,7 @@ function ProfileModal({ open, initial, waiterOnly, onClose, onSave }) {
   );
 }
 
-export default function ProfilesManager({ waiterOnly = false }) {
+export default function ProfilesManager({ waiterOnly = false, allowedRoles = null }) {
   const { user } = useAuth();
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -308,6 +312,7 @@ export default function ProfilesManager({ waiterOnly = false }) {
         open={modal.open}
         initial={modal.editing}
         waiterOnly={waiterOnly}
+        allowedRoles={allowedRoles}
         onClose={() => setModal({ open: false, editing: null })}
         onSave={handleSave}
       />

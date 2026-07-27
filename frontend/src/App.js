@@ -43,6 +43,10 @@ import FleetSelect from "@/pages/FleetSelect";
 import FleetDispatch from "@/pages/FleetDispatch";
 import FleetDriver from "@/pages/FleetDriver";
 import FleetMembers from "@/pages/FleetMembers";
+import StoreFleet from "@/pages/StoreFleet";
+import StoreFleetPartners from "@/pages/StoreFleetPartners";
+import StoreFleetStats from "@/pages/StoreFleetStats";
+import StoreFleetSettings from "@/pages/StoreFleetSettings";
 
 // Old top-level app paths now live under /app — keep old links/bookmarks working.
 const LEGACY_PATHS = [
@@ -151,6 +155,40 @@ function App() {
               element={
                 <ProtectedRoute roles={["owner", "manager", "employee"]}>
                   <PDA />
+                </ProtectedRoute>
+              }
+            />
+            {/* FleetDeck καταστήματος (πλάνο «fleet»): ανέβασμα παραγγελιών σε
+                συνεργαζόμενες εταιρείες διανομής — store auth, όχι fleet token */}
+            <Route
+              path="/app/fleet"
+              element={
+                <ProtectedRoute roles={["owner", "employee"]}>
+                  <StoreFleet />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/fleet/partners"
+              element={
+                <ProtectedRoute requireOwner>
+                  <StoreFleetPartners />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/fleet/stats"
+              element={
+                <ProtectedRoute requireOwner>
+                  <StoreFleetStats />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/fleet/settings"
+              element={
+                <ProtectedRoute requireOwner>
+                  <StoreFleetSettings />
                 </ProtectedRoute>
               }
             />

@@ -134,15 +134,15 @@ async def register(body: RegisterIn, request: Request):
             "created_at": now,
         },
     ]
-    if body.plan != "fleet":
-        profiles.append({
-            "id": str(uuid.uuid4())[:8],
-            "user_id": uid,
-            "name": "Υπάλληλος",
-            "role": "employee",
-            "pin_hash": hash_password("0000"),
-            "created_at": now,
-        })
+    # Και στο πλάνο «fleet» (FleetDeck καταστήματος): προφίλ Ιδιοκτήτης + Υπάλληλος
+    profiles.append({
+        "id": str(uuid.uuid4())[:8],
+        "user_id": uid,
+        "name": "Υπάλληλος",
+        "role": "employee",
+        "pin_hash": hash_password("0000"),
+        "created_at": now,
+    })
     if body.has_waiters and body.plan != "fleet":
         profiles.append({
             "id": str(uuid.uuid4())[:8],
@@ -153,8 +153,10 @@ async def register(body: RegisterIn, request: Request):
             "created_at": now,
         })
     await db.profiles.insert_many(profiles)
-    # Πλάνα με Fleet: έτοιμη ομάδα διανομής + μέλος-διαχειριστής (PIN = PIN ιδιοκτήτη)
-    if body.plan in ("fleet", "orderdeck_fleet"):
+    # Μόνο το orderdeck_fleet έχει ΔΙΚΗ του ομάδα διανομής. Το πλάνο «fleet»
+    # (FleetDeck καταστήματος) ανεβάζει παραγγελίες σε συνεργαζόμενες εταιρείες —
+    # δεν πρέπει να εμφανίζεται το ίδιο ως εταιρεία διανομής.
+    if body.plan == "orderdeck_fleet":
         await ensure_fleet_team_for_user(doc)
     token = create_token(uid, email)
     return {"token": token, "user": public_user(doc)}
