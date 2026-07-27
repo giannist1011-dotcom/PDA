@@ -72,55 +72,8 @@ async def admin_ping(ctx: dict = Depends(get_admin_ctx)):
     }
 
 
-# ============ ΕΠΙΣΚΟΠΗΣΗ ============
-@router.get("/admin/overview")
-async def admin_overview(x_admin_password: Optional[str] = Header(None)):
-    require_admin(x_admin_password)
-    now = datetime.now(timezone.utc)
-    today_start = now.astimezone(ATHENS).replace(hour=0, minute=0, second=0, microsecond=0)
-    today_iso = today_start.astimezone(timezone.utc).isoformat()
-    d7_iso = (now - timedelta(days=7)).isoformat()
-    d30_iso = (now - timedelta(days=30)).isoformat()
-
-    # Οι εταιρίες delivery (account_type=fleet_company) έχουν δική τους λίστα/μετρικές
-    not_fleet = {"account_type": {"$ne": "fleet_company"}}
-    real = {"is_demo": {"$ne": True}, **not_fleet}
-    total = await db.users.count_documents(real)
-    disabled = await db.users.count_documents({**real, "disabled": True})
-    demo = await db.users.count_documents({"is_demo": True, **not_fleet})
-
-    regs_today = await db.users.count_documents({**real, "created_at": {"$gte": today_iso}})
-    regs_7d = await db.users.count_documents({**real, "created_at": {"$gte": d7_iso}})
-    regs_30d = await db.users.count_documents({**real, "created_at": {"$gte": d30_iso}})
-
-    orders_total, revenue_total = 0, 0.0
-    async for row in db.orders.aggregate([
-        {"$group": {"_id": None, "n": {"$sum": 1}, "revenue": {"$sum": {"$ifNull": ["$total", 0]}}}},
-    ]):
-        orders_total, revenue_total = row["n"], row["revenue"]
-
-    by_type = {}
-    async for row in db.users.aggregate([
-        {"$match": real},
-        {"$group": {"_id": {"$ifNull": ["$business_type", "souvlaki"]}, "n": {"$sum": 1}}},
-    ]):
-        by_type[row["_id"]] = row["n"]
-
-    deckpilot_ids = await db.ai_usage.distinct("user_id")
-    deckpilot_shops = 0
-    if deckpilot_ids:
-        deckpilot_shops = await db.users.count_documents({**real, "id": {"$in": deckpilot_ids}})
-
-    return {
-        "shops": {"total": total, "active": total - disabled, "disabled": disabled, "demo": demo},
-        "registrations": {"today": regs_today, "last_7d": regs_7d, "last_30d": regs_30d},
-        "orders": {"total": orders_total, "revenue": round(revenue_total, 2)},
-        "by_business_type": by_type,
-        "deckpilot_shops": deckpilot_shops,
-    }
-
-
 # ============ ΜΑΓΑΖΙΑ ============
+# (Η Επισκόπηση μετακόμισε στο routers/admin_overview.py — command-center dashboard)
 @router.get("/admin/shops")
 async def admin_list_shops(
     ctx: dict = Depends(get_admin_ctx),

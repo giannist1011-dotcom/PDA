@@ -41,7 +41,8 @@ export function MasterOnly({ children }) {
 }
 
 const NAV = [
-  { to: "/admin", label: "Επισκόπηση", icon: LayoutDashboard, end: true },
+  // everyone: ορατό και στους sub-admins (το backend φιλτράρει στο scope τους)
+  { to: "/admin", label: "Επισκόπηση", icon: LayoutDashboard, end: true, everyone: true },
   { to: "/admin/shops", label: "Μαγαζιά", icon: Store, product: "orderdeck" },
   { to: "/admin/fleet", label: "Εταιρίες Delivery", icon: Truck, product: "fleet" },
   { to: "/admin/subscriptions", label: "Συνδρομές", icon: CreditCard },
@@ -52,11 +53,13 @@ const NAV = [
   { to: "/admin/admins", label: "Διαχειριστές", icon: ShieldCheck },
 ];
 
-// Sub-admin: μόνο οι λίστες των προϊόντων του scope του — όλα τα υπόλοιπα master-only
+// Sub-admin: Επισκόπηση + οι λίστες των προϊόντων του scope του — τα υπόλοιπα master-only
 const navForInfo = (info) =>
   info?.is_master
     ? NAV
-    : NAV.filter((n) => n.product && (info?.products || []).includes(n.product));
+    : NAV.filter(
+        (n) => n.everyone || (n.product && (info?.products || []).includes(n.product))
+      );
 
 const inputCls =
   "w-full h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame";

@@ -6,14 +6,13 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 ## BACKEND — endpoints (backend/routers/*.py)
 ### admin.py
 - GET /admin/ping → admin_ping @61 — Έλεγχος admin auth (master password ή sub-admin token)…
-- GET /admin/overview → admin_overview @77
-- GET /admin/shops → admin_list_shops @125
-- GET /admin/shops/{uid} → admin_shop_detail @209
-- POST /admin/shops/{uid}/profiles/{pid}/reset-pin → admin_reset_profile_pin @254 — Επαναφορά PIN προφίλ από τον διαχειριστή πλατφόρμας: προσωρινό…
-- PATCH /admin/shops/{uid} → admin_update_shop @318
-- DELETE /admin/shops/{uid} → admin_delete_shop @355
-- GET /admin/subscriptions/expiring → admin_expiring_subscriptions @370 — Συνδρομές/δοκιμές που λήγουν στις επόμενες 7 ημέρες (για…
-- GET /admin/leads → admin_leads @392
+- GET /admin/shops → admin_list_shops @78
+- GET /admin/shops/{uid} → admin_shop_detail @162
+- POST /admin/shops/{uid}/profiles/{pid}/reset-pin → admin_reset_profile_pin @207 — Επαναφορά PIN προφίλ από τον διαχειριστή πλατφόρμας: προσωρινό…
+- PATCH /admin/shops/{uid} → admin_update_shop @271
+- DELETE /admin/shops/{uid} → admin_delete_shop @308
+- GET /admin/subscriptions/expiring → admin_expiring_subscriptions @323 — Συνδρομές/δοκιμές που λήγουν στις επόμενες 7 ημέρες (για…
+- GET /admin/leads → admin_leads @345
 ### admin_admins.py
 - POST /admin/auth/login → admin_sub_login @142
 - POST /admin/auth/change-password → admin_sub_change_password @178 — Αλλαγή κωδικού sub-admin — υποχρεωτική μετά από προσωρινό…
@@ -32,6 +31,8 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - POST /admin/demos/{uid}/reset → admin_reset_demo @591 — Επαναφορά demo στην αρχική seeded κατάσταση — τα…
 - POST /admin/demos/{uid}/reset-password → admin_reset_demo_password @635 — Νέος κωδικός demo λογαριασμού: ενημερώνει το hash ΚΑΙ…
 - DELETE /admin/demos/{uid} → admin_delete_demo @660 — Οριστική διαγραφή demo λογαριασμού (χωρίς επιβεβαίωση ονόματος —…
+### admin_overview.py
+- GET /admin/overview → admin_overview @96
 ### ai.py
 - POST /ai/chat → ai_chat @199
 - GET /ai/brief → get_brief @275 — Επιστρέφει cached brief της ημέρας αν υπάρχει, αλλιώς…
@@ -234,7 +235,8 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - POST /tabs/{tab_id}/transfer → transfer_tab @317
 
 ## BACKEND — Mongo collections (paths σχετικά με backend/)
-- admin_audit: routers/admin.py, routers/admin_admins.py, server.py
+- admin_audit: routers/admin.py, routers/admin_admins.py, routers/admin_overview.py, server.py
+- admin_city_geo: routers/admin_overview.py, server.py
 - admin_users: routers/admin_admins.py, server.py
 - ai_briefs: routers/ai.py, server.py
 - ai_usage: routers/admin.py, routers/ai.py, server.py
@@ -243,21 +245,21 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - checklist_templates: routers/checklist.py, routers/stats.py, server.py
 - checklist_ticks: routers/checklist.py, routers/stats.py, server.py
 - day_reports: routers/stats.py, server.py
-- demo_leads: routers/admin.py, routers/auth.py, server.py
+- demo_leads: routers/admin.py, routers/admin_overview.py, routers/auth.py, server.py
 - employees: routers/schedule.py, routers/stats.py, server.py
 - expense_categories: routers/ai.py, routers/expenses.py, server.py
 - expenses: routers/ai.py, routers/expenses.py, routers/stats.py, server.py
 - fleet_accounts: routers/admin_fleet.py, routers/fleet.py, server.py
 - fleet_counters: routers/admin_fleet.py, routers/fleet.py, server.py
 - fleet_events: routers/admin_fleet.py, routers/fleet.py, server.py
-- fleet_members: routers/admin_fleet.py, routers/fleet.py, routers/store_fleet.py, server.py
-- fleet_orders: core.py, routers/admin_fleet.py, routers/fleet.py, routers/store_fleet.py, server.py
-- fleet_partnerships: core.py, routers/admin_fleet.py, routers/fleet.py, routers/store_fleet.py, server.py
+- fleet_members: routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
+- fleet_orders: core.py, routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
+- fleet_partnerships: core.py, routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
 - fleet_shifts: routers/fleet.py, server.py
-- fleet_teams: routers/admin_fleet.py, routers/fleet.py, routers/store_fleet.py, server.py
+- fleet_teams: routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
 - geocode_cache: routers/orders.py, routers/tables.py, server.py
 - items: core.py, routers/admin.py, routers/ai.py, routers/menu.py, routers/public_menu.py, server.py
-- orders: routers/admin.py, routers/ai.py, routers/orders.py, routers/stats.py, routers/tables.py, server.py
+- orders: routers/admin.py, routers/admin_overview.py, routers/ai.py, routers/orders.py, routers/stats.py, routers/tables.py, server.py
 - photos: routers/menu.py, routers/public_menu.py, server.py
 - profiles: core.py, routers/admin.py, routers/admin_fleet.py, routers/auth.py, server.py
 - promo_codes: routers/promo.py, server.py
@@ -270,7 +272,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - stock_photos: routers/menu.py, routers/stock_photos.py, server.py
 - table_tabs: routers/stats.py, routers/tables.py, server.py
 - tables: core.py, routers/stats.py, routers/tables.py, server.py
-- users: core.py, routers/admin.py, routers/admin_fleet.py, routers/auth.py, routers/billing.py, routers/fleet.py, routers/menu.py, routers/onboarding.py, routers/orders.py, routers/promo.py, routers/public_menu.py, routers/tables.py, server.py
+- users: core.py, routers/admin.py, routers/admin_fleet.py, routers/admin_overview.py, routers/auth.py, routers/billing.py, routers/fleet.py, routers/menu.py, routers/onboarding.py, routers/orders.py, routers/promo.py, routers/public_menu.py, routers/tables.py, server.py
 
 ## FRONTEND — routes (frontend/src/App.js)
 - login → FleetLogin
@@ -322,7 +324,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - AdminAnnouncements.jsx (386 γρ): Field@51, AnnouncementsContent@63, AdminAnnouncements@379
 - AdminFleet.jsx (51 γρ): AdminFleet@8
 - AdminLeads.jsx (156 γρ): LeadsContent@33, AdminLeads@149
-- AdminOverview.jsx (127 γρ): Card@14, Stat@23, OverviewContent@30, AdminOverview@120
+- AdminOverview.jsx (87 γρ): OverviewContent@17, AdminOverview@80
 - AdminPromo.jsx (394 γρ): Field@50, PromoContent@62, AdminPromo@387
 - AdminShops.jsx (55 γρ): AdminShops@12
 - AdminStockPhotos.jsx (289 γρ): Field@51, StockPhotosContent@58, AdminStockPhotos@282
@@ -368,6 +370,13 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - admin-fleet/FleetContent.jsx (158 γρ): FleetContent@16
 - admin-fleet/FleetModal.jsx (421 γρ): FleetModal@24
 - admin-fleet/utils.js (5 γρ)
+- admin-overview/ActivityFeed.jsx (49 γρ): ActivityFeed@14
+- admin-overview/AttentionStrip.jsx (62 γρ): Chip@4, AttentionStrip@17
+- admin-overview/CityTable.jsx (91 γρ): CityTable@25
+- admin-overview/ExpansionMap.jsx (123 γρ): ExpansionMap@49
+- admin-overview/GrowthChart.jsx (56 γρ): GrowthChart@15
+- admin-overview/KpiCards.jsx (92 γρ): Trend@5, Card@19, Mini@35, KpiCards@42
+- admin-overview/utils.js (27 γρ)
 - admin-shops/Badges.jsx (30 γρ): OnboardingCell@8, StatusBadge@22
 - admin-shops/CreateDemoModal.jsx (237 γρ): CreateDemoModal@42
 - admin-shops/DemoCredentials.jsx (112 γρ): CredRow@8, DemoCredentials@33
@@ -469,7 +478,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 
 ## FRONTEND — components (frontend/src/components)
 - AddressAutocomplete.jsx (353 γρ): AddressAutocomplete@83
-- AdminShell.jsx (352 γρ): useAdminPw@31, useAdminInfo@35, MasterOnly@38, LoginForm@64, ForcePasswordChange@143, AdminShell@207
+- AdminShell.jsx (355 γρ): useAdminPw@31, useAdminInfo@35, MasterOnly@38, LoginForm@67, ForcePasswordChange@146, AdminShell@210
 - AnnouncementBanner.jsx (88 γρ): AnnouncementBanner@32
 - AppShell.jsx (545 γρ): BetaBadge@102, DemoBanner@126, AppShell@169
 - BulkActionsBar.jsx (478 γρ): PriceChangeDialog@32, CategoryDialog@126, OptionGroupDialog@186, BulkActionsBar@362
