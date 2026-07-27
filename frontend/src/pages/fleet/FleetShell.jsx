@@ -5,6 +5,7 @@ import {
   Truck,
   LogOut,
   Users,
+  Settings,
   LayoutGrid,
   Bike,
   ShieldCheck,
@@ -150,6 +151,14 @@ export default function FleetShell({ title, children, actions = null }) {
                   data-testid="fleet-nav-members"
                 >
                   <Users className="w-4 h-4" />
+                </Link>
+                <Link
+                  to="/fleet/settings"
+                  className="p-2 rounded-md hover:bg-white/5 text-neutral-300"
+                  title="Ρυθμίσεις"
+                  data-testid="fleet-nav-settings"
+                >
+                  <Settings className="w-4 h-4" />
                 </Link>
               </>
             )}

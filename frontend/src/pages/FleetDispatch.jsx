@@ -9,7 +9,7 @@ import OrderCard from "@/pages/fleet/OrderCard";
 import PartnershipRequests from "@/pages/fleet/PartnershipRequests";
 import FleetOrdersMap from "@/pages/fleet/FleetOrdersMap";
 import DayTotals from "@/pages/fleet/DayTotals";
-import { fmtTime } from "@/pages/fleet/utils";
+import { fmtTime, useAccountCenter } from "@/pages/fleet/utils";
 
 const POLL_MS = 6000;
 const ACTIVE_STATUSES = ["waiting", "pickup", "enroute"];
@@ -24,6 +24,8 @@ export default function FleetDispatch() {
   const [tab, setTab] = useState("active");
   const [showEvents, setShowEvents] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
+  // Default κέντρο χάρτη: pin εταιρείας → geocode πόλης → θέα Ελλάδας
+  const mapCenter = useAccountCenter(team?.lat, team?.lng, team?.city);
 
   const load = useCallback(() => {
     apiFleetBoard()
@@ -80,7 +82,15 @@ export default function FleetDispatch() {
     ) : (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {list.map((o) => (
-          <OrderCard key={o.id} order={o} drivers={drivers} city={team?.city || ""} onChanged={load} />
+          <OrderCard
+            key={o.id}
+            order={o}
+            drivers={drivers}
+            city={team?.city || ""}
+            companyLat={team?.lat ?? null}
+            companyLng={team?.lng ?? null}
+            onChanged={load}
+          />
         ))}
       </div>
     );
@@ -91,7 +101,12 @@ export default function FleetDispatch() {
         {/* Αιτήματα συνεργασίας καταστημάτων — πάνω από τη φόρμα όταν υπάρχουν */}
         <PartnershipRequests requests={board?.partnership_requests} onChanged={load} />
 
-        <NewOrderForm city={team?.city || ""} onCreated={load} />
+        <NewOrderForm
+          city={team?.city || ""}
+          companyLat={team?.lat ?? null}
+          companyLng={team?.lng ?? null}
+          onCreated={load}
+        />
 
         {drivers.length > 0 && (
           <div className="flex flex-wrap items-center gap-2" data-testid="fleet-drivers-strip">
@@ -136,7 +151,7 @@ export default function FleetDispatch() {
             παραδομένα φεύγουν μόνα τους (δεν είναι πια στις ενεργές) */}
         {tab === "map" && (
           <section data-testid="fleet-tab-panel-map">
-            <FleetOrdersMap orders={active} />
+            <FleetOrdersMap orders={active} defaultCenter={mapCenter} />
           </section>
         )}
 

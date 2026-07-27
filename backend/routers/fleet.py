@@ -181,6 +181,10 @@ def public_team(t: dict, include_invite: bool = False) -> dict:
         "id": t["id"],
         "name": t["name"],
         "city": t.get("city") or "",
+        "address": t.get("address") or "",
+        "phone": t.get("phone") or "",
+        "lat": t.get("lat"),
+        "lng": t.get("lng"),
         "email": t.get("email"),
         "member_id": t.get("member_id"),
         "role": t.get("role"),
@@ -548,6 +552,49 @@ async def fleet_login(body: FleetLoginIn, request: Request):
 @router.get("/fleet/me")
 async def fleet_me(team: dict = Depends(get_fleet_team)):
     return public_team(team, include_invite=team.get("role") == "fleet_admin")
+
+
+class FleetCompanyIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    city: str = Field(default="", max_length=60)
+    address: str = Field(default="", max_length=200)
+    phone: str = Field(default="", max_length=60)
+    lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    lng: Optional[float] = Field(default=None, ge=-180, le=180)
+
+
+@router.put("/fleet/settings/company")
+async def fleet_update_company(body: FleetCompanyIn, team: dict = Depends(require_fleet_admin)):
+    """Στοιχεία επιχείρησης εταιρείας — όνομα, πόλη, διεύθυνση + pin, τηλέφωνα.
+
+    Η πόλη/pin κεντράρουν χάρτες & προτάσεις διευθύνσεων και το city ταιριάζει
+    με το store_city των καταστημάτων στην αναζήτηση συνεργασιών."""
+    fields = {
+        "name": body.name.strip(),
+        "city": body.city.strip(),
+        "address": body.address.strip(),
+        "phone": body.phone.strip(),
+        "lat": body.lat,
+        "lng": body.lng,
+    }
+    await db.fleet_teams.update_one({"id": team["id"]}, {"$set": fields})
+    # Τα snapshots όνομα/πόλη στις συνεργασίες ακολουθούν (τα βλέπουν τα μαγαζιά)
+    await db.fleet_partnerships.update_many(
+        {"team_id": team["id"]},
+        {"$set": {"team_name": fields["name"], "team_city": fields["city"]}},
+    )
+    # Unified λογαριασμός: καθρέφτισμα στα κοινά πεδία εμφάνισης του users
+    if team.get("owner_user_id"):
+        await db.users.update_one(
+            {"id": team["owner_user_id"]},
+            {"$set": {
+                "restaurant_name": fields["name"],
+                "city": fields["city"],
+                "store_city": fields["city"],
+                "phone": fields["phone"],
+            }},
+        )
+    return public_team({**team, **fields}, include_invite=True)
 
 
 # ============ MEMBERS ============

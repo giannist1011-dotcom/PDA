@@ -41,6 +41,9 @@ const popupHtml = (o) => {
 
 export default function FleetOrdersMap({
   orders,
+  // Default κέντρο χωρίς παραγγελίες: το pin/πόλη του λογαριασμού ({lat, lng}) —
+  // null → θέα Ελλάδας. Μπορεί να έρθει καθυστερημένα (async geocode πόλης).
+  defaultCenter = null,
   heightClass = "h-[55vh] min-h-[320px]",
   withPopups = true,
   onPinTap = null,
@@ -57,10 +60,14 @@ export default function FleetOrdersMap({
   const located = orders.filter((o) => o.lat != null && o.lng != null);
   const unlocated = orders.length - located.length;
 
-  // Init χάρτη — αρχική θέα Ελλάδα μέχρι το πρώτο fitBounds στα pins
+  // Init χάρτη — αρχική θέα το pin του λογαριασμού (αλλιώς Ελλάδα) μέχρι το
+  // πρώτο fitBounds στα pins παραγγελιών
   useEffect(() => {
     if (!mapEl.current || mapRef.current) return;
-    const map = L.map(mapEl.current, { attributionControl: false }).setView([38.3, 23.8], 6);
+    const map = L.map(mapEl.current, { attributionControl: false }).setView(
+      defaultCenter ? [defaultCenter.lat, defaultCenter.lng] : [38.3, 23.8],
+      defaultCenter ? 13 : 6
+    );
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
     L.control.attribution({ prefix: false }).addAttribution("© OpenStreetMap").addTo(map);
     mapRef.current = map;
@@ -70,7 +77,16 @@ export default function FleetOrdersMap({
       markersRef.current = {};
       fittedRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Το defaultCenter μπορεί να έρθει ΜΕΤΑ το init (async geocode της πόλης) —
+  // κεντράρισμα μόνο όσο ο χάρτης δεν έχει κάνει fit σε pins παραγγελιών
+  useEffect(() => {
+    if (defaultCenter && mapRef.current && !fittedRef.current) {
+      mapRef.current.setView([defaultCenter.lat, defaultCenter.lng], 13);
+    }
+  }, [defaultCenter]);
 
   // Συγχρονισμός pins με τις παραγγελίες (ίδιο μοτίβο με LiveOrdersMap):
   // ενημέρωση υπαρχόντων, προσθήκη νέων, αφαίρεση όσων έφυγαν (🔵/ακύρωση)

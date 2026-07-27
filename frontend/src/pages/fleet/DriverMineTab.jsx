@@ -13,6 +13,7 @@ export default function DriverMineTab({
   mine,
   delivered,
   city,
+  mapCenter = null,
   busyId,
   onAdvance,
   onProblem,
@@ -28,6 +29,7 @@ export default function DriverMineTab({
       {mine.some((o) => o.lat != null && o.lng != null) && (
         <FleetOrdersMap
           orders={mine}
+          defaultCenter={mapCenter}
           heightClass="h-56"
           withPopups={false}
           onPinTap={onPinTap}

@@ -1,5 +1,24 @@
 // Κοινά για τις σελίδες Fleet: καταστάσεις, πληρωμές, μορφοποίηση.
-import { photonSearch } from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { geocodeCityCenter, photonSearch } from "@/lib/api";
+
+// Default κέντρο χαρτών του λογαριασμού: αποθηκευμένο pin → geocode της
+// αποθηκευμένης πόλης → null (θέα Ελλάδας στον χάρτη). Σταθερό object
+// (useMemo) ώστε το recenter effect του FleetOrdersMap να μην ξαναπυροδοτείται
+// σε κάθε poll.
+export const useAccountCenter = (lat, lng, city) => {
+  const hasPin = lat != null && lng != null;
+  const [cityCenter, setCityCenter] = useState(null);
+  useEffect(() => {
+    if (hasPin || !city) return undefined;
+    let alive = true;
+    geocodeCityCenter(city).then((c) => alive && c && setCityCenter(c));
+    return () => {
+      alive = false;
+    };
+  }, [hasPin, city]);
+  return useMemo(() => (hasPin ? { lat, lng } : cityCenter), [hasPin, lat, lng, cityCenter]);
+};
 
 // Auto-geocode όταν ο χρήστης ΔΕΝ διάλεξε πρόταση/pin: πρώτο αποτέλεσμα του
 // Photon για «διεύθυνση, πόλη». null σε αποτυχία/offline — η παραγγελία

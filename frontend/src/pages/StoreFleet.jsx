@@ -122,6 +122,9 @@ export default function StoreFleet() {
         <StoreOrderForm
           storeName={board?.store_name || user?.restaurant_name || ""}
           city={user?.store_city || ""}
+          storeLat={user?.store_lat ?? null}
+          storeLng={user?.store_lng ?? null}
+          radiusKm={user?.delivery_radius_km ?? null}
           partnerships={partnerships}
           teamId={teamId}
           onTeamChange={setTeamId}

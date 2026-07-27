@@ -16,7 +16,7 @@ import DriverMineTab from "@/pages/fleet/DriverMineTab";
 import ProblemModal from "@/pages/fleet/ProblemModal";
 import PushToggle from "@/pages/fleet/PushToggle";
 import { notify, isMuted, setMuted } from "@/pages/fleet/alerts";
-import { NEXT_ACTION } from "@/pages/fleet/utils";
+import { NEXT_ACTION, useAccountCenter } from "@/pages/fleet/utils";
 import { ensurePushOnShiftStart, pushSupport } from "@/lib/push";
 
 const POLL_MS = 5000;
@@ -48,6 +48,8 @@ export default function FleetDriver() {
   const [problemOrder, setProblemOrder] = useState(null);
   // Tap σε pin του χάρτη → η κάρτα της παραγγελίας φωτίζεται και σκρολάρει σε θέα
   const [highlightId, setHighlightId] = useState(null);
+  // Default κέντρο του συμπαγούς χάρτη: pin εταιρείας → geocode πόλης → Ελλάδα
+  const mapCenter = useAccountCenter(team?.lat, team?.lng, team?.city);
   const highlightTimer = useRef(null);
   // Γνωστή κατάσταση για ανίχνευση αλλαγών μεταξύ polls (ειδοποιήσεις)
   const seenRef = useRef(null); // {available:Set, mine:Set, updated:Map(id→updated_at)}
@@ -336,6 +338,7 @@ export default function FleetDriver() {
             mine={mine}
             delivered={delivered}
             city={team?.city || ""}
+            mapCenter={mapCenter}
             busyId={busyId}
             onAdvance={advance}
             onProblem={setProblemOrder}

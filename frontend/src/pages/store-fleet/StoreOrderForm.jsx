@@ -31,6 +31,9 @@ const DELAYS = [
 export default function StoreOrderForm({
   storeName,
   city,
+  storeLat = null,
+  storeLng = null,
+  radiusKm = null,
   partnerships,
   teamId,
   onTeamChange,
@@ -145,11 +148,23 @@ export default function StoreOrderForm({
             }}
             onPick={setCoords}
             city={city}
+            storeLat={storeLat}
+            storeLng={storeLng}
+            radiusKm={radiusKm || undefined}
             fetchBook={apiStoreFleetAddressBook}
             placeholder="Οδός και αριθμός"
             testId="store-fleet-order-address"
             className="mt-1"
           />
+          {/* Χωρίς πόλη/pin οι προτάσεις είναι πανελλαδικές — παραπομπή στις ρυθμίσεις */}
+          {!city && storeLat == null && (
+            <div className="text-[11px] text-neutral-500 mt-1" data-testid="store-fleet-city-hint">
+              <Link to="/app/fleet/settings" className="text-flame hover:underline">
+                Όρισε τη διεύθυνσή σου
+              </Link>{" "}
+              για καλύτερες προτάσεις
+            </div>
+          )}
         </div>
         <div>
           <label className={labelCls}>Τηλέφωνο πελάτη (προαιρετικό)</label>

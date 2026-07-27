@@ -11,7 +11,14 @@ const inputCls =
 
 // Επεξεργασία παραγγελίας από τον διαχειριστή. Αν έχει ήδη οδηγό, η αποθήκευση
 // τον ειδοποιεί («Η #Χ ενημερώθηκε») με τα αλλαγμένα πεδία μαρκαρισμένα.
-export default function EditOrderModal({ order, city, onClose, onSaved }) {
+export default function EditOrderModal({
+  order,
+  city,
+  companyLat = null,
+  companyLng = null,
+  onClose,
+  onSaved,
+}) {
   const [pickup, setPickup] = useState(order.pickup_name || "");
   const [address, setAddress] = useState(order.address || "");
   // Pin της διεύθυνσης: ξεκινά από την παραγγελία, καθαρίζει σε πληκτρολόγηση,
@@ -91,6 +98,9 @@ export default function EditOrderModal({ order, city, onClose, onSaved }) {
             }}
             onPick={setCoords}
             city={city}
+            storeLat={companyLat}
+            storeLng={companyLng}
+            radiusKm={10}
             fetchBook={apiFleetAddressBook}
             placeholder="Οδός και αριθμός"
             testId="fleet-edit-address"

@@ -265,6 +265,24 @@ export const geocodeAddress = (q) =>
     `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
     { headers: { "Accept-Language": "el" } }
   ).then((r) => r.json());
+// Κέντρο πόλης για default θέα χαρτών όταν δεν υπάρχει αποθηκευμένο pin —
+// cached ανά πόλη στο session (και τα null: μη βρεθείσα πόλη δεν ξαναζητιέται)
+const cityCenterCache = new Map();
+export const geocodeCityCenter = async (city) => {
+  const key = (city || "").trim().toLowerCase();
+  if (!key) return null;
+  if (cityCenterCache.has(key)) return cityCenterCache.get(key);
+  try {
+    const results = await geocodeAddress(city.trim());
+    const c = results?.[0]
+      ? { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) }
+      : null;
+    cityCenterCache.set(key, c);
+    return c;
+  } catch {
+    return null; // offline/σφάλμα — ΔΕΝ γράφεται στο cache, θα ξαναδοκιμαστεί
+  }
+};
 // Ρυθμίσεις εκτύπωσης (owner)
 export const apiUpdatePrinting = (payload) =>
   api.put("/settings/printing", payload).then((r) => r.data);

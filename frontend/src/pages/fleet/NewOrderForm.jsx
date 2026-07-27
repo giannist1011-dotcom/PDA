@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Zap } from "lucide-react";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
@@ -10,10 +11,15 @@ import { Button } from "@/components/ui/button";
 const inputCls =
   "w-full h-11 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame";
 
+// Ακτίνα προτάσεων γύρω από το pin της εταιρείας — πιο φαρδιά από μαγαζιού
+// (η εταιρεία καλύπτει όλη την πόλη, όχι ζώνη διανομής ενός καταστήματος)
+const COMPANY_SUGGEST_RADIUS_KM = 10;
+
 // Γρήγορη καταχώρηση παραγγελίας από τον διαχειριστή: κατάστημα παραλαβής
-// (autocomplete από προηγούμενα ονόματα), διεύθυνση (AddressAutocomplete),
-// σημείωση. Χωρίς ποσά/πληρωμή — υπόθεση του μαγαζιού, όχι της εταιρείας.
-export default function NewOrderForm({ city, onCreated }) {
+// (autocomplete από προηγούμενα ονόματα), διεύθυνση (AddressAutocomplete με
+// bias στο pin/πόλη της εταιρείας), σημείωση. Χωρίς ποσά/πληρωμή — υπόθεση
+// του μαγαζιού, όχι της εταιρείας.
+export default function NewOrderForm({ city, companyLat = null, companyLng = null, onCreated }) {
   const [pickup, setPickup] = useState("");
   const [address, setAddress] = useState("");
   // Pin της διεύθυνσης: από επιλογή πρότασης· καθαρίζει σε κάθε πληκτρολόγηση
@@ -95,11 +101,23 @@ export default function NewOrderForm({ city, onCreated }) {
           }}
           onPick={setCoords}
           city={city}
+          storeLat={companyLat}
+          storeLng={companyLng}
+          radiusKm={COMPANY_SUGGEST_RADIUS_KM}
           fetchBook={apiFleetAddressBook}
           placeholder="Οδός και αριθμός"
           testId="fleet-order-address"
           className="mt-1"
         />
+        {/* Χωρίς πόλη/pin οι προτάσεις είναι πανελλαδικές — παραπομπή στις ρυθμίσεις */}
+        {!city && companyLat == null && (
+          <div className="text-[11px] text-neutral-500 mt-1" data-testid="fleet-order-city-hint">
+            <Link to="/fleet/settings" className="text-flame hover:underline">
+              Όρισε τη διεύθυνσή σου
+            </Link>{" "}
+            για καλύτερες προτάσεις
+          </div>
+        )}
       </div>
       <div className="md:col-span-4 flex gap-2">
         <div className="flex-1">

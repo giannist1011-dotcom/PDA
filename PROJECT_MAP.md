@@ -80,45 +80,46 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - PUT /expenses/{eid} → update_expense @146
 - DELETE /expenses/{eid} → delete_expense @169
 ### fleet.py
-- POST /fleet/signup → fleet_signup @439 — Εγγραφή εταιρείας διανομής στο ΕΝΙΑΙΟ auth (users, account_type=fleet_company).
-- POST /fleet/exchange → fleet_exchange @486 — Unified JWT (users) → team-level fleet token, χωρίς…
-- POST /fleet/register → fleet_register @502
-- POST /fleet/login → fleet_login @537
-- GET /fleet/me → fleet_me @549
-- GET /fleet/members → fleet_list_members @555
-- POST /fleet/members → fleet_create_member @563
-- POST /fleet/members/{mid}/reset-password → fleet_reset_member_password @615 — Νέος προσωρινός κωδικός διανομέα — υποχρεωτική αλλαγή στην…
-- PUT /fleet/members/{mid} → fleet_update_member @631
-- DELETE /fleet/members/{mid} → fleet_delete_member @651
-- POST /fleet/member/select → fleet_member_select @687
-- POST /fleet/member/exit → fleet_member_exit @700
-- POST /fleet/driver/login → fleet_driver_login @727 — Είσοδος διανομέα με τηλέφωνο/email + κωδικό (προσωρινό ή…
-- POST /fleet/driver/change-password → fleet_driver_change_password @743
-- POST /fleet/driver/select → fleet_driver_select @754 — Επιλογή εταιρείας → πλήρες fleet token (team +…
-- POST /fleet/admin/display-name → fleet_admin_display_name @777 — Προσωπικό όνομα του διαχειριστή («Το όνομά μου») —…
-- POST /fleet/admin/driver-mode → fleet_admin_driver_mode @796 — «Λειτουργία διανομέα»: βρίσκει ή δημιουργεί το προσωπικό driver…
-- POST /fleet/orders → fleet_create_order @846
-- GET /fleet/board → fleet_board @876 — Ο πίνακας του διαχειριστή: παραγγελίες ημέρας + feed…
-- GET /fleet/partnerships → fleet_partnerships @919 — Αιτήματα & ενεργές συνεργασίες καταστημάτων της εταιρείας.
-- POST /fleet/partnerships/{pid}/respond → fleet_respond_partnership @931 — Αποδοχή/απόρριψη αιτήματος συνεργασίας καταστήματος. Με αποδοχή η
-- GET /fleet/driver/board → fleet_driver_board @954 — Η οθόνη του οδηγού: ελεύθερες + δικές του…
-- POST /fleet/orders/{oid}/claim → fleet_claim_order @984 — ΑΤΟΜΙΚΟ claim: μόνο ένας οδηγός παίρνει την παραγγελία…
-- POST /fleet/orders/{oid}/status → fleet_order_status @1008
-- POST /fleet/orders/{oid}/assign → fleet_assign_order @1038
-- POST /fleet/orders/{oid}/cancel → fleet_cancel_order @1078
-- PUT /fleet/orders/{oid} → fleet_edit_order @1108 — Επεξεργασία παραγγελίας από τον διαχειριστή. Πριν το claim…
-- POST /fleet/orders/{oid}/urgent → fleet_set_urgent @1155 — «⚡ Επείγον»: καρφιτσώνει την παραγγελία πρώτη στις «Ελεύθερες»…
-- POST /fleet/orders/{oid}/problem → fleet_report_problem @1181 — Ο οδηγός σημαίνει πρόβλημα σε claimed παραγγελία του…
-- POST /fleet/orders/{oid}/problem/resolve → fleet_resolve_problem @1217
-- POST /fleet/driver/shift → fleet_driver_shift @1232 — «Ξεκινάω/Τέλος βάρδιας»: on_shift στο μέλος (πράσινη κουκκίδα στον…
-- GET /fleet/driver/stats → fleet_driver_stats @1266 — Στατιστικά του ίδιου του οδηγού: σύνολο παραδόσεων, σήμερα/εβδομάδα,
-- GET /fleet/driver/orders → fleet_driver_orders @1325 — Ιστορικό παραγγελιών του οδηγού (claimed/παραδομένες) με φίλτρο ημέρας…
-- GET /fleet/pickup-names → fleet_pickup_names @1358 — Ονόματα καταστημάτων παραλαβής που έχουν ξαναχρησιμοποιηθεί (autocomplete).
-- GET /fleet/address-book → fleet_address_book @1365 — Πρόσφατες διευθύνσεις της ομάδας για το AddressAutocomplete (μορφή…
-- GET /fleet/day-summary → fleet_day_summary @1383 — Πλήθη παραγγελιών ανά οδηγό για ημέρα ή εύρος…
-- GET /fleet/push/vapid-key → fleet_push_vapid_key @1440 — Δημόσιο VAPID κλειδί για το pushManager.subscribe — null…
-- POST /fleet/push/subscribe → fleet_push_subscribe @1447
-- POST /fleet/push/unsubscribe → fleet_push_unsubscribe @1455
+- POST /fleet/signup → fleet_signup @443 — Εγγραφή εταιρείας διανομής στο ΕΝΙΑΙΟ auth (users, account_type=fleet_company).
+- POST /fleet/exchange → fleet_exchange @490 — Unified JWT (users) → team-level fleet token, χωρίς…
+- POST /fleet/register → fleet_register @506
+- POST /fleet/login → fleet_login @541
+- GET /fleet/me → fleet_me @553
+- PUT /fleet/settings/company → fleet_update_company @567 — Στοιχεία επιχείρησης εταιρείας — όνομα, πόλη, διεύθυνση +…
+- GET /fleet/members → fleet_list_members @602
+- POST /fleet/members → fleet_create_member @610
+- POST /fleet/members/{mid}/reset-password → fleet_reset_member_password @662 — Νέος προσωρινός κωδικός διανομέα — υποχρεωτική αλλαγή στην…
+- PUT /fleet/members/{mid} → fleet_update_member @678
+- DELETE /fleet/members/{mid} → fleet_delete_member @698
+- POST /fleet/member/select → fleet_member_select @734
+- POST /fleet/member/exit → fleet_member_exit @747
+- POST /fleet/driver/login → fleet_driver_login @774 — Είσοδος διανομέα με τηλέφωνο/email + κωδικό (προσωρινό ή…
+- POST /fleet/driver/change-password → fleet_driver_change_password @790
+- POST /fleet/driver/select → fleet_driver_select @801 — Επιλογή εταιρείας → πλήρες fleet token (team +…
+- POST /fleet/admin/display-name → fleet_admin_display_name @824 — Προσωπικό όνομα του διαχειριστή («Το όνομά μου») —…
+- POST /fleet/admin/driver-mode → fleet_admin_driver_mode @843 — «Λειτουργία διανομέα»: βρίσκει ή δημιουργεί το προσωπικό driver…
+- POST /fleet/orders → fleet_create_order @893
+- GET /fleet/board → fleet_board @923 — Ο πίνακας του διαχειριστή: παραγγελίες ημέρας + feed…
+- GET /fleet/partnerships → fleet_partnerships @966 — Αιτήματα & ενεργές συνεργασίες καταστημάτων της εταιρείας.
+- POST /fleet/partnerships/{pid}/respond → fleet_respond_partnership @978 — Αποδοχή/απόρριψη αιτήματος συνεργασίας καταστήματος. Με αποδοχή η
+- GET /fleet/driver/board → fleet_driver_board @1001 — Η οθόνη του οδηγού: ελεύθερες + δικές του…
+- POST /fleet/orders/{oid}/claim → fleet_claim_order @1031 — ΑΤΟΜΙΚΟ claim: μόνο ένας οδηγός παίρνει την παραγγελία…
+- POST /fleet/orders/{oid}/status → fleet_order_status @1055
+- POST /fleet/orders/{oid}/assign → fleet_assign_order @1085
+- POST /fleet/orders/{oid}/cancel → fleet_cancel_order @1125
+- PUT /fleet/orders/{oid} → fleet_edit_order @1155 — Επεξεργασία παραγγελίας από τον διαχειριστή. Πριν το claim…
+- POST /fleet/orders/{oid}/urgent → fleet_set_urgent @1202 — «⚡ Επείγον»: καρφιτσώνει την παραγγελία πρώτη στις «Ελεύθερες»…
+- POST /fleet/orders/{oid}/problem → fleet_report_problem @1228 — Ο οδηγός σημαίνει πρόβλημα σε claimed παραγγελία του…
+- POST /fleet/orders/{oid}/problem/resolve → fleet_resolve_problem @1264
+- POST /fleet/driver/shift → fleet_driver_shift @1279 — «Ξεκινάω/Τέλος βάρδιας»: on_shift στο μέλος (πράσινη κουκκίδα στον…
+- GET /fleet/driver/stats → fleet_driver_stats @1313 — Στατιστικά του ίδιου του οδηγού: σύνολο παραδόσεων, σήμερα/εβδομάδα,
+- GET /fleet/driver/orders → fleet_driver_orders @1372 — Ιστορικό παραγγελιών του οδηγού (claimed/παραδομένες) με φίλτρο ημέρας…
+- GET /fleet/pickup-names → fleet_pickup_names @1405 — Ονόματα καταστημάτων παραλαβής που έχουν ξαναχρησιμοποιηθεί (autocomplete).
+- GET /fleet/address-book → fleet_address_book @1412 — Πρόσφατες διευθύνσεις της ομάδας για το AddressAutocomplete (μορφή…
+- GET /fleet/day-summary → fleet_day_summary @1430 — Πλήθη παραγγελιών ανά οδηγό για ημέρα ή εύρος…
+- GET /fleet/push/vapid-key → fleet_push_vapid_key @1487 — Δημόσιο VAPID κλειδί για το pushManager.subscribe — null…
+- POST /fleet/push/subscribe → fleet_push_subscribe @1494
+- POST /fleet/push/unsubscribe → fleet_push_unsubscribe @1502
 ### menu.py
 - GET /menu/config → get_menu_config @95
 - POST /menu/categories → create_category @125
@@ -277,6 +278,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - driver-login → FleetDriverLogin
 - select → FleetSelect
 - members → FleetProtected [fleet_admin]
+- settings → FleetProtected [fleet_admin]
 - driver → FleetProtected
 - / → Landing
 - /menu/:slug → PublicMenu
@@ -332,12 +334,13 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - DeckPilot.jsx (13 γρ): DeckPilot@4
 - DeckView.jsx (269 γρ): BigCard@21, Panel@39, DeckView@49
 - Expenses.jsx (397 γρ): Expenses@32
-- FleetDispatch.jsx (211 γρ): FleetDispatch@20
-- FleetDriver.jsx (360 γρ): FleetDriver@40
+- FleetDispatch.jsx (226 γρ): FleetDispatch@20
+- FleetDriver.jsx (363 γρ): FleetDriver@40
 - FleetDriverLogin.jsx (249 γρ): FleetDriverLogin@19
 - FleetLogin.jsx (133 γρ): FleetLogin@9
 - FleetMembers.jsx (357 γρ): FleetMembers@22
 - FleetSelect.jsx (136 γρ): FleetSelect@11
+- FleetSettings.jsx (64 γρ): FleetSettings@12
 - FleetSignup.jsx (290 γρ): Field@10, FleetSignup@38
 - History.jsx (296 γρ): History@26
 - Landing.jsx (397 γρ): Landing@88
@@ -351,9 +354,9 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - Schedule.jsx (338 γρ): Schedule@30
 - Settings.jsx (128 γρ): Section@20, Settings@35
 - Stock.jsx (299 γρ): Stock@29
-- StoreFleet.jsx (166 γρ): StoreFleet@16
+- StoreFleet.jsx (169 γρ): StoreFleet@16
 - StoreFleetPartners.jsx (159 γρ): StoreFleetPartners@22
-- StoreFleetSettings.jsx (29 γρ): StoreFleetSettings@7
+- StoreFleetSettings.jsx (47 γρ): StoreFleetSettings@9
 - StoreFleetStats.jsx (101 γρ): StoreFleetStats@14
 - TableOrder.jsx (337 γρ): TableOrder@28
 - Tables.jsx (159 γρ): Tables@12
@@ -393,18 +396,18 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - fleet/DayTotals.jsx (69 γρ): DayTotals@9
 - fleet/DriverCard.jsx (99 γρ): DriverCard@14, EmptyState@92
 - fleet/DriverHistory.jsx (92 γρ): DriverHistory@12
-- fleet/DriverMineTab.jsx (108 γρ): DriverMineTab@12
+- fleet/DriverMineTab.jsx (110 γρ): DriverMineTab@12
 - fleet/DriverStats.jsx (79 γρ): DriverStats@7
-- fleet/EditOrderModal.jsx (129 γρ): EditOrderModal@14
-- fleet/FleetOrdersMap.jsx (127 γρ): FleetOrdersMap@42
-- fleet/FleetShell.jsx (294 γρ): FleetShell@20
-- fleet/NewOrderForm.jsx (143 γρ): NewOrderForm@16
-- fleet/OrderCard.jsx (290 γρ): OrderCard@32
+- fleet/EditOrderModal.jsx (139 γρ): EditOrderModal@14
+- fleet/FleetOrdersMap.jsx (143 γρ): FleetOrdersMap@42
+- fleet/FleetShell.jsx (303 γρ): FleetShell@21
+- fleet/NewOrderForm.jsx (161 γρ): NewOrderForm@22
+- fleet/OrderCard.jsx (294 γρ): OrderCard@32
 - fleet/PartnershipRequests.jsx (81 γρ): PartnershipRequests@10
 - fleet/ProblemModal.jsx (81 γρ): ProblemModal@15
 - fleet/PushToggle.jsx (56 γρ): PushToggle@10
 - fleet/alerts.js (51 γρ)
-- fleet/utils.js (77 γρ)
+- fleet/utils.js (96 γρ): useAccountCenter@9
 - history/CustomerDetailModal.jsx (119 γρ): CustomerDetailModal@5
 - history/CustomersTab.jsx (84 γρ): CustomersTab@4
 - history/OrderDetailModal.jsx (242 γρ): OrderDetailModal@32
@@ -458,7 +461,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - stock/StockRow.jsx (60 γρ): StockRow@4
 - stock/StockSection.jsx (168 γρ): StockSection@6
 - stock/utils.js (73 γρ)
-- store-fleet/StoreOrderForm.jsx (223 γρ): StoreOrderForm@31
+- store-fleet/StoreOrderForm.jsx (238 γρ): StoreOrderForm@31
 - table-order/KitchenSlip.jsx (33 γρ): KitchenSlip@4
 - table-order/TabPanel.jsx (184 γρ): TabPanel@15
 - table-order/TransferModal.jsx (43 γρ): TransferModal@4
@@ -470,6 +473,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - AnnouncementBanner.jsx (88 γρ): AnnouncementBanner@32
 - AppShell.jsx (545 γρ): BetaBadge@102, DemoBanner@126, AppShell@169
 - BulkActionsBar.jsx (478 γρ): PriceChangeDialog@32, CategoryDialog@126, OptionGroupDialog@186, BulkActionsBar@362
+- BusinessDetailsForm.jsx (244 γρ): BusinessDetailsForm@27
 - CustomizationModal.jsx (356 γρ): OptionTile@13, LegacyOptions@47, GroupsOptions@126, CustomizationModal@188
 - DatePicker.jsx (168 γρ): DatePicker@20
 - DeckPilotChat.jsx (148 γρ): DeckPilotChat@31
@@ -487,7 +491,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - ProtectedRoute.jsx (40 γρ): ProtectedRoute@12
 - PublicMenuSettings.jsx (410 γρ): PublicMenuSettings@29
 - Receipt.jsx (155 γρ): ReceiptCopy@29, Receipt@140
-- StoreDetailsSettings.jsx (316 γρ): StoreDetailsSettings@24
+- StoreDetailsSettings.jsx (149 γρ): StoreDetailsSettings@16
 - StoreHoursEditor.jsx (123 γρ): StoreHoursEditor@19
 - TablesEditor.jsx (164 γρ): TablesEditor@14
 - TimePicker.jsx (119 γρ): Column@23, TimePicker@60
@@ -603,6 +607,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiAddressBook() → GET /orders/address-book
 - photonSearch(q, { lat, lon, bbox, signal } = {})
 - geocodeAddress(q)
+- geocodeCityCenter(city)
 - apiUpdatePrinting(payload) → PUT /settings/printing
 - apiGetBranding() → GET /branding
 - apiGetPublicMenu(slug) → GET /public/menu/${encodeURIComponent(slug)}

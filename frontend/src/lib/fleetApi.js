@@ -69,6 +69,10 @@ export const apiFleetLogin = (payload) =>
 export const apiFleetMe = (token) =>
   fleetApi.get("/fleet/me", token ? bearer(token) : undefined).then((r) => r.data);
 
+// Στοιχεία επιχείρησης εταιρείας (όνομα, πόλη, διεύθυνση + pin, τηλέφωνα)
+export const apiFleetUpdateCompany = (payload) =>
+  fleetApi.put("/fleet/settings/company", payload).then((r) => r.data);
+
 // ΜΕΛΗ
 export const apiFleetMembers = () => fleetApi.get("/fleet/members").then((r) => r.data);
 export const apiFleetCreateMember = (payload) =>

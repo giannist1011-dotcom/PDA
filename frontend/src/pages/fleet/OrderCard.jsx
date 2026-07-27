@@ -33,6 +33,8 @@ export default function OrderCard({
   order,
   drivers = [],
   city,
+  companyLat = null,
+  companyLng = null,
   onChanged,
   storeMode = false,
   onCancel = null,
@@ -280,6 +282,8 @@ export default function OrderCard({
         <EditOrderModal
           order={order}
           city={city}
+          companyLat={companyLat}
+          companyLng={companyLng}
           onClose={() => setShowEdit(false)}
           onSaved={onChanged}
         />
