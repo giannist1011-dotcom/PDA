@@ -1,22 +1,7 @@
 import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
 import { subtractAdded } from "@/lib/receiptText";
+import { customizationLines } from "@/lib/customizationText";
 import { useAuth } from "@/context/AuthContext";
-
-const summarize = (c) => {
-  if (!c) return null;
-  const parts = [];
-  if (c.bread) parts.push(c.bread);
-  if (c.double_meat) parts.push("Διπλό κρέας");
-  if (c.extras?.length) parts.push(`Extras: ${c.extras.join(", ")}`);
-  if (c.sauces?.length) parts.push(`Σως: ${c.sauces.join(", ")}`);
-  if (c.selections?.length) {
-    c.selections.forEach((sel) => {
-      const names = sel.choices.map((ch) => ch.name).join(", ");
-      if (names) parts.push(`${sel.group_name}: ${names}`);
-    });
-  }
-  return parts.join(" · ");
-};
 
 const orderTime = (iso) => formatGRTime(iso);
 
@@ -38,9 +23,12 @@ export function ReceiptCopy({ order, label }) {
         <span>{it.quantity}x {it.name}</span>
         <span className="rc-price">{eur(it.line_total)}</span>
       </div>
-      {it.customization && (
-        <div className="rc-mod">{summarize(it.customization)}</div>
-      )}
+      {/* Μία γραμμή ανά κατηγορία, σταθερή σειρά: ψωμί, διπλό, υλικά, λοιπά, σως */}
+      {customizationLines(it.customization).map((line, li) => (
+        <div key={li} className="rc-mod">
+          {line}
+        </div>
+      ))}
     </div>
   );
   return (

@@ -28,8 +28,29 @@ const cachedPhotonSearch = async (q, opts = {}) => {
   return data;
 };
 
+// Αριθμός οδού στο τέλος του query: 1-4 ψηφία + προαιρετικό γράμμα («12», «12Β», «5α»).
+// Τα ελληνικά επαρχιακά OSM σπάνια έχουν αριθμούς σπιτιών — ο αριθμός είναι κείμενο
+// διεύθυνσης, ΟΧΙ κάτι που πρέπει να γεωκωδικοποιηθεί.
+const HOUSE_NUM_RE = /\s+\d{1,4}\s*[A-Za-zΑ-Ωα-ωΆΈΉΊΌΎΏάέήίόύώ]?\.?$/;
+
+// «Περγάμου 12» → {street: "Περγάμου", number: "12"} — null αν δεν τελειώνει σε αριθμό
+export const splitHouseNumber = (q) => {
+  const t = (q || "").trim();
+  const m = t.match(HOUSE_NUM_RE);
+  return m ? { street: t.slice(0, m.index).trim(), number: t.slice(m.index).trim() } : null;
+};
+
+// Το value είναι η επιλεγμένη οδός + τίποτα ή μόνο αριθμός σπιτιού; (ο χρήστης
+// συμπληρώνει τον αριθμό μετά την επιλογή πρότασης — το pin της οδού ισχύει)
+const isNumberSuffixOf = (value, label) => {
+  const t = (value || "").trim();
+  if (!label || !t.startsWith(label)) return false;
+  const rest = t.slice(label.length).trim();
+  return rest === "" || /^\d{1,4}\s*[A-Za-zΑ-Ωα-ωΆΈΉΊΌΎΏάέήίόύώ]?\.?$/.test(rest);
+};
+
 // Απόσταση haversine σε km — φίλτρο ζώνης διανομής γύρω από το pin του μαγαζιού
-const distanceKm = (lat1, lon1, lat2, lon2) => {
+export const distanceKm = (lat1, lon1, lat2, lon2) => {
   const rad = Math.PI / 180;
   const dLat = (lat2 - lat1) * rad;
   const dLon = (lon2 - lon1) * rad;
@@ -105,6 +126,10 @@ export default function AddressAutocomplete({
   const debounceRef = useRef(null);
   const abortRef = useRef(null);
   const inputRef = useRef(null);
+  // Τελευταία επιλεγμένη πρόταση {label, lat, lng}: όσο ο χρήστης απλώς προσθέτει
+  // αριθμό σπιτιού μετά την οδό, ΔΕΝ ξανα-γεωκωδικοποιούμε και το pin δεν χάνεται.
+  // Καθαρίζει μόλις αλλάξει η ίδια η οδός (backspace/νέο κείμενο).
+  const pickedRef = useRef(null);
 
   // Φόρτωση γνωστών διευθύνσεων μία φορά (online-first, cache fallback για offline).
   // Η κανονικοποίηση (norm) γίνεται ΜΙΑ φορά εδώ — όχι σε όλη τη λίστα ανά πλήκτρο.
@@ -156,6 +181,25 @@ export default function AddressAutocomplete({
   useEffect(() => {
     clearTimeout(debounceRef.current);
     if (abortRef.current) abortRef.current.abort();
+    // Επιλεγμένη πρόταση + πληκτρολόγηση ΜΟΝΟ αριθμού σπιτιού («Περγάμου» → «Περγάμου 12»):
+    // καμία επανα-γεωκωδικοποίηση — το pin της οδού ισχύει, ο αριθμός μένει ως κείμενο.
+    // Έτσι δεν βγαίνει ποτέ ψευδές «εκτός ζώνης» επειδή ο αριθμός λείπει από το OSM.
+    const picked = pickedRef.current;
+    if (picked && isNumberSuffixOf(q, picked.label)) {
+      setPhotonResults([]);
+      // Οι φόρμες μηδενίζουν το pin σε κάθε πλήκτρο — το επαναφέρουμε: ο αριθμός
+      // σπιτιού είναι κείμενο διεύθυνσης, δεν μετακινεί ούτε ακυρώνει το pin.
+      if (onPick && picked.lat != null) onPick({ lat: picked.lat, lng: picked.lng });
+      if (onZoneStatus)
+        onZoneStatus(
+          hasZone &&
+            picked.lat != null &&
+            distanceKm(storeLat, storeLng, picked.lat, picked.lng) > zoneKm
+        );
+      return undefined;
+    }
+    // Άλλαξε η ίδια η οδός → η προηγούμενη επιλογή δεν ισχύει πια
+    pickedRef.current = null;
     if (q.length < MIN_CHARS) {
       console.warn(`[AddressAutocomplete] skip: q="${q}" < ${MIN_CHARS} chars`);
       setPhotonResults([]);
@@ -165,30 +209,38 @@ export default function AddressAutocomplete({
     debounceRef.current = setTimeout(async () => {
       const ctrl = new AbortController();
       abortRef.current = ctrl;
-      try {
-        const bbox = hasZone ? radiusBbox(storeLat, storeLng, zoneKm) : undefined;
-        let data = await cachedPhotonSearch(q, {
+      const bbox = hasZone ? radiusBbox(storeLat, storeLng, zoneKm) : undefined;
+      const cityN = norm(city);
+      // Ένα αίτημα Photon· αν το bbox έκοψε τα πάντα, δεύτερο ΧΩΡΙΣ bbox για να
+      // ξεχωρίσουμε "δεν υπάρχει τέτοια οδός" από "υπάρχει αλλά εκτός ζώνης"
+      const search = async (term) => {
+        let data = await cachedPhotonSearch(term, {
           lat: storeLat,
           lon: storeLng,
           bbox,
           signal: ctrl.signal,
         });
         let features = data?.features || [];
-        // Το bbox έκοψε τα πάντα; Δεύτερο αίτημα ΧΩΡΙΣ bbox για να ξεχωρίσουμε
-        // "δεν υπάρχει τέτοια οδός" από "υπάρχει αλλά εκτός ζώνης διανομής"
         if (!features.length && bbox) {
-          data = await cachedPhotonSearch(q, { lat: storeLat, lon: storeLng, signal: ctrl.signal });
+          data = await cachedPhotonSearch(term, {
+            lat: storeLat,
+            lon: storeLng,
+            signal: ctrl.signal,
+          });
           features = data?.features || [];
         }
-        // Ξεκίνησε νεότερο query όσο περιμέναμε — ΠΟΤΕ render αποτελεσμάτων παλιού query
-        if (ctrl.signal.aborted) return;
-        const cityN = norm(city);
-        const mapped = features
+        return features;
+      };
+      // numberSuffix: ο αριθμός που πληκτρολόγησε ο χρήστης αλλά λείπει από το OSM —
+      // κολλάει στην ετικέτα της οδού ώστε η επιλογή να κρατά το πλήρες κείμενο
+      const mapFeatures = (features, numberSuffix = "") =>
+        features
           .map((f) => {
             const p = f.properties || {};
             const street = p.type === "street" ? p.name : p.street || p.name;
             if (!street) return null;
-            const label = p.housenumber ? `${street} ${p.housenumber}` : street;
+            const base = p.housenumber ? `${street} ${p.housenumber}` : street;
+            const label = p.housenumber || !numberSuffix ? base : `${base} ${numberSuffix}`;
             const places = [p.city, p.district, p.county, p.locality].filter(Boolean);
             const inCity =
               !cityN ||
@@ -198,17 +250,40 @@ export default function AddressAutocomplete({
             return { key: `photon:${label}`, label, sub: null, local: false, inCity, lat: flat, lon: flon, lng: flon };
           })
           .filter(Boolean);
-        // Φίλτρο ζώνης διανομής: haversine από το pin του μαγαζιού — ό,τι είναι
-        // πέρα από την ακτίνα κόβεται (το bbox είναι τετράγωνο, εδώ γίνεται κύκλος)
-        const inZone = hasZone
-          ? mapped.filter(
+      // Φίλτρο ζώνης διανομής: haversine από το pin του μαγαζιού — ό,τι είναι
+      // πέρα από την ακτίνα κόβεται (το bbox είναι τετράγωνο, εδώ γίνεται κύκλος)
+      const zoneFilter = (rows) =>
+        hasZone
+          ? rows.filter(
               (r) =>
                 r.lat != null &&
                 r.lon != null &&
                 distanceKm(storeLat, storeLng, r.lat, r.lon) <= zoneKm
             )
-          : mapped;
-        // Η οδός υπάρχει αλλά μόνο εκτός ζώνης → μη μπλοκάρον warning στη φόρμα
+          : rows;
+      try {
+        let mapped = mapFeatures(await search(q));
+        let inZone = zoneFilter(mapped);
+        // Ο αριθμός σπιτιού λείπει από το OSM στις ελληνικές επαρχιακές πόλεις:
+        // αν με τον αριθμό δεν βρέθηκε τίποτα (ή όλα έπεσαν εκτός ζώνης — τυπικά
+        // ομώνυμος δρόμος αλλού), ξαναρωτάμε ΜΟΝΟ την οδό. Η οδός καθορίζει το pin
+        // και τη ζώνη· ο αριθμός μένει κείμενο πάνω στην ετικέτα.
+        const split = splitHouseNumber(q);
+        if (split && split.street.length >= MIN_CHARS && (!mapped.length || !inZone.length)) {
+          const streetRows = mapFeatures(await search(split.street), split.number);
+          if (ctrl.signal.aborted) return;
+          if (streetRows.length) {
+            console.warn(
+              `[AddressAutocomplete] q="${q}": fallback σε σκέτη οδό "${split.street}" (ο αριθμός λείπει από το OSM)`
+            );
+            mapped = streetRows;
+            inZone = zoneFilter(streetRows);
+          }
+        }
+        // Ξεκίνησε νεότερο query όσο περιμέναμε — ΠΟΤΕ render αποτελεσμάτων παλιού query
+        if (ctrl.signal.aborted) return;
+        // Η οδός υπάρχει αλλά μόνο εκτός ζώνης → μη μπλοκάρον warning στη φόρμα.
+        // Ποτέ επειδή απέτυχε ο αριθμός: εδώ φτάνει μόνο ό,τι έλυσε η ίδια η οδός.
         const outOfZone = hasZone && mapped.length > 0 && inZone.length === 0;
         if (onZoneStatus) onZoneStatus(outOfZone);
         if (outOfZone)
@@ -261,6 +336,9 @@ export default function AddressAutocomplete({
   // focus με τον κέρσορα στο τέλος, ώστε ο χρήστης να γράψει αμέσως τον αριθμό
   const select = (s) => {
     const next = `${s.label} `;
+    // Κλείδωμα του pin της οδού: ό,τι γραφτεί μετά και είναι μόνο αριθμός σπιτιού
+    // δεν ξανα-γεωκωδικοποιείται (βλ. isNumberSuffixOf στο effect του Photon)
+    pickedRef.current = { label: s.label, lat: s.lat ?? null, lng: s.lng ?? null };
     onChange(next);
     if (onPick) onPick(s.lat != null && s.lng != null ? { lat: s.lat, lng: s.lng } : null);
     setOpen(false);

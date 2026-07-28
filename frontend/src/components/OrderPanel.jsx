@@ -7,22 +7,7 @@ import TimePicker from "@/components/TimePicker";
 import DatePicker from "@/components/DatePicker";
 import { ORDER_SOURCES } from "@/data/menu";
 import { eur, todayISO } from "@/lib/format";
-
-const summarizeCustomization = (c) => {
-  if (!c) return "";
-  const parts = [];
-  if (c.bread) parts.push(c.bread);
-  if (c.double_meat) parts.push("Διπλό κρέας");
-  if (c.extras?.length) parts.push(`Extras: ${c.extras.join(", ")}`);
-  if (c.sauces?.length) parts.push(`Σως: ${c.sauces.join(", ")}`);
-  if (c.selections?.length) {
-    c.selections.forEach((sel) => {
-      const names = sel.choices.map((ch) => ch.name).join(", ");
-      if (names) parts.push(`${sel.group_name}: ${names}`);
-    });
-  }
-  return parts.join(" · ");
-};
+import { customizationLines } from "@/lib/customizationText";
 
 const DELIVERY_FIELDS = [
   { key: "name", label: "Όνομα", placeholder: "π.χ. Νίκος" },
@@ -195,11 +180,12 @@ export default function OrderPanel({
                   <div className="font-semibold text-white text-base leading-tight">
                     {it.name}
                   </div>
-                  {it.customization && (
-                    <div className="text-xs text-neutral-400 mt-1 leading-snug">
-                      {summarizeCustomization(it.customization)}
+                  {/* Ίδια σειρά με την απόδειξη: ψωμί, διπλό, υλικά, λοιπά, σως */}
+                  {customizationLines(it.customization).map((line, li) => (
+                    <div key={li} className="text-xs text-neutral-400 mt-1 leading-snug">
+                      {line}
                     </div>
-                  )}
+                  ))}
                 </div>
                 <div className="font-mono font-bold text-white">
                   {eur(it.line_total)}

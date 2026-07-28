@@ -36,12 +36,16 @@ class OptionSelection(BaseModel):
     group_id: str
     group_name: str
     choices: List[MenuOption] = Field(default_factory=list)
+    # Όλες οι διαθέσιμες επιλογές της ομάδας τη στιγμή της παραγγελίας — η απόδειξη
+    # τυπώνει «απ' όλα» / «απ' όλα χωρίς Χ» αντί για ολόκληρη τη λίστα υλικών
+    pool: List[str] = Field(default_factory=list)
 
 
 class OrderItemCustomization(BaseModel):
     model_config = ConfigDict(extra="ignore")
     bread: Optional[str] = None
     extras: List[str] = Field(default_factory=list)
+    extras_pool: List[str] = Field(default_factory=list)
     sauces: List[str] = Field(default_factory=list)
     double_meat: bool = False
     selections: List[OptionSelection] = Field(default_factory=list)
@@ -297,6 +301,23 @@ def _nominatim_lookup(query: str, viewbox: Optional[str] = None, bounded: bool =
     return None, None
 
 
+# Αριθμός σπιτιού στο τέλος της οδού: 1-4 ψηφία + προαιρετικό γράμμα («12», «12Β»)
+HOUSE_NUM_RE = re.compile(r"\s+\d{1,4}\s*[A-Za-zΑ-Ωα-ωΆΈΉΊΌΎΏάέήίόύώ]?\.?$")
+
+
+def _street_only(address: str) -> Optional[str]:
+    """«Περγάμου 12, Κοζάνη» → «Περγάμου, Κοζάνη» — None αν δεν υπάρχει αριθμός.
+
+    Οι ελληνικές επαρχιακές πόλεις σπάνια έχουν αριθμούς σπιτιών στο OSM: όταν
+    αποτύχει η πλήρης διεύθυνση, το pin της ίδιας της οδού είναι αρκετό.
+    """
+    head, sep, tail = address.partition(",")
+    stripped = HOUSE_NUM_RE.sub("", head.strip()).strip()
+    if not stripped or stripped == head.strip():
+        return None
+    return (stripped + sep + tail).strip()
+
+
 def _store_viewbox(user: dict) -> Optional[str]:
     """~13km κουτί γύρω από τις συντεταγμένες του καταστήματος (αν έχουν οριστεί)."""
     lat, lng = user.get("store_lat"), user.get("store_lng")
@@ -337,6 +358,15 @@ async def _geocode_cached(user: dict, address: str, budget: dict):
             # Fallback: σκέτη διεύθυνση, αυστηρά μέσα στο κουτί γύρω από το μαγαζί
             await asyncio.sleep(1)
             lat, lng = await asyncio.to_thread(_nominatim_lookup, address.strip(), viewbox, True)
+        if lat is None:
+            # Τελευταίο fallback: ΜΟΝΟ η οδός χωρίς αριθμό σπιτιού — ο αριθμός
+            # λείπει από το OSM στις περισσότερες επαρχιακές πόλεις
+            street = _street_only(query)
+            if street:
+                await asyncio.sleep(1)
+                lat, lng = await asyncio.to_thread(_nominatim_lookup, street, viewbox)
+                if lat is not None:
+                    query = street
     except Exception as e:
         logger.warning("geocode: lookup error for %r: %s", address, e)
         return None, None, "pending"  # προσωρινό σφάλμα — δεν κάνουμε cache, retry στο επόμενο poll

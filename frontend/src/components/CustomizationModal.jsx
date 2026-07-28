@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { eur } from "@/lib/format";
+import { ALL_LABEL, ALL_MIN_POOL, isAllSelected, modifierCategory } from "@/lib/customizationText";
 
 const OptionTile = ({ selected, label, badge, onClick, testId }) => (
   <button
@@ -51,6 +52,7 @@ function LegacyOptions({ item, breadOptions, extrasOptions, saucesOptions, doubl
       [key]: s[key].includes(name) ? s[key].filter((v) => v !== name) : [...s[key], name],
     }));
   };
+  const allExtrasOn = isAllSelected(state.extras, extrasOptions.map((e) => e.name));
 
   return (
     <>
@@ -75,6 +77,21 @@ function LegacyOptions({ item, breadOptions, extrasOptions, saucesOptions, doubl
         <section>
           <h3 className="text-xs font-bold uppercase tracking-widest text-flame mb-3">Υλικά</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {/* Συντόμευση, όχι κλείδωμα: μετά το «Απ' όλα» ο χρήστης ξεπατάει
+                όσα δεν θέλει κανονικά ένα-ένα */}
+            {extrasOptions.length >= ALL_MIN_POOL && (
+              <OptionTile
+                selected={allExtrasOn}
+                label={ALL_LABEL}
+                testId="extras-all"
+                onClick={() =>
+                  setState((s) => ({
+                    ...s,
+                    extras: allExtrasOn ? [] : extrasOptions.map((e) => e.name),
+                  }))
+                }
+              />
+            )}
             {extrasOptions.map((e) => (
               <OptionTile
                 key={e.name}
@@ -141,8 +158,17 @@ function GroupsOptions({ groups, selections, setSelections }) {
     });
   };
 
+  // «Απ' όλα» μόνο σε ομάδες υλικών με πολλαπλή επιλογή και αρκετές επιλογές
+  const allOptionsOn = (g, list) =>
+    isAllSelected(list.map((c) => c.name), g.options.map((o) => o.name));
+  const showAllTile = (g) =>
+    g.type === "multi" &&
+    g.options.length >= ALL_MIN_POOL &&
+    modifierCategory(g.name) === "ingredients";
+
   return groups.map((g, gi) => {
     const list = selections[g.id] || [];
+    const allOn = allOptionsOn(g, list);
     return (
       <section key={g.id} data-testid={`group-${g.id}`}>
         <h3 className="text-xs font-bold uppercase tracking-widest text-flame mb-3">
@@ -160,6 +186,18 @@ function GroupsOptions({ groups, selections, setSelections }) {
           )}
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {/* Συντόμευση, όχι κλείδωμα: μετά το «Απ' όλα» ο χρήστης ξεπατάει
+              όσα δεν θέλει κανονικά ένα-ένα */}
+          {showAllTile(g) && (
+            <OptionTile
+              selected={allOn}
+              label={ALL_LABEL}
+              testId={`opt-${g.id}-all`}
+              onClick={() =>
+                setSelections((prev) => ({ ...prev, [g.id]: allOn ? [] : [...g.options] }))
+              }
+            />
+          )}
           {g.options.map((opt) => {
             const selected = !!list.find((c) => c.name === opt.name);
             return (
@@ -264,10 +302,13 @@ export default function CustomizationModal({
   const handleConfirm = () => {
     if (missingRequired) return;
     let customization;
+    // Το pool = όλα τα διαθέσιμα υλικά του προϊόντος· η απόδειξη το χρειάζεται για
+    // να τυπώσει «απ' όλα» / «απ' όλα χωρίς Χ, Υ» αντί για ολόκληρη τη λίστα
     if (legacyMode) {
       customization = {
         bread: state.bread,
         extras: state.extras,
+        extras_pool: extrasOptions.map((e) => e.name),
         sauces: state.sauces,
         double_meat: !!(state.double_meat && item.double_meat_eligible),
         selections: [],
@@ -283,6 +324,7 @@ export default function CustomizationModal({
             group_id: g.id,
             group_name: g.name,
             choices: selections[g.id] || [],
+            pool: g.options.map((o) => o.name),
           }))
           .filter((s) => s.choices.length > 0),
       };

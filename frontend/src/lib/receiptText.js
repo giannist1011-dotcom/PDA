@@ -2,6 +2,7 @@
 // Κάθε builder επιστρέφει string (ένα φυσικό ticket) — τα αντίγραφα είναι
 // ξεχωριστά strings στο array του print_job, με κόψιμο χαρτιού μετά το καθένα.
 import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
+import { customizationLines } from "@/lib/customizationText";
 
 const WIDTH = 42; // στήλες σε 80mm θερμικό (Font A) — ασφαλής τιμή
 
@@ -41,23 +42,6 @@ const wrap = (s, indent = 0) => {
   }
   if (cur) lines.push(cur);
   return lines.map((l) => " ".repeat(indent) + l);
-};
-
-// Ίδια λογική με το <Receipt /> — σύνοψη customization σε μία γραμμή
-export const summarizeCustomization = (c) => {
-  if (!c) return null;
-  const parts = [];
-  if (c.bread) parts.push(c.bread);
-  if (c.double_meat) parts.push("Διπλό κρέας");
-  if (c.extras?.length) parts.push(`Extras: ${c.extras.join(", ")}`);
-  if (c.sauces?.length) parts.push(`Σως: ${c.sauces.join(", ")}`);
-  if (c.selections?.length) {
-    c.selections.forEach((sel) => {
-      const names = sel.choices.map((ch) => ch.name).join(", ");
-      if (names) parts.push(`${sel.group_name}: ${names}`);
-    });
-  }
-  return parts.join(" · ");
 };
 
 // Μετά από επεξεργασία: αφαιρεί τις «προσθήκες» από τις γραμμές ώστε η απόδειξη
@@ -125,8 +109,8 @@ export function receiptText(order, label = null) {
   const mainItems = added.length ? subtractAdded(order.items, added) : order.items || [];
   const pushItem = (it) => {
     L.push(row(`${it.quantity}x ${it.name}`, eur(it.line_total)));
-    const sum = summarizeCustomization(it.customization);
-    if (sum) L.push(...wrap(sum, 3));
+    // Μία γραμμή ανά κατηγορία, σταθερή σειρά: ψωμί, διπλό, υλικά, λοιπά, σως
+    customizationLines(it.customization).forEach((line) => L.push(...wrap(line, 3)));
   };
   mainItems.forEach(pushItem);
   if (added.length) {
@@ -167,8 +151,7 @@ export function kitchenSlipText(slip) {
   L.push(hr);
   (slip.round.items || []).forEach((it) => {
     L.push(`${it.quantity}x ${it.name}`);
-    const sum = summarizeCustomization(it.customization);
-    if (sum) L.push(...wrap(sum, 3));
+    customizationLines(it.customization).forEach((line) => L.push(...wrap(line, 3)));
   });
   L.push(hr);
   if (slip.sentBy) L.push(center(`Σερβίρει: ${slip.sentBy}`));

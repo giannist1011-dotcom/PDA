@@ -144,21 +144,21 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - POST /onboarding/hide → onboarding_hide @75
 - POST /onboarding/print-test → onboarding_print_test @81 — Καλείται από το frontend όταν γίνει οποιαδήποτε εκτύπωση…
 ### orders.py
-- GET /orders/next-number → next_order_number @134
-- POST /orders → create_order @139
-- GET /orders/scheduled → list_scheduled_orders @190
-- GET /orders → list_orders @234
-- GET /orders/count → count_orders @257 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
-- GET /orders/live-map → live_map_orders @370 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
-- POST /orders/live-map/clear → clear_live_map @423 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
-- GET /orders/address-book → address_book @431 — Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης…
-- GET /orders/heatmap → orders_heatmap @471 — Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng)…
-- GET /orders/{oid} → get_order @524
-- POST /orders/{oid}/activate → activate_order @534 — Move a scheduled order to active (fired /…
-- POST /orders/{oid}/cancel → cancel_order @554
-- DELETE /orders/{oid} → delete_order @581
-- PUT /orders/{oid} → edit_order @703 — Επεξεργασία takeaway/delivery παραγγελίας μετά τη δημιουργία: είδη,
-- GET /customers → list_customers @804 — Aggregate customers from phone/delivery orders, grouped by phone
+- GET /orders/next-number → next_order_number @138
+- POST /orders → create_order @143
+- GET /orders/scheduled → list_scheduled_orders @194
+- GET /orders → list_orders @238
+- GET /orders/count → count_orders @261 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
+- GET /orders/live-map → live_map_orders @400 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
+- POST /orders/live-map/clear → clear_live_map @453 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
+- GET /orders/address-book → address_book @461 — Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης…
+- GET /orders/heatmap → orders_heatmap @501 — Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng)…
+- GET /orders/{oid} → get_order @554
+- POST /orders/{oid}/activate → activate_order @564 — Move a scheduled order to active (fired /…
+- POST /orders/{oid}/cancel → cancel_order @584
+- DELETE /orders/{oid} → delete_order @611
+- PUT /orders/{oid} → edit_order @733 — Επεξεργασία takeaway/delivery παραγγελίας μετά τη δημιουργία: είδη,
+- GET /customers → list_customers @834 — Aggregate customers from phone/delivery orders, grouped by phone
 ### print_jobs.py
 - POST /print/jobs → create_print_job @63
 - GET /print/jobs/stream → print_jobs_stream @91 — SSE stream του σταθμού εκτύπωσης: event `job` μόλις…
@@ -235,18 +235,18 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - GET /store/fleet/stats → store_fleet_stats @314 — Πλήθη ανεβασμένων παραγγελιών ανά εταιρεία και κατάσταση για…
 ### tables.py
 - PUT /settings/business → update_business_type @53
-- PUT /settings/store → update_store_details @88 — Στοιχεία καταστήματος — όνομα, τηλέφωνο, διεύθυνση, συντεταγμένες (lat/lng).
-- PUT /settings/printing → update_printing @125 — Ρυθμίσεις εκτύπωσης — αποθηκεύονται στον λογαριασμό, έρχονται με…
-- PUT /settings/tables → toggle_tables @147
-- GET /tables/state → tables_state @155
-- POST /tables → create_table @178
-- POST /tables/reorder → reorder_tables @191
-- PUT /tables/{tid} → update_table @200
-- DELETE /tables/{tid} → delete_table @211
-- GET /tables/{tid}/tab → get_table_tab @224
-- POST /tables/{tid}/rounds → send_round @240 — Αποστολή: append a round to the table's open…
-- POST /tabs/{tab_id}/close → close_tab @277 — Κλείσιμο τραπεζιού: turn the tab into a normal…
-- POST /tabs/{tab_id}/transfer → transfer_tab @320
+- PUT /settings/store → update_store_details @91 — Στοιχεία καταστήματος — όνομα, τηλέφωνο, διεύθυνση, συντεταγμένες (lat/lng).
+- PUT /settings/printing → update_printing @129 — Ρυθμίσεις εκτύπωσης — αποθηκεύονται στον λογαριασμό, έρχονται με…
+- PUT /settings/tables → toggle_tables @151
+- GET /tables/state → tables_state @159
+- POST /tables → create_table @182
+- POST /tables/reorder → reorder_tables @195
+- PUT /tables/{tid} → update_table @204
+- DELETE /tables/{tid} → delete_table @215
+- GET /tables/{tid}/tab → get_table_tab @228
+- POST /tables/{tid}/rounds → send_round @244 — Αποστολή: append a round to the table's open…
+- POST /tabs/{tab_id}/close → close_tab @281 — Κλείσιμο τραπεζιού: turn the tab into a normal…
+- POST /tabs/{tab_id}/transfer → transfer_tab @324
 
 ## BACKEND — Mongo collections (paths σχετικά με backend/)
 - admin_audit: routers/admin.py, routers/admin_admins.py, routers/admin_overview.py, server.py
@@ -359,11 +359,11 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - FleetSelect.jsx (136 γρ): FleetSelect@11
 - FleetSettings.jsx (64 γρ): FleetSettings@12
 - FleetSignup.jsx (290 γρ): Field@10, FleetSignup@38
-- History.jsx (300 γρ): History@27
+- History.jsx (301 γρ): History@28
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
 - MenuManagement.jsx (389 γρ): MenuManagement@31
-- PDA.jsx (683 γρ): PDA@82
+- PDA.jsx (684 γρ): PDA@83
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
 - PublicMenu.jsx (209 γρ): PublicMenu@19
@@ -375,7 +375,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - StoreFleetPartners.jsx (159 γρ): StoreFleetPartners@22
 - StoreFleetSettings.jsx (47 γρ): StoreFleetSettings@9
 - StoreFleetStats.jsx (101 γρ): StoreFleetStats@14
-- TableOrder.jsx (339 γρ): TableOrder@28
+- TableOrder.jsx (340 γρ): TableOrder@29
 - Tables.jsx (159 γρ): Tables@12
 - Waiters.jsx (27 γρ): Waiters@6
 - admin-admins/AdminModal.jsx (207 γρ): AdminModal@12
@@ -431,10 +431,10 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - fleet/ProblemModal.jsx (81 γρ): ProblemModal@15
 - fleet/PushToggle.jsx (56 γρ): PushToggle@10
 - fleet/alerts.js (51 γρ)
-- fleet/utils.js (96 γρ): useAccountCenter@9
+- fleet/utils.js (105 γρ): useAccountCenter@10
 - history/CustomerDetailModal.jsx (119 γρ): CustomerDetailModal@5
 - history/CustomersTab.jsx (84 γρ): CustomersTab@4
-- history/OrderDetailModal.jsx (271 γρ): OrderDetailModal@33
+- history/OrderDetailModal.jsx (256 γρ): OrderDetailModal@18
 - history/OrdersTab.jsx (168 γρ): OrdersTab@11
 - history/ScheduledBadge.jsx (21 γρ): ScheduledBadge@5
 - history/utils.js (16 γρ)
@@ -491,33 +491,33 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - table-order/KitchenSlip.jsx (33 γρ): KitchenSlip@4
 - table-order/TabPanel.jsx (184 γρ): TabPanel@15
 - table-order/TransferModal.jsx (43 γρ): TransferModal@4
-- table-order/utils.js (20 γρ)
+- table-order/utils.js (6 γρ)
 
 ## FRONTEND — components (frontend/src/components)
-- AddressAutocomplete.jsx (353 γρ): AddressAutocomplete@83
+- AddressAutocomplete.jsx (431 γρ): AddressAutocomplete@104
 - AdminShell.jsx (355 γρ): useAdminPw@31, useAdminInfo@35, MasterOnly@38, LoginForm@67, ForcePasswordChange@146, AdminShell@210
 - AnnouncementBanner.jsx (88 γρ): AnnouncementBanner@32
 - AppShell.jsx (549 γρ): BetaBadge@103, DemoBanner@127, AppShell@170
 - BulkActionsBar.jsx (478 γρ): PriceChangeDialog@32, CategoryDialog@126, OptionGroupDialog@186, BulkActionsBar@362
 - BusinessDetailsForm.jsx (244 γρ): BusinessDetailsForm@27
-- CustomizationModal.jsx (356 γρ): OptionTile@13, LegacyOptions@47, GroupsOptions@126, CustomizationModal@188
+- CustomizationModal.jsx (398 γρ): OptionTile@14, LegacyOptions@48, GroupsOptions@143, CustomizationModal@226
 - DatePicker.jsx (168 γρ): DatePicker@20
 - DeckPilotChat.jsx (148 γρ): DeckPilotChat@31
-- LineEditModal.jsx (148 γρ): LineEditModal@29
+- LineEditModal.jsx (133 γρ): LineEditModal@14
 - LiveOrdersMap.jsx (256 γρ): LiveOrdersMap@44
 - LoadingScreen.jsx (67 γρ): LoadingScreen@12, StartupOverlay@61
 - MenuGrid.jsx (225 γρ): MenuGrid@6
 - OfflineBanner.jsx (67 γρ): OfflineBanner@10
 - OnboardingChecklist.jsx (100 γρ): OnboardingChecklist@18
-- OrderPanel.jsx (504 γρ): OrderPanel@40
+- OrderPanel.jsx (490 γρ): OrderPanel@25
 - PeriodFilter.jsx (91 γρ): PeriodFilter@20
 - PinGateModal.jsx (179 γρ): PinGateModal@16
 - PrintingSettings.jsx (231 γρ): PrintingSettings@36
 - ProfilesManager.jsx (322 γρ): ProfileModal@20, ProfilesManager@176
 - ProtectedRoute.jsx (40 γρ): ProtectedRoute@12
 - PublicMenuSettings.jsx (410 γρ): PublicMenuSettings@29
-- Receipt.jsx (151 γρ): ReceiptCopy@30, Receipt@136
-- StoreDetailsSettings.jsx (149 γρ): StoreDetailsSettings@16
+- Receipt.jsx (142 γρ): ReceiptCopy@15, Receipt@127
+- StoreDetailsSettings.jsx (165 γρ): StoreDetailsSettings@16
 - StoreHoursEditor.jsx (123 γρ): StoreHoursEditor@19
 - TablesEditor.jsx (164 γρ): TablesEditor@14
 - TimePicker.jsx (119 γρ): Column@23, TimePicker@60

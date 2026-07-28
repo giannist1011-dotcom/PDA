@@ -1,6 +1,7 @@
 // Κοινά για τις σελίδες Fleet: καταστάσεις, πληρωμές, μορφοποίηση.
 import { useEffect, useMemo, useState } from "react";
 import { geocodeCityCenter, photonSearch } from "@/lib/api";
+import { splitHouseNumber } from "@/components/AddressAutocomplete";
 
 // Default κέντρο χαρτών του λογαριασμού: αποθηκευμένο pin → geocode της
 // αποθηκευμένης πόλης → null (θέα Ελλάδας στον χάρτη). Σταθερό object
@@ -21,14 +22,22 @@ export const useAccountCenter = (lat, lng, city) => {
 };
 
 // Auto-geocode όταν ο χρήστης ΔΕΝ διάλεξε πρόταση/pin: πρώτο αποτέλεσμα του
-// Photon για «διεύθυνση, πόλη». null σε αποτυχία/offline — η παραγγελία
-// αποθηκεύεται κανονικά, απλώς μένει εκτός χάρτη.
+// Photon για «διεύθυνση, πόλη». Αν η πλήρης διεύθυνση δεν βρεθεί, δεύτερη
+// προσπάθεια ΜΟΝΟ με την οδό — στις ελληνικές επαρχιακές πόλεις οι αριθμοί
+// σπιτιών λείπουν από το OSM και το pin της οδού είναι αρκετό για τον χάρτη.
+// null σε αποτυχία/offline — η παραγγελία αποθηκεύεται κανονικά, εκτός χάρτη.
 export const geocodeFleetAddress = async (address, city) => {
-  try {
-    const q = city ? `${address}, ${city}` : address;
+  const first = async (term) => {
+    const q = city ? `${term}, ${city}` : term;
     const data = await photonSearch(q);
     const [lon, lat] = data?.features?.[0]?.geometry?.coordinates || [];
     return lat != null && lon != null ? { lat, lng: lon } : null;
+  };
+  try {
+    const hit = await first(address);
+    if (hit) return hit;
+    const split = splitHouseNumber(address);
+    return split?.street ? await first(split.street) : null;
   } catch {
     return null;
   }

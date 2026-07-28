@@ -9,22 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, SlidersHorizontal } from "lucide-react";
 import { eur } from "@/lib/format";
-
-const summarize = (c) => {
-  if (!c) return "";
-  const parts = [];
-  if (c.bread) parts.push(c.bread);
-  if (c.double_meat) parts.push("Διπλό κρέας");
-  if (c.extras?.length) parts.push(`Extras: ${c.extras.join(", ")}`);
-  if (c.sauces?.length) parts.push(`Σως: ${c.sauces.join(", ")}`);
-  if (c.selections?.length) {
-    c.selections.forEach((s) => {
-      const names = s.choices.map((ch) => ch.name).join(", ");
-      if (names) parts.push(`${s.group_name}: ${names}`);
-    });
-  }
-  return parts.join(" · ");
-};
+import { customizationSummary as summarize } from "@/lib/customizationText";
 
 export default function LineEditModal({
   open,
