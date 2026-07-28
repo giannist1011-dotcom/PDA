@@ -210,6 +210,8 @@ def public_user(u: dict) -> dict:
         "id": u["id"],
         "email": u["email"],
         "restaurant_name": u["restaurant_name"],
+        # Προαιρετικό όνομα για την κεφαλίδα της απόδειξης — κενό = restaurant_name
+        "receipt_name": u.get("receipt_name") or "",
         # Πλάνο λογαριασμού — τα υπάρχοντα μαγαζιά είναι by default OrderDeck (μόνο POS)
         "account_type": u.get("account_type") or "store",
         "plan": u.get("plan") or "orderdeck",

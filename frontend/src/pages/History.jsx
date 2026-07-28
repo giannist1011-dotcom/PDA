@@ -16,6 +16,7 @@ import { fetchOrders, fetchOrdersCount, apiGetOrder, apiCancelOrder, apiDeleteOr
 import { can } from "@/lib/perms";
 import { athensToday } from "@/lib/dates";
 import { printReceiptJob } from "@/lib/print";
+import { receiptStoreName } from "@/lib/receiptText";
 import OrderDetailModal from "./history/OrderDetailModal";
 import CustomerDetailModal from "./history/CustomerDetailModal";
 import OrdersTab from "./history/OrdersTab";
@@ -88,7 +89,7 @@ export default function History() {
   };
 
   const handleReprint = (order) => {
-    const merged = { ...order, restaurant_name: user?.restaurant_name };
+    const merged = { ...order, restaurant_name: receiptStoreName(user) };
     setPrintOrder(merged);
     setTimeout(() => printReceiptJob(user, merged), 100);
   };

@@ -16,6 +16,7 @@ const inputCls =
 export default function StoreDetailsSettings({ catalogExtras = true }) {
   const { user, refreshMe } = useAuth();
   const [radiusKm, setRadiusKm] = useState(String(user?.delivery_radius_km ?? 6));
+  const [receiptName, setReceiptName] = useState(user?.receipt_name || "");
   const [hours, setHours] = useState(user?.store_hours || {});
   const [reviewLink, setReviewLink] = useState(user?.google_review_link || "");
   const reviewQrRef = useRef(null);
@@ -49,6 +50,7 @@ export default function StoreDetailsSettings({ catalogExtras = true }) {
     }
     await apiUpdateStoreDetails({
       restaurant_name: core.name,
+      receipt_name: receiptName.trim(),
       store_phone: core.phone,
       store_address: core.address,
       store_city: core.city,
@@ -95,6 +97,20 @@ export default function StoreDetailsSettings({ catalogExtras = true }) {
         </div>
       }
     >
+      <div>
+        <label className="block text-xs text-neutral-400 mb-1.5">
+          Όνομα στην απόδειξη — προαιρετικό· αν οριστεί, η κεφαλίδα της απόδειξης δείχνει αυτό αντί για το πλήρες όνομα (ο κατάλογος και η εφαρμογή δεν αλλάζουν)
+        </label>
+        <input
+          value={receiptName}
+          onChange={(e) => setReceiptName(e.target.value)}
+          maxLength={80}
+          placeholder={user?.restaurant_name || "π.χ. Πεινώκιο"}
+          data-testid="receipt-name-input"
+          className={inputCls}
+        />
+      </div>
+
       {catalogExtras && (
         <>
           <div>

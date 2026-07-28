@@ -26,13 +26,13 @@ const FRAME_CSS = `
   #print-area * { color: black; }
   #print-area hr { border: none; border-top: 2px solid #000; margin: 7px 0; }
   #print-area .receipt-title { font-size: 22px; font-weight: 800; line-height: 1.2; }
-  #print-area .rc-sub { font-size: 13px; }
+  #print-area .rc-cust { font-size: 13px; font-weight: 400; }
   #print-area .rc-big { font-size: 17px; font-weight: 800; }
   #print-area .rc-row { display: flex; justify-content: space-between; gap: 6px; }
   #print-area .rc-row > :first-child { min-width: 0; }
   #print-area .rc-price { white-space: nowrap; }
   #print-area .rc-item { font-size: 18px; font-weight: 800; line-height: 1.3; }
-  #print-area .rc-mod { font-size: 15px; font-weight: 700; padding-left: 10px; }
+  #print-area .rc-mod { font-size: 13px; font-weight: 400; padding-left: 10px; }
   #print-area .rc-note { font-size: 17px; font-weight: 800; border: 2px solid #000; padding: 4px 6px; }
   #print-area .rc-total { font-size: 20px; font-weight: 800; }
   #print-area .rc-foot { font-size: 12px; text-align: center; }

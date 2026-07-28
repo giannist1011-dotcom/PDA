@@ -72,6 +72,9 @@ WEEK_DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
 class StoreDetailsIn(BaseModel):
     restaurant_name: str = Field(min_length=1, max_length=80)
+    # Προαιρετικό «Όνομα στην απόδειξη» — αν οριστεί, η κεφαλίδα της απόδειξης
+    # χρησιμοποιεί αυτό αντί για το πλήρες όνομα καταστήματος
+    receipt_name: Optional[str] = Field(default=None, max_length=80)
     store_phone: Optional[str] = Field(default=None, max_length=60)
     store_address: Optional[str] = Field(default=None, max_length=200)
     store_city: Optional[str] = Field(default=None, max_length=80)
@@ -93,6 +96,7 @@ async def update_store_details(body: StoreDetailsIn, user: dict = Depends(requir
             hours[day] = dh.model_dump()
     fields = {
         "restaurant_name": body.restaurant_name.strip(),
+        "receipt_name": (body.receipt_name or "").strip(),
         "store_phone": (body.store_phone or "").strip(),
         "store_address": (body.store_address or "").strip(),
         "store_city": (body.store_city or "").strip(),

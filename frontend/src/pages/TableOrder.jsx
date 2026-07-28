@@ -18,6 +18,7 @@ import {
 } from "@/lib/api";
 import { eur } from "@/lib/format";
 import { printReceiptJob, printKitchenSlip } from "@/lib/print";
+import { receiptStoreName } from "@/lib/receiptText";
 import KitchenSlip from "./table-order/KitchenSlip";
 import TabPanel from "./table-order/TabPanel";
 import TransferModal from "./table-order/TransferModal";
@@ -162,7 +163,7 @@ export default function TableOrder() {
     try {
       const order = await apiCloseTab(tab.id);
       setPrintSlip(null);
-      const merged = { ...order, restaurant_name: user?.restaurant_name };
+      const merged = { ...order, restaurant_name: receiptStoreName(user) };
       setPrintOrder(merged);
       setTimeout(() => {
         printReceiptJob(user, merged);

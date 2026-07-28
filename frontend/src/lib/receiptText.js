@@ -5,6 +5,11 @@ import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
 
 const WIDTH = 42; // στήλες σε 80mm θερμικό (Font A) — ασφαλής τιμή
 
+// Κεφαλίδα απόδειξης: το προαιρετικό «Όνομα στην απόδειξη» των ρυθμίσεων,
+// αλλιώς το πλήρες όνομα καταστήματος (ο κατάλογος/app μένουν στο πλήρες)
+export const receiptStoreName = (user) =>
+  (user?.receipt_name || "").trim() || user?.restaurant_name || "POS";
+
 const center = (s) => {
   const t = String(s || "").slice(0, WIDTH);
   const pad = Math.max(0, Math.floor((WIDTH - t.length) / 2));
@@ -208,7 +213,7 @@ export function zReportText(report, restaurantName) {
 // ---------- Δείγμα για τη «Δοκιμαστική εκτύπωση» των ρυθμίσεων ----------
 export function sampleOrder(user) {
   return {
-    restaurant_name: user?.restaurant_name || "OrderDeck",
+    restaurant_name: (user?.receipt_name || "").trim() || user?.restaurant_name || "OrderDeck",
     order_number: 999,
     source: "Δοκιμή",
     created_at: new Date().toISOString(),

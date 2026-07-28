@@ -27,6 +27,7 @@ import {
 import { formatGRTime } from "@/lib/format";
 import { can } from "@/lib/perms";
 import { printReceiptJob } from "@/lib/print";
+import { receiptStoreName } from "@/lib/receiptText";
 import MobileTabs from "./pda/MobileTabs";
 import MenuSection from "./pda/MenuSection";
 import PDAModals from "./pda/PDAModals";
@@ -265,7 +266,7 @@ export default function PDA() {
         return;
       }
       setReprint({
-        order: { ...res.order, restaurant_name: user?.restaurant_name },
+        order: { ...res.order, restaurant_name: receiptStoreName(user) },
         added: res.added_items || [],
       });
     } catch (e) {
@@ -290,7 +291,7 @@ export default function PDA() {
   // ---- scheduled orders: load + poll every 60s, auto-fire 15' before ----
   const printReceipt = (order) =>
     new Promise((resolve) => {
-      const merged = { ...order, restaurant_name: user?.restaurant_name };
+      const merged = { ...order, restaurant_name: receiptStoreName(user) };
       setPrintOrder(merged);
       setTimeout(() => {
         printReceiptJob(user, merged);
@@ -508,7 +509,7 @@ export default function PDA() {
           )
         );
       } else {
-        const merged = { ...saved, restaurant_name: user.restaurant_name };
+        const merged = { ...saved, restaurant_name: receiptStoreName(user) };
         setPrintOrder(merged);
         setTimeout(() => printReceiptJob(user, merged), 100);
         toast.success(`Παραγγελία #${saved.order_number} αποθηκεύτηκε`);
@@ -530,7 +531,7 @@ export default function PDA() {
             ...entry,
             id: entry.client_id,
             created_at: entry.client_created_at,
-            restaurant_name: user.restaurant_name,
+            restaurant_name: receiptStoreName(user),
           };
           setPrintOrder(merged);
           setTimeout(() => printReceiptJob(user, merged), 100);

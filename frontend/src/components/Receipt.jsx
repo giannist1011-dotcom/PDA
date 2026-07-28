@@ -56,7 +56,6 @@ export function ReceiptCopy({ order, label }) {
       <div className="receipt-title text-center">
         {(order.restaurant_name || "POS").toUpperCase()}
       </div>
-      <div className="rc-sub" style={{ textAlign: "center" }}>Souvlaki & Take-away</div>
       <hr />
       <div className="rc-big">Αρ. Παρ.: #{String(order.order_number).padStart(3, "0")}</div>
       <div>Πηγή: {order.source}</div>
@@ -71,11 +70,15 @@ export function ReceiptCopy({ order, label }) {
           <div className="rc-big">
             {d.delivery_type === "delivery" ? "★ ΠΑΡΑΔΟΣΗ" : "★ TAKEAWAY"}
           </div>
+          {/* Δευτερεύοντα στοιχεία πελάτη → .rc-cust (μικρά, normal weight).
+              Σε ΠΑΡΑΔΟΣΗ το τηλέφωνο και η διεύθυνση μένουν μεγάλα (τα χρειάζεται ο διανομέας). */}
           {d.delivery_type === "delivery" && (
-            <div>Παραγγέλθηκε: {orderTime(order.created_at || new Date().toISOString())}</div>
+            <div className="rc-cust">Παραγγέλθηκε: {orderTime(order.created_at || new Date().toISOString())}</div>
           )}
-          {d.name && <div>Όνομα: {d.name}</div>}
-          {d.phone && <div className="rc-big">Τηλ.: {d.phone}</div>}
+          {d.name && <div className="rc-cust">Όνομα: {d.name}</div>}
+          {d.phone && (
+            <div className={d.delivery_type === "delivery" ? "rc-big" : "rc-cust"}>Τηλ.: {d.phone}</div>
+          )}
           {d.delivery_type === "delivery" && d.address && (
             <div className="rc-big">Δ/νση: {d.address}</div>
           )}
