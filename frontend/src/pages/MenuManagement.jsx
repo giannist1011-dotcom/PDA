@@ -16,6 +16,7 @@ import {
   apiListPhotos,
   apiListStockPhotos,
   apiImportStockPhoto,
+  apiAutoNumberItems,
   formatApiError,
 } from "@/lib/api";
 import ItemModal from "./menu/ItemModal";
@@ -24,6 +25,7 @@ import MenuToolbar from "./menu/MenuToolbar";
 import CategoriesPanel from "./menu/CategoriesPanel";
 import ItemsPanel from "./menu/ItemsPanel";
 import { DeleteItemDialog, DeleteCategoryDialog } from "./menu/DeleteDialogs";
+import AutoNumberDialog from "./menu/AutoNumberDialog";
 
 // ---------- Main Page ----------
 export default function MenuManagement() {
@@ -43,6 +45,7 @@ export default function MenuManagement() {
   const [stockPhotos, setStockPhotos] = useState([]);
   const [dragCatId, setDragCatId] = useState(null);
   const [dragItemId, setDragItemId] = useState(null);
+  const [autoNumberOpen, setAutoNumberOpen] = useState(false);
   const load = async () => {
     try {
       const c = await apiGetMenuConfig();
@@ -126,6 +129,23 @@ export default function MenuManagement() {
       setItemModalOpen(false);
       setEditingItem(null);
       toast.success("Αποθηκεύτηκε");
+    } catch (e) {
+      // Διπλός κωδικός (409) → το χειρίζεται inline το ItemModal
+      if (e?.response?.status === 409) throw e;
+      toast.error(formatApiError(e));
+    }
+  };
+
+  const runAutoNumber = async () => {
+    setAutoNumberOpen(false);
+    try {
+      const r = await apiAutoNumberItems();
+      if (r.affected > 0) {
+        await load();
+        toast.success(`Δόθηκαν κωδικοί σε ${r.affected} προϊόντα`);
+      } else {
+        toast.info("Όλα τα προϊόντα έχουν ήδη κωδικό");
+      }
     } catch (e) {
       toast.error(formatApiError(e));
     }
@@ -268,6 +288,7 @@ export default function MenuManagement() {
         exitEdit={exitEdit}
         setEditMode={setEditMode}
         setCustModalOpen={setCustModalOpen}
+        onAutoNumber={() => setAutoNumberOpen(true)}
       />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 md:gap-6">
@@ -354,6 +375,13 @@ export default function MenuManagement() {
         confirmCat={confirmCat}
         setConfirmCat={setConfirmCat}
         confirmDeleteCategory={confirmDeleteCategory}
+      />
+
+      <AutoNumberDialog
+        open={autoNumberOpen}
+        setOpen={setAutoNumberOpen}
+        uncodedCount={config.items.filter((i) => !String(i.code || "").trim()).length}
+        onConfirm={runAutoNumber}
       />
     </AppShell>
   );

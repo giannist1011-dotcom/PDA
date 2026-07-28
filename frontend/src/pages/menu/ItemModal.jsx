@@ -40,6 +40,7 @@ export default function ItemModal({
 }) {
   const [form, setForm] = useState(initial || emptyItem());
   const [busy, setBusy] = useState(false);
+  const [codeError, setCodeError] = useState("");
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
   const [pickerTab, setPickerTab] = useState("mine"); // "mine" | "stock"
   const [importingId, setImportingId] = useState(null);
@@ -51,6 +52,7 @@ export default function ItemModal({
       option_groups: base.option_groups || [],
       photo_id: base.photo_id || null,
     });
+    setCodeError("");
   }, [initial, open, categories]);
 
   // Ξεκίνα πάντα στο σωστό tab: αν δεν έχει προσωπικές αλλά έχει βιβλιοθήκη
@@ -107,6 +109,10 @@ export default function ItemModal({
         allergens: (form.allergens || "").trim(),
         code: (form.code || "").trim(),
       });
+    } catch (err) {
+      // 409 = διπλός κωδικός — inline μήνυμα κάτω από το πεδίο, όχι toast
+      if (err?.response?.status === 409) setCodeError(formatApiError(err));
+      else toast.error(formatApiError(err));
     } finally {
       setBusy(false);
     }
@@ -260,15 +266,26 @@ export default function ItemModal({
             </label>
             <input
               value={form.code || ""}
-              onChange={(e) => setForm({ ...form, code: e.target.value })}
+              onChange={(e) => {
+                setForm({ ...form, code: e.target.value });
+                setCodeError("");
+              }}
               maxLength={20}
               placeholder="π.χ. 12"
               data-testid="item-code-input"
-              className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white font-mono focus:outline-none focus:border-flame"
+              className={`w-full h-11 px-3 mt-1 bg-[#3D1620] border rounded-md text-white font-mono focus:outline-none ${
+                codeError ? "border-[#FF3B30]" : "border-[#723645] focus:border-flame"
+              }`}
             />
-            <p className="text-xs text-neutral-500 mt-1">
-              Πληκτρολογώντας τον κωδικό στην αναζήτηση του ταμείου, το προϊόν επιλέγεται αμέσως
-            </p>
+            {codeError ? (
+              <p className="text-xs text-[#FF6961] mt-1" data-testid="item-code-error">
+                {codeError}
+              </p>
+            ) : (
+              <p className="text-xs text-neutral-500 mt-1">
+                Πληκτρολογώντας τον κωδικό στην αναζήτηση του ταμείου, το προϊόν επιλέγεται αμέσως
+              </p>
+            )}
           </div>
 
           <div>

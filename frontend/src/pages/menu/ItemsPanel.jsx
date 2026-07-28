@@ -114,7 +114,17 @@ export default function ItemsPanel({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="font-heading font-semibold text-white truncate">{it.name}</div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="font-heading font-semibold text-white truncate">{it.name}</div>
+                  {String(it.code || "").trim() && (
+                    <span
+                      className="shrink-0 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#3D1620] border border-[#723645] text-gold"
+                      data-testid={`item-code-badge-${it.id}`}
+                    >
+                      #{it.code}
+                    </span>
+                  )}
+                </div>
                 <div className="font-mono text-gold font-bold mt-1">{eur(it.price)}</div>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {it.customizable && (

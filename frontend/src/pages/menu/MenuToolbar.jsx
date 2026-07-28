@@ -1,7 +1,7 @@
-import { Pencil, X } from "lucide-react";
+import { Hash, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function MenuToolbar({ editMode, exitEdit, setEditMode, setCustModalOpen }) {
+export default function MenuToolbar({ editMode, exitEdit, setEditMode, setCustModalOpen, onAutoNumber }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 px-4 md:px-6 py-3 border-b border-[#431A25]">
       <Button
@@ -23,13 +23,22 @@ export default function MenuToolbar({ editMode, exitEdit, setEditMode, setCustMo
           </>
         )}
       </Button>
-      <Button
-        onClick={() => setCustModalOpen(true)}
-        data-testid="open-customization-config-btn"
-        className="bg-[#3D1620] border border-[#723645] hover:border-flame text-white h-11"
-      >
-        Επιλογές παραμετροποίησης
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          onClick={onAutoNumber}
+          data-testid="auto-number-btn"
+          className="bg-[#3D1620] border border-[#723645] hover:border-flame text-white h-11"
+        >
+          <Hash className="w-4 h-4 mr-2" /> Αυτόματη αρίθμηση
+        </Button>
+        <Button
+          onClick={() => setCustModalOpen(true)}
+          data-testid="open-customization-config-btn"
+          className="bg-[#3D1620] border border-[#723645] hover:border-flame text-white h-11"
+        >
+          Επιλογές παραμετροποίησης
+        </Button>
+      </div>
     </div>
   );
 }

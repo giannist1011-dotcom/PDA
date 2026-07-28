@@ -17,6 +17,26 @@ async def _mark_menu_customized(uid: str):
     await db.users.update_one({"id": uid}, {"$set": {"onb_menu": True}})
 
 
+def _norm_code(c) -> str:
+    return str(c or "").strip().casefold()
+
+
+async def _ensure_code_unique(uid: str, code: str, exclude_id: Optional[str] = None):
+    """Μοναδικότητα κωδικού ανά μαγαζί (case-insensitive) — 409 με το όνομα του προϊόντος που τον έχει ήδη."""
+    code = (code or "").strip()
+    if not code:
+        return
+    norm = code.casefold()
+    async for d in db.items.find(
+        {"user_id": uid, "code": {"$nin": ["", None]}},
+        {"_id": 0, "id": 1, "name": 1, "code": 1},
+    ):
+        if d["id"] != exclude_id and _norm_code(d.get("code")) == norm:
+            raise HTTPException(
+                409, f"Ο κωδικός «{code}» χρησιμοποιείται ήδη από το προϊόν «{d['name']}»"
+            )
+
+
 # ============ MODELS ============
 class MenuOption(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -179,6 +199,7 @@ async def delete_category(cid: str, user: dict = Depends(require_feature("menu",
 
 @router.post("/menu/items")
 async def create_item(body: MenuItemIn, user: dict = Depends(require_feature("menu", require_manager))):
+    await _ensure_code_unique(user["id"], body.code)
     iid = str(uuid.uuid4())
     # Νέο προϊόν μπαίνει στο τέλος της κατηγορίας του
     sort_order = await db.items.count_documents({"user_id": user["id"], "category": body.category})
@@ -207,6 +228,7 @@ async def create_item(body: MenuItemIn, user: dict = Depends(require_feature("me
 
 @router.put("/menu/items/{iid}")
 async def update_item(iid: str, body: MenuItemIn, user: dict = Depends(require_feature("menu", require_manager))):
+    await _ensure_code_unique(user["id"], body.code, exclude_id=iid)
     update = {
         "name": body.name.strip(),
         "price": float(body.price),
@@ -347,6 +369,39 @@ async def bulk_items(body: BulkItemsIn, user: dict = Depends(require_feature("me
         return {"ok": True, "affected": affected}
 
     raise HTTPException(400, "Άκυρη ενέργεια")
+
+
+@router.post("/menu/items/auto-number")
+async def auto_number_items(user: dict = Depends(require_feature("menu", require_manager))):
+    """«Αυτόματη αρίθμηση»: διαδοχικοί αριθμητικοί κωδικοί σε ΟΛΑ τα προϊόντα χωρίς κωδικό,
+    με σειρά μενού (κατηγορία → sort_order). Δεν πειράζει ποτέ υπάρχοντες κωδικούς —
+    ξεκινά από τον επόμενο του μεγαλύτερου αριθμητικού κωδικού."""
+    cats = await db.categories.find(
+        {"user_id": user["id"]}, {"_id": 0, "id": 1, "order": 1}
+    ).to_list(500)
+    cat_order = {c["id"]: c.get("order", 0) for c in cats}
+    items = await db.items.find(
+        {"user_id": user["id"]}, {"_id": 0, "id": 1, "code": 1, "category": 1, "sort_order": 1}
+    ).to_list(2000)
+    used = {_norm_code(i.get("code")) for i in items if str(i.get("code") or "").strip()}
+    numeric = [int(str(i["code"]).strip()) for i in items if str(i.get("code") or "").strip().isdigit()]
+    next_code = (max(numeric) + 1) if numeric else 1
+    todo = [i for i in items if not str(i.get("code") or "").strip()]
+    todo.sort(key=lambda i: (cat_order.get(i.get("category"), 10_000), i.get("sort_order", 0)))
+    affected = 0
+    for it in todo:
+        while str(next_code) in used:
+            next_code += 1
+        code = str(next_code)
+        await db.items.update_one(
+            {"id": it["id"], "user_id": user["id"]}, {"$set": {"code": code}}
+        )
+        used.add(code)
+        next_code += 1
+        affected += 1
+    if affected:
+        await _mark_menu_customized(user["id"])
+    return {"ok": True, "affected": affected}
 
 
 @router.put("/menu/customization")

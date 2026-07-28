@@ -122,22 +122,23 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - POST /fleet/push/subscribe → fleet_push_subscribe @1494
 - POST /fleet/push/unsubscribe → fleet_push_unsubscribe @1502
 ### menu.py
-- GET /menu/config → get_menu_config @95
-- POST /menu/categories → create_category @125
-- POST /menu/categories/reorder → reorder_categories @139 — Νέα σειρά κατηγοριών: η θέση στη λίστα ids…
-- POST /menu/items/reorder → reorder_items @149 — Νέα σειρά προϊόντων (μέσα σε μία κατηγορία): η…
-- PUT /menu/categories/{cid} → update_category @159
-- DELETE /menu/categories/{cid} → delete_category @171
-- POST /menu/items → create_item @181
-- PUT /menu/items/{iid} → update_item @209
-- PATCH /menu/items/{iid}/availability → set_item_availability @231
-- DELETE /menu/items/{iid} → delete_item @241
-- POST /menu/items/bulk → bulk_items @271
-- PUT /menu/customization → update_customization @353
-- GET /photos → list_photos @369
-- POST /photos → create_photo @377
-- POST /photos/import-stock/{stock_id} → import_stock_photo @393 — Επιλογή stock φωτογραφίας από τη βιβλιοθήκη OrderDeck →…
-- DELETE /photos/{pid} → delete_photo @422
+- GET /menu/config → get_menu_config @115
+- POST /menu/categories → create_category @145
+- POST /menu/categories/reorder → reorder_categories @159 — Νέα σειρά κατηγοριών: η θέση στη λίστα ids…
+- POST /menu/items/reorder → reorder_items @169 — Νέα σειρά προϊόντων (μέσα σε μία κατηγορία): η…
+- PUT /menu/categories/{cid} → update_category @179
+- DELETE /menu/categories/{cid} → delete_category @191
+- POST /menu/items → create_item @201
+- PUT /menu/items/{iid} → update_item @230
+- PATCH /menu/items/{iid}/availability → set_item_availability @253
+- DELETE /menu/items/{iid} → delete_item @263
+- POST /menu/items/bulk → bulk_items @293
+- POST /menu/items/auto-number → auto_number_items @375 — «Αυτόματη αρίθμηση»: διαδοχικοί αριθμητικοί κωδικοί σε ΟΛΑ τα…
+- PUT /menu/customization → update_customization @408
+- GET /photos → list_photos @424
+- POST /photos → create_photo @432
+- POST /photos/import-stock/{stock_id} → import_stock_photo @448 — Επιλογή stock φωτογραφίας από τη βιβλιοθήκη OrderDeck →…
+- DELETE /photos/{pid} → delete_photo @477
 ### onboarding.py
 - GET /onboarding/status → onboarding_status @70
 - POST /onboarding/hide → onboarding_hide @75
@@ -361,7 +362,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - History.jsx (300 γρ): History@27
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
-- MenuManagement.jsx (361 γρ): MenuManagement@29
+- MenuManagement.jsx (389 γρ): MenuManagement@31
 - PDA.jsx (683 γρ): PDA@82
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
@@ -442,13 +443,14 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - landing/Logo.jsx (5 γρ): Logo@1
 - landing/Mockups.jsx (67 γρ): MockupFrame@1, PlaceholderPDA@16, PlaceholderTables@32, PlaceholderStats@47
 - landing/SectionTitle.jsx (17 γρ): SectionTitle@3
+- menu/AutoNumberDialog.jsx (44 γρ): AutoNumberDialog@12
 - menu/CategoriesPanel.jsx (159 γρ): CategoriesPanel@13
 - menu/CustomizationConfigModal.jsx (127 γρ): CustomizationConfigModal@20
 - menu/DeleteDialogs.jsx (71 γρ): DeleteItemDialog@12, DeleteCategoryDialog@42
-- menu/ItemModal.jsx (360 γρ): ItemModal@31
+- menu/ItemModal.jsx (377 γρ): ItemModal@31
 - menu/ItemPhotoPicker.jsx (135 γρ): ItemPhotoPicker@4
-- menu/ItemsPanel.jsx (202 γρ): ItemsPanel@15
-- menu/MenuToolbar.jsx (36 γρ): MenuToolbar@4
+- menu/ItemsPanel.jsx (212 γρ): ItemsPanel@15
+- menu/MenuToolbar.jsx (45 γρ): MenuToolbar@4
 - menu/OptionGroupsEditor.jsx (130 γρ): OptionGroupsEditor@5
 - menu/PricedOptionList.jsx (62 γρ): PricedOptionList@4
 - menu/utils.js (13 γρ)
@@ -546,6 +548,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiDeleteItem(id) → DELETE /menu/items/${id}
 - apiUpdateCustomization(payload) → PUT /menu/customization
 - apiBulkItems(payload) → POST /menu/items/bulk
+- apiAutoNumberItems() → POST /menu/items/auto-number
 - apiListProfiles() → GET /profiles
 - apiSelectProfile(profileId, pin) → POST /profile/select
 - apiExitProfile() → POST /profile/exit
