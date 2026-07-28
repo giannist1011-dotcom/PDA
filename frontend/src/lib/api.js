@@ -294,6 +294,12 @@ export const apiGetPrintJob = (id) => api.get(`/print/jobs/${id}`).then((r) => r
 export const apiGetBridgeToken = () => api.get("/print/bridge/token").then((r) => r.data);
 export const apiRotateBridgeToken = () =>
   api.post("/print/bridge/token").then((r) => r.data);
+export const apiRelayPoll = () => api.post("/print/relay/poll").then((r) => r.data);
+export const apiRelayAck = (id, status, error = null) =>
+  api.post(`/print/relay/jobs/${id}/ack`, { status, error }).then((r) => r.data);
+export const apiRelayRetry = (id) =>
+  api.post(`/print/relay/jobs/${id}/retry`).then((r) => r.data);
+export const apiRelayStatus = () => api.get("/print/relay/status").then((r) => r.data);
 
 // Branding (λογότυπο μαγαζιού) — προσβάσιμο από κάθε συνδεδεμένο προφίλ
 export const apiGetBranding = () => api.get("/branding").then((r) => r.data);

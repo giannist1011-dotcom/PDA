@@ -55,7 +55,7 @@ export const summarizeCustomization = (c) => {
   return parts.join(" · ");
 };
 
-const copyLabel = (idx) => {
+export const copyLabel = (idx) => {
   if (idx === 0) return "ΚΟΥΖΙΝΑ";
   if (idx === 1) return "ΠΕΛΑΤΗΣ";
   return `ΑΝΤΙΓΡΑΦΟ ${idx + 1}`;

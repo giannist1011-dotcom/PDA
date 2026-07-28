@@ -118,7 +118,7 @@ class PrintingIn(BaseModel):
     copies: int = Field(ge=1, le=10)
     copy_labels: bool = False
     double_print: bool = False
-    mode: Literal["browser", "bridge"] = "browser"
+    mode: Literal["browser", "bridge", "kiosk_relay"] = "browser"
 
 
 @router.put("/settings/printing")

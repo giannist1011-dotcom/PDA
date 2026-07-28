@@ -158,12 +158,16 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - DELETE /orders/{oid} → delete_order @577
 - GET /customers → list_customers @592 — Aggregate customers from phone/delivery orders, grouped by phone
 ### print_jobs.py
-- POST /print/jobs → create_print_job @33
-- GET /print/jobs/{jid} → get_print_job @53 — Κατάσταση job — το χρησιμοποιεί η «Δοκιμαστική εκτύπωση»…
-- GET /print/bridge/token → get_bridge_token @65
-- POST /print/bridge/token → rotate_bridge_token @77 — Δημιουργία/αντικατάσταση token — το παλιό παύει να ισχύει…
-- GET /print/bridge/jobs → bridge_poll_jobs @101
-- POST /print/bridge/jobs/{jid}/ack → bridge_ack_job @122
+- POST /print/jobs → create_print_job @47
+- GET /print/jobs/{jid} → get_print_job @73 — Κατάσταση job — το χρησιμοποιεί η «Δοκιμαστική εκτύπωση»…
+- GET /print/bridge/token → get_bridge_token @85
+- POST /print/bridge/token → rotate_bridge_token @97 — Δημιουργία/αντικατάσταση token — το παλιό παύει να ισχύει…
+- GET /print/bridge/jobs → bridge_poll_jobs @121
+- POST /print/bridge/jobs/{jid}/ack → bridge_ack_job @142
+- POST /print/relay/poll → relay_poll @173 — Poll του σταθμού εκτύπωσης: claim-άρει ατομικά έως RELAY_BATCH…
+- POST /print/relay/jobs/{jid}/ack → relay_ack_job @225
+- POST /print/relay/jobs/{jid}/retry → relay_retry_job @242 — Επανεκτύπωση αποτυχημένου job από τον σταθμό — γίνεται…
+- GET /print/relay/status → relay_status @263 — Πότε έκανε τελευταίο poll ο σταθμός — για…
 ### promo.py
 - GET /admin/promo → admin_list_promos @106
 - POST /admin/promo → admin_create_promo @122
@@ -477,7 +481,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - stock/ShoppingListPanel.jsx (124 γρ): ShoppingListPanel@5
 - stock/StockRow.jsx (60 γρ): StockRow@4
 - stock/StockSection.jsx (168 γρ): StockSection@6
-- stock/utils.js (73 γρ)
+- stock/utils.js (75 γρ)
 - store-fleet/StoreOrderForm.jsx (238 γρ): StoreOrderForm@31
 - table-order/KitchenSlip.jsx (33 γρ): KitchenSlip@4
 - table-order/TabPanel.jsx (184 γρ): TabPanel@15
@@ -488,7 +492,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - AddressAutocomplete.jsx (353 γρ): AddressAutocomplete@83
 - AdminShell.jsx (355 γρ): useAdminPw@31, useAdminInfo@35, MasterOnly@38, LoginForm@67, ForcePasswordChange@146, AdminShell@210
 - AnnouncementBanner.jsx (88 γρ): AnnouncementBanner@32
-- AppShell.jsx (545 γρ): BetaBadge@102, DemoBanner@126, AppShell@169
+- AppShell.jsx (549 γρ): BetaBadge@103, DemoBanner@127, AppShell@170
 - BulkActionsBar.jsx (478 γρ): PriceChangeDialog@32, CategoryDialog@126, OptionGroupDialog@186, BulkActionsBar@362
 - BusinessDetailsForm.jsx (244 γρ): BusinessDetailsForm@27
 - CustomizationModal.jsx (356 γρ): OptionTile@13, LegacyOptions@47, GroupsOptions@126, CustomizationModal@188
@@ -503,17 +507,20 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - OrderPanel.jsx (486 γρ): OrderPanel@40
 - PeriodFilter.jsx (91 γρ): PeriodFilter@20
 - PinGateModal.jsx (179 γρ): PinGateModal@16
-- PrintingSettings.jsx (218 γρ): PrintingSettings@27
+- PrintingSettings.jsx (231 γρ): PrintingSettings@36
 - ProfilesManager.jsx (322 γρ): ProfileModal@20, ProfilesManager@176
 - ProtectedRoute.jsx (40 γρ): ProtectedRoute@12
 - PublicMenuSettings.jsx (410 γρ): PublicMenuSettings@29
-- Receipt.jsx (155 γρ): ReceiptCopy@29, Receipt@140
+- Receipt.jsx (133 γρ): ReceiptCopy@29, Receipt@118
 - StoreDetailsSettings.jsx (149 γρ): StoreDetailsSettings@16
 - StoreHoursEditor.jsx (123 γρ): StoreHoursEditor@19
 - TablesEditor.jsx (164 γρ): TablesEditor@14
 - TimePicker.jsx (119 γρ): Column@23, TimePicker@60
 - printing/BridgeSetup.jsx (185 γρ): BridgeSetup@17
 - printing/KioskSetup.jsx (82 γρ): KioskSetup@12
+- printing/RelayAgent.jsx (176 γρ): StationLoop@23, StationDownBanner@128, RelayAgent@167
+- printing/RelaySetup.jsx (181 γρ): RelaySetup@19
+- printing/relayRender.jsx (47 γρ)
 
 ## FRONTEND — lib/api.js (exported)
 - api — axios instance (baseURL /api)
@@ -632,6 +639,10 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiGetPrintJob(id) → GET /print/jobs/${id}
 - apiGetBridgeToken() → GET /print/bridge/token
 - apiRotateBridgeToken() → POST /print/bridge/token
+- apiRelayPoll() → POST /print/relay/poll
+- apiRelayAck(id, status, error = null) → POST /print/relay/jobs/${id}/ack
+- apiRelayRetry(id) → POST /print/relay/jobs/${id}/retry
+- apiRelayStatus() → GET /print/relay/status
 - apiGetBranding() → GET /branding
 - apiGetPublicMenu(slug) → GET /public/menu/${encodeURIComponent(slug)}
 - apiValidatePromo(code) → POST /promo/validate

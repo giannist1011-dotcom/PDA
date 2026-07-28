@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Info, Monitor, Waypoints } from "lucide-react";
+import { Info, Monitor, Waypoints, Radio } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import { apiUpdatePrinting, formatApiError } from "@/lib/api";
 import KioskSetup from "@/components/printing/KioskSetup";
 import BridgeSetup from "@/components/printing/BridgeSetup";
+import RelaySetup from "@/components/printing/RelaySetup";
 
 const PRESETS = [1, 2];
 
@@ -17,12 +18,20 @@ const MODES = [
     desc: "Εκτύπωση από το PC του ταμείου — αθόρυβη με Chrome kiosk mode",
   },
   {
+    key: "kiosk_relay",
+    label: "Kiosk Relay",
+    icon: Radio,
+    desc: "Κάθε συσκευή (κινητό/tablet) τυπώνει μέσω του πάντα-ανοιχτού kiosk PC — χωρίς εγκατάσταση",
+  },
+  {
     key: "bridge",
     label: "Print Bridge",
     icon: Waypoints,
     desc: "Για tablet/iPad — η εφαρμογή Print Bridge στο PC του εκτυπωτή τυπώνει για όλες τις συσκευές",
   },
 ];
+
+const MODE_KEYS = MODES.map((m) => m.key);
 
 export default function PrintingSettings() {
   const { user, refreshMe } = useAuth();
@@ -31,7 +40,9 @@ export default function PrintingSettings() {
   const [customMode, setCustomMode] = useState(!PRESETS.includes(initial));
   const [copyLabels, setCopyLabels] = useState(!!user?.print_copy_labels);
   const [doublePrint, setDoublePrint] = useState(!!user?.print_double);
-  const [mode, setMode] = useState(user?.print_mode === "bridge" ? "bridge" : "browser");
+  const [mode, setMode] = useState(
+    MODE_KEYS.includes(user?.print_mode) ? user.print_mode : "browser"
+  );
   const [saving, setSaving] = useState(false);
 
   const save = async (next) => {
@@ -87,7 +98,7 @@ export default function PrintingSettings() {
       {/* Τρόπος εκτύπωσης */}
       <div className="px-4 py-3 bg-[#2A0E14] border border-[#723645] rounded-md">
         <div className="font-semibold text-sm mb-3">Τρόπος εκτύπωσης</div>
-        <div className="grid sm:grid-cols-2 gap-2">
+        <div className="grid sm:grid-cols-3 gap-2">
           {MODES.map((m) => {
             const Icon = m.icon;
             const active = mode === m.key;
@@ -114,7 +125,9 @@ export default function PrintingSettings() {
       </div>
 
       {/* Οδηγίες & δοκιμή ανά mode */}
-      {mode === "browser" ? <KioskSetup /> : <BridgeSetup />}
+      {mode === "browser" && <KioskSetup />}
+      {mode === "kiosk_relay" && <RelaySetup />}
+      {mode === "bridge" && <BridgeSetup />}
 
       {/* Αντίγραφα */}
       <div className="px-4 py-3 bg-[#2A0E14] border border-[#723645] rounded-md">

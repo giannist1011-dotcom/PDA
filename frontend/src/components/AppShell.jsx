@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import DeckPilotChat from "@/components/DeckPilotChat";
 import OfflineBanner from "@/components/OfflineBanner";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
+import RelayAgent from "@/components/printing/RelayAgent";
 import { useOfflineStatus } from "@/lib/offline";
 import { apiFleetExchange, formatApiError } from "@/lib/api";
 import { setFleetToken } from "@/lib/fleetApi";
@@ -356,6 +357,9 @@ export default function AppShell({ title, children }) {
       <AnnouncementBanner />
 
       <OfflineBanner />
+
+      {/* Kiosk Relay: poll/εκτύπωση στον σταθμό, warning banner στις άλλες συσκευές */}
+      <RelayAgent />
 
       {open && (
         <>

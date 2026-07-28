@@ -26,7 +26,7 @@ const copyLabel = (idx) => {
   return `ΑΝΤΙΓΡΑΦΟ ${idx + 1}`;
 };
 
-function ReceiptCopy({ order, label }) {
+export function ReceiptCopy({ order, label }) {
   const d = order.delivery;
   return (
     <div>

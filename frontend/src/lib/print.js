@@ -1,4 +1,4 @@
-// Εκτύπωση με βάση τις ρυθμίσεις του λογαριασμού — δύο τρόποι:
+// Εκτύπωση με βάση τις ρυθμίσεις του λογαριασμού — τρεις τρόποι:
 //
 // «Browser (kiosk)» (default): window.print() πάνω στο κρυφό #print-area.
 // - Αντίγραφα: τα χειρίζεται το <Receipt /> (τυπώνει N σελίδες σε ΕΝΑ print job,
@@ -10,15 +10,27 @@
 // «Print Bridge»: αντί για print dialog δημιουργείται print_job στο backend —
 // η desktop εφαρμογή OrderDeck Print Bridge (στο PC του εκτυπωτή) το τυπώνει.
 // Έτσι τυπώνουν και tablet/iPad/κινητά χωρίς συνδεδεμένο εκτυπωτή.
+//
+// «Kiosk Relay»: σαν το Bridge αλλά ΧΩΡΙΣ desktop εφαρμογή — σταθμός εκτύπωσης
+// είναι το ίδιο το web app στο kiosk PC (RelayAgent στο AppShell): κάνει poll τα
+// jobs και τα τυπώνει αθόρυβα. Η συσκευή-σταθμός τυπώνει απευθείας (χωρίς job)·
+// οι υπόλοιπες στέλνουν job με δομημένο payload για πανομοιότυπη εκτύπωση.
 import { toast } from "sonner";
 import { apiCreatePrintJob, apiOnboardingMarkPrint } from "@/lib/api";
 import { receiptTexts, kitchenSlipText, zReportText } from "@/lib/receiptText";
+import { isRelayStation } from "@/lib/relayStation";
 
 const bridgeEnabled = (user) => user?.print_mode === "bridge";
+// Relay: μόνο οι ΑΛΛΕΣ συσκευές στέλνουν job — ο σταθμός τυπώνει απευθείας
+const relayJobEnabled = (user) => user?.print_mode === "kiosk_relay" && !isRelayStation();
 
-const sendBridgeJob = (texts, kind) => {
-  apiCreatePrintJob({ texts, kind }).catch(() => {
-    toast.error("Η εκτύπωση δεν στάλθηκε στο Print Bridge — ελέγξτε τη σύνδεση");
+const sendJob = (texts, kind, payload, viaRelay) => {
+  apiCreatePrintJob({ texts, kind, payload }).catch(() => {
+    toast.error(
+      viaRelay
+        ? "Η εκτύπωση δεν στάλθηκε στον σταθμό εκτύπωσης — ελέγξτε τη σύνδεση"
+        : "Η εκτύπωση δεν στάλθηκε στο Print Bridge — ελέγξτε τη σύνδεση"
+    );
   });
 };
 
@@ -34,8 +46,8 @@ const browserPrint = (user) => {
 export function printReceiptJob(user, order = null) {
   // Onboarding: σημείωσε ότι έγινε εκτύπωση (fire-and-forget, δεν μπλοκάρει)
   apiOnboardingMarkPrint().catch(() => {});
-  if (bridgeEnabled(user) && order) {
-    sendBridgeJob(receiptTexts(order, user), "receipt");
+  if (order && (bridgeEnabled(user) || relayJobEnabled(user))) {
+    sendJob(receiptTexts(order, user), "receipt", { order }, relayJobEnabled(user));
     return;
   }
   browserPrint(user);
@@ -43,16 +55,21 @@ export function printReceiptJob(user, order = null) {
 
 export function printKitchenSlip(user, slip) {
   apiOnboardingMarkPrint().catch(() => {});
-  if (bridgeEnabled(user) && slip) {
-    sendBridgeJob([kitchenSlipText(slip)], "kitchen");
+  if (slip && (bridgeEnabled(user) || relayJobEnabled(user))) {
+    sendJob([kitchenSlipText(slip)], "kitchen", { slip }, relayJobEnabled(user));
     return;
   }
   window.print();
 }
 
 export function printZReport(user, report, restaurantName) {
-  if (bridgeEnabled(user) && report) {
-    sendBridgeJob([zReportText(report, restaurantName)], "zreport");
+  if (report && (bridgeEnabled(user) || relayJobEnabled(user))) {
+    sendJob(
+      [zReportText(report, restaurantName)],
+      "zreport",
+      { report, restaurant_name: restaurantName },
+      relayJobEnabled(user)
+    );
     return;
   }
   window.print();
