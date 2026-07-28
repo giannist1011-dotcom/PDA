@@ -9,7 +9,7 @@ from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, ensure_demo_account, migrate_items_sort_order
-from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, admin_admins, admin_fleet, admin_overview, announcements, onboarding, billing, fleet, store_fleet
+from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, admin_admins, admin_fleet, admin_overview, announcements, onboarding, billing, fleet, store_fleet, print_jobs
 
 app = FastAPI(title="OrderDeck")
 
@@ -51,6 +51,7 @@ api.include_router(onboarding.router)
 api.include_router(billing.router)
 api.include_router(fleet.router)
 api.include_router(store_fleet.router)
+api.include_router(print_jobs.router)
 
 app.include_router(api)
 
@@ -163,6 +164,9 @@ async def on_startup():
     # Sub-admin λογαριασμοί (master panel «Διαχειριστές») + λίστα audit για τον master
     await db.admin_users.create_index("email", unique=True)
     await db.admin_audit.create_index([("created_at", -1)])
+    # Print Bridge: poll pending jobs ανά μαγαζί + εύρεση μαγαζιού από bridge token
+    await db.print_jobs.create_index([("user_id", 1), ("status", 1), ("created_at", 1)])
+    await db.users.create_index("print_bridge_token", unique=True, sparse=True)
     # Ανακοινώσεις πλατφόρμας: γρήγορη εύρεση ενεργής ανά μαγαζί
     await db.announcements.create_index([("active", 1), ("created_at", -1)])
     # Μία φορά: ενοποίηση πεδίου πόλης — παλιοί λογαριασμοί με city από την εγγραφή

@@ -164,9 +164,10 @@ export default function PDA() {
   // ---- scheduled orders: load + poll every 60s, auto-fire 15' before ----
   const printReceipt = (order) =>
     new Promise((resolve) => {
-      setPrintOrder({ ...order, restaurant_name: user?.restaurant_name });
+      const merged = { ...order, restaurant_name: user?.restaurant_name };
+      setPrintOrder(merged);
       setTimeout(() => {
-        printReceiptJob(user);
+        printReceiptJob(user, merged);
         resolve();
       }, 150);
     });
@@ -375,8 +376,9 @@ export default function PDA() {
           )
         );
       } else {
-        setPrintOrder({ ...saved, restaurant_name: user.restaurant_name });
-        setTimeout(() => printReceiptJob(user), 100);
+        const merged = { ...saved, restaurant_name: user.restaurant_name };
+        setPrintOrder(merged);
+        setTimeout(() => printReceiptJob(user, merged), 100);
         toast.success(`Παραγγελία #${saved.order_number} αποθηκεύτηκε`);
       }
       setItems([]);
@@ -392,13 +394,14 @@ export default function PDA() {
         markServerDown();
         try {
           const entry = await enqueueOrder(payload);
-          setPrintOrder({
+          const merged = {
             ...entry,
             id: entry.client_id,
             created_at: entry.client_created_at,
             restaurant_name: user.restaurant_name,
-          });
-          setTimeout(() => printReceiptJob(user), 100);
+          };
+          setPrintOrder(merged);
+          setTimeout(() => printReceiptJob(user, merged), 100);
           toast.warning(
             `Εκτός σύνδεσης — η #${String(payload.order_number).padStart(3, "0")} αποθηκεύτηκε τοπικά και θα συγχρονιστεί`
           );

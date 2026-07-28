@@ -24,6 +24,7 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { eur, todayISO, formatGRDateTime } from "@/lib/format";
+import { printZReport } from "@/lib/print";
 import ZReportPrint from "./day-close/ZReportPrint";
 import SummaryRow from "./day-close/SummaryRow";
 import { TYPE_LABELS } from "./day-close/utils";
@@ -81,7 +82,7 @@ export default function DayClose() {
 
   const printZ = (report) => {
     setPrintReport(report);
-    setTimeout(() => window.print(), 150);
+    setTimeout(() => printZReport(user, report, restaurantName), 150);
   };
 
   const handleClose = async () => {

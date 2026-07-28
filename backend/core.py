@@ -236,6 +236,9 @@ def public_user(u: dict) -> dict:
         "print_copies": u.get("print_copies", 1),
         "print_copy_labels": bool(u.get("print_copy_labels", False)),
         "print_double": bool(u.get("print_double", False)),
+        "print_mode": u.get("print_mode") or "browser",
+        # Το ίδιο το token επιστρέφεται μόνο από owner-only endpoint (routers/print_jobs.py)
+        "print_bridge_configured": bool(u.get("print_bridge_token")),
         "is_demo": bool(u.get("is_demo", False)),
         "demo_expires_at": u.get("demo_expires_at"),
         "ai_features_enabled": bool(u.get("ai_features_enabled", False)),

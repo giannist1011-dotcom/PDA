@@ -109,7 +109,9 @@ h1, h2, h3, h4, h5, .font-heading {
   }
   #print-area .receipt-title { font-size: 18px; font-weight: 800; }
   #print-area hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
-  @page { size: 80mm auto; margin: 4mm; }
+  /* Μηδενικά περιθώρια σελίδας για silent/kiosk printing σε θερμικό 80mm —
+     ο "αέρας" δίνεται από το padding του #print-area ώστε να μην κόβεται κείμενο */
+  @page { size: 80mm auto; margin: 0; }
 }
 
 /* Animations */

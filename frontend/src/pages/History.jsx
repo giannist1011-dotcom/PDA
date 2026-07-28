@@ -86,8 +86,9 @@ export default function History() {
   };
 
   const handleReprint = (order) => {
-    setPrintOrder({ ...order, restaurant_name: user?.restaurant_name });
-    setTimeout(() => printReceiptJob(user), 100);
+    const merged = { ...order, restaurant_name: user?.restaurant_name };
+    setPrintOrder(merged);
+    setTimeout(() => printReceiptJob(user, merged), 100);
   };
 
   // PIN gate state for employee-initiated cancel/delete

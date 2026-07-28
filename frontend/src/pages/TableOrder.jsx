@@ -17,7 +17,7 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { eur } from "@/lib/format";
-import { printReceiptJob } from "@/lib/print";
+import { printReceiptJob, printKitchenSlip } from "@/lib/print";
 import KitchenSlip from "./table-order/KitchenSlip";
 import TabPanel from "./table-order/TabPanel";
 import TransferModal from "./table-order/TransferModal";
@@ -140,8 +140,9 @@ export default function TableOrder() {
       );
       setTab(res.tab);
       setNewItems([]);
-      setPrintSlip({ tableName: res.table.name, round: res.round, sentBy: profileName });
-      setTimeout(() => window.print(), 150);
+      const slip = { tableName: res.table.name, round: res.round, sentBy: profileName };
+      setPrintSlip(slip);
+      setTimeout(() => printKitchenSlip(user, slip), 150);
       toast.success(`Ο γύρος ${res.round.round_no} στάλθηκε`);
     } catch (e) {
       toast.error(formatApiError(e));
@@ -161,9 +162,10 @@ export default function TableOrder() {
     try {
       const order = await apiCloseTab(tab.id);
       setPrintSlip(null);
-      setPrintOrder({ ...order, restaurant_name: user?.restaurant_name });
+      const merged = { ...order, restaurant_name: user?.restaurant_name };
+      setPrintOrder(merged);
       setTimeout(() => {
-        printReceiptJob(user);
+        printReceiptJob(user, merged);
         navigate("/app/tables");
       }, 200);
       toast.success(`Το τραπέζι έκλεισε — παραγγελία #${String(order.order_number).padStart(3, "0")}`);

@@ -157,6 +157,13 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - POST /orders/{oid}/cancel → cancel_order @550
 - DELETE /orders/{oid} → delete_order @577
 - GET /customers → list_customers @592 — Aggregate customers from phone/delivery orders, grouped by phone
+### print_jobs.py
+- POST /print/jobs → create_print_job @33
+- GET /print/jobs/{jid} → get_print_job @53 — Κατάσταση job — το χρησιμοποιεί η «Δοκιμαστική εκτύπωση»…
+- GET /print/bridge/token → get_bridge_token @65
+- POST /print/bridge/token → rotate_bridge_token @77 — Δημιουργία/αντικατάσταση token — το παλιό παύει να ισχύει…
+- GET /print/bridge/jobs → bridge_poll_jobs @101
+- POST /print/bridge/jobs/{jid}/ack → bridge_ack_job @122
 ### promo.py
 - GET /admin/promo → admin_list_promos @106
 - POST /admin/promo → admin_create_promo @122
@@ -222,17 +229,17 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 ### tables.py
 - PUT /settings/business → update_business_type @53
 - PUT /settings/store → update_store_details @88 — Στοιχεία καταστήματος — όνομα, τηλέφωνο, διεύθυνση, συντεταγμένες (lat/lng).
-- PUT /settings/printing → update_printing @124 — Ρυθμίσεις εκτύπωσης — αποθηκεύονται στον λογαριασμό, έρχονται με…
-- PUT /settings/tables → toggle_tables @144
-- GET /tables/state → tables_state @152
-- POST /tables → create_table @175
-- POST /tables/reorder → reorder_tables @188
-- PUT /tables/{tid} → update_table @197
-- DELETE /tables/{tid} → delete_table @208
-- GET /tables/{tid}/tab → get_table_tab @221
-- POST /tables/{tid}/rounds → send_round @237 — Αποστολή: append a round to the table's open…
-- POST /tabs/{tab_id}/close → close_tab @274 — Κλείσιμο τραπεζιού: turn the tab into a normal…
-- POST /tabs/{tab_id}/transfer → transfer_tab @317
+- PUT /settings/printing → update_printing @125 — Ρυθμίσεις εκτύπωσης — αποθηκεύονται στον λογαριασμό, έρχονται με…
+- PUT /settings/tables → toggle_tables @147
+- GET /tables/state → tables_state @155
+- POST /tables → create_table @178
+- POST /tables/reorder → reorder_tables @191
+- PUT /tables/{tid} → update_table @200
+- DELETE /tables/{tid} → delete_table @211
+- GET /tables/{tid}/tab → get_table_tab @224
+- POST /tables/{tid}/rounds → send_round @240 — Αποστολή: append a round to the table's open…
+- POST /tabs/{tab_id}/close → close_tab @277 — Κλείσιμο τραπεζιού: turn the tab into a normal…
+- POST /tabs/{tab_id}/transfer → transfer_tab @320
 
 ## BACKEND — Mongo collections (paths σχετικά με backend/)
 - admin_audit: routers/admin.py, routers/admin_admins.py, routers/admin_overview.py, server.py
@@ -261,6 +268,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - items: core.py, routers/admin.py, routers/ai.py, routers/menu.py, routers/public_menu.py, server.py
 - orders: routers/admin.py, routers/admin_overview.py, routers/ai.py, routers/orders.py, routers/stats.py, routers/tables.py, server.py
 - photos: routers/menu.py, routers/public_menu.py, server.py
+- print_jobs: routers/print_jobs.py, server.py
 - profiles: core.py, routers/admin.py, routers/admin_fleet.py, routers/auth.py, server.py
 - promo_codes: routers/promo.py, server.py
 - push_subscriptions: push.py, server.py
@@ -272,7 +280,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - stock_photos: routers/menu.py, routers/stock_photos.py, server.py
 - table_tabs: routers/stats.py, routers/tables.py, server.py
 - tables: core.py, routers/stats.py, routers/tables.py, server.py
-- users: core.py, routers/admin.py, routers/admin_fleet.py, routers/admin_overview.py, routers/auth.py, routers/billing.py, routers/fleet.py, routers/menu.py, routers/onboarding.py, routers/orders.py, routers/promo.py, routers/public_menu.py, routers/tables.py, server.py
+- users: core.py, routers/admin.py, routers/admin_fleet.py, routers/admin_overview.py, routers/auth.py, routers/billing.py, routers/fleet.py, routers/menu.py, routers/onboarding.py, routers/orders.py, routers/print_jobs.py, routers/promo.py, routers/public_menu.py, routers/tables.py, server.py
 
 ## FRONTEND — routes (frontend/src/App.js)
 - login → FleetLogin
@@ -332,7 +340,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - Analytics.jsx (308 γρ): Analytics@43
 - Checklist.jsx (136 γρ): Checklist@16
 - DailyBrief.jsx (159 γρ): DailyBrief@40
-- DayClose.jsx (320 γρ): DayClose@46
+- DayClose.jsx (321 γρ): DayClose@47
 - DeckPilot.jsx (13 γρ): DeckPilot@4
 - DeckView.jsx (269 γρ): BigCard@21, Panel@39, DeckView@49
 - Expenses.jsx (397 γρ): Expenses@32
@@ -344,11 +352,11 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - FleetSelect.jsx (136 γρ): FleetSelect@11
 - FleetSettings.jsx (64 γρ): FleetSettings@12
 - FleetSignup.jsx (290 γρ): Field@10, FleetSignup@38
-- History.jsx (296 γρ): History@26
+- History.jsx (297 γρ): History@26
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
 - MenuManagement.jsx (361 γρ): MenuManagement@29
-- PDA.jsx (518 γρ): PDA@77
+- PDA.jsx (521 γρ): PDA@77
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
 - PublicMenu.jsx (209 γρ): PublicMenu@19
@@ -360,7 +368,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - StoreFleetPartners.jsx (159 γρ): StoreFleetPartners@22
 - StoreFleetSettings.jsx (47 γρ): StoreFleetSettings@9
 - StoreFleetStats.jsx (101 γρ): StoreFleetStats@14
-- TableOrder.jsx (337 γρ): TableOrder@28
+- TableOrder.jsx (339 γρ): TableOrder@28
 - Tables.jsx (159 γρ): Tables@12
 - Waiters.jsx (27 γρ): Waiters@6
 - admin-admins/AdminModal.jsx (207 γρ): AdminModal@12
@@ -495,7 +503,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - OrderPanel.jsx (486 γρ): OrderPanel@40
 - PeriodFilter.jsx (91 γρ): PeriodFilter@20
 - PinGateModal.jsx (179 γρ): PinGateModal@16
-- PrintingSettings.jsx (159 γρ): PrintingSettings@10
+- PrintingSettings.jsx (218 γρ): PrintingSettings@27
 - ProfilesManager.jsx (322 γρ): ProfileModal@20, ProfilesManager@176
 - ProtectedRoute.jsx (40 γρ): ProtectedRoute@12
 - PublicMenuSettings.jsx (410 γρ): PublicMenuSettings@29
@@ -504,6 +512,8 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - StoreHoursEditor.jsx (123 γρ): StoreHoursEditor@19
 - TablesEditor.jsx (164 γρ): TablesEditor@14
 - TimePicker.jsx (119 γρ): Column@23, TimePicker@60
+- printing/BridgeSetup.jsx (185 γρ): BridgeSetup@17
+- printing/KioskSetup.jsx (82 γρ): KioskSetup@12
 
 ## FRONTEND — lib/api.js (exported)
 - api — axios instance (baseURL /api)
@@ -618,6 +628,10 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - geocodeAddress(q)
 - geocodeCityCenter(city)
 - apiUpdatePrinting(payload) → PUT /settings/printing
+- apiCreatePrintJob(payload) → POST /print/jobs
+- apiGetPrintJob(id) → GET /print/jobs/${id}
+- apiGetBridgeToken() → GET /print/bridge/token
+- apiRotateBridgeToken() → POST /print/bridge/token
 - apiGetBranding() → GET /branding
 - apiGetPublicMenu(slug) → GET /public/menu/${encodeURIComponent(slug)}
 - apiValidatePromo(code) → POST /promo/validate

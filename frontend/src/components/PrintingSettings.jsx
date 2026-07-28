@@ -1,11 +1,28 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Info } from "lucide-react";
+import { Info, Monitor, Waypoints } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import { apiUpdatePrinting, formatApiError } from "@/lib/api";
+import KioskSetup from "@/components/printing/KioskSetup";
+import BridgeSetup from "@/components/printing/BridgeSetup";
 
 const PRESETS = [1, 2];
+
+const MODES = [
+  {
+    key: "browser",
+    label: "Browser (kiosk)",
+    icon: Monitor,
+    desc: "Εκτύπωση από το PC του ταμείου — αθόρυβη με Chrome kiosk mode",
+  },
+  {
+    key: "bridge",
+    label: "Print Bridge",
+    icon: Waypoints,
+    desc: "Για tablet/iPad — η εφαρμογή Print Bridge στο PC του εκτυπωτή τυπώνει για όλες τις συσκευές",
+  },
+];
 
 export default function PrintingSettings() {
   const { user, refreshMe } = useAuth();
@@ -14,6 +31,7 @@ export default function PrintingSettings() {
   const [customMode, setCustomMode] = useState(!PRESETS.includes(initial));
   const [copyLabels, setCopyLabels] = useState(!!user?.print_copy_labels);
   const [doublePrint, setDoublePrint] = useState(!!user?.print_double);
+  const [mode, setMode] = useState(user?.print_mode === "bridge" ? "bridge" : "browser");
   const [saving, setSaving] = useState(false);
 
   const save = async (next) => {
@@ -23,6 +41,7 @@ export default function PrintingSettings() {
         copies: next.copies ?? copies,
         copy_labels: next.copy_labels ?? copyLabels,
         double_print: next.double_print ?? doublePrint,
+        mode: next.mode ?? mode,
       });
       await refreshMe(); // οι αποδείξεις διαβάζουν τις ρυθμίσεις από το user object
       toast.success("Οι ρυθμίσεις εκτύπωσης αποθηκεύτηκαν");
@@ -31,6 +50,12 @@ export default function PrintingSettings() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const pickMode = (key) => {
+    if (key === mode) return;
+    setMode(key);
+    save({ mode: key });
   };
 
   const pickPreset = (n) => {
@@ -59,6 +84,38 @@ export default function PrintingSettings() {
 
   return (
     <div className="space-y-4">
+      {/* Τρόπος εκτύπωσης */}
+      <div className="px-4 py-3 bg-[#2A0E14] border border-[#723645] rounded-md">
+        <div className="font-semibold text-sm mb-3">Τρόπος εκτύπωσης</div>
+        <div className="grid sm:grid-cols-2 gap-2">
+          {MODES.map((m) => {
+            const Icon = m.icon;
+            const active = mode === m.key;
+            return (
+              <button
+                key={m.key}
+                onClick={() => pickMode(m.key)}
+                disabled={saving}
+                data-testid={`print-mode-${m.key}`}
+                className={`text-left p-3 rounded-md border transition-colors ${
+                  active
+                    ? "bg-flame/10 border-flame/60"
+                    : "bg-[#1d090e] border-[#723645] hover:border-flame/60"
+                }`}
+              >
+                <div className={`flex items-center gap-2 font-bold text-sm ${active ? "text-flame" : "text-neutral-200"}`}>
+                  <Icon className="w-4 h-4" /> {m.label}
+                </div>
+                <div className="text-xs text-neutral-500 mt-1">{m.desc}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Οδηγίες & δοκιμή ανά mode */}
+      {mode === "browser" ? <KioskSetup /> : <BridgeSetup />}
+
       {/* Αντίγραφα */}
       <div className="px-4 py-3 bg-[#2A0E14] border border-[#723645] rounded-md">
         <div className="font-semibold text-sm">Αντίγραφα ανά παραγγελία</div>
@@ -122,37 +179,39 @@ export default function PrintingSettings() {
         </div>
       )}
 
-      {/* Διπλή εκτύπωση */}
-      <div className="px-4 py-3 bg-[#2A0E14] border border-[#723645] rounded-md">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-semibold text-sm">Διπλή εκτύπωση (2ος εκτυπωτής)</div>
-            <div className="text-xs text-neutral-500">
-              Κάθε παραγγελία ανοίγει δύο εκτυπώσεις στη σειρά — μία για κάθε εκτυπωτή
-            </div>
-          </div>
-          <Switch
-            checked={doublePrint}
-            disabled={saving}
-            onCheckedChange={(v) => {
-              setDoublePrint(!!v);
-              save({ double_print: !!v });
-            }}
-            data-testid="print-double-switch"
-          />
-        </div>
-        {doublePrint && (
-          <div className="mt-3 flex gap-2 text-xs text-neutral-400 bg-[#3D1620] border border-[#723645] rounded-md p-3">
-            <Info className="w-4 h-4 shrink-0 text-gold mt-0.5" />
+      {/* Διπλή εκτύπωση — μόνο στο browser mode (το bridge έχει έναν εκτυπωτή στο v1) */}
+      {mode === "browser" && (
+        <div className="px-4 py-3 bg-[#2A0E14] border border-[#723645] rounded-md">
+          <div className="flex items-center justify-between">
             <div>
-              Ο browser δεν επιτρέπει αυτόματη επιλογή εκτυπωτή. Στο πρώτο παράθυρο εκτύπωσης
-              επιλέξτε τον 1ο εκτυπωτή (π.χ. ταμείο) και στο δεύτερο τον 2ο (π.χ. κουζίνα) —
-              ο browser θυμάται την τελευταία επιλογή. Για εκτύπωση χωρίς παράθυρα (kiosk mode),
-              ο δεύτερος εκτυπωτής πρέπει να οριστεί ως προεπιλογή σε ξεχωριστή συσκευή/browser.
+              <div className="font-semibold text-sm">Διπλή εκτύπωση (2ος εκτυπωτής)</div>
+              <div className="text-xs text-neutral-500">
+                Κάθε παραγγελία ανοίγει δύο εκτυπώσεις στη σειρά — μία για κάθε εκτυπωτή
+              </div>
             </div>
+            <Switch
+              checked={doublePrint}
+              disabled={saving}
+              onCheckedChange={(v) => {
+                setDoublePrint(!!v);
+                save({ double_print: !!v });
+              }}
+              data-testid="print-double-switch"
+            />
           </div>
-        )}
-      </div>
+          {doublePrint && (
+            <div className="mt-3 flex gap-2 text-xs text-neutral-400 bg-[#3D1620] border border-[#723645] rounded-md p-3">
+              <Info className="w-4 h-4 shrink-0 text-gold mt-0.5" />
+              <div>
+                Ο browser δεν επιτρέπει αυτόματη επιλογή εκτυπωτή. Στο πρώτο παράθυρο εκτύπωσης
+                επιλέξτε τον 1ο εκτυπωτή (π.χ. ταμείο) και στο δεύτερο τον 2ο (π.χ. κουζίνα) —
+                ο browser θυμάται την τελευταία επιλογή. Για εκτύπωση χωρίς παράθυρα (kiosk mode),
+                ο δεύτερος εκτυπωτής πρέπει να οριστεί ως προεπιλογή σε ξεχωριστή συσκευή/browser.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

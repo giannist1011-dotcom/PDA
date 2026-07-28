@@ -114,7 +114,7 @@ export default function Settings() {
               <Section
                 icon={Printer}
                 title="Εκτύπωση"
-                subtitle="Αντίγραφα ανά παραγγελία και ταυτόχρονη εκτύπωση σε δεύτερο εκτυπωτή"
+                subtitle="Τρόπος εκτύπωσης (kiosk ή Print Bridge), αντίγραφα ανά παραγγελία και δεύτερος εκτυπωτής"
               >
                 <PrintingSettings />
               </Section>

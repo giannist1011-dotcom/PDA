@@ -118,6 +118,7 @@ class PrintingIn(BaseModel):
     copies: int = Field(ge=1, le=10)
     copy_labels: bool = False
     double_print: bool = False
+    mode: Literal["browser", "bridge"] = "browser"
 
 
 @router.put("/settings/printing")
@@ -130,6 +131,7 @@ async def update_printing(body: PrintingIn, user: dict = Depends(require_feature
                 "print_copies": body.copies,
                 "print_copy_labels": bool(body.copy_labels),
                 "print_double": bool(body.double_print),
+                "print_mode": body.mode,
             }
         },
     )
@@ -137,6 +139,7 @@ async def update_printing(body: PrintingIn, user: dict = Depends(require_feature
         "copies": body.copies,
         "copy_labels": bool(body.copy_labels),
         "double_print": bool(body.double_print),
+        "mode": body.mode,
     }
 
 

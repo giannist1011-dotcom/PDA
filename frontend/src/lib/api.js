@@ -287,6 +287,14 @@ export const geocodeCityCenter = async (city) => {
 export const apiUpdatePrinting = (payload) =>
   api.put("/settings/printing", payload).then((r) => r.data);
 
+// Print Bridge — jobs από κάθε προφίλ, token μόνο owner
+export const apiCreatePrintJob = (payload) =>
+  api.post("/print/jobs", payload).then((r) => r.data);
+export const apiGetPrintJob = (id) => api.get(`/print/jobs/${id}`).then((r) => r.data);
+export const apiGetBridgeToken = () => api.get("/print/bridge/token").then((r) => r.data);
+export const apiRotateBridgeToken = () =>
+  api.post("/print/bridge/token").then((r) => r.data);
+
 // Branding (λογότυπο μαγαζιού) — προσβάσιμο από κάθε συνδεδεμένο προφίλ
 export const apiGetBranding = () => api.get("/branding").then((r) => r.data);
 // Public — χωρίς login
