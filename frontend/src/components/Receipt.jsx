@@ -32,14 +32,8 @@ function ReceiptCopy({ order, label }) {
     <div>
       {label && (
         <div
-          style={{
-            textAlign: "center",
-            fontWeight: 800,
-            fontSize: 13,
-            border: "1px solid #000",
-            padding: "1px 0",
-            marginBottom: 4,
-          }}
+          className="rc-big"
+          style={{ textAlign: "center", border: "2px solid #000", padding: "2px 0", marginBottom: 4 }}
         >
           {label}
         </div>
@@ -47,92 +41,76 @@ function ReceiptCopy({ order, label }) {
       <div className="receipt-title text-center">
         {(order.restaurant_name || "POS").toUpperCase()}
       </div>
-      <div style={{ textAlign: "center", fontSize: 11 }}>Souvlaki & Take-away</div>
+      <div className="rc-sub" style={{ textAlign: "center" }}>Souvlaki & Take-away</div>
       <hr />
-      <div>Αρ. Παρ.: #{String(order.order_number).padStart(3, "0")}</div>
+      <div className="rc-big">Αρ. Παρ.: #{String(order.order_number).padStart(3, "0")}</div>
       <div>Πηγή: {order.source}</div>
-      {order.table_name && (
-        <div style={{ fontWeight: 800, fontSize: 13 }}>Τραπέζι: {order.table_name}</div>
-      )}
-      <div>Ημ/νία: {formatGRDateTime(order.created_at || new Date().toISOString())}</div>
+      {order.table_name && <div className="rc-big">Τραπέζι: {order.table_name}</div>}
+      <div className="rc-big">
+        {formatGRDateTime(order.created_at || new Date().toISOString())}
+      </div>
       {d && (
         <>
           <hr />
-          <div style={{ fontWeight: 800, fontSize: 13 }}>
+          <div className="rc-big">
             {d.delivery_type === "delivery" ? "★ ΠΑΡΑΔΟΣΗ" : "★ TAKEAWAY"}
           </div>
           {d.delivery_type === "delivery" && (
-            <div style={{ fontWeight: 800, fontSize: 13 }}>
-              Παραγγέλθηκε: {orderTime(order.created_at || new Date().toISOString())}
-            </div>
+            <div>Παραγγέλθηκε: {orderTime(order.created_at || new Date().toISOString())}</div>
           )}
           {d.name && <div>Όνομα: {d.name}</div>}
-          {d.phone && <div>Τηλ.: {d.phone}</div>}
-          {d.delivery_type === "delivery" && d.address && <div>Δ/νση: {d.address}</div>}
+          {d.phone && <div className="rc-big">Τηλ.: {d.phone}</div>}
+          {d.delivery_type === "delivery" && d.address && (
+            <div className="rc-big">Δ/νση: {d.address}</div>
+          )}
           {d.delivery_type === "delivery" && d.floor && <div>Όροφος: {d.floor}</div>}
         </>
       )}
       {order.note && (
         <>
           <hr />
-          <div
-            style={{
-              border: "1px solid #000",
-              padding: "2px 4px",
-              fontWeight: 800,
-              fontSize: 12,
-            }}
-          >
-            ΣΗΜΕΙΩΣΗ: {order.note}
-          </div>
+          <div className="rc-note">ΣΗΜΕΙΩΣΗ: {order.note}</div>
         </>
       )}
       <hr />
       {order.items.map((it, idx) => (
-        <div key={idx} style={{ marginBottom: 4 }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div key={idx} style={{ marginBottom: 6 }}>
+          <div className="rc-row rc-item">
             <span>{it.quantity}x {it.name}</span>
-            <span>{eur(it.line_total)}</span>
+            <span className="rc-price">{eur(it.line_total)}</span>
           </div>
           {it.customization && (
-            <div style={{ fontSize: 10, paddingLeft: 8 }}>{summarize(it.customization)}</div>
+            <div className="rc-mod">{summarize(it.customization)}</div>
           )}
         </div>
       ))}
       <hr />
       {(order.discount?.amount > 0 || order.delivery_fee > 0) && (
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div className="rc-row">
           <span>Υποσύνολο</span>
-          <span>{eur(order.subtotal)}</span>
+          <span className="rc-price">{eur(order.subtotal)}</span>
         </div>
       )}
       {order.discount?.amount > 0 && (
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div className="rc-row">
           <span>
             Έκπτωση{order.discount.type === "percent" ? ` ${order.discount.value}%` : ""}
           </span>
-          <span>-{eur(order.discount.amount)}</span>
+          <span className="rc-price">-{eur(order.discount.amount)}</span>
         </div>
       )}
       {order.delivery_fee > 0 && (
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div className="rc-row">
           <span>Χρέωση delivery</span>
-          <span>+{eur(order.delivery_fee)}</span>
+          <span className="rc-price">+{eur(order.delivery_fee)}</span>
         </div>
       )}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          fontWeight: 800,
-          fontSize: 14,
-        }}
-      >
+      <div className="rc-row rc-total">
         <span>ΣΥΝΟΛΟ</span>
-        <span>{eur(order.total)}</span>
+        <span className="rc-price">{eur(order.total)}</span>
       </div>
       <hr />
-      <div style={{ textAlign: "center", fontSize: 10 }}>Ευχαριστούμε! Καλή όρεξη</div>
+      <div className="rc-foot">Ευχαριστούμε! Καλή όρεξη</div>
     </div>
   );
 }

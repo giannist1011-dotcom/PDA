@@ -36,18 +36,20 @@ export function printShoppingList({ restaurantName, items, when = null }) {
 <meta charset="utf-8" />
 <title>Λίστα αγορών — ${escapeHtml(restaurantName || "")}</title>
 <style>
+  /* Θερμικός 80mm (72mm εκτυπώσιμο) — μόνο καθαρό μαύρο, οι γκρι βγαίνουν αχνές κουκκίδες */
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; margin: 24px; }
-  header { border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 18px; }
-  h1 { margin: 0 0 4px; font-size: 22px; }
-  .meta { font-size: 13px; color: #7A3E52; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #000; width: 72mm; margin: 0; padding: 1mm 0 5mm; font-size: 15px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; word-break: break-word; }
+  header { border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; }
+  h1 { margin: 0 0 2px; font-size: 22px; font-weight: 800; }
+  .meta { font-size: 13px; color: #000; }
   ul { list-style: none; padding: 0; margin: 0; }
-  .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed #999; font-size: 16px; }
-  .row.bought .text { text-decoration: line-through; color: #888; }
-  .check { font-size: 20px; width: 22px; text-align: center; }
-  .empty { color: #888; font-style: italic; padding: 20px 0; }
-  footer { margin-top: 24px; font-size: 11px; color: #888; text-align: right; }
-  @media print { body { margin: 12mm; } .no-print { display: none; } }
+  .row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #000; font-size: 18px; font-weight: 800; }
+  .row.bought .text { text-decoration: line-through; }
+  .check { font-size: 22px; width: 24px; text-align: center; flex-shrink: 0; }
+  .empty { color: #000; font-style: italic; padding: 20px 0; }
+  footer { margin-top: 12px; font-size: 11px; color: #000; text-align: center; }
+  @page { size: 72mm auto; margin: 0; }
+  @media print { .no-print { display: none; } }
 </style>
 </head>
 <body>

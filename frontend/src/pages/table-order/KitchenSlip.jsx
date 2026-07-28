@@ -6,25 +6,25 @@ export default function KitchenSlip({ slip }) {
   return (
     <div id="print-area" className="hidden print:block">
       <div className="receipt-title text-center">ΚΟΥΖΙΝΑ</div>
-      <div style={{ textAlign: "center", fontSize: 14, fontWeight: 800 }}>
+      <div className="rc-big" style={{ textAlign: "center" }}>
         ΤΡΑΠΕΖΙ {slip.tableName}
       </div>
-      <div style={{ textAlign: "center", fontSize: 11 }}>
+      <div style={{ textAlign: "center" }}>
         Γύρος {slip.round.round_no} · {roundTime(slip.round.sent_at)}
       </div>
       <hr />
       {slip.round.items.map((it, idx) => (
-        <div key={idx} style={{ marginBottom: 5 }}>
-          <div style={{ fontSize: 14, fontWeight: 800 }}>
+        <div key={idx} style={{ marginBottom: 6 }}>
+          <div className="rc-item">
             {it.quantity}x {it.name}
           </div>
           {it.customization && summarize(it.customization) && (
-            <div style={{ fontSize: 11, paddingLeft: 8 }}>{summarize(it.customization)}</div>
+            <div className="rc-mod">{summarize(it.customization)}</div>
           )}
         </div>
       ))}
       <hr />
-      <div style={{ textAlign: "center", fontSize: 10 }}>
+      <div className="rc-foot">
         {slip.sentBy ? `Σερβίρει: ${slip.sentBy}` : ""}
       </div>
     </div>

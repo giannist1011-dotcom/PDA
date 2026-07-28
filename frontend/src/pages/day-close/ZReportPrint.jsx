@@ -9,7 +9,7 @@ export default function ZReportPrint({ report, restaurantName }) {
       <div className="receipt-title text-center">
         {(restaurantName || "POS").toUpperCase()}
       </div>
-      <div style={{ textAlign: "center", fontSize: 12, fontWeight: 800 }}>
+      <div className="rc-big" style={{ textAlign: "center" }}>
         ΚΛΕΙΣΙΜΟ ΗΜΕΡΑΣ (Z)
       </div>
       <hr />
@@ -20,12 +20,12 @@ export default function ZReportPrint({ report, restaurantName }) {
         <span>Παραγγελίες</span>
         <span>{report.total_orders}</span>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 14 }}>
+      <div className="rc-row rc-total">
         <span>ΤΖΙΡΟΣ</span>
-        <span>{eur(report.total_revenue)}</span>
+        <span className="rc-price">{eur(report.total_revenue)}</span>
       </div>
       <hr />
-      <div style={{ fontWeight: 800, fontSize: 11 }}>ΑΝΑ ΠΗΓΗ</div>
+      <div style={{ fontWeight: 800 }}>ΑΝΑ ΠΗΓΗ</div>
       {(report.by_source || []).map((s) => (
         <div key={s.source} style={{ display: "flex", justifyContent: "space-between" }}>
           <span>{s.source} ({s.count})</span>
@@ -35,7 +35,7 @@ export default function ZReportPrint({ report, restaurantName }) {
       {(report.by_type || []).length > 0 && (
         <>
           <hr />
-          <div style={{ fontWeight: 800, fontSize: 11 }}>ΑΝΑ ΤΥΠΟ</div>
+          <div style={{ fontWeight: 800 }}>ΑΝΑ ΤΥΠΟ</div>
           {(report.by_type || []).map((t) => (
             <div key={t.type} style={{ display: "flex", justifyContent: "space-between" }}>
               <span>{TYPE_LABELS[t.type] || t.type} ({t.count})</span>
@@ -64,12 +64,12 @@ export default function ZReportPrint({ report, restaurantName }) {
         <span>-{eur(report.total_expenses)}</span>
       </div>
       <hr />
-      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 14 }}>
+      <div className="rc-row rc-total">
         <span>ΚΑΘΑΡΟ</span>
-        <span>{eur(report.net_result)}</span>
+        <span className="rc-price">{eur(report.net_result)}</span>
       </div>
       <hr />
-      <div style={{ textAlign: "center", fontSize: 10 }}>OrderDeck — Αναφορά Z</div>
+      <div className="rc-foot">OrderDeck — Αναφορά Z</div>
     </div>
   );
 }
