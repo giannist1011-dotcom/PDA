@@ -295,6 +295,13 @@ export const apiGetBridgeToken = () => api.get("/print/bridge/token").then((r) =
 export const apiRotateBridgeToken = () =>
   api.post("/print/bridge/token").then((r) => r.data);
 export const apiRelayPoll = () => api.post("/print/relay/poll").then((r) => r.data);
+// SSE stream νέων print jobs για τον σταθμό — με fetch (όχι EventSource) ώστε το
+// JWT να πάει σε Authorization header και όχι σε query string.
+export const relayJobsStream = (signal) =>
+  fetch(`${API}/print/jobs/stream`, {
+    headers: { Authorization: `Bearer ${getToken() || ""}` },
+    signal,
+  });
 export const apiRelayAck = (id, status, error = null) =>
   api.post(`/print/relay/jobs/${id}/ack`, { status, error }).then((r) => r.data);
 export const apiRelayRetry = (id) =>

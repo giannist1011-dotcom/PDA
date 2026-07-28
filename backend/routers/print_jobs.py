@@ -11,18 +11,34 @@ print_jobs αντί να ανοίξει browser print dialog. Δύο καταν�
   claim-άρει jobs ατομικά, τα τυπώνει με window.print() και κάνει ack
   (endpoints /print/relay/*). Χωρίς desktop εφαρμογή.
 """
+import asyncio
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from pymongo import ReturnDocument
 
 from core import db, get_current_user, require_owner, require_feature
 
 router = APIRouter()
+
+# ============ SSE: ειδοποίηση σταθμού τη στιγμή που δημιουργείται job ============
+# In-process pub/sub ανά κατάστημα (ένα instance στο Render — αρκεί). Αν ο σταθμός
+# δεν έχει ανοιχτό stream, το notify είναι no-op και τα jobs τα βρίσκει το poll.
+_relay_listeners: dict[str, set] = {}
+SSE_HEARTBEAT_SEC = 20  # κρατάει ζωντανή τη σύνδεση μέσα από proxies
+
+
+def _relay_notify(user_id: str):
+    for q in _relay_listeners.get(user_id, ()):
+        try:
+            q.put_nowait(1)
+        except Exception:
+            pass
 
 MAX_TEXT_LEN = 20000  # ανά ticket — μια απόδειξη είναι λίγα KB
 MAX_PAYLOAD_LEN = 30000  # δομημένο payload (order/slip/report) για το relay
@@ -64,9 +80,47 @@ async def create_print_job(body: PrintJobIn, user: dict = Depends(get_current_us
         "claimed_at": None,
         "printed_at": None,
     }
+    # Ένα γρήγορο insert και τίποτα άλλο πριν την απάντηση — η συσκευή που
+    # πάτησε «εκτύπωση» δεν περιμένει. Το notify είναι σύγχρονο in-memory (μs).
     await db.print_jobs.insert_one(job)
-    job.pop("_id", None)
+    _relay_notify(user["id"])
     return {"id": job["id"], "status": "pending"}
+
+
+@router.get("/print/jobs/stream")
+async def print_jobs_stream(user: dict = Depends(get_current_user)):
+    """SSE stream του σταθμού εκτύπωσης: event `job` μόλις δημιουργηθεί print_job
+    του καταστήματος. Ο σταθμός κάνει αμέσως relay poll (το claim μένει ατομικό
+    στο /print/relay/poll). Δηλωμένο ΠΡΙΝ το /print/jobs/{jid} για να μην
+    πιαστεί το «stream» ως job id."""
+    user_id = user["id"]
+    queue: asyncio.Queue = asyncio.Queue()
+    _relay_listeners.setdefault(user_id, set()).add(queue)
+
+    async def gen():
+        try:
+            yield "retry: 2000\n\n"
+            while True:
+                try:
+                    await asyncio.wait_for(queue.get(), timeout=SSE_HEARTBEAT_SEC)
+                    # burst από πολλά jobs → ένα event (ο σταθμός θα τα πάρει όλα σε ένα poll)
+                    while not queue.empty():
+                        queue.get_nowait()
+                    yield "event: job\ndata: 1\n\n"
+                except asyncio.TimeoutError:
+                    yield ": ping\n\n"
+        finally:
+            listeners = _relay_listeners.get(user_id)
+            if listeners is not None:
+                listeners.discard(queue)
+                if not listeners:
+                    _relay_listeners.pop(user_id, None)
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/print/jobs/{jid}")

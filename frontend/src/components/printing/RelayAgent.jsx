@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Printer, AlertTriangle, RotateCcw, ChevronUp, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { apiRelayPoll, apiRelayAck, apiRelayRetry, apiRelayStatus } from "@/lib/api";
+import { apiRelayPoll, apiRelayAck, apiRelayRetry, apiRelayStatus, relayJobsStream } from "@/lib/api";
 import { isRelayStation, subscribeRelayStation } from "@/lib/relayStation";
 import { printHtmlInFrame } from "@/lib/printFrame";
 import { renderJobHtml } from "@/components/printing/relayRender";
 
-const POLL_MS = 2500; // poll του σταθμού
+// Ο σταθμός μαθαίνει τα νέα jobs κυρίως από SSE (/print/jobs/stream) — το poll
+// είναι πλέον fallback όταν πέσει το stream + αραιό δίχτυ ασφαλείας όσο ζει.
+const POLL_FALLBACK_MS = 2000; // χωρίς SSE → poll κάθε 2"
+const POLL_SAFETY_MS = 30000; // με ζωντανό SSE → αραιό poll ασφαλείας
+const SSE_RETRY_MS = 3000; // σιωπηλό reconnect του stream
 const STATUS_MS = 30000; // έλεγχος «ζει ο σταθμός;» από τις άλλες συσκευές
 const STALE_MS = 30000; // χωρίς poll για 30" → ο σταθμός θεωρείται κλειστός
 
@@ -19,22 +23,35 @@ const jobTime = (iso) => {
     : d.toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
 };
 
-// ---------- Ο σταθμός: poll → εκτύπωση σε κρυφό iframe → ack ----------
+// ---------- Ο σταθμός: SSE (ή fallback poll) → claim → εκτύπωση σε κρυφό iframe → ack ----------
 function StationLoop({ user }) {
   const [printedToday, setPrintedToday] = useState(0);
   const [failed, setFailed] = useState([]);
   const [connected, setConnected] = useState(true);
   const [open, setOpen] = useState(false);
+  // Δευτερόλεπτα από τη δημιουργία του job (πάτημα «εκτύπωση» στη συσκευή)
+  // μέχρι το window.print() στον σταθμό — για επαλήθευση της ταχύτητας.
+  const [lastPrintSecs, setLastPrintSecs] = useState(null);
   const busyRef = useRef(false);
+  const againRef = useRef(false);
   const userRef = useRef(user);
   userRef.current = user;
 
   useEffect(() => {
     let stopped = false;
+    const sseUpRef = { current: false };
+    const lastPollRef = { current: 0 };
+
     const tick = async () => {
-      if (stopped || busyRef.current) return;
+      if (stopped) return;
+      if (busyRef.current) {
+        // Ήρθε SSE event ενώ τυπώνουμε → ξανά poll μόλις τελειώσει η ουρά
+        againRef.current = true;
+        return;
+      }
       busyRef.current = true;
       try {
+        lastPollRef.current = Date.now();
         const res = await apiRelayPoll();
         if (stopped) return;
         setConnected(true);
@@ -45,6 +62,8 @@ function StationLoop({ user }) {
           if (stopped) break;
           try {
             await printHtmlInFrame(renderJobHtml(job, userRef.current));
+            const ms = Date.now() - new Date(job.created_at).getTime();
+            if (Number.isFinite(ms)) setLastPrintSecs(Math.max(0, ms) / 1000);
             await apiRelayAck(job.id, "printed");
             setPrintedToday((n) => n + 1);
           } catch (e) {
@@ -55,13 +74,53 @@ function StationLoop({ user }) {
         if (!stopped) setConnected(false);
       } finally {
         busyRef.current = false;
+        if (againRef.current && !stopped) {
+          againRef.current = false;
+          tick();
+        }
       }
     };
+
+    // SSE μέσω fetch stream (Authorization header) — ένα "event: job" σημαίνει
+    // «υπάρχει νέο print_job», και ο σταθμός κάνει αμέσως poll για να το claim-άρει.
+    const abort = new AbortController();
+    const connectStream = async () => {
+      while (!stopped) {
+        try {
+          const resp = await relayJobsStream(abort.signal);
+          if (!resp.ok || !resp.body) throw new Error("stream unavailable");
+          sseUpRef.current = true;
+          tick(); // catch-up: ό,τι δημιουργήθηκε όσο δεν είχαμε stream
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done || stopped) break;
+            buf += decoder.decode(value, { stream: true });
+            const blocks = buf.split("\n\n");
+            buf = blocks.pop();
+            if (blocks.some((b) => b.includes("event: job"))) tick();
+          }
+        } catch {
+          // πέφτουμε στο fallback poll — σιωπηλό reconnect πιο κάτω
+        }
+        sseUpRef.current = false;
+        if (stopped) return;
+        await new Promise((r) => setTimeout(r, SSE_RETRY_MS));
+      }
+    };
+    connectStream();
     tick();
-    const t = setInterval(tick, POLL_MS);
+    // Fallback/δίχτυ ασφαλείας: πυκνό poll χωρίς SSE, αραιό όσο το SSE ζει
+    const t = setInterval(() => {
+      const gap = sseUpRef.current ? POLL_SAFETY_MS : POLL_FALLBACK_MS;
+      if (Date.now() - lastPollRef.current >= gap) tick();
+    }, 500);
     return () => {
       stopped = true;
       clearInterval(t);
+      abort.abort();
     };
   }, []);
 
@@ -96,6 +155,14 @@ function StationLoop({ user }) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+      {lastPrintSecs != null && (
+        <div
+          className="text-[10px] font-bold text-neutral-400 bg-[#2A0E14]/90 border border-[#3a1a22] rounded-full px-2.5 py-0.5 shadow"
+          data-testid="relay-last-print-timing"
+        >
+          Τελευταία εκτύπωση: {lastPrintSecs.toFixed(1).replace(".", ",")}s από το πάτημα
         </div>
       )}
       <button

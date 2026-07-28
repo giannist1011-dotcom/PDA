@@ -158,16 +158,17 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - DELETE /orders/{oid} → delete_order @577
 - GET /customers → list_customers @592 — Aggregate customers from phone/delivery orders, grouped by phone
 ### print_jobs.py
-- POST /print/jobs → create_print_job @47
-- GET /print/jobs/{jid} → get_print_job @73 — Κατάσταση job — το χρησιμοποιεί η «Δοκιμαστική εκτύπωση»…
-- GET /print/bridge/token → get_bridge_token @85
-- POST /print/bridge/token → rotate_bridge_token @97 — Δημιουργία/αντικατάσταση token — το παλιό παύει να ισχύει…
-- GET /print/bridge/jobs → bridge_poll_jobs @121
-- POST /print/bridge/jobs/{jid}/ack → bridge_ack_job @142
-- POST /print/relay/poll → relay_poll @173 — Poll του σταθμού εκτύπωσης: claim-άρει ατομικά έως RELAY_BATCH…
-- POST /print/relay/jobs/{jid}/ack → relay_ack_job @225
-- POST /print/relay/jobs/{jid}/retry → relay_retry_job @242 — Επανεκτύπωση αποτυχημένου job από τον σταθμό — γίνεται…
-- GET /print/relay/status → relay_status @263 — Πότε έκανε τελευταίο poll ο σταθμός — για…
+- POST /print/jobs → create_print_job @63
+- GET /print/jobs/stream → print_jobs_stream @91 — SSE stream του σταθμού εκτύπωσης: event `job` μόλις…
+- GET /print/jobs/{jid} → get_print_job @127 — Κατάσταση job — το χρησιμοποιεί η «Δοκιμαστική εκτύπωση»…
+- GET /print/bridge/token → get_bridge_token @139
+- POST /print/bridge/token → rotate_bridge_token @151 — Δημιουργία/αντικατάσταση token — το παλιό παύει να ισχύει…
+- GET /print/bridge/jobs → bridge_poll_jobs @175
+- POST /print/bridge/jobs/{jid}/ack → bridge_ack_job @196
+- POST /print/relay/poll → relay_poll @227 — Poll του σταθμού εκτύπωσης: claim-άρει ατομικά έως RELAY_BATCH…
+- POST /print/relay/jobs/{jid}/ack → relay_ack_job @279
+- POST /print/relay/jobs/{jid}/retry → relay_retry_job @296 — Επανεκτύπωση αποτυχημένου job από τον σταθμό — γίνεται…
+- GET /print/relay/status → relay_status @317 — Πότε έκανε τελευταίο poll ο σταθμός — για…
 ### promo.py
 - GET /admin/promo → admin_list_promos @106
 - POST /admin/promo → admin_create_promo @122
@@ -518,7 +519,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - TimePicker.jsx (119 γρ): Column@23, TimePicker@60
 - printing/BridgeSetup.jsx (185 γρ): BridgeSetup@17
 - printing/KioskSetup.jsx (82 γρ): KioskSetup@12
-- printing/RelayAgent.jsx (176 γρ): StationLoop@23, StationDownBanner@128, RelayAgent@167
+- printing/RelayAgent.jsx (243 γρ): StationLoop@27, StationDownBanner@195, RelayAgent@234
 - printing/RelaySetup.jsx (181 γρ): RelaySetup@19
 - printing/relayRender.jsx (47 γρ)
 
@@ -640,6 +641,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiGetBridgeToken() → GET /print/bridge/token
 - apiRotateBridgeToken() → POST /print/bridge/token
 - apiRelayPoll() → POST /print/relay/poll
+- relayJobsStream(signal)
 - apiRelayAck(id, status, error = null) → POST /print/relay/jobs/${id}/ack
 - apiRelayRetry(id) → POST /print/relay/jobs/${id}/retry
 - apiRelayStatus() → GET /print/relay/status
