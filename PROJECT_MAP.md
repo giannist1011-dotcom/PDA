@@ -143,20 +143,21 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - POST /onboarding/hide → onboarding_hide @75
 - POST /onboarding/print-test → onboarding_print_test @81 — Καλείται από το frontend όταν γίνει οποιαδήποτε εκτύπωση…
 ### orders.py
-- GET /orders/next-number → next_order_number @130
-- POST /orders → create_order @135
-- GET /orders/scheduled → list_scheduled_orders @186
-- GET /orders → list_orders @230
-- GET /orders/count → count_orders @253 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
-- GET /orders/live-map → live_map_orders @366 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
-- POST /orders/live-map/clear → clear_live_map @419 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
-- GET /orders/address-book → address_book @427 — Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης…
-- GET /orders/heatmap → orders_heatmap @467 — Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng)…
-- GET /orders/{oid} → get_order @520
-- POST /orders/{oid}/activate → activate_order @530 — Move a scheduled order to active (fired /…
-- POST /orders/{oid}/cancel → cancel_order @550
-- DELETE /orders/{oid} → delete_order @577
-- GET /customers → list_customers @592 — Aggregate customers from phone/delivery orders, grouped by phone
+- GET /orders/next-number → next_order_number @134
+- POST /orders → create_order @139
+- GET /orders/scheduled → list_scheduled_orders @190
+- GET /orders → list_orders @234
+- GET /orders/count → count_orders @257 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
+- GET /orders/live-map → live_map_orders @370 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
+- POST /orders/live-map/clear → clear_live_map @423 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
+- GET /orders/address-book → address_book @431 — Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης…
+- GET /orders/heatmap → orders_heatmap @471 — Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng)…
+- GET /orders/{oid} → get_order @524
+- POST /orders/{oid}/activate → activate_order @534 — Move a scheduled order to active (fired /…
+- POST /orders/{oid}/cancel → cancel_order @554
+- DELETE /orders/{oid} → delete_order @581
+- PUT /orders/{oid} → edit_order @703 — Επεξεργασία takeaway/delivery παραγγελίας μετά τη δημιουργία: είδη,
+- GET /customers → list_customers @804 — Aggregate customers from phone/delivery orders, grouped by phone
 ### print_jobs.py
 - POST /print/jobs → create_print_job @63
 - GET /print/jobs/stream → print_jobs_stream @91 — SSE stream του σταθμού εκτύπωσης: event `job` μόλις…
@@ -265,7 +266,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - fleet_counters: routers/admin_fleet.py, routers/fleet.py, server.py
 - fleet_events: routers/admin_fleet.py, routers/fleet.py, server.py
 - fleet_members: routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
-- fleet_orders: core.py, routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
+- fleet_orders: core.py, routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/orders.py, routers/store_fleet.py, server.py
 - fleet_partnerships: core.py, routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
 - fleet_shifts: routers/fleet.py, server.py
 - fleet_teams: routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
@@ -357,11 +358,11 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - FleetSelect.jsx (136 γρ): FleetSelect@11
 - FleetSettings.jsx (64 γρ): FleetSettings@12
 - FleetSignup.jsx (290 γρ): Field@10, FleetSignup@38
-- History.jsx (297 γρ): History@26
+- History.jsx (300 γρ): History@27
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
 - MenuManagement.jsx (361 γρ): MenuManagement@29
-- PDA.jsx (521 γρ): PDA@77
+- PDA.jsx (683 γρ): PDA@82
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
 - PublicMenu.jsx (209 γρ): PublicMenu@19
@@ -432,8 +433,8 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - fleet/utils.js (96 γρ): useAccountCenter@9
 - history/CustomerDetailModal.jsx (119 γρ): CustomerDetailModal@5
 - history/CustomersTab.jsx (84 γρ): CustomersTab@4
-- history/OrderDetailModal.jsx (242 γρ): OrderDetailModal@32
-- history/OrdersTab.jsx (165 γρ): OrdersTab@11
+- history/OrderDetailModal.jsx (271 γρ): OrderDetailModal@33
+- history/OrdersTab.jsx (168 γρ): OrdersTab@11
 - history/ScheduledBadge.jsx (21 γρ): ScheduledBadge@5
 - history/utils.js (16 γρ)
 - landing/DemoModal.jsx (147 γρ): DemoModal@8
@@ -455,6 +456,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - pda/MenuSection.jsx (49 γρ): MenuSection@9
 - pda/MobileTabs.jsx (40 γρ): MobileTabs@2
 - pda/PDAModals.jsx (85 γρ): PDAModals@8
+- pda/ReprintPromptModal.jsx (70 γρ): ReprintPromptModal@6
 - pda/ScheduledOrdersModal.jsx (86 γρ): ScheduledOrdersModal@5
 - pda/utils.js (12 γρ)
 - profile-select/ForcePinChange.jsx (101 γρ): ForcePinChange@8
@@ -505,14 +507,14 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - MenuGrid.jsx (225 γρ): MenuGrid@6
 - OfflineBanner.jsx (67 γρ): OfflineBanner@10
 - OnboardingChecklist.jsx (100 γρ): OnboardingChecklist@18
-- OrderPanel.jsx (486 γρ): OrderPanel@40
+- OrderPanel.jsx (504 γρ): OrderPanel@40
 - PeriodFilter.jsx (91 γρ): PeriodFilter@20
 - PinGateModal.jsx (179 γρ): PinGateModal@16
 - PrintingSettings.jsx (231 γρ): PrintingSettings@36
 - ProfilesManager.jsx (322 γρ): ProfileModal@20, ProfilesManager@176
 - ProtectedRoute.jsx (40 γρ): ProtectedRoute@12
 - PublicMenuSettings.jsx (410 γρ): PublicMenuSettings@29
-- Receipt.jsx (133 γρ): ReceiptCopy@29, Receipt@118
+- Receipt.jsx (151 γρ): ReceiptCopy@30, Receipt@136
 - StoreDetailsSettings.jsx (149 γρ): StoreDetailsSettings@16
 - StoreHoursEditor.jsx (123 γρ): StoreHoursEditor@19
 - TablesEditor.jsx (164 γρ): TablesEditor@14
@@ -593,6 +595,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiGetOrder(id) → GET /orders/${id}
 - apiCancelOrder(id, pin = null) → POST /orders/${id}/cancel
 - apiDeleteOrder(id, pin = null) → DELETE /orders/${id}
+- apiEditOrder(id, payload) → PUT /orders/${id}
 - apiVerifyOwnerPin(pin) → POST /auth/verify-owner-pin
 - apiListScheduledOrders() → GET /orders/scheduled
 - apiActivateOrder(id) → POST /orders/${id}/activate

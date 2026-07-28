@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   History as HistoryIcon,
@@ -25,6 +26,7 @@ const PAGE_SIZE = 30;
 // ---------- Main page ----------
 export default function History() {
   const { user, isOwner, canManage } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState("map");
 
   // ---- Tab 1: orders ----
@@ -274,6 +276,7 @@ export default function History() {
         onReprint={handleReprint}
         onCancel={handleCancelOrder}
         onDelete={handleDeleteOrder}
+        onEdit={(order) => navigate(`/app?edit=${order.id}`)}
       />
       <CustomerDetailModal
         customer={selectedCustomer}

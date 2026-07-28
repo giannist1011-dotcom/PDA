@@ -148,6 +148,8 @@ export const apiCancelOrder = (id, pin = null) =>
   api.post(`/orders/${id}/cancel`, { pin }).then((r) => r.data);
 export const apiDeleteOrder = (id, pin = null) =>
   api.delete(`/orders/${id}`, { params: pin ? { pin } : {} }).then((r) => r.data);
+export const apiEditOrder = (id, payload) =>
+  api.put(`/orders/${id}`, payload).then((r) => r.data);
 export const apiVerifyOwnerPin = (pin) =>
   api.post("/auth/verify-owner-pin", { pin }).then((r) => r.data);
 export const apiListScheduledOrders = () =>

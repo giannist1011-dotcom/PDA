@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent, StickyNote } from "lucide-react";
+import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent, StickyNote, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LineEditModal from "@/components/LineEditModal";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
@@ -66,6 +66,9 @@ export default function OrderPanel({
   storeLat = null,
   storeLng = null,
   deliveryRadiusKm = 6,
+  // Επεξεργασία υπάρχουσας παραγγελίας: κλειδωμένη πηγή, χωρίς προγραμματισμό
+  editMode = false,
+  onCancelEdit = null,
 }) {
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
   const total = Math.max(0, subtotal - discountAmount + deliveryFee);
@@ -123,8 +126,12 @@ export default function OrderPanel({
       <div className="p-4 lg:p-5 border-b border-[#723645] shrink-0">
         <div className="flex items-baseline justify-between">
           <div>
-            <div className="text-xs font-bold uppercase tracking-widest text-neutral-400">
-              Παραγγελία
+            <div
+              className={`text-xs font-bold uppercase tracking-widest ${
+                editMode ? "text-gold" : "text-neutral-400"
+              }`}
+            >
+              {editMode ? "Επεξεργασία παραγγελίας" : "Παραγγελία"}
             </div>
             <div
               className="font-mono text-2xl lg:text-3xl font-bold text-white mt-1"
@@ -145,9 +152,10 @@ export default function OrderPanel({
               <button
                 key={s}
                 onClick={() => onSourceChange(s)}
+                disabled={editMode}
                 data-testid={`source-btn-${s}`}
                 data-state={active ? "on" : "off"}
-                className={`h-10 rounded-md text-xs lg:text-sm font-bold transition-all ${
+                className={`h-10 rounded-md text-xs lg:text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   active
                     ? "bg-brand text-white"
                     : "text-neutral-400 hover:text-white hover:bg-[#451924]"
@@ -264,7 +272,8 @@ export default function OrderPanel({
               </button>
             </div>
 
-            {/* Scheduled order toggle */}
+            {/* Scheduled order toggle — όχι σε επεξεργασία (ο προγραμματισμός δεν αλλάζει) */}
+            {!editMode && (
             <div className="mt-1.5">
               <button
                 onClick={() =>
@@ -302,6 +311,7 @@ export default function OrderPanel({
                 </div>
               )}
             </div>
+            )}
 
             {activeFields.length > 0 && (
               <div className="grid grid-cols-2 gap-1.5 mt-1.5">
@@ -425,13 +435,13 @@ export default function OrderPanel({
         </div>
         <div className="grid grid-cols-4 gap-1.5">
           <Button
-            onClick={onClear}
-            disabled={isEmpty}
+            onClick={editMode ? onCancelEdit : onClear}
+            disabled={!editMode && isEmpty}
             data-testid="order-clear-btn"
             variant="ghost"
             className="col-span-1 h-12 text-xs font-bold text-neutral-100 bg-[#4A1B27] border border-[#7E3B50] hover:bg-[#582233] hover:text-white disabled:opacity-40"
           >
-            Καθαρισμός
+            {editMode ? "Άκυρο" : "Καθαρισμός"}
           </Button>
           <Button
             onClick={onSubmit}
@@ -439,12 +449,20 @@ export default function OrderPanel({
             data-testid="order-submit-btn"
             className="col-span-3 h-12 text-base font-bold bg-brand hover:bg-brand-hover text-white flex items-center justify-center gap-2 disabled:opacity-40"
           >
-            {scheduled?.enabled ? <Clock className="w-4 h-4" /> : <Printer className="w-4 h-4" />}
+            {editMode ? (
+              <Pencil className="w-4 h-4" />
+            ) : scheduled?.enabled ? (
+              <Clock className="w-4 h-4" />
+            ) : (
+              <Printer className="w-4 h-4" />
+            )}
             {submitting
               ? "Αποθήκευση..."
-              : scheduled?.enabled
-                ? "Προγραμματισμός"
-                : "Εκτύπωση & Αποθήκευση"}
+              : editMode
+                ? "Αποθήκευση αλλαγών"
+                : scheduled?.enabled
+                  ? "Προγραμματισμός"
+                  : "Εκτύπωση & Αποθήκευση"}
           </Button>
         </div>
         {belowMinimum && (

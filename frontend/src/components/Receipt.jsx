@@ -1,4 +1,5 @@
 import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
+import { subtractAdded } from "@/lib/receiptText";
 import { useAuth } from "@/context/AuthContext";
 
 const summarize = (c) => {
@@ -28,6 +29,20 @@ const copyLabel = (idx) => {
 
 export function ReceiptCopy({ order, label }) {
   const d = order.delivery;
+  // Μετά από επεξεργασία: οι προσθήκες σε ξεχωριστή ενότητα «+ ΠΡΟΣΘΗΚΗ»
+  const added = order.added_items || [];
+  const mainItems = added.length ? subtractAdded(order.items, added) : order.items;
+  const itemRow = (it, idx) => (
+    <div key={idx} style={{ marginBottom: 6 }}>
+      <div className="rc-row rc-item">
+        <span>{it.quantity}x {it.name}</span>
+        <span className="rc-price">{eur(it.line_total)}</span>
+      </div>
+      {it.customization && (
+        <div className="rc-mod">{summarize(it.customization)}</div>
+      )}
+    </div>
+  );
   return (
     <div>
       {label && (
@@ -49,6 +64,7 @@ export function ReceiptCopy({ order, label }) {
       <div className="rc-big">
         {formatGRDateTime(order.created_at || new Date().toISOString())}
       </div>
+      {order.modified_at && <div>Τροποποιήθηκε: {formatGRTime(order.modified_at)}</div>}
       {d && (
         <>
           <hr />
@@ -73,17 +89,19 @@ export function ReceiptCopy({ order, label }) {
         </>
       )}
       <hr />
-      {order.items.map((it, idx) => (
-        <div key={idx} style={{ marginBottom: 6 }}>
-          <div className="rc-row rc-item">
-            <span>{it.quantity}x {it.name}</span>
-            <span className="rc-price">{eur(it.line_total)}</span>
+      {mainItems.map(itemRow)}
+      {added.length > 0 && (
+        <>
+          <hr />
+          <div
+            className="rc-big"
+            style={{ textAlign: "center", border: "2px solid #000", padding: "2px 0", margin: "4px 0" }}
+          >
+            + ΠΡΟΣΘΗΚΗ
           </div>
-          {it.customization && (
-            <div className="rc-mod">{summarize(it.customization)}</div>
-          )}
-        </div>
-      ))}
+          {added.map(itemRow)}
+        </>
+      )}
       <hr />
       {(order.discount?.amount > 0 || order.delivery_fee > 0) && (
         <div className="rc-row">

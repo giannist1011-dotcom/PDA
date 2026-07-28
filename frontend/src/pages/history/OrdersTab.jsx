@@ -1,7 +1,7 @@
 import { Search, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ORDER_SOURCES } from "@/data/menu";
-import { eur, formatGRDateTime } from "@/lib/format";
+import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
 import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
 import ScheduledBadge from "./ScheduledBadge";
 import { typeLabel, sourceBadgeCls } from "./utils";
@@ -130,6 +130,9 @@ export default function OrdersTab({
                   </div>
                   <div className="text-xs text-neutral-500 mt-1">
                     {formatGRDateTime(o.created_at)}
+                    {o.modified_at ? (
+                      <span className="text-gold"> · τροπ. {formatGRTime(o.modified_at)}</span>
+                    ) : null}
                     {o.delivery?.name ? ` · ${o.delivery.name}` : ""}
                     {o.delivery?.phone ? ` · ${o.delivery.phone}` : ""}
                   </div>

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
 import OrderPanel from "@/components/OrderPanel";
+import PinGateModal from "@/components/PinGateModal";
 import { useAuth } from "@/context/AuthContext";
 import { ORDER_SOURCES } from "@/data/menu";
 import {
@@ -10,6 +12,8 @@ import {
   apiListScheduledOrders,
   apiActivateOrder,
   apiCancelOrder,
+  apiGetOrder,
+  apiEditOrder,
   formatApiError,
 } from "@/lib/api";
 import {
@@ -26,6 +30,7 @@ import { printReceiptJob } from "@/lib/print";
 import MobileTabs from "./pda/MobileTabs";
 import MenuSection from "./pda/MenuSection";
 import PDAModals from "./pda/PDAModals";
+import ReprintPromptModal from "./pda/ReprintPromptModal";
 import { schedDateTime } from "./pda/utils";
 
 // Ενώνει οδό + πόλη σε πλήρη διεύθυνση (η πόλη δεν αποθηκεύεται ξεχωριστά)
@@ -101,6 +106,14 @@ export default function PDA() {
   // Tablet-portrait / mobile: switch between menu and order panel (two-column on lg+)
   const [mobileTab, setMobileTab] = useState("menu");
 
+  // ---- Επεξεργασία υπάρχουσας παραγγελίας (/app?edit=<id> από το Ιστορικό) ----
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
+  const [editOrder, setEditOrder] = useState(null); // η αρχική παραγγελία
+  const [editPinOpen, setEditPinOpen] = useState(false);
+  const [reprint, setReprint] = useState(null); // {order, added} μετά την αποθήκευση
+
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
   const orderCount = items.reduce((s, it) => s + it.quantity, 0);
   // Σταθερό αντικείμενο ανά config — όχι νέο Object.fromEntries σε κάθε render/πλήκτρο
@@ -114,10 +127,15 @@ export default function PDA() {
       ? Math.round(subtotal * discount.value) / 100
       : Math.min(discount.value, subtotal);
 
-  // Χρέωση delivery: αυτόματη γραμμή στις παραγγελίες παράδοσης όταν έχει οριστεί στις ρυθμίσεις
+  // Χρέωση delivery: αυτόματη γραμμή στις παραγγελίες παράδοσης όταν έχει οριστεί στις
+  // ρυθμίσεις — σε επεξεργασία κρατάμε τη χρέωση της αρχικής παραγγελίας
+  const baseDeliveryFee =
+    editOrder && editOrder.delivery_fee != null
+      ? Number(editOrder.delivery_fee)
+      : Number(user?.delivery_fee) || 0;
   const deliveryFee =
-    source === "Τηλέφωνο" && delivery?.delivery_type === "delivery" && Number(user?.delivery_fee) > 0
-      ? Number(user.delivery_fee)
+    source === "Τηλέφωνο" && delivery?.delivery_type === "delivery" && baseDeliveryFee > 0
+      ? baseDeliveryFee
       : 0;
   const minOrder = Number(user?.min_order) > 0 ? Number(user.min_order) : 0;
 
@@ -157,9 +175,117 @@ export default function PDA() {
 
   useEffect(() => {
     loadConfig();
-    loadNext();
+    if (!editId) loadNext(); // σε edit mode ο αριθμός έρχεται από την παραγγελία
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Προφόρτωση παραγγελίας προς επεξεργασία στο panel (κρατά αριθμό & στοιχεία)
+  const wasEditingRef = useRef(false);
+  useEffect(() => {
+    if (!editId) {
+      // Έξοδος από edit mode (π.χ. μενού → Παραγγελίες): καθάρισε το panel
+      if (wasEditingRef.current) {
+        wasEditingRef.current = false;
+        setEditOrder(null);
+        setItems([]);
+        setDelivery(null);
+        setDiscount(null);
+        setNote("");
+        setSource(ORDER_SOURCES[0]);
+        loadNext();
+      }
+      return;
+    }
+    wasEditingRef.current = true;
+    (async () => {
+      try {
+        const o = await apiGetOrder(editId);
+        if (o.cancelled || o.source === "Τραπέζι" || o.table_name) {
+          toast.error("Η παραγγελία δεν επιδέχεται επεξεργασία");
+          navigate("/app/history");
+          return;
+        }
+        setEditOrder(o);
+        setOrderNumber(o.order_number);
+        setSource(o.source);
+        setItems(
+          (o.items || []).map((it) => ({
+            line_id: newLineId(),
+            item_id: it.item_id,
+            name: it.name,
+            category: it.category,
+            unit_price: it.unit_price,
+            quantity: it.quantity,
+            line_total: it.line_total,
+            customization: it.customization || null,
+          }))
+        );
+        setDelivery(o.delivery ? { ...o.delivery } : null);
+        setNote(o.note || "");
+        setDiscount(o.discount ? { type: o.discount.type, value: o.discount.value } : null);
+        setScheduled({ enabled: false, date: "", time: "" });
+        setMobileTab("order");
+      } catch (e) {
+        toast.error(formatApiError(e));
+        navigate("/app/history");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
+
+  const cancelEdit = () => navigate("/app/history");
+
+  const saveEdit = async (pin = null) => {
+    setSubmitting(true);
+    try {
+      const res = await apiEditOrder(editOrder.id, {
+        subtotal,
+        total: Math.max(0, Math.round((subtotal - discountAmount + deliveryFee) * 100) / 100),
+        note: note.trim() || null,
+        delivery_fee: deliveryFee > 0 ? deliveryFee : null,
+        discount:
+          discount && discountAmount > 0
+            ? { type: discount.type, value: discount.value, amount: discountAmount }
+            : null,
+        delivery: buildDeliveryPayload(source, delivery),
+        items: items.map((it) => ({
+          item_id: it.item_id,
+          name: it.name,
+          category: it.category,
+          unit_price: it.unit_price,
+          quantity: it.quantity,
+          line_total: it.line_total,
+          customization: it.customization,
+        })),
+        pin,
+      });
+      toast.success(`Η #${String(editOrder.order_number).padStart(3, "0")} ενημερώθηκε`);
+      if ((res.changed || []).length === 0) {
+        navigate("/app/history");
+        return;
+      }
+      setReprint({
+        order: { ...res.order, restaurant_name: user?.restaurant_name },
+        added: res.added_items || [],
+      });
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Επιλογή στο «Επανεκτύπωση;»: με σήμανση «+ ΠΡΟΣΘΗΚΗ» ή πλήρης
+  const handleReprintChoice = (marked) => {
+    const { order, added } = reprint;
+    setReprint(null);
+    const merged = marked && added.length ? { ...order, added_items: added } : order;
+    setPrintOrder(merged);
+    setTimeout(() => {
+      printReceiptJob(user, merged);
+      navigate("/app/history");
+    }, 150);
+  };
 
   // ---- scheduled orders: load + poll every 60s, auto-fire 15' before ----
   const printReceipt = (order) =>
@@ -329,6 +455,12 @@ export default function PDA() {
 
   const handleSubmit = async () => {
     if (items.length === 0) return;
+    if (editOrder) {
+      // Ίδιο gate με την ακύρωση: owner/manager απευθείας, υπάλληλος με PIN
+      if (canManage) await saveEdit();
+      else setEditPinOpen(true);
+      return;
+    }
     const isScheduled = scheduled.enabled && scheduled.time;
     let scheduledAt = null;
     if (isScheduled) {
@@ -435,7 +567,13 @@ export default function PDA() {
   }
 
   return (
-    <AppShell title="Παραγγελίες">
+    <AppShell
+      title={
+        editOrder
+          ? `Επεξεργασία #${String(editOrder.order_number).padStart(3, "0")}`
+          : "Παραγγελίες"
+      }
+    >
       {/* Δίστηλο από sm (640px) και πάνω — tablet portrait/landscape & desktop.
           Το breakpoint βασίζεται σε CSS viewport width (Tailwind media queries),
           όχι σε user-agent/touch. Android tablets 1280x800 με DPR ~1.33 δίνουν
@@ -485,6 +623,8 @@ export default function PDA() {
           storeLat={user?.store_lat ?? null}
           storeLng={user?.store_lng ?? null}
           deliveryRadiusKm={user?.delivery_radius_km || 6}
+          editMode={!!editOrder}
+          onCancelEdit={cancelEdit}
         />
         </div>
       </main>
@@ -514,6 +654,28 @@ export default function PDA() {
         pinGateOpen={pinGateOpen}
         setPinGateOpen={setPinGateOpen}
         printOrder={printOrder}
+      />
+
+      {/* Επεξεργασία: PIN gate αποθήκευσης (υπάλληλος) + prompt επανεκτύπωσης */}
+      <PinGateModal
+        open={editPinOpen}
+        title="Απαιτείται PIN ιδιοκτήτη/υπευθύνου για αποθήκευση αλλαγών"
+        onClose={() => setEditPinOpen(false)}
+        onSuccess={(pin) => {
+          setEditPinOpen(false);
+          saveEdit(pin);
+        }}
+      />
+      <ReprintPromptModal
+        open={!!reprint}
+        orderNumber={editOrder?.order_number}
+        addedCount={(reprint?.added || []).reduce((s, it) => s + it.quantity, 0)}
+        onPrintMarked={() => handleReprintChoice(true)}
+        onPrintFull={() => handleReprintChoice(false)}
+        onSkip={() => {
+          setReprint(null);
+          navigate("/app/history");
+        }}
       />
     </AppShell>
   );

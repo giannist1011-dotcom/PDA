@@ -55,6 +55,33 @@ export const summarizeCustomization = (c) => {
   return parts.join(" · ");
 };
 
+// Μετά από επεξεργασία: αφαιρεί τις «προσθήκες» από τις γραμμές ώστε η απόδειξη
+// να τις δείξει σε ξεχωριστή ενότητα «+ ΠΡΟΣΘΗΚΗ» (η κουζίνα φτιάχνει μόνο τα νέα)
+export const subtractAdded = (items, added) => {
+  const remaining = (added || []).map((a) => ({ ...a, left: a.quantity }));
+  const out = [];
+  for (const it of items || []) {
+    let qty = it.quantity;
+    for (const a of remaining) {
+      if (
+        a.left > 0 &&
+        a.item_id === it.item_id &&
+        a.name === it.name &&
+        a.unit_price === it.unit_price &&
+        JSON.stringify(a.customization || null) === JSON.stringify(it.customization || null)
+      ) {
+        const take = Math.min(a.left, qty);
+        qty -= take;
+        a.left -= take;
+      }
+    }
+    if (qty > 0) {
+      out.push({ ...it, quantity: qty, line_total: Math.round(it.unit_price * qty * 100) / 100 });
+    }
+  }
+  return out;
+};
+
 export const copyLabel = (idx) => {
   if (idx === 0) return "ΚΟΥΖΙΝΑ";
   if (idx === 1) return "ΠΕΛΑΤΗΣ";
@@ -71,6 +98,7 @@ export function receiptText(order, label = null) {
   L.push(`Πηγή: ${order.source}`);
   if (order.table_name) L.push(`ΤΡΑΠΕΖΙ: ${order.table_name}`);
   L.push(`Ημ/νία: ${formatGRDateTime(order.created_at || new Date().toISOString())}`);
+  if (order.modified_at) L.push(`Τροποποιήθηκε: ${formatGRTime(order.modified_at)}`);
   const d = order.delivery;
   if (d) {
     L.push(hr);
@@ -88,11 +116,19 @@ export function receiptText(order, label = null) {
     L.push(...wrap(`ΣΗΜΕΙΩΣΗ: ${order.note}`));
   }
   L.push(hr);
-  (order.items || []).forEach((it) => {
+  const added = order.added_items || [];
+  const mainItems = added.length ? subtractAdded(order.items, added) : order.items || [];
+  const pushItem = (it) => {
     L.push(row(`${it.quantity}x ${it.name}`, eur(it.line_total)));
     const sum = summarizeCustomization(it.customization);
     if (sum) L.push(...wrap(sum, 3));
-  });
+  };
+  mainItems.forEach(pushItem);
+  if (added.length) {
+    L.push(hr);
+    L.push(center("+++ ΠΡΟΣΘΗΚΗ +++"));
+    added.forEach(pushItem);
+  }
   L.push(hr);
   if (order.discount?.amount > 0 || order.delivery_fee > 0) {
     L.push(row("Υποσύνολο", eur(order.subtotal)));

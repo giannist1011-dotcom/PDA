@@ -9,7 +9,7 @@ export const FEATURES = [
   { key: "menu", label: "Διαχείριση μενού & φωτογραφίες" },
   { key: "day_close", label: "Κλείσιμο ημέρας (Z-report)" },
   { key: "discounts", label: "Εκπτώσεις στο ταμείο" },
-  { key: "cancel_orders", label: "Ακύρωση/διαγραφή παραγγελιών" },
+  { key: "cancel_orders", label: "Ακύρωση/διαγραφή/επεξεργασία παραγγελιών" },
 ];
 
 // Ο Ιδιοκτήτης έχει ΠΑΝΤΑ τα πάντα. Απουσία κλειδιού = επιτρέπεται (default: όλα ενεργά).

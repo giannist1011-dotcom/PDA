@@ -5,9 +5,10 @@ import {
   X,
   Phone,
   MapPin,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { eur, formatGRDateTime } from "@/lib/format";
+import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
 import { actorLabel } from "@/lib/roles";
 import ScheduledBadge from "./ScheduledBadge";
 import { typeLabel, sourceBadgeCls } from "./utils";
@@ -29,9 +30,12 @@ const summarize = (c) => {
 };
 
 // ---------- Order detail modal ----------
-export default function OrderDetailModal({ order, canManage, canCancel = true, onClose, onReprint, onCancel, onDelete }) {
+export default function OrderDetailModal({ order, canManage, canCancel = true, onClose, onReprint, onCancel, onDelete, onEdit }) {
   if (!order) return null;
   const d = order.delivery;
+  // Επεξεργασία: takeaway/delivery/λοιπές μη-τραπεζιού, όχι ακυρωμένες — ίδιο gate με ακύρωση
+  const canEdit =
+    canCancel && !!onEdit && !order.cancelled && order.source !== "Τραπέζι" && !order.table_name;
   return (
     <div
       className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
@@ -60,6 +64,11 @@ export default function OrderDetailModal({ order, canManage, canCancel = true, o
             </div>
             <div className="text-sm text-neutral-400 mt-1">
               {formatGRDateTime(order.created_at)} · {typeLabel(order)}
+              {order.modified_at && (
+                <span className="text-gold" data-testid="order-modified-badge">
+                  {" · "}τροποποιήθηκε {formatGRTime(order.modified_at)}
+                </span>
+              )}
             </div>
           </div>
           <button
@@ -171,7 +180,7 @@ export default function OrderDetailModal({ order, canManage, canCancel = true, o
             </div>
           </div>
 
-          {(order.taken_by?.name || order.discount?.applied_by || order.cancelled_by) && (
+          {(order.taken_by?.name || order.discount?.applied_by || order.cancelled_by || order.edits?.length > 0) && (
             <div className="p-3 bg-[#2A0E14] border border-[#723645] rounded-md space-y-1 text-xs text-neutral-400" data-testid="order-audit">
               <div className="font-bold uppercase tracking-widest text-neutral-500 mb-1">
                 Καταγραφή ενεργειών
@@ -193,6 +202,16 @@ export default function OrderDetailModal({ order, canManage, canCancel = true, o
                   {order.discount.applied_at ? ` · ${formatGRDateTime(order.discount.applied_at)}` : ""}
                 </div>
               )}
+              {(order.edits || []).map((e, i) => (
+                <div key={i} data-testid={`order-edit-log-${i}`}>
+                  Επεξεργασία από:{" "}
+                  <span className="text-white">{actorLabel(e.by, e.by_role)}</span>
+                  {e.at ? ` · ${formatGRDateTime(e.at)}` : ""}
+                  {e.changes?.length > 0 && (
+                    <div className="text-neutral-500 pl-3">{e.changes.join(" · ")}</div>
+                  )}
+                </div>
+              ))}
               {order.cancelled_by && (
                 <div>
                   Ακύρωση από:{" "}
@@ -215,6 +234,16 @@ export default function OrderDetailModal({ order, canManage, canCancel = true, o
               className="h-11 bg-[#FF3B30] hover:bg-[#FF5A50] text-white font-bold mr-auto"
             >
               <Trash2 className="w-4 h-4 mr-2" /> Διαγραφή
+            </Button>
+          )}
+          {canEdit && (
+            <Button
+              onClick={() => onEdit(order)}
+              data-testid="order-edit-btn"
+              title={canManage ? "" : "Απαιτείται PIN ιδιοκτήτη/υπευθύνου κατά την αποθήκευση"}
+              className="h-11 bg-transparent border border-gold/50 text-gold hover:bg-gold/10 hover:border-gold"
+            >
+              <Pencil className="w-4 h-4 mr-2" /> Επεξεργασία
             </Button>
           )}
           {canCancel && !order.cancelled && (

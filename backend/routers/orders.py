@@ -1,5 +1,6 @@
-"""Παραγγελίες: δημιουργία, scheduled, ιστορικό, ακύρωση, πελάτες."""
+"""Παραγγελίες: δημιουργία, scheduled, ιστορικό, ακύρωση, επεξεργασία, πελάτες."""
 import asyncio
+import json
 import logging
 import re
 import uuid
@@ -111,6 +112,9 @@ class Order(OrderCreate):
     cancelled_by_role: Optional[str] = None
     cancelled_at: Optional[str] = None
     taken_by: Optional[TakenBy] = None
+    # Επεξεργασία μετά τη δημιουργία: πότε άλλαξε τελευταία + change log (ποιος/πότε/τι)
+    modified_at: Optional[str] = None
+    edits: List[dict] = Field(default_factory=list)
 
 
 # ============ ORDER ROUTES ============
@@ -586,6 +590,214 @@ async def delete_order(
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
     return {"ok": True}
+
+
+# ============ ΕΠΕΞΕΡΓΑΣΙΑ ΠΑΡΑΓΓΕΛΙΑΣ ============
+class OrderEditIn(BaseModel):
+    items: List[OrderItem]
+    subtotal: float
+    total: float
+    note: Optional[str] = Field(default=None, max_length=300)
+    delivery_fee: Optional[float] = Field(default=None, ge=0)
+    delivery: Optional[DeliveryInfo] = None
+    discount: Optional[DiscountInfo] = None
+    pin: Optional[str] = None  # PIN ιδιοκτήτη/υπευθύνου όταν αποθηκεύει υπάλληλος
+
+
+def _eur(v) -> str:
+    return f"{float(v or 0):.2f}".replace(".", ",") + " €"
+
+
+def _item_key(it: dict) -> str:
+    """Ταυτότητα γραμμής για το diff: είδος + τιμή + customization (όχι ποσότητα)."""
+    return json.dumps(
+        [
+            it.get("item_id"),
+            it.get("name"),
+            round(float(it.get("unit_price") or 0), 2),
+            it.get("customization") or None,
+        ],
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+
+
+def _diff_items(old_items: list, new_items: list):
+    """(added, removed): γραμμές με τη ΔΙΑΦΟΡΑ ποσότητας ανά είδος+customization —
+    π.χ. 1x → 3x δίνει added «2x» ώστε η κουζίνα να φτιάξει μόνο τα νέα."""
+    old_c, new_c, rep = Counter(), Counter(), {}
+    for it in old_items or []:
+        k = _item_key(it)
+        old_c[k] += int(it.get("quantity") or 1)
+        rep.setdefault(k, it)
+    for it in new_items or []:
+        k = _item_key(it)
+        new_c[k] += int(it.get("quantity") or 1)
+        rep[k] = it
+    added, removed = [], []
+    for k in set(old_c) | set(new_c):
+        d = new_c[k] - old_c[k]
+        if d == 0:
+            continue
+        it = dict(rep[k])
+        it["quantity"] = abs(d)
+        it["line_total"] = round(float(it.get("unit_price") or 0) * abs(d), 2)
+        (added if d > 0 else removed).append(it)
+    return added, removed
+
+
+async def _sync_fleet_order(user: dict, old_d: dict, new_d: dict, old_note: str, new_note: str) -> bool:
+    """Αν η παραγγελία έχει ανέβει στο FleetDeck (ταύτιση με την παλιά διεύθυνση
+    σε ανοιχτό fleet_order του καταστήματος), περνά τις αλλαγές διεύθυνσης/
+    σημείωσης/τηλεφώνου και στέλνει στον οδηγό το υπάρχον «Η #Χ ενημερώθηκε».
+    Αλλαγές ειδών ΔΕΝ ειδοποιούν — οι οδηγοί δεν βλέπουν είδη."""
+    changed = {}
+    if (new_d.get("address") or "").strip() != (old_d.get("address") or "").strip():
+        changed["address"] = (new_d.get("address") or "").strip()
+    if (new_d.get("phone") or "").strip() != (old_d.get("phone") or "").strip():
+        changed["phone"] = (new_d.get("phone") or "").strip()
+    if new_note != old_note:
+        changed["notes"] = new_note
+    old_addr = (old_d.get("address") or "").strip()
+    if not changed or not old_addr:
+        return False
+    fo = await db.fleet_orders.find_one(
+        {
+            "store_user_id": user["id"],
+            "address": old_addr,
+            "status": {"$nin": ["delivered", "cancelled"]},
+        },
+        sort=[("created_at", -1)],
+    )
+    if not fo:
+        return False
+    from push import notify_push
+    from routers.fleet import DRIVER_URL, EDIT_FIELD_LABELS, add_event
+
+    update = dict(changed)
+    if "address" in changed:
+        # Νέα διεύθυνση → το παλιό pin δεν ισχύει (χωρίς νέο geocode εδώ)
+        update["lat"] = None
+        update["lng"] = None
+    # Το τηλέφωνο ενημερώνεται σιωπηλά — ειδοποίηση μόνο για διεύθυνση/σημείωση
+    notify_fields = [f for f in ("address", "notes") if f in changed]
+    if fo.get("driver_id") and notify_fields:
+        update["updated_at"] = datetime.now(timezone.utc).isoformat()
+        update["updated_fields"] = notify_fields
+    await db.fleet_orders.update_one({"id": fo["id"]}, {"$set": update})
+    if notify_fields and fo.get("number") is not None:
+        labels = ", ".join(EDIT_FIELD_LABELS[f] for f in notify_fields)
+        await add_event(fo["team_id"], f"Η #{fo['number']} ενημερώθηκε ({labels})")
+        if fo.get("driver_id"):
+            await notify_push(
+                fo["team_id"], "driver",
+                f"Η #{fo['number']} ενημερώθηκε",
+                f"Άλλαξε: {labels}",
+                DRIVER_URL,
+                member_ids=[fo["driver_id"]],
+            )
+    return True
+
+
+@router.put("/orders/{oid}")
+async def edit_order(oid: str, body: OrderEditIn, user: dict = Depends(require_staff)):
+    """Επεξεργασία takeaway/delivery παραγγελίας μετά τη δημιουργία: είδη,
+    ποσότητες, σημείωση, στοιχεία παράδοσης. Κρατά αριθμό & ώρα δημιουργίας,
+    γράφει change log. Ίδιο gate με την ακύρωση (per-profile + PIN)."""
+    order = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})
+    if not order:
+        raise HTTPException(404, "Not found")
+    if order.get("cancelled"):
+        raise HTTPException(400, "Η παραγγελία είναι ακυρωμένη")
+    if order.get("source") == "Τραπέζι" or order.get("table_name"):
+        raise HTTPException(400, "Οι παραγγελίες τραπεζιών δεν επεξεργάζονται από εδώ")
+    if not body.items:
+        raise HTTPException(400, "Η παραγγελία δεν μπορεί να μείνει χωρίς είδη")
+    if not profile_can(user, "cancel_orders"):
+        raise HTTPException(403, "Το προφίλ σας δεν έχει δικαίωμα επεξεργασίας παραγγελιών")
+    await require_owner_or_pin(user, body.pin)
+
+    now = datetime.now(timezone.utc)
+    new_items = [it.model_dump() for it in body.items]
+    added, removed = _diff_items(order.get("items") or [], new_items)
+
+    changes = [f"+{it['quantity']}x {it['name']}" for it in added]
+    changes += [f"-{it['quantity']}x {it['name']}" for it in removed]
+
+    old_note = (order.get("note") or "").strip()
+    new_note = (body.note or "").strip()
+    if new_note != old_note:
+        changes.append("Σημείωση")
+
+    old_d = order.get("delivery") or {}
+    new_d = body.delivery.model_dump() if body.delivery else {}
+    if (new_d.get("delivery_type") or None) != (old_d.get("delivery_type") or None):
+        changes.append("Τύπος παραλαβής")
+    for f, lbl in (
+        ("address", "Διεύθυνση"), ("phone", "Τηλέφωνο"),
+        ("name", "Όνομα πελάτη"), ("floor", "Όροφος"),
+    ):
+        if (new_d.get(f) or "").strip() != (old_d.get(f) or "").strip():
+            changes.append(lbl)
+
+    old_disc = round(float((order.get("discount") or {}).get("amount") or 0), 2)
+    new_discount = body.discount.model_dump() if body.discount else None
+    new_disc = round(float((new_discount or {}).get("amount") or 0), 2)
+    if new_disc != old_disc:
+        changes.append("Έκπτωση")
+    if new_discount:
+        if new_disc == old_disc and order.get("discount"):
+            for k in ("applied_by", "applied_by_role", "applied_at"):
+                new_discount[k] = order["discount"].get(k)
+        else:
+            new_discount["applied_by"] = actor_name(user)
+            new_discount["applied_by_role"] = user.get("role")
+            new_discount["applied_at"] = now.isoformat()
+
+    if round(float(body.total), 2) != round(float(order.get("total") or 0), 2):
+        changes.append(f"Σύνολο {_eur(order.get('total'))} → {_eur(body.total)}")
+
+    if not changes:
+        if isinstance(order.get("created_at"), str):
+            order["created_at"] = datetime.fromisoformat(order["created_at"])
+        return {"order": order, "added_items": [], "changed": [], "fleet_synced": False}
+
+    entry = {
+        "at": now.isoformat(),
+        "by": actor_name(user),
+        "by_role": user.get("role"),
+        "changes": changes,
+    }
+    await db.orders.update_one(
+        {"id": oid, "user_id": user["id"]},
+        {
+            "$set": {
+                "items": new_items,
+                "subtotal": body.subtotal,
+                "total": body.total,
+                "note": new_note or None,
+                "delivery_fee": body.delivery_fee,
+                "delivery": new_d or None,
+                "discount": new_discount,
+                "modified_at": now.isoformat(),
+            },
+            "$push": {"edits": entry},
+        },
+    )
+
+    fleet_synced = False
+    if old_d.get("delivery_type") == "delivery" and new_d.get("delivery_type") == "delivery":
+        try:
+            fleet_synced = await _sync_fleet_order(user, old_d, new_d, old_note, new_note)
+        except Exception as e:
+            logger.warning("fleet sync failed for order %s: %s", oid, e)
+        if "Διεύθυνση" in changes and order.get("status") == "active":
+            _warm_geocode(user, new_d)  # νέο pin στον live χάρτη
+
+    doc = await db.orders.find_one({"id": oid, "user_id": user["id"]}, {"_id": 0})
+    if isinstance(doc.get("created_at"), str):
+        doc["created_at"] = datetime.fromisoformat(doc["created_at"])
+    return {"order": doc, "added_items": added, "changed": changes, "fleet_synced": fleet_synced}
 
 
 @router.get("/customers")
