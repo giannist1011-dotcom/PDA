@@ -9,12 +9,14 @@ import { ORDER_SOURCES } from "@/data/menu";
 import { eur, todayISO } from "@/lib/format";
 import { customizationLines } from "@/lib/customizationText";
 
+// Σειρά όπως τυπώνεται: διεύθυνση → όροφος → όνομα → τηλέφωνο
+// (η πόλη είναι βοηθητική για το autocomplete και ενώνεται με τη διεύθυνση)
 const DELIVERY_FIELDS = [
+  { key: "address", label: "Διεύθυνση", placeholder: "π.χ. Ερμού 12" },
+  { key: "floor", label: "Όροφος", placeholder: "π.χ. 3ος, ισόγειο" },
+  { key: "city", label: "Πόλη", placeholder: "π.χ. Χαλκίδα" },
   { key: "name", label: "Όνομα", placeholder: "π.χ. Νίκος" },
   { key: "phone", label: "Τηλέφωνο", placeholder: "6912345678", inputMode: "tel" },
-  { key: "address", label: "Διεύθυνση", placeholder: "π.χ. Ερμού 12" },
-  { key: "city", label: "Πόλη", placeholder: "π.χ. Χαλκίδα" },
-  { key: "floor", label: "Όροφος", placeholder: "π.χ. 3ος" },
 ];
 
 const TAKEAWAY_FIELDS = [
@@ -447,7 +449,7 @@ export default function OrderPanel({
               : editMode
                 ? "Αποθήκευση αλλαγών"
                 : scheduled?.enabled
-                  ? "Προγραμματισμός"
+                  ? "Προγραμματισμός & Εκτύπωση"
                   : "Εκτύπωση & Αποθήκευση"}
           </Button>
         </div>

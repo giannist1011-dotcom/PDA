@@ -60,6 +60,34 @@ export const formatGRDateTime = (v) => {
   }
 };
 
+const GR_DAYS = [
+  "Κυριακή",
+  "Δευτέρα",
+  "Τρίτη",
+  "Τετάρτη",
+  "Πέμπτη",
+  "Παρασκευή",
+  "Σάββατο",
+];
+
+// «Σήμερα 18:30» / «Αύριο 18:30» / «Δευτέρα 04/08 18:30» — για προγραμματισμένες
+// παραγγελίες (κεφαλίδα απόδειξης & λίστα): η ημέρα πάντα ρητή, ποτέ σκέτη ώρα.
+export const formatGRSchedule = (v) => {
+  try {
+    const d = toDate(v);
+    if (isNaN(d)) return "";
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff = Math.round((day - today) / 86400000);
+    const label =
+      diff === 0 ? "Σήμερα" : diff === 1 ? "Αύριο" : `${GR_DAYS[d.getDay()]} ${formatGRDayMonth(d)}`;
+    return `${label} ${formatGRTime(d)}`;
+  } catch {
+    return "";
+  }
+};
+
 // "14/07 18:30" — συμπαγές για badges/λίστες
 export const formatGRDayMonthTime = (v) => {
   try {

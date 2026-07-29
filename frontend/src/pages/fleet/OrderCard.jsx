@@ -119,6 +119,11 @@ export default function OrderCard({
         <MapPin className="w-3.5 h-3.5 text-flame shrink-0" />
         <span className="truncate">{order.address}</span>
       </a>
+      {order.floor && (
+        <div className="mt-0.5 text-xs text-neutral-400" data-testid={`fleet-floor-${order.id}`}>
+          Όροφος: {order.floor}
+        </div>
+      )}
       <div className="mt-1 text-xs text-neutral-400 truncate">
         🛵 {order.driver_name || "—"}
       </div>

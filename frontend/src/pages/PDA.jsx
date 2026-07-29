@@ -32,7 +32,7 @@ import MobileTabs from "./pda/MobileTabs";
 import MenuSection from "./pda/MenuSection";
 import PDAModals from "./pda/PDAModals";
 import ReprintPromptModal from "./pda/ReprintPromptModal";
-import { schedDateTime } from "./pda/utils";
+import { schedDateTime, sortScheduled, FIRE_AHEAD_MS } from "./pda/utils";
 
 // Ενώνει οδό + πόλη σε πλήρη διεύθυνση (η πόλη δεν αποθηκεύεται ξεχωριστά)
 const buildDeliveryPayload = (source, delivery) => {
@@ -49,7 +49,6 @@ const buildDeliveryPayload = (source, delivery) => {
 let LINE_SEQ = 1;
 const newLineId = () => `L${Date.now()}-${LINE_SEQ++}`;
 
-const FIRE_AHEAD_MS = 15 * 60 * 1000; // print 15' before the scheduled time
 const POLL_MS = 60 * 1000;
 
 const schedTime = (iso) => formatGRTime(iso);
@@ -289,30 +288,40 @@ export default function PDA() {
   };
 
   // ---- scheduled orders: load + poll every 60s, auto-fire 15' before ----
-  const printReceipt = (order) =>
-    new Promise((resolve) => {
-      const merged = { ...order, restaurant_name: receiptStoreName(user) };
-      setPrintOrder(merged);
-      setTimeout(() => {
-        printReceiptJob(user, merged);
-        resolve();
-      }, 150);
-    });
+  // useCallback: σταθερές αναφορές για το memo(MenuSection) — η περιοχή
+  // «Προγραμματισμένες» ζει εκεί και δεν πρέπει να ξαναρεντάρει το πλέγμα μενού
+  const printReceipt = useCallback(
+    (order) =>
+      new Promise((resolve) => {
+        const merged = { ...order, restaurant_name: receiptStoreName(user) };
+        setPrintOrder(merged);
+        setTimeout(() => {
+          printReceiptJob(user, merged);
+          resolve();
+        }, 150);
+      }),
+    [user]
+  );
 
   const checkScheduled = async () => {
     if (firingRef.current) return;
     firingRef.current = true;
     try {
+      // Η λίστα περιέχει τις εκκρεμείς ΚΑΙ όσες ενεργοποιήθηκαν πρόσφατα
+      // (μένουν ορατές ως υπενθύμιση «ΩΡΑ ΤΗΣ: τώρα»)
       const list = await apiListScheduledOrders();
       const now = Date.now();
       const due = list.filter(
-        (o) => o.scheduled_at && new Date(o.scheduled_at).getTime() - now <= FIRE_AHEAD_MS
+        (o) =>
+          o.status === "scheduled" &&
+          o.scheduled_at &&
+          new Date(o.scheduled_at).getTime() - now <= FIRE_AHEAD_MS
       );
-      const pending = list.filter((o) => !due.some((d) => d.id === o.id));
-      setScheduledOrders(pending);
+      setScheduledOrders(sortScheduled(list));
       for (const o of due) {
         try {
           const activated = await apiActivateOrder(o.id);
+          setScheduledOrders((p) => p.map((x) => (x.id === o.id ? activated : x)));
           playAlert();
           toast.warning(
             `🕒 Ώρα για την προγραμματισμένη #${String(o.order_number).padStart(3, "0")}` +
@@ -339,18 +348,24 @@ export default function PDA() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handlePrintNow = async (order) => {
-    try {
-      const activated = await apiActivateOrder(order.id);
-      setScheduledOrders((p) => p.filter((o) => o.id !== order.id));
-      await printReceipt(activated);
-      toast.success(`Η #${String(order.order_number).padStart(3, "0")} τυπώθηκε`);
-    } catch (e) {
-      toast.error(formatApiError(e));
-    }
-  };
+  // Χειροκίνητη εκτύπωση: εκκρεμής → ενεργοποίηση + εκτύπωση, ήδη ενεργή
+  // (έφτασε η ώρα της) → σκέτη επανεκτύπωση, μένει στη λίστα ως υπενθύμιση
+  const handlePrintNow = useCallback(
+    async (order) => {
+      try {
+        const fresh =
+          order.status === "scheduled" ? await apiActivateOrder(order.id) : order;
+        setScheduledOrders((p) => p.map((o) => (o.id === order.id ? fresh : o)));
+        await printReceipt(fresh);
+        toast.success(`Η #${String(order.order_number).padStart(3, "0")} τυπώθηκε`);
+      } catch (e) {
+        toast.error(formatApiError(e));
+      }
+    },
+    [printReceipt]
+  );
 
-  const handleCancelScheduled = async (order) => {
+  const handleCancelScheduled = useCallback(async (order) => {
     if (!window.confirm(`Ακύρωση προγραμματισμένης #${String(order.order_number).padStart(3, "0")};`)) return;
     try {
       await apiCancelOrder(order.id);
@@ -359,7 +374,7 @@ export default function PDA() {
     } catch (e) {
       toast.error(formatApiError(e));
     }
-  };
+  }, []);
 
   // useCallback: σταθερή αναφορά ώστε το memo(MenuSection) να μην ξαναρεντάρει το
   // πλέγμα μενού όταν αλλάζει άσχετο state (π.χ. πληκτρολόγηση στη φόρμα παράδοσης)
@@ -503,11 +518,10 @@ export default function PDA() {
         toast.success(
           `Η #${String(saved.order_number).padStart(3, "0")} προγραμματίστηκε για ${schedDateTime(scheduledAt)}`
         );
-        setScheduledOrders((p) =>
-          [...p, saved].sort(
-            (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
-          )
-        );
+        setScheduledOrders((p) => sortScheduled([...p, saved]));
+        // Τυπώνεται ΑΜΕΣΩΣ με κεφαλίδα «ΠΡΟΓΡΑΜΜΑΤΙΣΜΕΝΗ — ...» ώστε να ξέρει η
+        // κουζίνα ότι είναι για αργότερα· μένει και στην εφαρμογή ως υπενθύμιση
+        printReceipt(saved);
       } else {
         const merged = { ...saved, restaurant_name: receiptStoreName(user) };
         setPrintOrder(merged);
@@ -585,6 +599,8 @@ export default function PDA() {
           mobileTab={mobileTab}
           scheduledOrders={scheduledOrders}
           setScheduledOpen={setScheduledOpen}
+          onPrintScheduled={handlePrintNow}
+          onCancelScheduled={handleCancelScheduled}
           config={config}
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}

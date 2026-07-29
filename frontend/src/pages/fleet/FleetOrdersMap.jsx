@@ -33,7 +33,7 @@ const popupHtml = (o) => {
   <div style="font-family:inherit;min-width:180px;color:#2A0E14">
     <div style="font-weight:bold;font-size:14px;margin-bottom:4px">${o.urgent ? "⚡ " : ""}#${esc(o.number)} · ${meta.emoji} ${esc(meta.label)}</div>
     <div style="font-size:12px;color:#555">${esc(o.pickup_name)}</div>
-    <div style="font-size:12px;color:#555">${esc(o.address)}</div>
+    <div style="font-size:12px;color:#555">${esc(o.address)}${o.floor ? ` · Όροφος: ${esc(o.floor)}` : ""}</div>
     <div style="font-size:12px;color:#555">🛵 ${esc(o.driver_name || "—")}</div>
     ${mins != null ? `<div style="font-weight:bold;color:#B8860B;margin-top:4px">⏱ ${mins}'</div>` : ""}
   </div>`;

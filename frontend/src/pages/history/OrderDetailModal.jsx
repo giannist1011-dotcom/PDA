@@ -71,17 +71,18 @@ export default function OrderDetailModal({ order, canManage, canCancel = true, o
               <div className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-1">
                 Στοιχεία πελάτη
               </div>
-              {d.name && <div className="text-white font-semibold">{d.name}</div>}
-              {d.phone && (
-                <div className="flex items-center gap-2 text-neutral-300">
-                  <Phone className="w-3.5 h-3.5 text-flame" /> {d.phone}
-                </div>
-              )}
+              {/* Ίδια σειρά με την απόδειξη: διεύθυνση → όροφος → όνομα → τηλέφωνο */}
               {d.address && (
                 <div className="flex items-center gap-2 text-neutral-300">
                   <MapPin className="w-3.5 h-3.5 text-flame" />
                   {d.address}
-                  {d.floor ? ` · Όροφος: ${d.floor}` : ""}
+                </div>
+              )}
+              {d.floor && <div className="text-neutral-300">Όροφος: {d.floor}</div>}
+              {d.name && <div className="text-white font-semibold">{d.name}</div>}
+              {d.phone && (
+                <div className="flex items-center gap-2 text-neutral-300">
+                  <Phone className="w-3.5 h-3.5 text-flame" /> {d.phone}
                 </div>
               )}
             </div>

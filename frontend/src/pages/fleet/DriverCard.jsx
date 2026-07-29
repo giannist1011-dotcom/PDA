@@ -51,6 +51,12 @@ export function DriverCard({ o, city, dim = false, showStatus = false, highlight
         <MapPin className="w-4 h-4 text-flame shrink-0" />
         <span className="underline underline-offset-2">{o.address}</span>
       </a>
+      {/* Όροφος/κουδούνι — μέρος της διεύθυνσης, ακριβώς κάτω από αυτήν */}
+      {o.floor && (
+        <div className="mt-1 text-sm text-neutral-300 pl-6" data-testid={`fleet-drv-floor-${o.id}`}>
+          Όροφος: {o.floor}
+        </div>
+      )}
       {/* Τηλέφωνο πελάτη (παραγγελίες καταστημάτων) — tap για κλήση */}
       {o.phone && (
         <a

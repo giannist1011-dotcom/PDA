@@ -1,6 +1,6 @@
 import { Clock, X, Printer, Ban, Phone as PhoneIcon } from "lucide-react";
 import { eur } from "@/lib/format";
-import { schedDateTime } from "./utils";
+import { schedDateTime, schedState, sortScheduled, SCHED_META } from "./utils";
 
 export default function ScheduledOrdersModal({ open, orders, onClose, onPrintNow, onCancel }) {
   if (!open) return null;
@@ -30,17 +30,26 @@ export default function ScheduledOrdersModal({ open, orders, onClose, onPrintNow
             </div>
           ) : (
             <ul className="space-y-3">
-              {orders.map((o) => (
+              {sortScheduled(orders).map((o) => {
+                const st = schedState(o);
+                const meta = SCHED_META[st];
+                return (
                 <li
                   key={o.id}
                   data-testid={`scheduled-order-${o.id}`}
-                  className="p-4 bg-[#2A0E14] border border-[#00B0FF]/40 rounded-lg"
+                  data-state={st}
+                  className={`p-4 border rounded-lg ${meta.box}`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="font-mono text-xl font-bold text-[#00B0FF] shrink-0">
+                      <div className={`font-mono text-xl font-bold shrink-0 ${meta.text}`}>
                         {schedDateTime(o.scheduled_at)}
                       </div>
+                      {meta.label && (
+                        <div className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${meta.text}`}>
+                          {meta.label}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <div className="text-white font-semibold text-sm truncate">
                           #{String(o.order_number).padStart(3, "0")}
@@ -64,18 +73,21 @@ export default function ScheduledOrdersModal({ open, orders, onClose, onPrintNow
                       data-testid={`scheduled-print-now-${o.id}`}
                       className="flex-1 h-10 rounded-md bg-brand hover:bg-brand-hover text-white text-sm font-bold flex items-center justify-center gap-2"
                     >
-                      <Printer className="w-4 h-4" /> Τύπωσε τώρα
+                      <Printer className="w-4 h-4" /> {meta.action}
                     </button>
-                    <button
-                      onClick={() => onCancel(o)}
-                      data-testid={`scheduled-cancel-${o.id}`}
-                      className="h-10 px-4 rounded-md border border-[#FF3B30]/50 text-[#FF6961] hover:bg-[#FF3B30]/10 text-sm font-bold flex items-center justify-center gap-2"
-                    >
-                      <Ban className="w-4 h-4" /> Ακύρωση
-                    </button>
+                    {o.status === "scheduled" && (
+                      <button
+                        onClick={() => onCancel(o)}
+                        data-testid={`scheduled-cancel-${o.id}`}
+                        className="h-10 px-4 rounded-md border border-[#FF3B30]/50 text-[#FF6961] hover:bg-[#FF3B30]/10 text-sm font-bold flex items-center justify-center gap-2"
+                      >
+                        <Ban className="w-4 h-4" /> Ακύρωση
+                      </button>
+                    )}
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </div>

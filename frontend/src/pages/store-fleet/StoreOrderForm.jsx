@@ -41,6 +41,7 @@ export default function StoreOrderForm({
 }) {
   const [address, setAddress] = useState("");
   const [coords, setCoords] = useState(null);
+  const [floor, setFloor] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [urgent, setUrgent] = useState(false);
@@ -59,6 +60,7 @@ export default function StoreOrderForm({
       await apiStoreFleetCreateOrder({
         team_id: teamId,
         address: address.trim(),
+        floor: floor.trim(),
         phone: phone.trim(),
         notes: notes.trim(),
         urgent,
@@ -68,6 +70,7 @@ export default function StoreOrderForm({
       });
       setAddress("");
       setCoords(null);
+      setFloor("");
       setPhone("");
       setNotes("");
       setUrgent(false);
@@ -165,6 +168,15 @@ export default function StoreOrderForm({
               για καλύτερες προτάσεις
             </div>
           )}
+          {/* Όροφος αμέσως μετά τη διεύθυνση — ο οδηγός τον βλέπει κάτω από αυτήν */}
+          <input
+            maxLength={60}
+            placeholder="Όροφος (προαιρετικό) — π.χ. 3ος, ισόγειο"
+            value={floor}
+            onChange={(e) => setFloor(e.target.value)}
+            data-testid="store-fleet-order-floor"
+            className={`${inputCls} mt-2`}
+          />
         </div>
         <div>
           <label className={labelCls}>Τηλέφωνο πελάτη (προαιρετικό)</label>

@@ -190,10 +190,28 @@ async def create_order(body: OrderCreate, user: dict = Depends(require_staff)):
     return doc
 
 
+# Πόση ώρα μένει ορατή στην περιοχή «Προγραμματισμένες» μια παραγγελία αφού
+# έφτασε η ώρα της (υπενθύμιση «ΩΡΑ ΤΗΣ: τώρα» — επιβιώνει από refresh)
+SCHEDULED_REMINDER_HOURS = 3
+
+
 @router.get("/orders/scheduled", response_model=List[Order])
 async def list_scheduled_orders(user: dict = Depends(require_staff)):
+    """Εκκρεμείς προγραμματισμένες + όσες ενεργοποιήθηκαν τις τελευταίες
+    SCHEDULED_REMINDER_HOURS ώρες (μένουν ως υπενθύμιση στη ροή παραγγελιών)."""
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(hours=SCHEDULED_REMINDER_HOURS)
+    ).isoformat()
     docs = await db.orders.find(
-        {"user_id": user["id"], "status": "scheduled", "cancelled": {"$ne": True}},
+        {
+            "user_id": user["id"],
+            "cancelled": {"$ne": True},
+            "$or": [
+                {"status": "scheduled"},
+                # activated_at γράφεται server-side με το ίδιο ISO format → ασφαλής σύγκριση
+                {"status": "active", "activated_at": {"$gte": cutoff}},
+            ],
+        },
         {"_id": 0},
     ).sort("scheduled_at", 1).to_list(500)
     for d in docs:
@@ -679,11 +697,13 @@ def _diff_items(old_items: list, new_items: list):
 async def _sync_fleet_order(user: dict, old_d: dict, new_d: dict, old_note: str, new_note: str) -> bool:
     """Αν η παραγγελία έχει ανέβει στο FleetDeck (ταύτιση με την παλιά διεύθυνση
     σε ανοιχτό fleet_order του καταστήματος), περνά τις αλλαγές διεύθυνσης/
-    σημείωσης/τηλεφώνου και στέλνει στον οδηγό το υπάρχον «Η #Χ ενημερώθηκε».
+    ορόφου/σημείωσης/τηλεφώνου και στέλνει στον οδηγό το «Η #Χ ενημερώθηκε».
     Αλλαγές ειδών ΔΕΝ ειδοποιούν — οι οδηγοί δεν βλέπουν είδη."""
     changed = {}
     if (new_d.get("address") or "").strip() != (old_d.get("address") or "").strip():
         changed["address"] = (new_d.get("address") or "").strip()
+    if (new_d.get("floor") or "").strip() != (old_d.get("floor") or "").strip():
+        changed["floor"] = (new_d.get("floor") or "").strip()
     if (new_d.get("phone") or "").strip() != (old_d.get("phone") or "").strip():
         changed["phone"] = (new_d.get("phone") or "").strip()
     if new_note != old_note:
@@ -709,7 +729,7 @@ async def _sync_fleet_order(user: dict, old_d: dict, new_d: dict, old_note: str,
         # Νέα διεύθυνση → το παλιό pin δεν ισχύει (χωρίς νέο geocode εδώ)
         update["lat"] = None
         update["lng"] = None
-    # Το τηλέφωνο ενημερώνεται σιωπηλά — ειδοποίηση μόνο για διεύθυνση/σημείωση
+    # Τηλέφωνο/όροφος ενημερώνονται σιωπηλά — ειδοποίηση μόνο για διεύθυνση/σημείωση
     notify_fields = [f for f in ("address", "notes") if f in changed]
     if fo.get("driver_id") and notify_fields:
         update["updated_at"] = datetime.now(timezone.utc).isoformat()

@@ -240,8 +240,11 @@ DISPATCH_URL = "/fleet"
 
 
 def order_push_body(o: dict) -> str:
-    """Σύντομο σώμα ειδοποίησης: κατάστημα παραλαβής · διεύθυνση."""
-    return " · ".join(x for x in [o.get("pickup_name"), o.get("address")] if x)
+    """Σύντομο σώμα ειδοποίησης: κατάστημα παραλαβής · διεύθυνση (+ όροφος)."""
+    addr = o.get("address") or ""
+    if addr and (o.get("floor") or "").strip():
+        addr = f"{addr} ({o['floor'].strip()})"
+    return " · ".join(x for x in [o.get("pickup_name"), addr] if x)
 
 
 async def push_on_shift_drivers(team_id: str, title: str, body: str):

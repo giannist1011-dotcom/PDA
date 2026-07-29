@@ -1,5 +1,5 @@
 import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
-import { subtractAdded } from "@/lib/receiptText";
+import { subtractAdded, scheduledHeader, scheduledTotalLine } from "@/lib/receiptText";
 import { customizationLines } from "@/lib/customizationText";
 import { useAuth } from "@/context/AuthContext";
 
@@ -17,6 +17,8 @@ export function ReceiptCopy({ order, label }) {
   // Μετά από επεξεργασία: οι προσθήκες σε ξεχωριστή ενότητα «+ ΠΡΟΣΘΗΚΗ»
   const added = order.added_items || [];
   const mainItems = added.length ? subtractAdded(order.items, added) : order.items;
+  const schedHead = scheduledHeader(order);
+  const schedTotal = scheduledTotalLine(order);
   const itemRow = (it, idx) => (
     <div key={idx} style={{ marginBottom: 6 }}>
       <div className="rc-row rc-item">
@@ -44,6 +46,14 @@ export function ReceiptCopy({ order, label }) {
       <div className="receipt-title text-center">
         {(order.restaurant_name || "POS").toUpperCase()}
       </div>
+      {schedHead && (
+        <div
+          className="rc-big"
+          style={{ textAlign: "center", border: "2px solid #000", padding: "2px 0", margin: "4px 0" }}
+        >
+          {schedHead}
+        </div>
+      )}
       <hr />
       <div className="rc-big">Αρ. Παρ.: #{String(order.order_number).padStart(3, "0")}</div>
       <div>Πηγή: {order.source}</div>
@@ -63,14 +73,15 @@ export function ReceiptCopy({ order, label }) {
           {d.delivery_type === "delivery" && (
             <div className="rc-cust">Παραγγέλθηκε: {orderTime(order.created_at || new Date().toISOString())}</div>
           )}
-          {d.name && <div className="rc-cust">Όνομα: {d.name}</div>}
-          {d.phone && (
-            <div className={d.delivery_type === "delivery" ? "rc-big" : "rc-cust"}>Τηλ.: {d.phone}</div>
-          )}
+          {/* Σταθερή σειρά για τον διανομέα: διεύθυνση → όροφος → όνομα → τηλέφωνο */}
           {d.delivery_type === "delivery" && d.address && (
             <div className="rc-big">Δ/νση: {d.address}</div>
           )}
           {d.delivery_type === "delivery" && d.floor && <div>Όροφος: {d.floor}</div>}
+          {d.name && <div className="rc-cust">Όνομα: {d.name}</div>}
+          {d.phone && (
+            <div className={d.delivery_type === "delivery" ? "rc-big" : "rc-cust"}>Τηλ.: {d.phone}</div>
+          )}
         </>
       )}
       {order.note && (
@@ -118,6 +129,11 @@ export function ReceiptCopy({ order, label }) {
         <span>ΣΥΝΟΛΟ</span>
         <span className="rc-price">{eur(order.total)}</span>
       </div>
+      {schedTotal && (
+        <div className="rc-big" style={{ textAlign: "center", marginTop: 2 }}>
+          {schedTotal}
+        </div>
+      )}
       <hr />
       <div className="rc-foot">Ευχαριστούμε! Καλή όρεξη</div>
     </div>

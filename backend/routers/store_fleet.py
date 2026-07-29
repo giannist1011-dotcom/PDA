@@ -71,6 +71,8 @@ async def active_partnership(user_id: str, team_id: str) -> Optional[dict]:
 class StoreOrderIn(BaseModel):
     team_id: str
     address: str = Field(min_length=1, max_length=160)
+    # Όροφος/κουδούνι — μέρος της διεύθυνσης που βλέπει ο οδηγός
+    floor: str = Field(default="", max_length=60)
     phone: str = Field(default="", max_length=20)
     notes: str = Field(default="", max_length=300)
     urgent: bool = False
@@ -229,6 +231,7 @@ async def store_fleet_create_order(body: StoreOrderIn, user: dict = Depends(get_
         "number": None,
         "pickup_name": store_name(user),
         "address": body.address.strip(),
+        "floor": body.floor.strip(),
         "phone": body.phone.strip(),
         "notes": body.notes.strip(),
         "urgent": bool(body.urgent),

@@ -1,7 +1,7 @@
 // Plain-text αποδόσεις των εκτυπώσεων για το Print Bridge (θερμικός 80mm).
 // Κάθε builder επιστρέφει string (ένα φυσικό ticket) — τα αντίγραφα είναι
 // ξεχωριστά strings στο array του print_job, με κόψιμο χαρτιού μετά το καθένα.
-import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
+import { eur, formatGRDateTime, formatGRTime, formatGRSchedule } from "@/lib/format";
 import { customizationLines } from "@/lib/customizationText";
 
 const WIDTH = 42; // στήλες σε 80mm θερμικό (Font A) — ασφαλής τιμή
@@ -71,6 +71,19 @@ export const subtractAdded = (items, added) => {
   return out;
 };
 
+// Προγραμματισμένη παραγγελία: έντονη κεφαλίδα ώστε η κουζίνα να ξέρει ότι δεν
+// είναι για τώρα. Όταν έφτασε η ώρα της (status «active») η επανεκτύπωση το λέει.
+export const scheduledHeader = (order) => {
+  if (!order?.scheduled_at) return null;
+  return order.status === "scheduled"
+    ? `ΠΡΟΓΡΑΜΜΑΤΙΣΜΕΝΗ — ${formatGRSchedule(order.scheduled_at)}`
+    : `ΩΡΑ ΤΗΣ: ΤΩΡΑ — ${formatGRTime(order.scheduled_at)}`;
+};
+
+// Επανάληψη της ώρας κοντά στα σύνολα
+export const scheduledTotalLine = (order) =>
+  order?.scheduled_at ? `ΓΙΑ ΤΙΣ: ${formatGRSchedule(order.scheduled_at)}` : null;
+
 export const copyLabel = (idx) => {
   if (idx === 0) return "ΚΟΥΖΙΝΑ";
   if (idx === 1) return "ΠΕΛΑΤΗΣ";
@@ -82,6 +95,11 @@ export function receiptText(order, label = null) {
   const L = [];
   if (label) L.push(center(`== ${label} ==`), "");
   L.push(center((order.restaurant_name || "POS").toUpperCase()));
+  const schedHead = scheduledHeader(order);
+  if (schedHead) {
+    L.push(hr);
+    L.push(center(`** ${schedHead} **`));
+  }
   L.push(hr);
   L.push(`Αρ. Παρ.: #${String(order.order_number).padStart(3, "0")}`);
   L.push(`Πηγή: ${order.source}`);
@@ -95,10 +113,11 @@ export function receiptText(order, label = null) {
     if (d.delivery_type === "delivery") {
       L.push(`Παραγγέλθηκε: ${formatGRTime(order.created_at || new Date().toISOString())}`);
     }
-    if (d.name) L.push(`Όνομα: ${d.name}`);
-    if (d.phone) L.push(`Τηλ.: ${d.phone}`);
+    // Σταθερή σειρά για τον διανομέα: διεύθυνση → όροφος → όνομα → τηλέφωνο
     if (d.delivery_type === "delivery" && d.address) L.push(...wrap(`Δ/νση: ${d.address}`));
     if (d.delivery_type === "delivery" && d.floor) L.push(`Όροφος: ${d.floor}`);
+    if (d.name) L.push(`Όνομα: ${d.name}`);
+    if (d.phone) L.push(`Τηλ.: ${d.phone}`);
   }
   if (order.note) {
     L.push(hr);
@@ -128,6 +147,8 @@ export function receiptText(order, label = null) {
   }
   if (order.delivery_fee > 0) L.push(row("Χρέωση delivery", `+${eur(order.delivery_fee)}`));
   L.push(row("ΣΥΝΟΛΟ", eur(order.total)));
+  const schedTotal = scheduledTotalLine(order);
+  if (schedTotal) L.push(center(schedTotal));
   L.push(hr);
   L.push(center("Ευχαριστούμε! Καλή όρεξη"));
   return L.join("\n");
