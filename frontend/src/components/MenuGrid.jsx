@@ -81,7 +81,7 @@ export default function MenuGrid({
         }`}
         data-testid="category-bar"
       >
-        {categories.map((c) => {
+        {categories.map((c, ci) => {
           const active = c.id === activeCategory;
           return (
             <button
@@ -89,12 +89,16 @@ export default function MenuGrid({
               onClick={() => onCategoryChange(c.id)}
               data-testid={`category-btn-${c.id}`}
               data-state={active ? "on" : "off"}
-              className={`shrink-0 whitespace-nowrap px-3.5 sm:px-4 lg:px-5 h-10 sm:h-11 lg:h-12 rounded-full sm:rounded-md text-sm sm:text-base font-semibold transition-all no-select active:scale-[0.98] ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 sm:px-4 lg:px-5 h-10 sm:h-11 lg:h-12 rounded-full sm:rounded-md text-sm sm:text-base font-semibold transition-all no-select active:scale-[0.98] ${
                 active
                   ? "bg-flame text-white border border-flame"
                   : "bg-[#4A1B27] text-neutral-200 border border-[#723645] hover:border-flame"
               }`}
             >
+              {/* Ίδια αρίθμηση με τη λίστα — οι δύο προβολές δείχνουν τον ίδιο αριθμό */}
+              <span className={`font-mono font-bold ${active ? "text-white" : "text-gold"}`}>
+                {ci + 1}.
+              </span>
               {c.name}
             </button>
           );
@@ -114,6 +118,7 @@ export default function MenuGrid({
           const unavailable = it.available === false;
           const pulsing = pulsedId === it.id;
           const hasPhoto = !!it.photo_url;
+          const code = String(it.code ?? "").trim();
 
           const stateClasses = unavailable
             ? "bg-[#33111A] border border-[#4F202D] cursor-not-allowed opacity-50"
@@ -130,11 +135,6 @@ export default function MenuGrid({
           const priceRow = (
             <div className="flex items-end justify-between mt-2 relative z-[1]">
               <span className="font-mono text-xl font-bold text-gold">{eur(it.price)}</span>
-              {q && it.code && (
-                <span className="font-mono text-[10px] font-bold text-neutral-500">
-                  κωδ. {it.code}
-                </span>
-              )}
               {it.customizable && !unavailable && (
                 <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
                   Custom
@@ -146,6 +146,17 @@ export default function MenuGrid({
                 </span>
               )}
             </div>
+          );
+
+          // Κωδικός σε σταθερή γωνία (πάνω αριστερά), συμπαγές φόντο ώστε να
+          // διαβάζεται και πάνω από φωτογραφία. Χωρίς κωδικό → κανένα badge.
+          const codeBadge = code && (
+            <span
+              data-testid={`menu-item-code-${it.id}`}
+              className="absolute top-0 left-0 z-[2] min-w-[2rem] px-1.5 py-0.5 rounded-tl-lg rounded-br-md bg-[#2A0E14] border-r border-b border-[#723645] font-mono text-sm sm:text-base font-bold text-gold text-center tabular-nums leading-tight"
+            >
+              {code}
+            </span>
           );
 
           const unavailableBadge = unavailable && (
@@ -179,6 +190,7 @@ export default function MenuGrid({
                   {nameEl}
                   {priceRow}
                 </div>
+                {codeBadge}
                 {unavailableBadge}
               </button>
             );
@@ -189,10 +201,13 @@ export default function MenuGrid({
             <button
               key={it.id}
               {...commonProps}
-              className={`menu-item group flex flex-col justify-between p-4 rounded-lg text-left h-32 no-select relative overflow-hidden will-change-transform ${stateClasses}`}
+              className={`menu-item group flex flex-col justify-between px-4 pb-4 rounded-lg text-left h-32 no-select relative overflow-hidden will-change-transform ${
+                code ? "pt-8" : "pt-4"
+              } ${stateClasses}`}
             >
               {nameEl}
               {priceRow}
+              {codeBadge}
               {unavailableBadge}
             </button>
           );

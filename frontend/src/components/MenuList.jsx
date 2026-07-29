@@ -83,7 +83,7 @@ export default function MenuList({
         {/* Αριθμημένες κατηγορίες */}
         {!q && (
           <nav
-            className="w-[7.5rem] sm:w-40 lg:w-48 shrink-0 overflow-y-auto no-scrollbar space-y-1.5 pb-6"
+            className="w-[7.5rem] sm:w-40 lg:w-48 shrink-0 overflow-y-auto no-scrollbar space-y-3 pb-6"
             data-testid="menu-list-categories"
           >
             {categories.map((c, ci) => {
@@ -94,20 +94,22 @@ export default function MenuList({
                   onClick={() => onCategoryChange(c.id)}
                   data-testid={`category-btn-${c.id}`}
                   data-state={active ? "on" : "off"}
-                  className={`w-full flex items-center gap-2 px-2.5 sm:px-3 min-h-[3.25rem] rounded-md text-left no-select active:scale-[0.98] transition-colors border ${
+                  className={`w-full flex items-center gap-2 px-2.5 sm:px-3 min-h-[6rem] sm:min-h-[8rem] rounded-lg text-left no-select active:scale-[0.98] transition-colors border ${
                     active
                       ? "bg-flame text-white border-flame"
                       : "bg-[#4A1B27] text-neutral-200 border-[#723645] hover:border-flame"
                   }`}
                 >
                   <span
-                    className={`font-mono text-base font-bold shrink-0 ${
+                    className={`font-mono text-lg sm:text-xl font-bold shrink-0 ${
                       active ? "text-white" : "text-gold"
                     }`}
                   >
                     {ci + 1}.
                   </span>
-                  <span className="font-semibold text-sm sm:text-base leading-tight">{c.name}</span>
+                  <span className="font-semibold text-sm sm:text-lg leading-tight line-clamp-3">
+                    {c.name}
+                  </span>
                 </button>
               );
             })}
@@ -121,7 +123,7 @@ export default function MenuList({
 
         {/* Αριθμημένα προϊόντα — ο αριθμός ΕΙΝΑΙ ο κωδικός */}
         <div
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-1.5 pr-1 pb-6"
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-3 pr-1 pb-6"
           data-testid="menu-items-list"
         >
           {rows.map((it) => {
@@ -135,7 +137,7 @@ export default function MenuList({
                 disabled={unavailable}
                 data-testid={`menu-item-${it.id}`}
                 data-available={unavailable ? "false" : "true"}
-                className={`menu-item w-full flex items-center gap-2.5 sm:gap-3 px-2.5 sm:px-3 min-h-[3.25rem] rounded-md text-left no-select border transition-colors ${
+                className={`menu-item w-full flex items-center gap-2.5 sm:gap-4 px-2.5 sm:px-4 min-h-[6rem] sm:min-h-[8rem] rounded-lg text-left no-select border transition-colors ${
                   unavailable
                     ? "bg-[#33111A] border-[#4F202D] cursor-not-allowed opacity-50"
                     : `bg-[#4A1B27] border-[#723645] hover:border-flame hover:bg-[#582233] active:scale-[0.99] ${
@@ -144,7 +146,7 @@ export default function MenuList({
                 }`}
               >
                 <span
-                  className={`font-mono text-lg sm:text-xl font-bold w-[2.75rem] sm:w-[3.25rem] shrink-0 text-right tabular-nums ${
+                  className={`font-mono text-2xl sm:text-3xl font-bold w-[2.75rem] sm:w-[3.5rem] shrink-0 text-right tabular-nums ${
                     code ? "text-gold" : "text-neutral-600"
                   }`}
                   data-testid={`menu-item-code-${it.id}`}
@@ -156,24 +158,30 @@ export default function MenuList({
                     src={it.photo_url}
                     alt=""
                     loading="lazy"
-                    className="w-10 h-10 rounded object-cover bg-[#2A0E14] shrink-0"
+                    className="w-14 h-14 sm:w-20 sm:h-20 rounded-md object-cover bg-[#2A0E14] shrink-0"
                   />
                 )}
-                <span className="flex-1 min-w-0 font-heading text-base sm:text-lg font-semibold text-white leading-tight line-clamp-2">
-                  {it.name}
-                </span>
-                {(it.customizable || (it.option_groups || []).length > 0) && !unavailable && (
-                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-                    {it.customizable ? "Custom" : "Επιλογές"}
+                {/* Σε στενές οθόνες: όνομα πάνω, τιμή/σημάνσεις κάτω (η γραμμή είναι
+                    ψηλή, δεν στοιβάζονται). Από sm και πάνω: μία σειρά, τιμή δεξιά. */}
+                <span className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                  <span className="flex-1 min-w-0 font-heading text-lg sm:text-2xl font-semibold text-white leading-tight line-clamp-2">
+                    {it.name}
                   </span>
-                )}
-                {unavailable && (
-                  <span className="shrink-0 px-2 py-0.5 rounded bg-[#FF3B30]/20 text-[#FF6961] text-[10px] font-bold uppercase tracking-widest">
-                    Έλλειψη
+                  <span className="shrink-0 flex items-center justify-end gap-2 sm:gap-4">
+                    {(it.customizable || (it.option_groups || []).length > 0) && !unavailable && (
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                        {it.customizable ? "Custom" : "Επιλογές"}
+                      </span>
+                    )}
+                    {unavailable && (
+                      <span className="shrink-0 px-2 py-0.5 rounded bg-[#FF3B30]/20 text-[#FF6961] text-[10px] font-bold uppercase tracking-widest">
+                        Έλλειψη
+                      </span>
+                    )}
+                    <span className="font-mono text-xl sm:text-2xl font-bold text-gold shrink-0 tabular-nums">
+                      {eur(it.price)}
+                    </span>
                   </span>
-                )}
-                <span className="font-mono text-lg sm:text-xl font-bold text-gold shrink-0 tabular-nums">
-                  {eur(it.price)}
                 </span>
               </button>
             );

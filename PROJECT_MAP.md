@@ -508,8 +508,8 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - LineEditModal.jsx (133 γρ): LineEditModal@14
 - LiveOrdersMap.jsx (256 γρ): LiveOrdersMap@44
 - LoadingScreen.jsx (67 γρ): LoadingScreen@12, StartupOverlay@61
-- MenuGrid.jsx (211 γρ): MenuGrid@7
-- MenuList.jsx (193 γρ): MenuList@10
+- MenuGrid.jsx (226 γρ): MenuGrid@7
+- MenuList.jsx (201 γρ): MenuList@10
 - OfflineBanner.jsx (67 γρ): OfflineBanner@10
 - OnboardingChecklist.jsx (100 γρ): OnboardingChecklist@18
 - OrderPanel.jsx (492 γρ): OrderPanel@27
