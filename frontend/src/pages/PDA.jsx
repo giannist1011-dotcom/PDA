@@ -26,6 +26,7 @@ import {
 } from "@/lib/offline";
 import { formatGRTime } from "@/lib/format";
 import { can } from "@/lib/perms";
+import { getMenuView, setMenuView as persistMenuView } from "@/lib/menuView";
 import { printReceiptJob } from "@/lib/print";
 import { receiptStoreName } from "@/lib/receiptText";
 import MobileTabs from "./pda/MobileTabs";
@@ -105,6 +106,20 @@ export default function PDA() {
   const [pinGateOpen, setPinGateOpen] = useState(false);
   // Tablet-portrait / mobile: switch between menu and order panel (two-column on lg+)
   const [mobileTab, setMobileTab] = useState("menu");
+  // Προβολή μενού: «Πλέγμα» ή αριθμημένη «Λίστα» — ανά συσκευή/προφίλ
+  const [menuView, setMenuViewState] = useState(() => getMenuView(user?.profile_id));
+  const changeMenuView = useCallback(
+    (v) => {
+      setMenuViewState(v);
+      persistMenuView(user?.profile_id, v);
+    },
+    [user?.profile_id]
+  );
+  // Το προφίλ μπορεί να φτάσει μετά το πρώτο render (offline path) — τότε
+  // διαβάζουμε την προτίμηση του σωστού προφίλ
+  useEffect(() => {
+    setMenuViewState(getMenuView(user?.profile_id));
+  }, [user?.profile_id]);
 
   // ---- Επεξεργασία υπάρχουσας παραγγελίας (/app?edit=<id> από το Ιστορικό) ----
   const navigate = useNavigate();
@@ -605,6 +620,8 @@ export default function PDA() {
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}
           handleItemClick={handleItemClick}
+          menuView={menuView}
+          setMenuView={changeMenuView}
         />
         <div
           className={`min-h-0 overflow-hidden flex-1 sm:flex-none flex-col ${

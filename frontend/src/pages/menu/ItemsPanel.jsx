@@ -115,15 +115,24 @@ export default function ItemsPanel({
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="font-heading font-semibold text-white truncate">{it.name}</div>
-                  {String(it.code || "").trim() && (
+                  {/* Ο κωδικός είναι ο αριθμός που βλέπει ο ταμίας στη «Λίστα» — έντονος */}
+                  {String(it.code || "").trim() ? (
                     <span
-                      className="shrink-0 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#3D1620] border border-[#723645] text-gold"
+                      className="shrink-0 min-w-[2rem] text-center text-sm font-mono font-bold px-1.5 py-0.5 rounded bg-gold/15 border border-gold/40 text-gold tabular-nums"
                       data-testid={`item-code-badge-${it.id}`}
                     >
-                      #{it.code}
+                      {it.code}
+                    </span>
+                  ) : (
+                    <span
+                      className="shrink-0 min-w-[2rem] text-center text-sm font-mono font-bold px-1.5 py-0.5 rounded bg-[#3D1620] border border-[#723645] text-neutral-600"
+                      title="Χωρίς κωδικό — «Αυτόματη αρίθμηση» για να συμπληρωθεί"
+                      data-testid={`item-code-missing-${it.id}`}
+                    >
+                      –
                     </span>
                   )}
+                  <div className="font-heading font-semibold text-white truncate">{it.name}</div>
                 </div>
                 <div className="font-mono text-gold font-bold mt-1">{eur(it.price)}</div>
                 <div className="flex gap-2 mt-2 flex-wrap">

@@ -96,6 +96,10 @@ export default function CategoriesPanel({
                   {editMode && (
                     <GripVertical className="w-4 h-4 text-neutral-500 shrink-0 cursor-grab touch-none" />
                   )}
+                  {/* Ίδια αρίθμηση με την προβολή «Λίστα» στο ταμείο */}
+                  <span className="font-mono text-sm font-bold text-gold shrink-0 tabular-nums">
+                    {ci + 1}.
+                  </span>
                   <span className="font-semibold text-sm truncate">{c.name}</span>
                 </span>
                 <span className="flex items-center gap-0.5 shrink-0">

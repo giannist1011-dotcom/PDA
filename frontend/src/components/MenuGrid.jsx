@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { eur } from "@/lib/format";
 import { normText } from "@/lib/text";
+import { searchItems, findExactCode, isAmbiguousCode } from "@/lib/menuSearch";
 
 export default function MenuGrid({
   categories,
@@ -22,43 +23,28 @@ export default function MenuGrid({
     setTimeout(() => setPulsedId((p) => (p === it.id ? null : p)), 240);
   };
 
-  const searchResults = useMemo(() => {
-    if (!q) return null;
-    return items.filter(
-      (i) => normText(i.name).includes(q) || (i.code && normText(String(i.code)).includes(q))
-    );
-  }, [q, items]);
+  const searchResults = useMemo(() => searchItems(items, q), [q, items]);
 
   const filtered = q ? searchResults : items.filter((i) => i.category === activeCategory);
-
-  // Ακριβής κωδικός → άμεση επιλογή προϊόντος. Άμεσα μόνο όταν κανένας άλλος
-  // κωδικός δεν ξεκινά με ό,τι γράφτηκε (αλλιώς το "1" θα έκλεβε το "12") — τότε με Enter.
-  const exactCodeMatch = (value) => {
-    const v = normText(value.trim());
-    if (!v) return null;
-    return items.find((i) => i.code && normText(String(i.code)) === v) || null;
-  };
 
   const selectAndClear = (it) => {
     handleClick(it);
     setQuery("");
   };
 
+  // Ακριβής κωδικός → άμεση επιλογή προϊόντος. Άμεσα μόνο όταν κανένας άλλος
+  // κωδικός δεν ξεκινά με ό,τι γράφτηκε (αλλιώς το "1" θα έκλεβε το "12") — τότε με Enter.
   const handleQueryChange = (value) => {
     setQuery(value);
-    const exact = exactCodeMatch(value);
+    const exact = findExactCode(items, value);
     if (!exact || exact.available === false) return;
-    const v = normText(value.trim());
-    const ambiguous = items.some(
-      (i) => i !== exact && i.code && normText(String(i.code)).startsWith(v)
-    );
-    if (!ambiguous) selectAndClear(exact);
+    if (!isAmbiguousCode(items, exact, value)) selectAndClear(exact);
   };
 
   const handleQueryKeyDown = (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    const exact = exactCodeMatch(query);
+    const exact = findExactCode(items, query);
     if (exact && exact.available !== false) {
       selectAndClear(exact);
     } else if (searchResults?.length === 1 && searchResults[0].available !== false) {

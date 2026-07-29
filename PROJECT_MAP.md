@@ -363,7 +363,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
 - MenuManagement.jsx (389 γρ): MenuManagement@31
-- PDA.jsx (700 γρ): PDA@82
+- PDA.jsx (717 γρ): PDA@83
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
 - PublicMenu.jsx (209 γρ): PublicMenu@19
@@ -444,18 +444,18 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - landing/Mockups.jsx (67 γρ): MockupFrame@1, PlaceholderPDA@16, PlaceholderTables@32, PlaceholderStats@47
 - landing/SectionTitle.jsx (17 γρ): SectionTitle@3
 - menu/AutoNumberDialog.jsx (44 γρ): AutoNumberDialog@12
-- menu/CategoriesPanel.jsx (159 γρ): CategoriesPanel@13
+- menu/CategoriesPanel.jsx (163 γρ): CategoriesPanel@13
 - menu/CustomizationConfigModal.jsx (127 γρ): CustomizationConfigModal@20
 - menu/DeleteDialogs.jsx (71 γρ): DeleteItemDialog@12, DeleteCategoryDialog@42
-- menu/ItemModal.jsx (377 γρ): ItemModal@31
+- menu/ItemModal.jsx (381 γρ): ItemModal@31
 - menu/ItemPhotoPicker.jsx (135 γρ): ItemPhotoPicker@4
-- menu/ItemsPanel.jsx (212 γρ): ItemsPanel@15
+- menu/ItemsPanel.jsx (221 γρ): ItemsPanel@15
 - menu/MenuToolbar.jsx (45 γρ): MenuToolbar@4
 - menu/OptionGroupsEditor.jsx (130 γρ): OptionGroupsEditor@5
 - menu/PricedOptionList.jsx (62 γρ): PricedOptionList@4
 - menu/utils.js (13 γρ)
 - pda/DiscountModal.jsx (106 γρ): DiscountModal@7
-- pda/MenuSection.jsx (44 γρ): MenuSection@9
+- pda/MenuSection.jsx (91 γρ): MenuSection@17
 - pda/MobileTabs.jsx (40 γρ): MobileTabs@2
 - pda/PDAModals.jsx (85 γρ): PDAModals@8
 - pda/ReprintPromptModal.jsx (70 γρ): ReprintPromptModal@6
@@ -501,13 +501,15 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - AppShell.jsx (549 γρ): BetaBadge@103, DemoBanner@127, AppShell@170
 - BulkActionsBar.jsx (478 γρ): PriceChangeDialog@32, CategoryDialog@126, OptionGroupDialog@186, BulkActionsBar@362
 - BusinessDetailsForm.jsx (244 γρ): BusinessDetailsForm@27
+- CodeNumpad.jsx (110 γρ): CodeNumpad@11
 - CustomizationModal.jsx (398 γρ): OptionTile@14, LegacyOptions@48, GroupsOptions@143, CustomizationModal@226
 - DatePicker.jsx (168 γρ): DatePicker@20
 - DeckPilotChat.jsx (148 γρ): DeckPilotChat@31
 - LineEditModal.jsx (133 γρ): LineEditModal@14
 - LiveOrdersMap.jsx (256 γρ): LiveOrdersMap@44
 - LoadingScreen.jsx (67 γρ): LoadingScreen@12, StartupOverlay@61
-- MenuGrid.jsx (225 γρ): MenuGrid@6
+- MenuGrid.jsx (211 γρ): MenuGrid@7
+- MenuList.jsx (193 γρ): MenuList@10
 - OfflineBanner.jsx (67 γρ): OfflineBanner@10
 - OnboardingChecklist.jsx (100 γρ): OnboardingChecklist@18
 - OrderPanel.jsx (492 γρ): OrderPanel@27

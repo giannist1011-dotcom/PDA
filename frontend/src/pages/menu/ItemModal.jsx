@@ -166,18 +166,50 @@ export default function ItemModal({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <div>
-            <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
-              Όνομα
-            </label>
-            <input
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              data-testid="item-name-input"
-              className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame"
-            />
+          {/* Όνομα + Κωδικός μαζί: ο κωδικός είναι ο αριθμός που πληκτρολογεί ο
+              ταμίας στην προβολή «Λίστα» / στο πληκτρολόγιο κωδικών */}
+          <div className="grid grid-cols-[1fr_7rem] gap-3">
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                Όνομα
+              </label>
+              <input
+                required
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                data-testid="item-name-input"
+                className="w-full h-11 px-3 mt-1 bg-[#3D1620] border border-[#723645] rounded-md text-white focus:outline-none focus:border-flame"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                Κωδικός
+              </label>
+              <input
+                value={form.code || ""}
+                onChange={(e) => {
+                  setForm({ ...form, code: e.target.value });
+                  setCodeError("");
+                }}
+                maxLength={20}
+                placeholder="π.χ. 14"
+                data-testid="item-code-input"
+                className={`w-full h-11 px-3 mt-1 bg-[#3D1620] border rounded-md text-white font-mono text-lg font-bold text-center focus:outline-none ${
+                  codeError ? "border-[#FF3B30]" : "border-[#723645] focus:border-flame"
+                }`}
+              />
+            </div>
           </div>
+          {codeError ? (
+            <p className="text-xs text-[#FF6961] -mt-2" data-testid="item-code-error">
+              {codeError}
+            </p>
+          ) : (
+            <p className="text-xs text-neutral-500 -mt-2">
+              Ο κωδικός εμφανίζεται μπροστά από το προϊόν στην προβολή «Λίστα» και το επιλέγει
+              αμέσως από την αναζήτηση ή το πληκτρολόγιο κωδικών (προαιρετικός)
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
@@ -258,34 +290,6 @@ export default function ItemModal({
                 {form.photo_id ? "Αλλαγή" : "Επιλογή"}
               </Button>
             </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
-              Κωδικός (προαιρετικό)
-            </label>
-            <input
-              value={form.code || ""}
-              onChange={(e) => {
-                setForm({ ...form, code: e.target.value });
-                setCodeError("");
-              }}
-              maxLength={20}
-              placeholder="π.χ. 12"
-              data-testid="item-code-input"
-              className={`w-full h-11 px-3 mt-1 bg-[#3D1620] border rounded-md text-white font-mono focus:outline-none ${
-                codeError ? "border-[#FF3B30]" : "border-[#723645] focus:border-flame"
-              }`}
-            />
-            {codeError ? (
-              <p className="text-xs text-[#FF6961] mt-1" data-testid="item-code-error">
-                {codeError}
-              </p>
-            ) : (
-              <p className="text-xs text-neutral-500 mt-1">
-                Πληκτρολογώντας τον κωδικό στην αναζήτηση του ταμείου, το προϊόν επιλέγεται αμέσως
-              </p>
-            )}
           </div>
 
           <div>
