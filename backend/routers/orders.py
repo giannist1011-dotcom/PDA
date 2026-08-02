@@ -2,6 +2,7 @@
 import asyncio
 import json
 import logging
+import os
 import re
 import uuid
 
@@ -306,7 +307,9 @@ def _nominatim_lookup(query: str, viewbox: Optional[str] = None, bounded: bool =
         params=params,
         headers={
             # Το Nominatim απαιτεί αναγνωρίσιμο User-Agent με στοιχεία επικοινωνίας
-            "User-Agent": "OrderDeck-POS/1.0 (giannist1011@gmail.com)",
+            "User-Agent": "OrderDeck-POS/1.0 ("
+            + os.environ.get("GEOCODE_CONTACT", "contact@orderdeck.gr")
+            + ")",
             "Accept-Language": "el",
         },
         timeout=8,

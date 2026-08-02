@@ -20,7 +20,7 @@ from core import db
 
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "").strip()
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
-VAPID_CONTACT = os.environ.get("VAPID_CONTACT", "").strip() or "mailto:giannist1011@gmail.com"
+VAPID_CONTACT = os.environ.get("VAPID_CONTACT", "").strip() or "mailto:contact@orderdeck.gr"
 
 logger = logging.getLogger("orderdeck.push")
 

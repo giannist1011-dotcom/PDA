@@ -79,8 +79,9 @@ export default function FleetSignup() {
         admin_pin: form.admin_pin,
         plan: form.plan,
       });
-      // Ενιαίος λογαριασμός: κύριο token (για μελλοντική σύνδεση από το site) + fleet session
-      setToken(data.token);
+      // Ενιαίος λογαριασμός: κύριο token (για μελλοντική σύνδεση από το site) + fleet session.
+      // Επιφάνεια «company» — δεν πατάει session καταστήματος του ίδιου browser.
+      setToken(data.token, { account_type: "fleet_company" });
       await adoptToken(data.fleet_token);
       toast.success("Η εταιρεία δημιουργήθηκε!");
       navigate("/fleet/select");

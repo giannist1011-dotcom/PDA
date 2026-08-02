@@ -7,7 +7,16 @@
 // Το online path ΔΕΝ αλλάζει: η cache γράφεται μόνο μετά από επιτυχημένες κλήσεις
 // και διαβάζεται μόνο όταν το δίκτυο αποτύχει.
 import { useEffect, useState } from "react";
-import { api, apiAddressBook, apiGetMenuConfig, apiMe, apiOfflineProfiles, submitOrder } from "@/lib/api";
+import {
+  api,
+  apiAddressBook,
+  apiGetMenuConfig,
+  apiMe,
+  apiOfflineProfiles,
+  getToken,
+  submitOrder,
+  tokenAccountId,
+} from "@/lib/api";
 
 const DB_NAME = "orderdeck-offline";
 const DB_VERSION = 1;
@@ -196,17 +205,23 @@ export async function getMenuConfigCached() {
   }
 }
 
-// Ενεργό προφίλ (/auth/me): ίδια λογική — ώστε reload χωρίς ίντερνετ να μη σε πετάει έξω
+// Ενεργό προφίλ (/auth/me): ίδια λογική — ώστε reload χωρίς ίντερνετ να μη σε πετάει έξω.
+// Το snapshot είναι ΑΝΑ ΛΟΓΑΡΙΑΣΜΟ: με δύο λογαριασμούς καταστήματος στον ίδιο
+// browser, το offline reload του ενός δεν πρέπει ποτέ να σερβίρει το «me» του άλλου.
+const meKey = () => `me_${tokenAccountId(getToken()) || "anon"}`;
+
+export const cacheMe = (me) => cacheSet(meKey(), me);
+
 export async function getMeCached() {
   try {
     const me = await apiMe();
-    cacheSet("me", me);
+    cacheMe(me);
     markServerUp();
     return me;
   } catch (e) {
     if (isNetworkError(e)) {
       markServerDown();
-      const cached = await cacheGet("me");
+      const cached = await cacheGet(meKey());
       if (cached) return cached;
     }
     throw e;

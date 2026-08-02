@@ -145,21 +145,21 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - POST /onboarding/hide → onboarding_hide @75
 - POST /onboarding/print-test → onboarding_print_test @81 — Καλείται από το frontend όταν γίνει οποιαδήποτε εκτύπωση…
 ### orders.py
-- GET /orders/next-number → next_order_number @138
-- POST /orders → create_order @143
-- GET /orders/scheduled → list_scheduled_orders @199 — Εκκρεμείς προγραμματισμένες + όσες ενεργοποιήθηκαν τις τελευταίες
-- GET /orders → list_orders @256
-- GET /orders/count → count_orders @279 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
-- GET /orders/live-map → live_map_orders @418 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
-- POST /orders/live-map/clear → clear_live_map @471 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
-- GET /orders/address-book → address_book @479 — Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης…
-- GET /orders/heatmap → orders_heatmap @519 — Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng)…
-- GET /orders/{oid} → get_order @572
-- POST /orders/{oid}/activate → activate_order @582 — Move a scheduled order to active (fired /…
-- POST /orders/{oid}/cancel → cancel_order @602
-- DELETE /orders/{oid} → delete_order @629
-- PUT /orders/{oid} → edit_order @753 — Επεξεργασία takeaway/delivery παραγγελίας μετά τη δημιουργία: είδη,
-- GET /customers → list_customers @854 — Aggregate customers from phone/delivery orders, grouped by phone
+- GET /orders/next-number → next_order_number @139
+- POST /orders → create_order @144
+- GET /orders/scheduled → list_scheduled_orders @200 — Εκκρεμείς προγραμματισμένες + όσες ενεργοποιήθηκαν τις τελευταίες
+- GET /orders → list_orders @257
+- GET /orders/count → count_orders @280 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
+- GET /orders/live-map → live_map_orders @421 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
+- POST /orders/live-map/clear → clear_live_map @474 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
+- GET /orders/address-book → address_book @482 — Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης…
+- GET /orders/heatmap → orders_heatmap @522 — Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng)…
+- GET /orders/{oid} → get_order @575
+- POST /orders/{oid}/activate → activate_order @585 — Move a scheduled order to active (fired /…
+- POST /orders/{oid}/cancel → cancel_order @605
+- DELETE /orders/{oid} → delete_order @632
+- PUT /orders/{oid} → edit_order @756 — Επεξεργασία takeaway/delivery παραγγελίας μετά τη δημιουργία: είδη,
+- GET /customers → list_customers @857 — Aggregate customers from phone/delivery orders, grouped by phone
 ### print_jobs.py
 - POST /print/jobs → create_print_job @63
 - GET /print/jobs/stream → print_jobs_stream @91 — SSE stream του σταθμού εκτύπωσης: event `job` μόλις…
@@ -362,7 +362,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - FleetMembers.jsx (357 γρ): FleetMembers@22
 - FleetSelect.jsx (136 γρ): FleetSelect@11
 - FleetSettings.jsx (93 γρ): FleetSettings@13
-- FleetSignup.jsx (290 γρ): Field@10, FleetSignup@38
+- FleetSignup.jsx (291 γρ): Field@10, FleetSignup@38
 - FleetStats.jsx (179 γρ): FleetStats@21
 - History.jsx (301 γρ): History@28
 - Landing.jsx (397 γρ): Landing@88
@@ -539,9 +539,19 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 
 ## FRONTEND — lib/api.js (exported)
 - api — axios instance (baseURL /api)
-- setToken(t)
-- getToken()
 - decodeJwtPayload(t)
+- STORE_SURFACES()
+- storeSurfaceForUser(u)
+- storeSurfaceForPath(p = "")
+- tokenAccountId(t)
+- setStoreSurface(s)
+- getStoreSurface()
+- activeAccountId()
+- storeSessionSource()
+- getToken()
+- bindStoreSession(accountId, surface)
+- clearStorePointer()
+- setToken(t, user = null)
 - apiRegister(payload) → POST /auth/register
 - apiLogin(payload) → POST /auth/login
 - apiStartDemo(payload) → POST /auth/demo

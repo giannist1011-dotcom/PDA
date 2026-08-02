@@ -11,6 +11,12 @@ import {
   setToken,
   getToken,
   decodeJwtPayload,
+  tokenAccountId,
+  bindStoreSession,
+  clearStorePointer,
+  storeSessionSource,
+  storeSurfaceForUser,
+  getStoreSurface,
 } from "@/lib/api";
 import { setFavicon, resetFavicon } from "@/lib/favicon";
 import {
@@ -21,7 +27,7 @@ import {
   rememberStoreLoginOffline,
   verifyStoreLoginOffline,
   wipeOfflineDeviceData,
-  cacheSet,
+  cacheMe,
   isNetworkError,
   markServerDown,
   useOfflineStatus,
@@ -105,9 +111,22 @@ export function AuthProvider({ children }) {
         setUser(false);
         return;
       }
+      const surface = getStoreSurface();
+      const claimed = storeSessionSource() !== "single"; // δηλωμένη επιφάνεια (tab ή δείκτης)
       try {
         // Offline-aware: αν το δίκτυο πέσει, γυρνά το cached προφίλ αντί για logout
         const me = await getMeCached();
+        // Ο λογαριασμός του token ΚΑΙ το πλάνο του πρέπει να ταιριάζουν με αυτό
+        // που πάει να αποδώσει αυτό το tab. Σε αναντιστοιχία (π.χ. δεύτερος
+        // λογαριασμός καταστήματος στον ίδιο browser, ή cached «me» άλλου
+        // λογαριασμού) καθάρισε τον δείκτη και ζήτα login — ΠΟΤΕ δεδομένα άλλου.
+        if (me?.id !== tokenAccountId(t) || (claimed && storeSurfaceForUser(me) !== surface)) {
+          clearStorePointer();
+          setUser(false);
+          return;
+        }
+        // Μοναδικό session χωρίς δείκτη: το tab υιοθετεί την επιφάνεια του πλάνου
+        bindStoreSession(me.id, storeSurfaceForUser(me));
         setUser(me);
       } catch {
         setToken(null);
@@ -126,7 +145,8 @@ export function AuthProvider({ children }) {
       try {
         const me = await apiMe();
         if (!getToken()) return; // έγινε logout όσο έτρεχε το request
-        cacheSet("me", me);
+        if (me?.id !== userId) return; // άλλαξε λογαριασμός στο μεταξύ — μην τον πατήσεις
+        cacheMe(me);
         setUser((prev) =>
           prev && prev !== false && JSON.stringify(prev) === JSON.stringify(me) ? prev : me
         );
@@ -146,10 +166,12 @@ export function AuthProvider({ children }) {
     setError(null);
     try {
       const { token, user: u } = await apiLogin({ email, password });
-      setToken(token);
+      // Η επιφάνεια (POS / FleetDeck καταστήματος / εταιρεία) βγαίνει ΠΑΝΤΑ από
+      // τον λογαριασμό του token, ποτέ από ό,τι έπαιζε πριν σε αυτό το tab
+      setToken(token, u);
       setUser(u);
       pendingOfflineStoreLogin = null;
-      cacheSet("me", u);
+      cacheMe(u);
       cacheProfilesForOffline(); // ώστε η επιλογή προφίλ + PIN να δουλεύει και offline
       // Η σύνδεση επαληθεύτηκε online — αποθήκευσε τοπικό hash για offline είσοδο
       rememberStoreLoginOffline(email, password, u);
@@ -176,7 +198,7 @@ export function AuthProvider({ children }) {
       delete me.profile;
       delete me.profile_id;
       delete me.profile_name; // ο ρόλος ορίζεται από την επιλογή προφίλ + PIN (offline path)
-      cacheSet("me", me); // ώστε reload χωρίς δίκτυο να κρατά το session
+      cacheMe(me); // ώστε reload χωρίς δίκτυο να κρατά το session
       pendingOfflineStoreLogin = { email, password };
       setUser(me);
       return me;
@@ -186,7 +208,7 @@ export function AuthProvider({ children }) {
   const register = async (payload) => {
     setError(null);
     const { token, user: u } = await apiRegister(payload);
-    setToken(token);
+    setToken(token, u);
     setUser(u);
     return u;
   };
@@ -194,7 +216,7 @@ export function AuthProvider({ children }) {
   const startDemo = async (payload) => {
     setError(null);
     const { token, user: u } = await apiStartDemo(payload);
-    setToken(token); // token already carries the Ιδιοκτήτης profile → straight into the app
+    setToken(token, u); // token already carries the Ιδιοκτήτης profile → straight into the app
     setUser(u);
     return u;
   };
@@ -246,7 +268,7 @@ export function AuthProvider({ children }) {
         profile_name: verified.name,
         offline_session: true,
       };
-      cacheSet("me", me); // ώστε reload χωρίς δίκτυο να κρατά το προφίλ
+      cacheMe(me); // ώστε reload χωρίς δίκτυο να κρατά το προφίλ
       pendingOfflineLogin = { profileId, pin };
       setUser(me);
       return me;
@@ -263,12 +285,12 @@ export function AuthProvider({ children }) {
         try {
           const { email, password } = pendingOfflineStoreLogin;
           const { token, user: u } = await apiLogin({ email, password });
-          setToken(token);
+          setToken(token, u);
           rememberStoreLoginOffline(email, password, u); // ανανέωση hash + snapshot
           pendingOfflineStoreLogin = null;
           if (!pendingOfflineLogin) {
             setUser(u);
-            cacheSet("me", u);
+            cacheMe(u);
             cacheProfilesForOffline();
             syncQueue();
           }
@@ -293,7 +315,7 @@ export function AuthProvider({ children }) {
         pendingOfflineLogin = null;
         const me = await apiMe();
         setUser(me);
-        cacheSet("me", me);
+        cacheMe(me);
         cacheProfilesForOffline();
         syncQueue(); // τώρα που το token έχει προφίλ, ανέβασε τυχόν ουρά παραγγελιών
       } catch (e) {
@@ -303,7 +325,7 @@ export function AuthProvider({ children }) {
           try {
             const me = await apiMe();
             setUser(me);
-            cacheSet("me", me);
+            cacheMe(me);
           } catch {
             /* το δίκτυο ξανάπεσε — θα ξαναδοκιμάσει στο επόμενο online */
           }
@@ -322,7 +344,7 @@ export function AuthProvider({ children }) {
       pendingOfflineLogin = null;
       const me = await apiMe();
       setUser(me);
-      cacheSet("me", me);
+      cacheMe(me);
       return me;
     } catch (e) {
       if (!isNetworkError(e)) throw e;
@@ -335,7 +357,7 @@ export function AuthProvider({ children }) {
       delete base.profile_id;
       delete base.profile_name;
       delete base.offline_session;
-      cacheSet("me", base);
+      cacheMe(base);
       setUser(base);
       return base;
     }
@@ -344,7 +366,7 @@ export function AuthProvider({ children }) {
   const refreshMe = async () => {
     const me = await apiMe();
     setUser(me);
-    cacheSet("me", me); // αλλιώς το επόμενο offline/cold-start άνοιγμα σερβίρει παλιό snapshot
+    cacheMe(me); // αλλιώς το επόμενο offline/cold-start άνοιγμα σερβίρει παλιό snapshot
     return me;
   };
 

@@ -2,27 +2,12 @@ import axios from "axios";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
-const TOKEN_KEY = "peinokio_token";
 
 export const api = axios.create({ baseURL: API });
 
-// attach token if present — ρητό Authorization header (π.χ. exchange με άλλο token) έχει προτεραιότητα
-api.interceptors.request.use((cfg) => {
-  const t = localStorage.getItem(TOKEN_KEY);
-  if (t && !cfg.headers.Authorization) cfg.headers.Authorization = `Bearer ${t}`;
-  return cfg;
-});
-
-export const setToken = (t) => {
-  if (t) localStorage.setItem(TOKEN_KEY, t);
-  else localStorage.removeItem(TOKEN_KEY);
-};
-
-export const getToken = () => localStorage.getItem(TOKEN_KEY);
-
 // Αποκωδικοποίηση payload JWT ΧΩΡΙΣ επαλήθευση υπογραφής — μόνο για client-side
-// έλεγχο σε ποια επιφάνεια (store/fleet/driver) ανήκει ένα αποθηκευμένο token.
-// null αν το string δεν είναι έγκυρο JWT.
+// έλεγχο σε ποια επιφάνεια (store/fleet/driver) και σε ποιον λογαριασμό ανήκει
+// ένα αποθηκευμένο token. null αν το string δεν είναι έγκυρο JWT.
 export const decodeJwtPayload = (t) => {
   try {
     const base64 = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -32,6 +17,202 @@ export const decodeJwtPayload = (t) => {
     return null;
   }
 };
+
+// ---------- SESSIONS ΚΑΤΑΣΤΗΜΑΤΟΣ (ανά ΛΟΓΑΡΙΑΣΜΟ, όχι ένα ενιαίο κλειδί) ----------
+// Ο ίδιος browser μπορεί να έχει δύο λογαριασμούς καταστήματος ταυτόχρονα (π.χ. το
+// ίδιο μαγαζί με πλάνο «orderdeck» και ένα δεύτερο με πλάνο «fleet»). Ένα κοινό
+// κλειδί έκανε το login του ενός να σβήνει το session του άλλου και το refresh να
+// φέρνει λάθος ταυτότητα/πλάνο. Οπότε:
+//   LS  token_store_<accountId>   → το token του κάθε λογαριασμού (διαρκές)
+//   LS  active_store_<surface>    → ο τελευταίος λογαριασμός ανά επιφάνεια
+//                                   (αρχική τιμή για ΝΕΟ tab)
+//   SS  active_store_account/_surface → ο λογαριασμός ΑΥΤΟΥ του tab — sessionStorage,
+//                                   ώστε δύο tabs να μη «σκουπίζει» το ένα το άλλο
+const TOKEN_PREFIX = "token_store_";
+const ACTIVE_PREFIX = "active_store_";
+const TAB_ACCOUNT_KEY = "active_store_account";
+const TAB_SURFACE_KEY = "active_store_surface";
+const LEGACY_TOKEN_KEY = "peinokio_token";
+
+// Επιφάνειες: pos = OrderDeck POS (/app), fleet = FleetDeck καταστήματος
+// (/app/fleet, πλάνο «fleet»), company = εταιρεία διανομής (/fleet)
+export const STORE_SURFACES = ["pos", "fleet", "company"];
+
+// Η επιφάνεια ΕΝΟΣ ΛΟΓΑΡΙΑΣΜΟΥ — πάντα από το ίδιο το /auth/me, ποτέ από cache UI
+export const storeSurfaceForUser = (u) =>
+  u?.account_type === "fleet_company" ? "company" : u?.plan === "fleet" ? "fleet" : "pos";
+
+// Η επιφάνεια που ΠΑΕΙ ΝΑ ΑΠΟΔΩΣΕΙ ένα route — χρησιμοποιείται μόνο για να
+// διαλέξει ένα ΝΕΟ tab ποιο αποθηκευμένο session θα υιοθετήσει
+export const storeSurfaceForPath = (p = "") =>
+  p === "/fleet" || p.startsWith("/fleet/")
+    ? "company"
+    : p === "/app/fleet" || p.startsWith("/app/fleet")
+      ? "fleet"
+      : "pos";
+
+export const tokenAccountId = (t) => decodeJwtPayload(t)?.sub || null;
+
+const ls = {
+  get: (k) => {
+    try {
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  },
+  set: (k, v) => {
+    try {
+      localStorage.setItem(k, v);
+    } catch {
+      /* localStorage μη διαθέσιμο */
+    }
+  },
+  del: (k) => {
+    try {
+      localStorage.removeItem(k);
+    } catch {
+      /* localStorage μη διαθέσιμο */
+    }
+  },
+};
+const ss = {
+  get: (k) => {
+    try {
+      return sessionStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  },
+  set: (k, v) => {
+    try {
+      sessionStorage.setItem(k, v);
+    } catch {
+      /* sessionStorage μη διαθέσιμο */
+    }
+  },
+  del: (k) => {
+    try {
+      sessionStorage.removeItem(k);
+    } catch {
+      /* sessionStorage μη διαθέσιμο */
+    }
+  },
+};
+
+const storedAccountIds = () => {
+  try {
+    return Object.keys(localStorage)
+      .filter((k) => k.startsWith(TOKEN_PREFIX))
+      .map((k) => k.slice(TOKEN_PREFIX.length));
+  } catch {
+    return [];
+  }
+};
+
+// Μετανάστευση μία φορά από το παλιό ενιαίο κλειδί: το token πάει στο κλειδί του
+// λογαριασμού του, ΧΩΡΙΣ δείκτη — η πρώτη ενυδάτωση το δένει στη σωστή επιφάνεια
+// αφού μάθει το πλάνο από το /auth/me.
+try {
+  const legacy = ls.get(LEGACY_TOKEN_KEY);
+  if (legacy) {
+    const id = tokenAccountId(legacy);
+    if (id) ls.set(TOKEN_PREFIX + id, legacy);
+    ls.del(LEGACY_TOKEN_KEY);
+  }
+} catch {
+  /* localStorage μη διαθέσιμο */
+}
+
+// Η επιφάνεια που «παίζει» σε αυτό το tab: αν το tab είναι ήδη δεμένο κρατά τη δική
+// του, αλλιώς την υποδεικνύει το route εκκίνησης (μόνο για να διαλέξει ποιο
+// αποθηκευμένο session θα υιοθετήσει). Μετά το login/την ενυδάτωση ξαναβγαίνει
+// ΠΑΝΤΑ από το πλάνο του λογαριασμού.
+let activeSurface = "pos";
+export const setStoreSurface = (s) => {
+  activeSurface = STORE_SURFACES.includes(s) ? s : "pos";
+};
+export const getStoreSurface = () => activeSurface;
+
+setStoreSurface(
+  ss.get(TAB_ACCOUNT_KEY)
+    ? ss.get(TAB_SURFACE_KEY)
+    : storeSurfaceForPath(typeof window === "undefined" ? "" : window.location.pathname)
+);
+
+// Ποιον λογαριασμό χρησιμοποιεί ΑΥΤΟ το tab: πρώτα ο δικός του δείκτης (sessionStorage),
+// μετά ο τελευταίος της επιφάνειας, και τέλος — μόνο αν υπάρχει ΑΚΡΙΒΩΣ ένα session
+// στη συσκευή — αυτό (καλύπτει και τη μετανάστευση από το παλιό κλειδί).
+export const activeAccountId = () => {
+  const tab = ss.get(TAB_ACCOUNT_KEY);
+  if (tab) return tab;
+  const bySurface = ls.get(ACTIVE_PREFIX + activeSurface);
+  if (bySurface) return bySurface;
+  const ids = storedAccountIds();
+  return ids.length === 1 ? ids[0] : null;
+};
+
+// Από πού προέκυψε το τρέχον session:
+//   "tab"     → αυτό το tab είναι ήδη δεμένο σε λογαριασμό
+//   "surface" → ο δείκτης της επιφάνειας το διεκδικεί
+//   "single"  → κανένας δείκτης· υπάρχει ΑΚΡΙΒΩΣ ένα session στη συσκευή
+// Στα δύο πρώτα η επιφάνεια είναι δηλωμένη και μια αναντιστοιχία πλάνου σημαίνει
+// λάθος λογαριασμός· στο τρίτο το tab απλώς υιοθετεί την επιφάνεια του token.
+export const storeSessionSource = () => {
+  if (ss.get(TAB_ACCOUNT_KEY)) return "tab";
+  if (ls.get(ACTIVE_PREFIX + activeSurface)) return "surface";
+  return storedAccountIds().length === 1 ? "single" : null;
+};
+
+export const getToken = () => {
+  const id = activeAccountId();
+  return id ? ls.get(TOKEN_PREFIX + id) : null;
+};
+
+// Καρφώνει αυτό το tab σε λογαριασμό + επιφάνεια. Καλείται μετά το login και μετά
+// από επιτυχή ενυδάτωση, ΠΑΝΤΑ με στοιχεία που προέκυψαν από το token/το /auth/me.
+export const bindStoreSession = (accountId, surface) => {
+  if (!accountId) return;
+  setStoreSurface(surface);
+  ss.set(TAB_ACCOUNT_KEY, accountId);
+  ss.set(TAB_SURFACE_KEY, activeSurface);
+  ls.set(ACTIVE_PREFIX + activeSurface, accountId);
+  // Ο ίδιος λογαριασμός δεν μπορεί να ανήκει σε δύο επιφάνειες (π.χ. άλλαξε πλάνο)
+  STORE_SURFACES.forEach((s) => {
+    if (s !== activeSurface && ls.get(ACTIVE_PREFIX + s) === accountId) ls.del(ACTIVE_PREFIX + s);
+  });
+};
+
+// Καθαρίζει ΜΟΝΟ τους δείκτες αυτού του tab/της επιφάνειας — το token του
+// λογαριασμού μένει (χρησιμοποιείται στο mismatch: πίσω στο login χωρίς να πέσει
+// το session του άλλου tab).
+export const clearStorePointer = () => {
+  const id = activeAccountId();
+  ss.del(TAB_ACCOUNT_KEY);
+  if (id && ls.get(ACTIVE_PREFIX + activeSurface) === id) ls.del(ACTIVE_PREFIX + activeSurface);
+};
+
+// user: το αντικείμενο του /auth/me ή του login (για να βγει η επιφάνεια από το
+// πλάνο του λογαριασμού). null token = αποσύνδεση ΑΥΤΟΥ του λογαριασμού μόνο.
+export const setToken = (t, user = null) => {
+  if (!t) {
+    const id = activeAccountId();
+    if (id) ls.del(TOKEN_PREFIX + id);
+    clearStorePointer();
+    return;
+  }
+  const id = tokenAccountId(t);
+  if (!id) return;
+  ls.set(TOKEN_PREFIX + id, t);
+  bindStoreSession(id, user ? storeSurfaceForUser(user) : activeSurface);
+};
+
+// attach token if present — ρητό Authorization header (π.χ. exchange με άλλο token) έχει προτεραιότητα
+api.interceptors.request.use((cfg) => {
+  const t = getToken();
+  if (t && !cfg.headers.Authorization) cfg.headers.Authorization = `Bearer ${t}`;
+  return cfg;
+});
 
 // AUTH
 export const apiRegister = (payload) => api.post("/auth/register", payload).then((r) => r.data);
