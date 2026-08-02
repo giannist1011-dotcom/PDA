@@ -14,7 +14,7 @@ import { eur, todayISO } from "@/lib/format";
 import { athensToday } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
-import StatCard from "./analytics/StatCard";
+import StatCard from "@/components/StatCard";
 import ChartsRow from "./analytics/ChartsRow";
 import PopularItems from "./analytics/PopularItems";
 import CompareSection from "./analytics/CompareSection";

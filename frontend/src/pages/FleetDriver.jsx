@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CloudOff, Volume2, VolumeX } from "lucide-react";
+import { CloudOff } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
 import {
   apiFleetDriverBoard,
@@ -10,12 +11,12 @@ import {
 } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
 import FleetShell from "@/pages/fleet/FleetShell";
-import { DriverCard, EmptyState } from "@/pages/fleet/DriverCard";
+import { DriverCard } from "@/pages/fleet/DriverCard";
+import EmptyState from "@/components/EmptyState";
 import DriverStats from "@/pages/fleet/DriverStats";
 import DriverMineTab from "@/pages/fleet/DriverMineTab";
 import ProblemModal from "@/pages/fleet/ProblemModal";
-import PushToggle from "@/pages/fleet/PushToggle";
-import { notify, isMuted, setMuted } from "@/pages/fleet/alerts";
+import { notify } from "@/pages/fleet/alerts";
 import { NEXT_ACTION, useAccountCenter } from "@/pages/fleet/utils";
 import { ensurePushOnShiftStart, pushSupport } from "@/lib/push";
 
@@ -42,8 +43,22 @@ export default function FleetDriver() {
   const [board, setBoard] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [pending, setPending] = useState(readQueue().length);
-  const [tab, setTab] = useState(null); // null μέχρι το πρώτο board → default ανά ενεργές
-  const [muted, setMutedState] = useState(isMuted());
+  // Η καρτέλα ζει στο URL (?tab=) ώστε να την οδηγεί και το burger menu —
+  // κενή μέχρι το πρώτο board, όπου ορίζεται ανάλογα με τις ενεργές
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab");
+  const setTab = useCallback(
+    (t) => setSearchParams({ tab: t }, { replace: true }),
+    [setSearchParams]
+  );
+  const setDefaultTab = useCallback(
+    (t) =>
+      setSearchParams(
+        (prev) => (prev.get("tab") ? prev : new URLSearchParams({ tab: t })),
+        { replace: true }
+      ),
+    [setSearchParams]
+  );
   const [shiftBusy, setShiftBusy] = useState(false);
   const [problemOrder, setProblemOrder] = useState(null);
   // Tap σε pin του χάρτη → η κάρτα της παραγγελίας φωτίζεται και σκρολάρει σε θέα
@@ -53,11 +68,6 @@ export default function FleetDriver() {
   const highlightTimer = useRef(null);
   // Γνωστή κατάσταση για ανίχνευση αλλαγών μεταξύ polls (ειδοποιήσεις)
   const seenRef = useRef(null); // {available:Set, mine:Set, updated:Map(id→updated_at)}
-
-  const toggleMute = () => {
-    setMuted(!muted);
-    setMutedState(!muted);
-  };
 
   const highlightOrder = (id) => {
     setHighlightId(id);
@@ -126,11 +136,11 @@ export default function FleetDriver() {
         .then((b) => {
           detectChanges(b);
           setBoard(b);
-          setTab((t) => t ?? (b.mine.length ? "mine" : "free"));
+          setDefaultTab(b.mine.length ? "mine" : "free");
         })
         .catch(() => {})
     );
-  }, [flushQueue, detectChanges]);
+  }, [flushQueue, detectChanges, setDefaultTab]);
 
   useEffect(() => {
     load();
@@ -258,22 +268,15 @@ export default function FleetDriver() {
   return (
     <FleetShell
       actions={
-        <>
-          {pending > 0 && (
-            <span className="flex items-center gap-1 text-[11px] text-gold px-2">
-              <CloudOff className="w-3.5 h-3.5" /> {pending}
-            </span>
-          )}
-          <PushToggle surface="driver" />
-          <button
-            onClick={toggleMute}
-            title={muted ? "Ενεργοποίηση ήχου ειδοποιήσεων" : "Σίγαση ειδοποιήσεων"}
-            data-testid="fleet-drv-mute"
-            className={`p-2 rounded-md hover:bg-white/5 ${muted ? "text-neutral-500" : "text-gold"}`}
+        pending > 0 ? (
+          <span
+            className="flex items-center gap-1 text-[11px] text-gold px-2"
+            title="Αλλαγές σε αναμονή συγχρονισμού"
+            data-testid="fleet-drv-pending"
           >
-            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-        </>
+            <CloudOff className="w-3.5 h-3.5" /> {pending}
+          </span>
+        ) : null
       }
     >
       <div className="max-w-md mx-auto space-y-4">

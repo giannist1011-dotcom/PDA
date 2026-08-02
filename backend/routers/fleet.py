@@ -18,6 +18,8 @@ from core import (
     JWT_ALG,
     JWT_SECRET,
     JWT_TTL_HOURS,
+    athens_day_expr,
+    athens_hour_expr,
     athens_today,
     create_token,
     db,
@@ -29,6 +31,7 @@ from core import (
     public_user,
     rate_limit,
     register_pin_attempt,
+    to_athens,
     verify_password,
 )
 from push import (
@@ -1313,9 +1316,14 @@ async def fleet_driver_shift(body: ShiftIn, team: dict = Depends(get_fleet_membe
 
 # ============ ΟΔΗΓΟΣ: ΣΤΑΤΙΣΤΙΚΑ & ΙΣΤΟΡΙΚΟ ============
 @router.get("/fleet/driver/stats")
-async def fleet_driver_stats(team: dict = Depends(get_fleet_member)):
+async def fleet_driver_stats(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    team: dict = Depends(get_fleet_member),
+):
     """Στατιστικά του ίδιου του οδηγού: σύνολο παραδόσεων, σήμερα/εβδομάδα,
-    κορυφαία καταστήματα παραλαβής (όλων των εποχών)."""
+    κορυφαία καταστήματα παραλαβής (όλων των εποχών) + ανάλυση περιόδου
+    (ανά ημέρα / ανά κατάστημα / ανά βάρδια) για την οθόνη «Στατιστικά»."""
     q = {"team_id": team["id"], "driver_id": team["member_id"], "status": "delivered"}
     total = await db.fleet_orders.count_documents(q)
     today = athens_today()
@@ -1361,13 +1369,80 @@ async def fleet_driver_stats(team: dict = Depends(get_fleet_member)):
             "started_at": me["shift_started_at"],
             "ended_at": datetime.now(timezone.utc).isoformat(),
         })
+    # ---- Ανάλυση περιόδου (φίλτρο της οθόνης «Στατιστικά») ----
+    # Default: τελευταίες 7 ημέρες, ίδια λογική με το PeriodFilter του OrderDeck.
+    p_to = date_to or today
+    p_from = date_from or (date_cls.fromisoformat(p_to) - timedelta(days=6)).isoformat()
+    p_start, p_end = local_day_range(p_from, p_to)
+    p_q = {**q, "created_at": {"$gte": p_start, "$lt": p_end}}
+    facets = await db.fleet_orders.aggregate([
+        {"$match": p_q},
+        {"$facet": {
+            "by_day": [
+                {"$group": {"_id": athens_day_expr(), "orders": {"$sum": 1}}},
+                {"$sort": {"_id": 1}},
+                {"$limit": 400},
+            ],
+            "by_store": [
+                {"$group": {"_id": "$pickup_name", "orders": {"$sum": 1}}},
+                {"$sort": {"orders": -1, "_id": 1}},
+                {"$limit": 10},
+            ],
+            "total": [{"$count": "n"}],
+        }},
+    ]).to_list(1)
+    pf = facets[0] if facets else {}
+
+    # Παραδόσεις ανά βάρδια: οι χρονοσφραγίδες παράδοσης της περιόδου μπαίνουν
+    # στη βάρδια που τις περιέχει (κλειστές βάρδιες + η τρέχουσα ανοιχτή).
+    stamps = sorted(
+        o["delivered_at"]
+        for o in await db.fleet_orders.find(p_q, {"_id": 0, "delivered_at": 1}).to_list(2000)
+        if o.get("delivered_at")
+    )
+    p_shifts = await db.fleet_shifts.find(
+        {
+            "team_id": team["id"],
+            "member_id": team["member_id"],
+            "ended_at": {"$gte": p_start},
+            "started_at": {"$lt": p_end},
+        },
+        {"_id": 0, "started_at": 1, "ended_at": 1},
+    ).sort("started_at", -1).to_list(60)
+    if me and me.get("on_shift") and me.get("shift_started_at"):
+        p_shifts.insert(0, {
+            "started_at": me["shift_started_at"],
+            "ended_at": datetime.now(timezone.utc).isoformat(),
+            "open": True,
+        })
+
+    def _shift_row(s):
+        try:
+            a = to_athens(s["started_at"])
+            b = to_athens(s["ended_at"])
+        except (KeyError, ValueError, TypeError):
+            return None
+        return {
+            "day": a.date().isoformat(),
+            "start": a.strftime("%H:%M"),
+            "end": None if s.get("open") else b.strftime("%H:%M"),
+            "hours": round(max(0, (b - a).total_seconds()) / 3600, 1),
+            "orders": sum(1 for t in stamps if s["started_at"] <= t <= s["ended_at"]),
+        }
+
     return {
+        "date_from": p_from,
+        "date_to": p_to,
         "total": total,
         "today": today_n,
         "week": week_n,
         "shift_hours_today": _hours([s for s in shifts if s["ended_at"] >= t_start], t_start),
         "shift_hours_week": _hours(shifts, w_start),
         "top_stores": [{"name": r["_id"] or "—", "orders": r["orders"]} for r in top],
+        "period_total": (pf.get("total") or [{}])[0].get("n", 0),
+        "by_day": [{"day": r["_id"], "orders": r["orders"]} for r in pf.get("by_day", []) if r.get("_id")],
+        "by_store": [{"name": r["_id"] or "—", "orders": r["orders"]} for r in pf.get("by_store", [])],
+        "by_shift": [r for r in (_shift_row(s) for s in p_shifts[:30]) if r],
     }
 
 
@@ -1426,6 +1501,120 @@ async def fleet_address_book(team: dict = Depends(get_fleet_member)):
         if len(out) >= 200:
             break
     return out
+
+
+# ============ ΣΤΑΤΙΣΤΙΚΑ ============
+@router.get("/fleet/stats")
+async def fleet_stats(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    team: dict = Depends(require_fleet_admin),
+):
+    """Στατιστικά εταιρείας για περίοδο: πλήθη ανά κατάσταση, ανά οδηγό, ανά
+    κατάστημα παραλαβής + μέσος χρόνος παράδοσης (καταχώρηση → παράδοση).
+    Χωρίς ποσά — τα χρήματα είναι υπόθεση του καταστήματος."""
+    day_from = date_from or athens_today()
+    day_to = date_to or day_from
+    start, end = local_day_range(day_from, day_to)
+    # Οι μη δημοσιευμένες προγραμματισμένες δεν μετράνε πουθενά
+    match = {
+        "team_id": team["id"],
+        "status": {"$ne": "scheduled"},
+        "created_at": {"$gte": start, "$lt": end},
+    }
+    # Λεπτά καταχώρηση → παράδοση, υπολογισμένα στη Mongo (τα created_at/
+    # delivered_at είναι ISO strings)
+    minutes_expr = {
+        "$divide": [
+            {"$subtract": [
+                {"$dateFromString": {"dateString": "$delivered_at"}},
+                {"$dateFromString": {"dateString": "$created_at"}},
+            ]},
+            60000,
+        ]
+    }
+    delivered_match = {"status": "delivered", "delivered_at": {"$ne": None}}
+    facets = {
+        "by_status": [{"$group": {"_id": "$status", "n": {"$sum": 1}}}],
+        "total": [{"$count": "n"}],
+        "avg_minutes": [
+            {"$match": delivered_match},
+            {"$group": {"_id": None, "avg": {"$avg": minutes_expr}}},
+        ],
+        "drivers": [
+            {"$match": {"driver_id": {"$ne": None}, "status": {"$ne": "cancelled"}}},
+            {"$group": {
+                "_id": {"driver_id": "$driver_id", "driver_name": "$driver_name"},
+                "orders": {"$sum": 1},
+                "delivered": {"$sum": {"$cond": [{"$eq": ["$status", "delivered"]}, 1, 0]}},
+                "avg_minutes": {"$avg": {
+                    "$cond": [{"$eq": ["$status", "delivered"]}, minutes_expr, None]
+                }},
+            }},
+            {"$sort": {"orders": -1}},
+            {"$limit": 100},
+        ],
+        "stores": [
+            {"$group": {
+                "_id": "$pickup_name",
+                "orders": {"$sum": 1},
+                "delivered": {"$sum": {"$cond": [{"$eq": ["$status", "delivered"]}, 1, 0]}},
+            }},
+            {"$sort": {"orders": -1}},
+            {"$limit": 10},
+        ],
+        # Παραγγελίες ανά ελληνική ημέρα (διάγραμμα) και ανά ώρα (ώρες αιχμής)
+        "by_day": [
+            {"$group": {
+                "_id": athens_day_expr(),
+                "orders": {"$sum": 1},
+                "delivered": {"$sum": {"$cond": [{"$eq": ["$status", "delivered"]}, 1, 0]}},
+            }},
+            {"$sort": {"_id": 1}},
+            {"$limit": 400},
+        ],
+        "by_hour": [
+            {"$group": {"_id": athens_hour_expr(), "orders": {"$sum": 1}}},
+            {"$sort": {"_id": 1}},
+        ],
+    }
+    res = await db.fleet_orders.aggregate([{"$match": match}, {"$facet": facets}]).to_list(1)
+    f = res[0] if res else {}
+
+    def rnd(v):
+        return round(v, 1) if isinstance(v, (int, float)) else None
+
+    return {
+        "date_from": day_from,
+        "date_to": day_to,
+        "total": (f.get("total") or [{}])[0].get("n", 0),
+        "by_status": {r["_id"]: r["n"] for r in f.get("by_status", []) if r.get("_id")},
+        "avg_minutes": rnd((f.get("avg_minutes") or [{}])[0].get("avg")),
+        "drivers": [
+            {
+                "driver_id": r["_id"].get("driver_id"),
+                "driver_name": r["_id"].get("driver_name") or "—",
+                "orders": r["orders"],
+                "delivered": r["delivered"],
+                "avg_minutes": rnd(r.get("avg_minutes")),
+            }
+            for r in f.get("drivers", [])
+        ],
+        "stores": [
+            {"name": r["_id"] or "—", "orders": r["orders"], "delivered": r["delivered"]}
+            for r in f.get("stores", [])
+        ],
+        "by_day": [
+            {"day": r["_id"], "orders": r["orders"], "delivered": r["delivered"]}
+            for r in f.get("by_day", [])
+            if r.get("_id")
+        ],
+        "by_hour": [
+            {"hour": r["_id"], "orders": r["orders"]}
+            for r in f.get("by_hour", [])
+            if r.get("_id") is not None
+        ],
+    }
 
 
 # ============ DAY SUMMARY ============

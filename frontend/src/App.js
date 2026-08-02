@@ -42,8 +42,10 @@ import FleetDriverLogin from "@/pages/FleetDriverLogin";
 import FleetSelect from "@/pages/FleetSelect";
 import FleetDispatch from "@/pages/FleetDispatch";
 import FleetDriver from "@/pages/FleetDriver";
+import FleetDriverSettings from "@/pages/FleetDriverSettings";
 import FleetMembers from "@/pages/FleetMembers";
 import FleetSettings from "@/pages/FleetSettings";
+import FleetStats from "@/pages/FleetStats";
 import StoreFleet from "@/pages/StoreFleet";
 import StoreFleetPartners from "@/pages/StoreFleetPartners";
 import StoreFleetStats from "@/pages/StoreFleetStats";
@@ -99,6 +101,14 @@ function FleetRoutes() {
           }
         />
         <Route
+          path="stats"
+          element={
+            <FleetProtected roles={["fleet_admin"]}>
+              <FleetStats />
+            </FleetProtected>
+          }
+        />
+        <Route
           path="settings"
           element={
             <FleetProtected roles={["fleet_admin"]}>
@@ -111,6 +121,14 @@ function FleetRoutes() {
           element={
             <FleetProtected>
               <FleetDriver />
+            </FleetProtected>
+          }
+        />
+        <Route
+          path="driver/settings"
+          element={
+            <FleetProtected>
+              <FleetDriverSettings />
             </FleetProtected>
           }
         />

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
+import DatePicker from "@/components/DatePicker";
 import { apiFleetDaySummary } from "@/lib/fleetApi";
-
-const dateCls =
-  "h-8 px-2 bg-[#2A0E14] border border-[#723645] rounded-md text-xs text-white focus:outline-none focus:border-flame";
 
 // Πλήθη παραγγελιών ανά οδηγό (σήμερα ή επιλεγόμενο εύρος) για τον διαχειριστή —
 // χωρίς ποσά/μετρητά. Περιλαμβάνει και το driver προφίλ του διαχειριστή.
+// Οι ημερομηνίες επιλέγονται με το DatePicker του OrderDeck (DD/MM/YYYY), όχι
+// με native input — ίδια εμπειρία με Ιστορικό/Στατιστικά.
 export default function DayTotals({ refreshKey }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -22,22 +22,20 @@ export default function DayTotals({ refreshKey }) {
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <h2 className="font-heading font-bold text-sm">Παραγγελίες ανά οδηγό</h2>
         <div className="ml-auto flex items-center gap-1.5">
-          <input
-            type="date"
+          <DatePicker
             value={from || (data?.date ?? "")}
             max={to || undefined}
-            onChange={(e) => setFrom(e.target.value)}
-            data-testid="fleet-totals-date"
-            className={dateCls}
+            onChange={setFrom}
+            testId="fleet-totals-date"
+            className="h-9 px-2 text-xs"
           />
           <span className="text-xs text-neutral-500">–</span>
-          <input
-            type="date"
+          <DatePicker
             value={to || from || (data?.date_to ?? data?.date ?? "")}
             min={from || undefined}
-            onChange={(e) => setTo(e.target.value)}
-            data-testid="fleet-totals-date-to"
-            className={dateCls}
+            onChange={setTo}
+            testId="fleet-totals-date-to"
+            className="h-9 px-2 text-xs"
           />
         </div>
       </div>
@@ -56,8 +54,8 @@ export default function DayTotals({ refreshKey }) {
             {data.drivers.map((d) => (
               <tr key={d.driver_id || d.driver_name} className="border-t border-[#723645]/40">
                 <td className="py-1.5 truncate">{d.driver_name}</td>
-                <td className="py-1.5 text-right">{d.orders}</td>
-                <td className="py-1.5 text-right text-gold">{d.delivered}</td>
+                <td className="py-1.5 text-right font-mono">{d.orders}</td>
+                <td className="py-1.5 text-right font-mono text-gold">{d.delivered}</td>
               </tr>
             ))}
           </tbody>

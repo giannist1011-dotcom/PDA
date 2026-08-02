@@ -1,3 +1,6 @@
+// Κάρτα μετρικής του OrderDeck (Στατιστικά, Έξοδα, FleetDeck): ετικέτα +
+// εικονίδιο πάνω, μεγάλος αριθμός, προαιρετικό υπότιτλο. Κοινή για ΟΛΕΣ τις
+// επιφάνειες ώστε οι μετρικές να δείχνουν παντού ίδιες.
 const StatCard = ({ icon: Icon, label, value, testId, sub, valueClass = "text-white", iconClass = "text-flame" }) => (
   <div
     className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg"

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ChevronDown, AlertTriangle } from "lucide-react";
 import FleetOrdersMap from "./FleetOrdersMap";
-import { DriverCard, EmptyState } from "./DriverCard";
+import { DriverCard } from "./DriverCard";
+import EmptyState from "@/components/EmptyState";
 import DriverHistory from "./DriverHistory";
 import { NEXT_ACTION } from "./utils";
 

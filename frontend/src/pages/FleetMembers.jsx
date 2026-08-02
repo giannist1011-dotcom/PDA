@@ -137,7 +137,7 @@ export default function FleetMembers() {
   };
 
   return (
-    <FleetShell title="Μέλη ομάδας">
+    <FleetShell title="Διανομείς">
       <div className="max-w-2xl space-y-4">
         {issued && (
           <div
@@ -208,7 +208,7 @@ export default function FleetMembers() {
 
         <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-4">
           <div className="flex items-center mb-3">
-            <h2 className="font-heading font-bold text-sm">Μέλη ({members.length})</h2>
+            <h2 className="font-heading font-bold text-sm">Διανομείς ({members.length})</h2>
             <Button
               onClick={() => openEdit(null)}
               data-testid="fleet-member-add"

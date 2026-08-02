@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
 import { apiFleetBoard } from "@/lib/fleetApi";
+import EmptyState from "@/components/EmptyState";
 import FleetShell from "@/pages/fleet/FleetShell";
 import NewOrderForm from "@/pages/fleet/NewOrderForm";
-import PushToggle from "@/pages/fleet/PushToggle";
 import OrderCard from "@/pages/fleet/OrderCard";
 import PartnershipRequests from "@/pages/fleet/PartnershipRequests";
 import FleetOrdersMap from "@/pages/fleet/FleetOrdersMap";
@@ -21,7 +22,10 @@ export default function FleetDispatch() {
   const { team } = useFleet();
   const [board, setBoard] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [tab, setTab] = useState("active");
+  // Η καρτέλα ζει στο URL (?tab=) ώστε να την οδηγεί και το burger menu
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "active";
+  const setTab = (t) => setSearchParams({ tab: t }, { replace: true });
   const [showEvents, setShowEvents] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
   // Default κέντρο χάρτη: pin εταιρείας → geocode πόλης → θέα Ελλάδας
@@ -76,9 +80,7 @@ export default function FleetDispatch() {
 
   const cardsGrid = (list, empty) =>
     list.length === 0 ? (
-      <div className="border border-dashed border-[#723645]/60 rounded-lg p-6 text-center text-sm text-neutral-500">
-        {empty}
-      </div>
+      <EmptyState text={empty} />
     ) : (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {list.map((o) => (
@@ -96,7 +98,7 @@ export default function FleetDispatch() {
     );
 
   return (
-    <FleetShell actions={<PushToggle surface="dispatcher" />}>
+    <FleetShell>
       <div className="space-y-4">
         {/* Αιτήματα συνεργασίας καταστημάτων — πάνω από τη φόρμα όταν υπάρχουν */}
         <PartnershipRequests requests={board?.partnership_requests} onChanged={load} />

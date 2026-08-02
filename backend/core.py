@@ -37,6 +37,7 @@ db = client[os.environ["DB_NAME"]]
 from zoneinfo import ZoneInfo
 
 ATHENS = ZoneInfo("Europe/Athens")
+ATHENS_TZ = "Europe/Athens"  # για $dateToString της Mongo
 
 
 def athens_now() -> datetime:
@@ -61,6 +62,32 @@ def local_day_range(day_from: str, day_to: Optional[str] = None) -> tuple[str, s
         start.astimezone(timezone.utc).isoformat(),
         end.astimezone(timezone.utc).isoformat(),
     )
+
+
+# Εκφράσεις aggregation για ομαδοποίηση ανά ελληνική ημέρα/ώρα. Τα created_at/
+# delivered_at είναι ISO strings, οπότε περνάνε πρώτα από $dateFromString.
+def athens_day_expr(field: str = "$created_at") -> dict:
+    """Η ελληνική ημέρα (YYYY-MM-DD) ενός ISO string πεδίου."""
+    return {
+        "$dateToString": {
+            "date": {"$dateFromString": {"dateString": field}},
+            "format": "%Y-%m-%d",
+            "timezone": ATHENS_TZ,
+        }
+    }
+
+
+def athens_hour_expr(field: str = "$created_at") -> dict:
+    """Ώρα (0-23) ελληνικής ώρας ενός ISO string πεδίου."""
+    return {
+        "$toInt": {
+            "$dateToString": {
+                "date": {"$dateFromString": {"dateString": field}},
+                "format": "%H",
+                "timezone": ATHENS_TZ,
+            }
+        }
+    }
 
 
 def to_athens(iso: str) -> datetime:

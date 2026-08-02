@@ -95,10 +95,3 @@ export function DriverCard({ o, city, dim = false, showStatus = false, highlight
   );
 }
 
-export function EmptyState({ text }) {
-  return (
-    <div className="border border-dashed border-[#723645]/60 rounded-lg p-6 text-center text-sm text-neutral-500">
-      {text}
-    </div>
-  );
-}

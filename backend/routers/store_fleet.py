@@ -6,6 +6,7 @@ Auth: το ΕΝΙΑΙΟ store JWT (users + προφίλ Ιδιοκτήτης/Υ�
 store_user_id για το scoping του καταστήματος. Οι συνεργασίες ζουν στο
 fleet_partnerships (pending/active/declined/ended).
 """
+import asyncio
 import re
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -14,7 +15,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from core import athens_today, db, get_current_user, local_day_range
+from core import athens_day_expr, athens_today, db, get_current_user, local_day_range
 from push import notify_push
 from routers.fleet import (
     DISPATCH_URL,
@@ -329,13 +330,22 @@ async def store_fleet_stats(
         q["created_at"] = {"$gte": local_day_range(date_from)[0]}
     elif date_to:
         q["created_at"] = {"$lt": local_day_range(date_to)[1]}
-    rows = await db.fleet_orders.aggregate([
-        {"$match": q},
-        {"$group": {
-            "_id": {"team_id": "$team_id", "team_name": "$team_name", "status": "$status"},
-            "count": {"$sum": 1},
-        }},
-    ]).to_list(500)
+    rows, by_day = await asyncio.gather(
+        db.fleet_orders.aggregate([
+            {"$match": q},
+            {"$group": {
+                "_id": {"team_id": "$team_id", "team_name": "$team_name", "status": "$status"},
+                "count": {"$sum": 1},
+            }},
+        ]).to_list(500),
+        # Ανεβασμένες ανά ελληνική ημέρα — για το διάγραμμα της οθόνης
+        db.fleet_orders.aggregate([
+            {"$match": q},
+            {"$group": {"_id": athens_day_expr(), "orders": {"$sum": 1}}},
+            {"$sort": {"_id": 1}},
+            {"$limit": 400},
+        ]).to_list(400),
+    )
     companies = {}
     total = 0
     by_status_total = {}
@@ -352,4 +362,9 @@ async def store_fleet_stats(
         by_status_total[st] = by_status_total.get(st, 0) + r["count"]
         total += r["count"]
     out = sorted(companies.values(), key=lambda c: -c["total"])
-    return {"total": total, "by_status": by_status_total, "companies": out}
+    return {
+        "total": total,
+        "by_status": by_status_total,
+        "companies": out,
+        "by_day": [{"day": r["_id"], "orders": r["orders"]} for r in by_day if r.get("_id")],
+    }

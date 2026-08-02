@@ -3,7 +3,8 @@ import { History } from "lucide-react";
 import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
 import { apiFleetDriverOrders } from "@/lib/fleetApi";
 import { presetRange } from "@/lib/dates";
-import { DriverCard, EmptyState } from "./DriverCard";
+import { DriverCard } from "./DriverCard";
+import EmptyState from "@/components/EmptyState";
 
 const PAGE = 20;
 

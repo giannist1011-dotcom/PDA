@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import LoadingScreen from "@/components/LoadingScreen";
 import {
   apiFleetMe,
   apiFleetLogin,
@@ -143,13 +144,8 @@ export const useFleet = () => useContext(FleetAuthContext);
 export function FleetProtected({ roles = null, children }) {
   const { team } = useFleet();
   const location = useLocation();
-  if (team === undefined) {
-    return (
-      <div className="min-h-screen bg-[#2A0E14] text-white flex items-center justify-center">
-        <span className="text-neutral-400 text-sm">Φόρτωση...</span>
-      </div>
-    );
-  }
+  // Ίδια branded οθόνη φόρτωσης με το OrderDeck (μονόγραμμα D), με λεκτικό FleetDeck
+  if (team === undefined) return <LoadingScreen name="FleetDeck" />;
   if (team === false) {
     const loginPath = surfaceOfPath(location.pathname) === "driver"
       ? "/fleet/driver-login"

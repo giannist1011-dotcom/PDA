@@ -1,9 +1,10 @@
 import { toast } from "sonner";
-import { Building2 } from "lucide-react";
+import { Bell, Building2 } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
 import { apiFleetUpdateCompany } from "@/lib/fleetApi";
 import BusinessDetailsForm from "@/components/BusinessDetailsForm";
 import FleetShell from "@/pages/fleet/FleetShell";
+import PushToggle from "@/pages/fleet/PushToggle";
 
 // «Ρυθμίσεις» εταιρείας διανομής (μόνο διαχειριστής): στοιχεία επιχείρησης —
 // όνομα, πόλη, διεύθυνση με pin, τηλέφωνα. Πόλη/pin κεντράρουν τους χάρτες και
@@ -27,6 +28,34 @@ export default function FleetSettings() {
 
   return (
     <FleetShell title="Ρυθμίσεις">
+      <section className="max-w-[900px] mb-8">
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Bell className="w-5 h-5 text-flame" />
+            <h2 className="font-heading text-lg font-bold">Ειδοποιήσεις</h2>
+          </div>
+          <p className="text-sm text-neutral-400">
+            Ειδοποιήσεις push για νέες παραγγελίες καταστημάτων και αιτήματα
+            συνεργασίας — και με κλειστή την εφαρμογή
+          </p>
+        </div>
+        <div className="px-4 bg-[#3D1620] border border-[#723645] rounded-lg">
+          <div
+            className="flex items-center gap-3 py-3"
+            data-testid="fleet-set-push"
+          >
+            <Bell className="w-5 h-5 text-flame shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-sm">Ειδοποιήσεις push</div>
+              <div className="text-xs text-neutral-500 mt-0.5">
+                Σε αυτή τη συσκευή
+              </div>
+            </div>
+            <PushToggle surface="dispatcher" />
+          </div>
+        </div>
+      </section>
+
       <section className="max-w-[900px]">
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-1">

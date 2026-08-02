@@ -132,8 +132,8 @@ export const apiFleetDriverShift = (on) =>
   fleetApi.post("/fleet/driver/shift", { on }).then((r) => r.data);
 
 // ΟΔΗΓΟΣ: ΣΤΑΤΙΣΤΙΚΑ + ΙΣΤΟΡΙΚΟ
-export const apiFleetDriverStats = () =>
-  fleetApi.get("/fleet/driver/stats").then((r) => r.data);
+export const apiFleetDriverStats = (params) =>
+  fleetApi.get("/fleet/driver/stats", { params }).then((r) => r.data);
 export const apiFleetDriverOrders = (params) =>
   fleetApi.get("/fleet/driver/orders", { params }).then((r) => r.data);
 
@@ -158,6 +158,9 @@ export const apiFleetPickupNames = () =>
   fleetApi.get("/fleet/pickup-names").then((r) => r.data);
 export const apiFleetAddressBook = () =>
   fleetApi.get("/fleet/address-book").then((r) => r.data);
+// Στατιστικά εταιρείας για περίοδο (σελίδα «Στατιστικά» της διαχείρισης)
+export const apiFleetStats = (params) =>
+  fleetApi.get("/fleet/stats", { params }).then((r) => r.data);
 export const apiFleetDaySummary = (date, dateTo) =>
   fleetApi
     .get("/fleet/day-summary", {

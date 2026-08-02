@@ -1,33 +1,58 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Truck,
   LogOut,
   Users,
-  Settings,
-  LayoutGrid,
+  KeyRound,
+  ShoppingCart,
+  Map as MapIcon,
+  BarChart3,
   Bike,
   ShieldCheck,
-  ChevronDown,
+  PackageSearch,
+  RefreshCw,
+  Menu,
+  X,
   Check,
 } from "lucide-react";
 import { useFleet } from "@/context/FleetAuthContext";
 import { apiFleetAdminDriverMode, apiFleetSetAdminName, setFleetToken } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
 
-// Κοινό κέλυφος των FleetDeck σελίδων: FleetDeck branding + δυναμικό όνομα
-// εταιρείας στο header. Δεν χρησιμοποιεί το AppShell των μαγαζιών.
+// Πλοήγηση FleetDeck — ίδια δομή με το NAV του AppShell (OrderDeck): μία λίστα
+// ανά επιφάνεια, κάθε εγγραφή με εικονίδιο + ελληνική ετικέτα. Οι εγγραφές με
+// `tab` δείχνουν σε καρτέλα της ίδιας σελίδας (?tab=…) — ίδια ροή, μία πλοήγηση.
+const NAV_ADMIN = [
+  { to: "/fleet", tab: "active", label: "Παραγγελίες", icon: ShoppingCart, testId: "fleet-drawer-orders" },
+  { to: "/fleet", tab: "map", label: "Χάρτης", icon: MapIcon, testId: "fleet-drawer-map" },
+  { to: "/fleet/members", label: "Διανομείς", icon: Users, testId: "fleet-drawer-members" },
+  { to: "/fleet/stats", label: "Στατιστικά", icon: BarChart3, testId: "fleet-drawer-stats" },
+  { to: "/fleet/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "fleet-drawer-settings" },
+];
+
+const NAV_DRIVER = [
+  { to: "/fleet/driver", tab: "free", label: "Ελεύθερες", icon: PackageSearch, testId: "fleet-drawer-free" },
+  { to: "/fleet/driver", tab: "mine", label: "Οι παραγγελίες μου", icon: Bike, testId: "fleet-drawer-mine" },
+  { to: "/fleet/driver", tab: "stats", label: "Στατιστικά", icon: BarChart3, testId: "fleet-drawer-drv-stats" },
+  { to: "/fleet/driver/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "fleet-drawer-drv-settings" },
+];
+
+// Κοινό κέλυφος των FleetDeck σελίδων: ίδιο header/burger menu με το AppShell
+// του OrderDeck (ίδια tokens, ίδια δομή drawer), με FleetDeck branding και
+// δυναμικό όνομα εταιρείας.
 export default function FleetShell({ title, children, actions = null }) {
   const { team, refresh, logout, exitMember } = useFleet();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const [open, setOpen] = useState(false);
   const [busyDriverMode, setBusyDriverMode] = useState(false);
-  const [switcherOpen, setSwitcherOpen] = useState(false);
   // Μία φορά: αν ο διαχειριστής δεν έχει ορίσει προσωπικό όνομα, ζητείται πριν
   // την πρώτη εναλλαγή σε προφίλ οδηγού (αποθηκεύεται στο ίδιο πεδίο των ρυθμίσεων)
   const [nameModal, setNameModal] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
-  const switcherRef = useRef(null);
   const isAdmin = team && team.role === "fleet_admin";
   const isDriver = team && team.role === "driver";
   // Ο γρήγορος εναλλάκτης προφίλ (όπως στο POS) εμφανίζεται στον διαχειριστή και
@@ -48,16 +73,6 @@ export default function FleetShell({ title, children, actions = null }) {
     };
   }, [team]);
 
-  // Κλείσιμο του switcher με click εκτός
-  useEffect(() => {
-    if (!switcherOpen) return;
-    const onDown = (e) => {
-      if (switcherRef.current && !switcherRef.current.contains(e.target)) setSwitcherOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [switcherOpen]);
-
   const changeMember = async () => {
     await exitMember();
     navigate("/fleet/select");
@@ -70,7 +85,7 @@ export default function FleetShell({ title, children, actions = null }) {
     try {
       const data = await apiFleetAdminDriverMode();
       setFleetToken(data.token);
-      setSwitcherOpen(false);
+      setOpen(false);
       setNameModal(false);
       navigate("/fleet/driver");
     } catch (err) {
@@ -81,15 +96,22 @@ export default function FleetShell({ title, children, actions = null }) {
   };
 
   const switchToDriver = async () => {
-    if (isDriver) return setSwitcherOpen(false);
+    if (isDriver) return setOpen(false);
     // Χωρίς προσωπικό όνομα ακόμα → one-time prompt πριν την πρώτη εναλλαγή
     if (isAdmin && !team.admin_display_name) {
       setNameDraft("");
-      setSwitcherOpen(false);
+      setOpen(false);
       setNameModal(true);
       return;
     }
     await enterDriverMode();
+  };
+
+  // Προφίλ «Διαχειριστής»: το admin session ζει στο δικό του κλειδί — απλή
+  // αλλαγή επιφάνειας, ο provider επαναφορτώνει το σωστό token
+  const switchToAdmin = () => {
+    setOpen(false);
+    if (!isAdmin) navigate("/fleet");
   };
 
   const saveNameAndSwitch = async (e) => {
@@ -108,154 +130,191 @@ export default function FleetShell({ title, children, actions = null }) {
     await enterDriverMode();
   };
 
-  // Προφίλ «Διαχειριστής»: το admin session ζει στο δικό του κλειδί — απλή
-  // αλλαγή επιφάνειας, ο provider επαναφορτώνει το σωστό token
-  const switchToAdmin = () => {
-    setSwitcherOpen(false);
-    if (!isAdmin) navigate("/fleet");
+  const nav = isDriver ? NAV_DRIVER : isAdmin ? NAV_ADMIN : [];
+  const currentTab = searchParams.get("tab");
+
+  const renderNavLink = (n) => {
+    const Icon = n.icon;
+    const samePath = location.pathname === n.to;
+    const active = n.tab ? samePath && currentTab === n.tab : samePath;
+    return (
+      <Link
+        key={n.testId}
+        to={n.tab ? `${n.to}?tab=${n.tab}` : n.to}
+        onClick={() => setOpen(false)}
+        data-testid={n.testId}
+        className={`flex items-center gap-3 px-4 py-3 rounded-md mb-1 transition-colors ${
+          active
+            ? "bg-flame/15 text-flame border border-flame/40"
+            : "text-neutral-200 hover:bg-[#3D1620] border border-transparent"
+        }`}
+      >
+        <Icon className="w-5 h-5" />
+        <span className="font-semibold">{n.label}</span>
+      </Link>
+    );
   };
 
-  const menuItem =
-    "w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-white/5 disabled:opacity-60";
+  // Badge προφίλ — ίδιο σχήμα με του OrderDeck (χρώμα ρόλου, κεφαλαία)
+  const roleColor = isDriver ? "#F97316" : "#D4A017";
+  const profileBadge = team && team !== false && team.role ? (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest"
+      style={{ backgroundColor: `${roleColor}26`, color: roleColor }}
+      data-testid="fleet-profile-badge"
+    >
+      {isDriver ? <Bike className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
+      <span className="max-w-[110px] truncate">
+        {isDriver ? team.member_name || "Οδηγός" : "Διαχείριση"}
+      </span>
+    </span>
+  ) : null;
+
+  const drawerBtn =
+    "w-full flex items-center gap-3 px-4 py-3 rounded-md mb-1 text-neutral-200 hover:bg-[#3D1620] border border-transparent disabled:opacity-60";
+
+  const brandMark = (
+    <div className="w-9 h-9 rounded-md bg-brand flex items-center justify-center shrink-0">
+      <Truck className="w-5 h-5 text-white" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#2A0E14] text-white">
-      <header className="sticky top-0 z-40 bg-[#3D1620] border-b border-[#723645]">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Truck className="w-5 h-5 text-flame shrink-0" />
-          <div className="min-w-0">
-            <div className="font-heading font-bold leading-tight truncate">
-              {team && team !== false ? team.name : "FleetDeck"}
-            </div>
-            {/* Στη διαχείριση σταθερή ένδειξη «Διαχείριση» — ποτέ όνομα μέλους/ρόλου */}
-            <div className="text-[11px] text-neutral-400 leading-tight">
-              FleetDeck{isAdmin ? " — Διαχείριση" : team?.member_name ? ` · ${team.member_name}` : ""}
-            </div>
-          </div>
-          <div className="ml-auto flex items-center gap-1">
-            {actions}
-            {isAdmin && (
-              <>
-                <Link
-                  to="/fleet"
-                  className="p-2 rounded-md hover:bg-white/5 text-neutral-300"
-                  title="Πίνακας"
-                  data-testid="fleet-nav-board"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                </Link>
-                <Link
-                  to="/fleet/members"
-                  className="p-2 rounded-md hover:bg-white/5 text-neutral-300"
-                  title="Μέλη"
-                  data-testid="fleet-nav-members"
-                >
-                  <Users className="w-4 h-4" />
-                </Link>
-                <Link
-                  to="/fleet/settings"
-                  className="p-2 rounded-md hover:bg-white/5 text-neutral-300"
-                  title="Ρυθμίσεις"
-                  data-testid="fleet-nav-settings"
-                >
-                  <Settings className="w-4 h-4" />
-                </Link>
-              </>
-            )}
-            {/* Chip προφίλ (πάνω δεξιά, όπως στο POS): tap → επιλογή προφίλ.
-                Εναλλαγή Διαχειριστής ↔ προσωπικό προφίλ οδηγού, χωρίς logout */}
-            {canSwitch && (
-              <div className="relative" ref={switcherRef}>
-                <button
-                  onClick={() => setSwitcherOpen((v) => !v)}
-                  data-testid="fleet-profile-chip"
-                  className="flex items-center gap-1.5 px-2.5 h-9 rounded-md border border-[#723645] hover:border-flame text-xs font-bold transition-colors"
-                >
-                  {isDriver ? (
-                    <Bike className="w-3.5 h-3.5 text-flame" />
-                  ) : (
-                    <ShieldCheck className="w-3.5 h-3.5 text-gold" />
-                  )}
-                  {/* Στο προφίλ οδηγού το chip δείχνει το ΟΝΟΜΑ του ανθρώπου (όπως
-                      κάθε διανομέας) — όχι γενική ετικέτα */}
-                  <span className="max-w-[110px] truncate">
-                    {isDriver ? team.member_name || "Οδηγός" : "Διαχείριση"}
-                  </span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${
-                      switcherOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-                {switcherOpen && (
-                  <div
-                    className="absolute right-0 top-full mt-1.5 w-52 bg-[#3D1620] border border-[#723645] rounded-lg shadow-xl shadow-black/40 overflow-hidden z-50"
-                    data-testid="fleet-profile-menu"
-                  >
-                    <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-widest font-bold text-neutral-500">
-                      Προφίλ
-                    </div>
-                    <button
-                      onClick={switchToAdmin}
-                      className={menuItem}
-                      data-testid="fleet-profile-admin"
-                    >
-                      <ShieldCheck className="w-4 h-4 text-gold shrink-0" />
-                      <span className="font-semibold">Διαχείριση</span>
-                      {isAdmin && <Check className="w-4 h-4 ml-auto text-flame shrink-0" />}
-                    </button>
-                    <button
-                      onClick={switchToDriver}
-                      disabled={busyDriverMode}
-                      className={menuItem}
-                      data-testid="fleet-profile-driver"
-                    >
-                      <Bike className="w-4 h-4 text-flame shrink-0" />
-                      <div className="min-w-0">
-                        <span className="font-semibold block leading-tight">Οδηγός</span>
-                        <span className="text-[11px] text-neutral-500 block leading-tight">
-                          Claim & παραδόσεις όπως κάθε διανομέας
-                        </span>
-                      </div>
-                      {isDriver && <Check className="w-4 h-4 ml-auto text-flame shrink-0" />}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-            {/* Αλλαγή μέλους μόνο στο dashboard — ο οδηγός μπαίνει πάντα στη
-                μία εταιρεία του λογαριασμού του, χωρίς switcher */}
-            {!isDriver && (
-              <button
-                onClick={changeMember}
-                className="px-2 py-1.5 rounded-md hover:bg-white/5 text-xs text-neutral-300"
-                data-testid="fleet-change-member"
-              >
-                Αλλαγή μέλους
-              </button>
-            )}
-            <button
-              onClick={() => {
-                logout();
-                navigate(isDriver ? "/fleet/driver-login" : "/fleet/login");
-              }}
-              className="p-2 rounded-md hover:bg-white/5 text-neutral-300"
-              title="Αποσύνδεση"
-              data-testid="fleet-logout"
+      <header className="sticky top-0 z-40 flex items-center justify-between gap-2 px-4 md:px-6 h-14 lg:h-16 border-b border-[#723645] bg-[#2A0E14]">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <button
+            onClick={() => setOpen(true)}
+            data-testid="fleet-burger-btn"
+            aria-label="Μενού"
+            className="w-11 h-11 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center text-white transition-colors shrink-0"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          {brandMark}
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span
+              className="font-heading text-lg lg:text-xl font-bold tracking-tight truncate"
+              data-testid="fleet-team-name"
             >
-              <LogOut className="w-4 h-4" />
-            </button>
+              {team && team !== false ? team.name : "FleetDeck"}
+            </span>
+            {title && (
+              <span className="text-xs uppercase tracking-widest text-neutral-500 hidden sm:inline shrink-0">
+                · {title}
+              </span>
+            )}
           </div>
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {actions}
+          <div className="hidden sm:block">{profileBadge}</div>
+        </div>
       </header>
+
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+            data-testid="fleet-drawer-backdrop"
+          />
+          <aside
+            className="fixed left-0 top-0 bottom-0 z-50 w-[320px] bg-[#2A0E14] border-r border-[#723645] flex flex-col"
+            data-testid="fleet-drawer"
+          >
+            <div className="flex items-center justify-between px-5 h-16 border-b border-[#723645]">
+              <div className="flex items-center gap-3 min-w-0">
+                {brandMark}
+                <div className="min-w-0">
+                  <div className="font-heading text-lg font-bold leading-tight truncate">
+                    {team && team !== false ? team.name : "FleetDeck"}
+                  </div>
+                  <div className="mt-0.5">{profileBadge}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setOpen(false)}
+                data-testid="fleet-drawer-close-btn"
+                className="w-10 h-10 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <nav className="flex-1 p-3 overflow-y-auto">
+              {nav.map(renderNavLink)}
+
+              {/* Εναλλαγή προφίλ Διαχειριστής ↔ προσωπικό προφίλ οδηγού — στη
+                  θέση της «Αλλαγής προφίλ» του OrderDeck, χωρίς logout */}
+              {canSwitch && (
+                <div className="mt-2 pt-2 border-t border-[#723645]">
+                  <div className="px-4 pt-1 pb-2 text-[10px] uppercase tracking-widest font-bold text-neutral-500">
+                    Προφίλ
+                  </div>
+                  <button
+                    onClick={switchToAdmin}
+                    className={drawerBtn}
+                    data-testid="fleet-profile-admin"
+                  >
+                    <ShieldCheck className="w-5 h-5 text-gold" />
+                    <span className="font-semibold">Διαχείριση</span>
+                    {isAdmin && <Check className="w-4 h-4 ml-auto text-flame" />}
+                  </button>
+                  <button
+                    onClick={switchToDriver}
+                    disabled={busyDriverMode}
+                    className={drawerBtn}
+                    data-testid="fleet-profile-driver"
+                  >
+                    <Bike className="w-5 h-5 text-flame" />
+                    <span className="font-semibold">Οδηγός</span>
+                    {isDriver && <Check className="w-4 h-4 ml-auto text-flame" />}
+                  </button>
+                </div>
+              )}
+
+              {/* Αλλαγή μέλους μόνο στο dashboard — ο οδηγός μπαίνει πάντα στη
+                  μία εταιρεία του λογαριασμού του, χωρίς switcher */}
+              {!isDriver && (
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    changeMember();
+                  }}
+                  className={drawerBtn}
+                  data-testid="fleet-change-member"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  <span className="font-semibold">Αλλαγή μέλους</span>
+                </button>
+              )}
+            </nav>
+            <div className="p-3 border-t border-[#723645]">
+              <button
+                onClick={() => {
+                  logout();
+                  navigate(isDriver ? "/fleet/driver-login" : "/fleet/login");
+                }}
+                data-testid="fleet-logout"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-neutral-300 hover:bg-[#FF3B30]/10 hover:text-[#FF3B30] border border-[#723645] hover:border-[#FF3B30] transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="font-semibold">Αποσύνδεση</span>
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
+
       {title && (
         <div className="max-w-6xl mx-auto px-4 pt-4">
           <h1 className="font-heading text-xl font-bold">{title}</h1>
         </div>
       )}
       <main className="max-w-6xl mx-auto px-4 py-4">{children}</main>
+
       {nameModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={saveNameAndSwitch}
             className="w-full max-w-sm bg-[#3D1620] border border-[#723645] rounded-lg p-4 space-y-3"
@@ -265,7 +324,7 @@ export default function FleetShell({ title, children, actions = null }) {
             <p className="text-xs text-neutral-400">
               Στο προφίλ οδηγού εμφανίζεστε με το προσωπικό σας όνομα (όπως κάθε
               διανομέας) — όχι με το όνομα της εταιρείας. Ορίστε το μία φορά·
-              αλλάζει από τα «Μέλη ομάδας».
+              αλλάζει από τους «Διανομείς».
             </p>
             <input
               autoFocus

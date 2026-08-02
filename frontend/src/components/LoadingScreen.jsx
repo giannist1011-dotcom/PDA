@@ -9,7 +9,7 @@ import { getToken } from "@/lib/api";
 const FADE_MS = 500;
 const SLOW_HINT_MS = 8000;
 
-export default function LoadingScreen({ show = true }) {
+export default function LoadingScreen({ show = true, name = null }) {
   const [mounted, setMounted] = useState(show);
   const [slow, setSlow] = useState(false);
 
@@ -44,6 +44,12 @@ export default function LoadingScreen({ show = true }) {
           />
         </g>
       </svg>
+      {/* Λεκτικό επιφάνειας (π.χ. «FleetDeck») — το POS δεν περνάει name */}
+      {name && (
+        <div className="-mt-2 font-heading text-sm uppercase tracking-[0.3em] text-neutral-500">
+          {name}
+        </div>
+      )}
       <div
         className={`text-sm text-neutral-400 transition-opacity duration-700 ${
           slow ? "opacity-100" : "opacity-0"
