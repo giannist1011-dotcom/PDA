@@ -3,7 +3,8 @@ import { X, Printer, ChevronDown, ChevronUp, History as HistoryIcon, Check } fro
 import { toast } from "sonner";
 import { apiListShoppingPrints, formatApiError } from "@/lib/api";
 import { formatGRTime } from "@/lib/format";
-import { printShoppingList } from "./utils";
+import { useAuth } from "@/context/AuthContext";
+import { printShoppingList, groupShoppingByCategory } from "./utils";
 
 const PAGE_SIZE = 20;
 
@@ -21,7 +22,8 @@ const fmtDateGR = (iso) => {
 };
 
 // ---------- Ιστορικό εκτυπώσεων λίστας αγορών ----------
-export default function PrintHistoryModal({ open, onClose, restaurantName }) {
+export default function PrintHistoryModal({ open, onClose, restaurantName, categories = [] }) {
+  const { user } = useAuth();
   const [prints, setPrints] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -50,8 +52,16 @@ export default function PrintHistoryModal({ open, onClose, restaurantName }) {
 
   if (!open) return null;
 
+  // Παλιές εγγραφές δεν έχουν κατηγορία στα είδη — πέφτουν στο «Άλλα» και
+  // τυπώνονται κανονικά, όπως πάντα.
   const reprint = (p) => {
-    printShoppingList({ restaurantName, items: p.items || [], when: p.printed_at });
+    printShoppingList({
+      user,
+      restaurantName,
+      items: p.items || [],
+      categories,
+      when: p.printed_at,
+    });
   };
 
   return (
@@ -124,22 +134,35 @@ export default function PrintHistoryModal({ open, onClose, restaurantName }) {
                   </button>
                 </div>
                 {expanded && (
-                  <ul className="border-t border-[#431A25] px-4 py-2 space-y-1">
-                    {(p.items || []).map((it, i) => (
-                      <li key={i} className="flex items-center gap-2 text-sm">
-                        <span
-                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                            it.bought ? "bg-[#00E676] border-[#00E676]" : "border-[#7A3E52]"
-                          }`}
-                        >
-                          {it.bought && <Check className="w-3 h-3 text-black" />}
-                        </span>
-                        <span className={it.bought ? "line-through text-neutral-500" : "text-neutral-200"}>
-                          {it.text}
-                        </span>
-                      </li>
+                  <div className="border-t border-[#431A25] px-4 py-2 space-y-3">
+                    {groupShoppingByCategory(p.items || [], categories).map((g) => (
+                      <div key={g.category}>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-flame mb-1">
+                          {g.category}
+                        </div>
+                        <ul className="space-y-1">
+                          {g.items.map((it, i) => (
+                            <li key={i} className="flex items-center gap-2 text-sm">
+                              <span
+                                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                                  it.bought ? "bg-[#00E676] border-[#00E676]" : "border-[#7A3E52]"
+                                }`}
+                              >
+                                {it.bought && <Check className="w-3 h-3 text-black" />}
+                              </span>
+                              <span
+                                className={
+                                  it.bought ? "line-through text-neutral-500" : "text-neutral-200"
+                                }
+                              >
+                                {it.text}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
             );

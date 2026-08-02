@@ -1,17 +1,24 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-// ---------- Add item modal ----------
-export default function AddItemModal({ open, onClose, categories, defaultCategoryId, onSubmit }) {
+// ---------- Είδος ελλείψεων: προσθήκη ή επεξεργασία (όνομα + κατηγορία) ----------
+export default function AddItemModal({
+  open,
+  onClose,
+  categories,
+  defaultCategoryId,
+  editing = null,
+  onSubmit,
+}) {
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState(defaultCategoryId || "");
 
   useEffect(() => {
     if (open) {
-      setName("");
-      setCategoryId(defaultCategoryId || (categories[0]?.id ?? ""));
+      setName(editing?.name || "");
+      setCategoryId(editing?.category_id || defaultCategoryId || (categories[0]?.id ?? ""));
     }
-  }, [open, defaultCategoryId, categories]);
+  }, [open, editing, defaultCategoryId, categories]);
 
   if (!open) return null;
 
@@ -31,13 +38,15 @@ export default function AddItemModal({ open, onClose, categories, defaultCategor
         onSubmit={submit}
         className="bg-[#3D1620] border border-[#723645] rounded-lg p-6 w-full max-w-md"
       >
-        <h3 className="font-heading text-xl font-bold mb-4">Νέο προϊόν αποθέματος</h3>
+        <h3 className="font-heading text-xl font-bold mb-4">
+          {editing ? "Επεξεργασία είδους" : "Νέο είδος ελλείψεων"}
+        </h3>
         <label className="text-xs uppercase tracking-wider text-neutral-400">Όνομα</label>
         <input
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="π.χ. Χαρτοπετσέτες"
+          placeholder="π.χ. 35άρες"
           data-testid="stock-item-name-input"
           className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         />
@@ -68,7 +77,7 @@ export default function AddItemModal({ open, onClose, categories, defaultCategor
             data-testid="stock-item-save-btn"
             className="h-10 bg-brand hover:bg-brand-hover px-4"
           >
-            Προσθήκη
+            {editing ? "Αποθήκευση" : "Προσθήκη"}
           </Button>
         </div>
       </form>

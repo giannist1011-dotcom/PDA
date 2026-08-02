@@ -1,76 +1,29 @@
-import { toast } from "sonner";
 import { formatWeekRange } from "@/lib/dates";
 import { formatGRDayMonth } from "@/lib/format";
+import { printScheduleJob } from "@/lib/print";
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => (
-    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-  ));
-}
-
-// ---------- Print helper: weekly schedule table ----------
-export function printSchedule({ restaurantName, weekStart, employees, shifts, days }) {
+// ---------- Εκτύπωση εβδομαδιαίου προγράμματος ----------
+// Περνά από το ΕΝΙΑΙΟ μηχανισμό εκτύπωσης (lib/print.js): σε Kiosk Relay / Print
+// Bridge γίνεται print_job για τον σταθμό, αλλιώς τυπώνεται στο κρυφό iframe.
+// Στα 72mm το εβδομαδιαίο πλέγμα δεν χωράει — τυπώνεται ανά υπάλληλο.
+export function printSchedule({ user, restaurantName, weekStart, employees, shifts, days }) {
   const findShift = (employeeId, dayIdx) =>
     shifts.find((s) => s.employee_id === employeeId && s.day === dayIdx);
 
-  const headerCells = days
-    .map((d) => `<th>${escapeHtml(d.short)}<br/><span class="sub">${formatGRDayMonth(d.date)}</span></th>`)
-    .join("");
-
-  const rows = employees
-    .map((emp) => {
-      const cells = days
-        .map((d) => {
-          const sh = findShift(emp.id, d.idx);
-          return `<td>${sh ? `${sh.start}–${sh.end}` : "—"}</td>`;
-        })
-        .join("");
-      return `<tr><td class="name">${escapeHtml(emp.name)}</td>${cells}</tr>`;
-    })
-    .join("");
-
-  const html = `<!DOCTYPE html>
-<html lang="el">
-<head>
-<meta charset="utf-8" />
-<title>Πρόγραμμα — ${escapeHtml(restaurantName || "")}</title>
-<style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #111; margin: 24px; }
-  header { border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 18px; }
-  h1 { margin: 0 0 4px; font-size: 22px; }
-  .meta { font-size: 13px; color: #7A3E52; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { border: 1px solid #999; padding: 8px 6px; text-align: center; }
-  th { background: #eee; font-size: 11px; }
-  th .sub { font-weight: normal; color: #666; }
-  td.name { text-align: left; font-weight: bold; }
-  .empty { color: #888; font-style: italic; padding: 20px 0; }
-  footer { margin-top: 24px; font-size: 11px; color: #888; text-align: right; }
-  @media print { body { margin: 12mm; } .no-print { display: none; } }
-</style>
-</head>
-<body>
-  <header>
-    <h1>Εβδομαδιαίο πρόγραμμα</h1>
-    <div class="meta">${escapeHtml(restaurantName || "")} · Εβδομάδα ${escapeHtml(formatWeekRange(weekStart))}</div>
-  </header>
-  ${employees.length === 0
-    ? '<div class="empty">Δεν υπάρχουν υπάλληλοι</div>'
-    : `<table><thead><tr><th>Υπάλληλος</th>${headerCells}</tr></thead><tbody>${rows}</tbody></table>`}
-  <footer>Εκτυπώθηκε από το OrderDeck</footer>
-  <script>window.addEventListener('load', () => setTimeout(() => window.print(), 100));</script>
-</body>
-</html>`;
-
-  const w = window.open("", "_blank", "width=900,height=700");
-  if (!w) {
-    toast.error("Ενεργοποιήστε τα pop-ups για εκτύπωση");
-    return;
-  }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
+  printScheduleJob(user, {
+    restaurant_name: restaurantName || "",
+    week_label: `Εβδομάδα ${formatWeekRange(weekStart)}`,
+    employees: employees.map((emp) => ({
+      name: emp.name,
+      days: days.map((d) => {
+        const sh = findShift(emp.id, d.idx);
+        return {
+          label: `${d.short} ${formatGRDayMonth(d.date)}`,
+          shift: sh ? `${sh.start}–${sh.end}` : null,
+        };
+      }),
+    })),
+  });
 }
 
 // ---------- Plain-text schedule for Viber/WhatsApp/SMS ----------

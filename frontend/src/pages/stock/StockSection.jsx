@@ -1,8 +1,9 @@
-import { Plus, Trash2, Pencil, FolderPlus, Package } from "lucide-react";
+import { Plus, FolderPlus, Package, Pencil, Check as CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StockRow from "./StockRow";
+import CategoryRail from "./CategoryRail";
 
-// ---------- Stock section (κατηγορίες + λίστα ελλείψεων) ----------
+// ---------- Ελλείψεις: κατηγορίες με είδη από κάτω (όπως ο κατάλογος) ----------
 export default function StockSection({
   canManage,
   categories,
@@ -10,11 +11,15 @@ export default function StockSection({
   needsCount,
   activeCat,
   setActiveCat,
+  editMode,
+  setEditMode,
   setCatModal,
   setItemModal,
   handleDeleteCategory,
+  handleMoveCategory,
+  handleMoveItem,
   loading,
-  filteredItems,
+  groups,
   handleToggleNeed,
   handleDeleteItem,
 }) {
@@ -24,15 +29,31 @@ export default function StockSection({
         <div>
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-flame" />
-            <h2 className="font-heading text-2xl font-bold">Απόθεμα καταστήματος</h2>
+            <h2 className="font-heading text-2xl font-bold">Ελλείψεις καταστήματος</h2>
           </div>
           <p className="text-sm text-neutral-400 mt-1">
-            Τσεκάρετε ό,τι τελειώνει και προστίθεται αυτόματα στη λίστα αγορών →
+            Κατηγορίες με είδη από κάτω — τσεκάρετε ό,τι τελειώνει και μπαίνει στη λίστα →
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {canManage && (
             <>
+              <Button
+                onClick={() => setEditMode((v) => !v)}
+                data-testid="stock-edit-mode-btn"
+                className={`h-10 border ${
+                  editMode
+                    ? "bg-flame/15 border-flame text-flame hover:bg-flame/25"
+                    : "bg-[#3D1620] border-[#723645] hover:border-flame text-white"
+                }`}
+              >
+                {editMode ? (
+                  <CheckIcon className="w-4 h-4 mr-2" />
+                ) : (
+                  <Pencil className="w-4 h-4 mr-2" />
+                )}
+                {editMode ? "Τέλος" : "Επεξεργασία"}
+              </Button>
               <Button
                 onClick={() => setCatModal({ open: true, editing: null })}
                 data-testid="stock-add-category-btn"
@@ -42,99 +63,45 @@ export default function StockSection({
                 Νέα κατηγορία
               </Button>
               <Button
-                onClick={() => setItemModal({ open: true })}
+                onClick={() => setItemModal({ open: true, editing: null })}
                 disabled={categories.length === 0}
                 data-testid="stock-add-item-btn"
                 className="h-10 bg-brand hover:bg-brand-hover"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Νέο προϊόν
+                Νέο είδος
               </Button>
             </>
           )}
           <div className="text-sm ml-2">
             <span className="text-neutral-400">Στη λίστα: </span>
-            <span
-              className="font-mono font-bold text-flame"
-              data-testid="needs-count"
-            >
+            <span className="font-mono font-bold text-flame" data-testid="needs-count">
               {needsCount}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        <button
-          onClick={() => setActiveCat("all")}
-          data-testid="stock-filter-all"
-          className={`h-10 px-4 rounded-md text-sm font-bold border ${
-            activeCat === "all"
-              ? "bg-brand border-brand text-white"
-              : "bg-[#3D1620] border-[#723645] text-neutral-300 hover:border-flame"
-          }`}
-        >
-          Όλα ({items.length})
-        </button>
-        <button
-          onClick={() => setActiveCat("needs")}
-          data-testid="stock-filter-needs"
-          className={`h-10 px-4 rounded-md text-sm font-bold border ${
-            activeCat === "needs"
-              ? "bg-brand border-brand text-white"
-              : "bg-[#3D1620] border-[#723645] text-neutral-300 hover:border-flame"
-          }`}
-        >
-          Στη λίστα ({needsCount})
-        </button>
-        {categories.map((c) => {
-          const count = items.filter((i) => i.category_id === c.id).length;
-          const active = activeCat === c.id;
-          return (
-            <div key={c.id} className="flex items-center gap-1 group">
-              <button
-                onClick={() => setActiveCat(c.id)}
-                data-testid={`stock-filter-${c.id}`}
-                className={`h-10 px-4 rounded-md text-sm font-bold border ${
-                  active
-                    ? "bg-brand border-brand text-white"
-                    : "bg-[#3D1620] border-[#723645] text-neutral-300 hover:border-flame"
-                }`}
-              >
-                {c.name} ({count})
-              </button>
-              {canManage && (
-                <div className="flex [@media(hover:hover)]:hidden [@media(hover:hover)]:group-hover:flex items-center gap-0.5">
-                  <button
-                    onClick={() => setCatModal({ open: true, editing: c })}
-                    data-testid={`stock-cat-edit-${c.id}`}
-                    className="p-1.5 text-neutral-400 hover:text-white"
-                    title="Μετονομασία"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCategory(c)}
-                    data-testid={`stock-cat-delete-${c.id}`}
-                    className="p-1.5 text-neutral-400 hover:text-[#FF3B30]"
-                    title="Διαγραφή"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <CategoryRail
+        categories={categories}
+        items={items}
+        itemsCount={items.length}
+        needsCount={needsCount}
+        activeCat={activeCat}
+        setActiveCat={setActiveCat}
+        canManage={canManage}
+        editMode={editMode}
+        onEditCategory={(c) => setCatModal({ open: true, editing: c })}
+        onDeleteCategory={handleDeleteCategory}
+        onMoveCategory={handleMoveCategory}
+      />
 
       {loading ? (
         <div className="text-neutral-500 py-12 text-center">Φόρτωση...</div>
       ) : categories.length === 0 ? (
         <div className="text-neutral-500 py-12 text-center border border-dashed border-[#723645] rounded-lg">
           <Package className="w-8 h-8 mx-auto mb-3 opacity-50" />
-          <div className="mb-2">Δεν έχετε δημιουργήσει κατηγορίες αποθέματος</div>
+          <div className="mb-2">Δεν έχετε δημιουργήσει κατηγορίες ελλείψεων</div>
           {canManage && (
             <button
               onClick={() => setCatModal({ open: true, editing: null })}
@@ -145,20 +112,40 @@ export default function StockSection({
             </button>
           )}
         </div>
-      ) : filteredItems.length === 0 ? (
+      ) : groups.length === 0 ? (
         <div className="text-neutral-500 py-12 text-center">
-          Δεν υπάρχουν προϊόντα σε αυτή την προβολή
+          Δεν υπάρχουν είδη σε αυτή την προβολή
         </div>
       ) : (
-        <div className="space-y-2">
-          {filteredItems.map((it) => (
-            <StockRow
-              key={it.id}
-              item={it}
-              onToggleNeed={handleToggleNeed}
-              onDelete={handleDeleteItem}
-              canEdit={canManage}
-            />
+        <div className="space-y-6">
+          {groups.map((g) => (
+            <div key={g.id} data-testid={`stock-group-${g.id}`}>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <h3 className="font-heading text-sm font-bold uppercase tracking-widest text-flame">
+                  {g.name}
+                </h3>
+                <span className="text-xs text-neutral-500">{g.items.length}</span>
+              </div>
+              {g.items.length === 0 && (
+                <div className="text-xs text-neutral-500 italic py-2">Κενή κατηγορία</div>
+              )}
+              <div className="space-y-2">
+                {g.items.map((it, idx) => (
+                  <StockRow
+                    key={it.id}
+                    item={it}
+                    onToggleNeed={handleToggleNeed}
+                    onEdit={(item) => setItemModal({ open: true, editing: item })}
+                    onDelete={handleDeleteItem}
+                    onMove={handleMoveItem}
+                    canEdit={canManage}
+                    editMode={editMode}
+                    isFirst={idx === 0}
+                    isLast={idx === g.items.length - 1}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

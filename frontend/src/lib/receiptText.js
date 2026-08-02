@@ -214,6 +214,49 @@ export function zReportText(report, restaurantName) {
   return L.join("\n");
 }
 
+// ---------- Λίστα ελλείψεων / αγορών (ομαδοποιημένη ανά κατηγορία) ----------
+export function shoppingListText({ restaurant_name, printed_at, groups } = {}) {
+  const L = [];
+  L.push(center((restaurant_name || "OrderDeck").toUpperCase()));
+  L.push(center("ΛΙΣΤΑ ΑΓΟΡΩΝ"));
+  L.push(hr);
+  L.push(center(formatGRDateTime(printed_at || new Date().toISOString())));
+  const gs = (groups || []).filter((g) => (g.items || []).length > 0);
+  if (!gs.length) {
+    L.push(hr, center("Η λίστα είναι άδεια"));
+  }
+  gs.forEach((g) => {
+    L.push(hr);
+    L.push(String(g.category || "Άλλα").toUpperCase());
+    (g.items || []).forEach((it) => {
+      L.push(...wrap(`${it.bought ? "[x]" : "[ ]"} ${it.text}`, 0));
+    });
+  });
+  L.push(hr);
+  L.push(center("OrderDeck — Λίστα αγορών"));
+  return L.join("\n");
+}
+
+// ---------- Εβδομαδιαίο πρόγραμμα υπαλλήλων ----------
+export function scheduleText({ restaurant_name, week_label, employees } = {}) {
+  const L = [];
+  L.push(center((restaurant_name || "OrderDeck").toUpperCase()));
+  L.push(center("ΕΒΔΟΜΑΔΙΑΙΟ ΠΡΟΓΡΑΜΜΑ"));
+  if (week_label) L.push(center(week_label));
+  const emps = employees || [];
+  if (!emps.length) {
+    L.push(hr, center("Δεν υπάρχουν υπάλληλοι"));
+  }
+  emps.forEach((e) => {
+    L.push(hr);
+    L.push(String(e.name || "").toUpperCase());
+    (e.days || []).forEach((d) => L.push(row(`  ${d.label}`, d.shift || "—")));
+  });
+  L.push(hr);
+  L.push(center("OrderDeck — Πρόγραμμα"));
+  return L.join("\n");
+}
+
 // ---------- Δείγμα για τη «Δοκιμαστική εκτύπωση» των ρυθμίσεων ----------
 export function sampleOrder(user) {
   return {

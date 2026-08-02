@@ -53,7 +53,7 @@ class PrintJobIn(BaseModel):
     # Κάθε στοιχείο = ένα φυσικό ticket (κόβεται μετά από το καθένα).
     # Τα αντίγραφα/ετικέτες τα παράγει το frontend ως ξεχωριστά texts.
     texts: List[str] = Field(default_factory=list, max_length=10)
-    kind: Literal["receipt", "kitchen", "zreport", "test"] = "receipt"
+    kind: Literal["receipt", "kitchen", "zreport", "shopping", "schedule", "test"] = "receipt"
     # Kiosk Relay: δομημένα δεδομένα (order/slip/report) — ο σταθμός τα αποδίδει
     # με τα κανονικά receipt components για πλήρη ποιότητα εκτύπωσης.
     payload: Optional[dict] = None

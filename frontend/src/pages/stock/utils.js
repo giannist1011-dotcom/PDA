@@ -1,74 +1,42 @@
-import { toast } from "sonner";
-import { formatGRTime } from "@/lib/format";
+import { printShoppingListJob } from "@/lib/print";
 
-export function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => (
-    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-  ));
+export const OTHER_CATEGORY = "Άλλα";
+
+// Ομαδοποίηση ειδών της λίστας αγορών ανά κατηγορία, με τη σειρά των κατηγοριών
+// του αποθέματος. Ό,τι δεν έχει (ακόμη) κατηγορία πάει στο «Άλλα».
+// items: [{ text, bought, category_name?, category_id? }]
+export function groupShoppingByCategory(items, categories = []) {
+  const order = new Map(categories.map((c, i) => [c.name, i]));
+  const buckets = new Map();
+  (items || []).forEach((it) => {
+    const name = (it.category_name || it.category || "").trim() || OTHER_CATEGORY;
+    if (!buckets.has(name)) buckets.set(name, []);
+    buckets.get(name).push(it);
+  });
+  return Array.from(buckets.entries())
+    .map(([category, list]) => ({ category, items: list }))
+    .sort((a, b) => {
+      // «Άλλα» πάντα τελευταίο, οι υπόλοιπες με τη σειρά των κατηγοριών
+      if (a.category === OTHER_CATEGORY) return 1;
+      if (b.category === OTHER_CATEGORY) return -1;
+      const ai = order.has(a.category) ? order.get(a.category) : 9999;
+      const bi = order.has(b.category) ? order.get(b.category) : 9999;
+      return ai - bi || a.category.localeCompare(b.category, "el");
+    });
 }
 
 // Εκτύπωση λίστας αγορών — χρησιμοποιείται από το κουμπί «Εκτύπωση» (Stock.jsx)
 // και από την επανεκτύπωση στο ιστορικό εκτυπώσεων (PrintHistoryModal.jsx).
+// Περνά από το ΕΝΙΑΙΟ μηχανισμό εκτύπωσης (lib/print.js): σε Kiosk Relay / Print
+// Bridge γίνεται print_job, αλλιώς τυπώνεται στο κρυφό iframe 72mm.
 // when: προαιρετική ημερομηνία (ISO) για επανεκτύπωση παλιάς λίστας — default τώρα.
-export function printShoppingList({ restaurantName, items, when = null }) {
-  const now = when ? new Date(when) : new Date();
-  const dateStr = now.toLocaleDateString("el-GR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
+export function printShoppingList({ user, restaurantName, items, categories = [], when = null }) {
+  printShoppingListJob(user, {
+    restaurant_name: restaurantName || "",
+    printed_at: when || new Date().toISOString(),
+    groups: groupShoppingByCategory(items, categories).map((g) => ({
+      category: g.category,
+      items: g.items.map((it) => ({ text: it.text, bought: !!it.bought })),
+    })),
   });
-  const timeStr = formatGRTime(now);
-
-  const rows = items
-    .map(
-      (it) => `
-      <li class="row ${it.bought ? "bought" : ""}">
-        <span class="check">${it.bought ? "☒" : "☐"}</span>
-        <span class="text">${escapeHtml(it.text)}</span>
-      </li>`
-    )
-    .join("");
-
-  const html = `<!DOCTYPE html>
-<html lang="el">
-<head>
-<meta charset="utf-8" />
-<title>Λίστα αγορών — ${escapeHtml(restaurantName || "")}</title>
-<style>
-  /* Θερμικός 80mm (72mm εκτυπώσιμο) — μόνο καθαρό μαύρο, οι γκρι βγαίνουν αχνές κουκκίδες */
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color: #000; width: 72mm; margin: 0; padding: 1mm 0 5mm; font-size: 15px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; word-break: break-word; }
-  header { border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; }
-  h1 { margin: 0 0 2px; font-size: 22px; font-weight: 800; }
-  .meta { font-size: 13px; color: #000; }
-  ul { list-style: none; padding: 0; margin: 0; }
-  .row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #000; font-size: 18px; font-weight: 800; }
-  .row.bought .text { text-decoration: line-through; }
-  .check { font-size: 22px; width: 24px; text-align: center; flex-shrink: 0; }
-  .empty { color: #000; font-style: italic; padding: 20px 0; }
-  footer { margin-top: 12px; font-size: 11px; color: #000; text-align: center; }
-  @page { size: 72mm auto; margin: 0; }
-  @media print { .no-print { display: none; } }
-</style>
-</head>
-<body>
-  <header>
-    <h1>Λίστα αγορών</h1>
-    <div class="meta">${escapeHtml(restaurantName || "")} · ${dateStr} · ${timeStr}</div>
-  </header>
-  ${items.length === 0 ? '<div class="empty">Η λίστα είναι άδεια</div>' : `<ul>${rows}</ul>`}
-  <footer>Εκτυπώθηκε από το OrderDeck</footer>
-  <script>window.addEventListener('load', () => setTimeout(() => window.print(), 100));</script>
-</body>
-</html>`;
-
-  const w = window.open("", "_blank", "width=720,height=900");
-  if (!w) {
-    toast.error("Ενεργοποιήστε τα pop-ups για εκτύπωση");
-    return;
-  }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
 }

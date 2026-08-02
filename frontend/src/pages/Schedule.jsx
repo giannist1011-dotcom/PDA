@@ -194,7 +194,7 @@ export default function Schedule() {
   const restaurantName = user?.restaurant_name || "";
 
   const handlePrintSchedule = () => {
-    printSchedule({ restaurantName, weekStart, employees, shifts, days });
+    printSchedule({ user, restaurantName, weekStart, employees, shifts, days });
     setShareOpen(false);
   };
 

@@ -6,12 +6,16 @@ import { ReceiptCopy } from "@/components/Receipt";
 import KitchenSlip from "@/pages/table-order/KitchenSlip";
 import ZReportPrint from "@/pages/day-close/ZReportPrint";
 import { copyLabel } from "@/lib/receiptText";
+import { shoppingListHtml, scheduleHtml } from "@/lib/printDocs";
 
 const escapeHtml = (s) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export function renderJobHtml(job, user) {
   const p = job.payload || null;
+  // Έγγραφα 72mm εκτός απόδειξης — ίδιοι builders με την απευθείας εκτύπωση
+  if (p && job.kind === "shopping") return shoppingListHtml(p);
+  if (p && job.kind === "schedule") return scheduleHtml(p);
   if (p?.order) {
     // Αντίγραφα/ετικέτες: ίδια λογική με το <Receipt /> — ρυθμίσεις του λογαριασμού
     const copies = Math.max(1, Math.min(10, Number(user?.print_copies) || 1));

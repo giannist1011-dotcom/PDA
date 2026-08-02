@@ -1,8 +1,22 @@
-import { Check, Trash2 } from "lucide-react";
+import { Check, Trash2, Pencil, ChevronUp, ChevronDown } from "lucide-react";
 
-// ---------- Stock row (checkbox = "add to shopping list") ----------
-export default function StockRow({ item, onToggleNeed, onDelete, canEdit }) {
+// ---------- Γραμμή είδους ελλείψεων (checkbox = «μπες στη λίστα αγορών») ----------
+// Σε λειτουργία επεξεργασίας (editMode) εμφανίζονται μετονομασία & σειρά,
+// ακριβώς όπως στη διαχείριση καταλόγου.
+export default function StockRow({
+  item,
+  onToggleNeed,
+  onEdit,
+  onDelete,
+  onMove,
+  canEdit,
+  editMode = false,
+  isFirst = false,
+  isLast = false,
+}) {
   const needs = !!item.shopping_item_id;
+  const iconBtn =
+    "p-1.5 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400";
   return (
     <label
       className={`p-4 bg-[#3D1620] border rounded-lg flex items-center gap-4 group cursor-pointer select-none transition-colors ${
@@ -39,6 +53,51 @@ export default function StockRow({ item, onToggleNeed, onDelete, canEdit }) {
           </div>
         )}
       </div>
+      {canEdit && editMode && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onMove(item, -1);
+            }}
+            disabled={isFirst}
+            data-testid={`stock-item-up-${item.id}`}
+            className={iconBtn}
+            title="Πάνω"
+          >
+            <ChevronUp className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onMove(item, 1);
+            }}
+            disabled={isLast}
+            data-testid={`stock-item-down-${item.id}`}
+            className={iconBtn}
+            title="Κάτω"
+          >
+            <ChevronDown className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEdit(item);
+            }}
+            data-testid={`stock-item-edit-${item.id}`}
+            className={iconBtn}
+            title="Επεξεργασία"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+        </>
+      )}
       {canEdit && (
         <button
           type="button"
@@ -48,7 +107,11 @@ export default function StockRow({ item, onToggleNeed, onDelete, canEdit }) {
             onDelete(item);
           }}
           data-testid={`stock-delete-${item.id}`}
-          className="opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 p-1.5 text-neutral-400 hover:text-[#FF3B30]"
+          className={`p-1.5 text-neutral-400 hover:text-[#FF3B30] ${
+            editMode
+              ? ""
+              : "opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+          }`}
           title="Διαγραφή"
         >
           <Trash2 className="w-4 h-4" />

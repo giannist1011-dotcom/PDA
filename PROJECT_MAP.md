@@ -205,21 +205,23 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - GET /deck/overview → deck_overview @295
 - GET /reports/day → list_day_reports @379
 ### stock.py
-- POST /shopping/print → record_shopping_print @33 — Καταγραφή εκτύπωσης της λίστας αγορών: snapshot ειδών +…
-- GET /shopping/prints → list_shopping_prints @53
-- GET /stock/config → stock_config @85
-- POST /stock/categories → create_stock_category @96
-- PUT /stock/categories/{cid} → update_stock_category @109
-- DELETE /stock/categories/{cid} → delete_stock_category @120
-- POST /stock/items → create_stock_item @137
-- PATCH /stock/items/{iid} → update_stock_item @156
-- POST /stock/items/{iid}/shopping → toggle_stock_item_shopping @191
-- DELETE /stock/items/{iid} → delete_stock_item @232
-- GET /shopping → list_shopping @243
-- POST /shopping/reset → reset_shopping @251 — Wipe entire shopping list and clear shopping_item_id on…
-- POST /shopping → add_shopping @262
-- PUT /shopping/{sid} → update_shopping @280
-- DELETE /shopping/{sid} → delete_shopping @295
+- POST /shopping/print → record_shopping_print @82 — Καταγραφή εκτύπωσης της λίστας αγορών: snapshot ειδών +…
+- GET /shopping/prints → list_shopping_prints @109
+- GET /stock/config → stock_config @145
+- POST /stock/categories/reorder → reorder_stock_categories @159 — Νέα σειρά κατηγοριών ελλείψεων: η θέση στη λίστα…
+- POST /stock/items/reorder → reorder_stock_items @171 — Νέα σειρά ειδών μέσα σε μία κατηγορία ελλείψεων.
+- POST /stock/categories → create_stock_category @181
+- PUT /stock/categories/{cid} → update_stock_category @194
+- DELETE /stock/categories/{cid} → delete_stock_category @210
+- POST /stock/items → create_stock_item @235
+- PATCH /stock/items/{iid} → update_stock_item @258
+- POST /stock/items/{iid}/shopping → toggle_stock_item_shopping @302
+- DELETE /stock/items/{iid} → delete_stock_item @348
+- GET /shopping → list_shopping @359
+- POST /shopping/reset → reset_shopping @367 — Wipe entire shopping list and clear shopping_item_id on…
+- POST /shopping → add_shopping @378
+- PUT /shopping/{sid} → update_shopping @405
+- DELETE /shopping/{sid} → delete_shopping @420
 ### stock_photos.py
 - GET /admin/stock-photos → admin_list_stock_photos @44
 - POST /admin/stock-photos → admin_create_stock_photo @61
@@ -375,7 +377,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - Register.jsx (244 γρ): Register@23
 - Schedule.jsx (338 γρ): Schedule@30
 - Settings.jsx (128 γρ): Section@20, Settings@35
-- Stock.jsx (299 γρ): Stock@29
+- Stock.jsx (398 γρ): Stock@32
 - StoreFleet.jsx (169 γρ): StoreFleet@16
 - StoreFleetPartners.jsx (159 γρ): StoreFleetPartners@22
 - StoreFleetSettings.jsx (47 γρ): StoreFleetSettings@9
@@ -482,16 +484,17 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - schedule/ScheduleGrid.jsx (115 γρ): ScheduleGrid@5
 - schedule/ShareDialog.jsx (41 γρ): ShareDialog@11
 - schedule/ShiftModal.jsx (111 γρ): ShiftModal@16
-- schedule/utils.js (114 γρ)
+- schedule/utils.js (67 γρ)
 - settings/SubscriptionSettings.jsx (146 γρ): SubscriptionSettings@20
 - settings/TablesSettings.jsx (65 γρ): TablesSettings@8
-- stock/AddItemModal.jsx (78 γρ): AddItemModal@5
+- stock/AddItemModal.jsx (87 γρ): AddItemModal@5
 - stock/CategoryModal.jsx (61 γρ): CategoryModal@5
-- stock/PrintHistoryModal.jsx (162 γρ): PrintHistoryModal@24
-- stock/ShoppingListPanel.jsx (124 γρ): ShoppingListPanel@5
-- stock/StockRow.jsx (60 γρ): StockRow@4
-- stock/StockSection.jsx (168 γρ): StockSection@6
-- stock/utils.js (75 γρ)
+- stock/CategoryRail.jsx (97 γρ): CategoryRail@4
+- stock/PrintHistoryModal.jsx (185 γρ): PrintHistoryModal@25
+- stock/ShoppingListPanel.jsx (145 γρ): ShoppingListPanel@6
+- stock/StockRow.jsx (123 γρ): StockRow@6
+- stock/StockSection.jsx (155 γρ): StockSection@7
+- stock/utils.js (43 γρ)
 - store-fleet/StoreOrderForm.jsx (250 γρ): StoreOrderForm@31
 - table-order/KitchenSlip.jsx (33 γρ): KitchenSlip@4
 - table-order/TabPanel.jsx (184 γρ): TabPanel@15
@@ -535,7 +538,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - printing/KioskSetup.jsx (82 γρ): KioskSetup@12
 - printing/RelayAgent.jsx (243 γρ): StationLoop@27, StationDownBanner@195, RelayAgent@234
 - printing/RelaySetup.jsx (181 γρ): RelaySetup@19
-- printing/relayRender.jsx (47 γρ)
+- printing/relayRender.jsx (51 γρ)
 
 ## FRONTEND — lib/api.js (exported)
 - api — axios instance (baseURL /api)
@@ -577,7 +580,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiUpdateProfile(id, payload) → PUT /profiles/${id}
 - apiDeleteProfile(id) → DELETE /profiles/${id}
 - apiListShopping() → GET /shopping
-- apiAddShopping(text) → POST /shopping
+- apiAddShopping(text, categoryId = null) → POST /shopping
 - apiUpdateShopping(id, payload) → PUT /shopping/${id}
 - apiDeleteShopping(id) → DELETE /shopping/${id}
 - apiResetShopping() → POST /shopping/reset
@@ -592,7 +595,10 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiCreateStockCategory(payload) → POST /stock/categories
 - apiUpdateStockCategory(id, payload) → PUT /stock/categories/${id}
 - apiDeleteStockCategory(id) → DELETE /stock/categories/${id}
+- apiReorderStockCategories(ids) → POST /stock/categories/reorder
 - apiCreateStockItem(payload) → POST /stock/items
+- apiUpdateStockItem(id, payload) → PATCH /stock/items/${id}
+- apiReorderStockItems(ids) → POST /stock/items/reorder
 - apiToggleStockItemShopping(id, needs) → POST /stock/items/${id}/shopping
 - apiDeleteStockItem(id) → DELETE /stock/items/${id}
 - apiChecklistToday() → GET /checklist/today

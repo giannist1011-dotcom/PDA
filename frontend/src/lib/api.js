@@ -252,7 +252,8 @@ export const apiDeleteProfile = (id) =>
 
 // SHOPPING
 export const apiListShopping = () => api.get("/shopping").then((r) => r.data);
-export const apiAddShopping = (text) => api.post("/shopping", { text }).then((r) => r.data);
+export const apiAddShopping = (text, categoryId = null) =>
+  api.post("/shopping", { text, category_id: categoryId }).then((r) => r.data);
 export const apiUpdateShopping = (id, payload) => api.put(`/shopping/${id}`, payload).then((r) => r.data);
 export const apiDeleteShopping = (id) => api.delete(`/shopping/${id}`).then((r) => r.data);
 export const apiResetShopping = () => api.post("/shopping/reset").then((r) => r.data);
@@ -280,8 +281,14 @@ export const apiUpdateStockCategory = (id, payload) =>
   api.put(`/stock/categories/${id}`, payload).then((r) => r.data);
 export const apiDeleteStockCategory = (id) =>
   api.delete(`/stock/categories/${id}`).then((r) => r.data);
+export const apiReorderStockCategories = (ids) =>
+  api.post("/stock/categories/reorder", { ids }).then((r) => r.data);
 export const apiCreateStockItem = (payload) =>
   api.post("/stock/items", payload).then((r) => r.data);
+export const apiUpdateStockItem = (id, payload) =>
+  api.patch(`/stock/items/${id}`, payload).then((r) => r.data);
+export const apiReorderStockItems = (ids) =>
+  api.post("/stock/items/reorder", { ids }).then((r) => r.data);
 export const apiToggleStockItemShopping = (id, needs) =>
   api.post(`/stock/items/${id}/shopping`, { needs }).then((r) => r.data);
 export const apiDeleteStockItem = (id) =>

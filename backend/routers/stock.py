@@ -11,9 +11,55 @@ from core import db, require_staff, require_manager, actor_name
 router = APIRouter()
 
 
+# ============ ΚΑΤΗΓΟΡΙΑ «ΑΛΛΑ» & MIGRATION ΑΠΟ ΤΗΝ ΠΑΛΙΑ ΕΠΙΠΕΔΗ ΔΟΜΗ ============
+OTHER_CATEGORY_NAME = "Άλλα"
+
+
+async def ensure_other_category(user_id: str) -> dict:
+    """Η κατηγορία «Άλλα»: εκεί προσγειώνονται τα παλιά είδη ελλείψεων χωρίς
+    κατηγορία και ό,τι προστίθεται χειροκίνητα στη λίστα αγορών."""
+    cat = await db.stock_categories.find_one(
+        {"user_id": user_id, "name": OTHER_CATEGORY_NAME}, {"_id": 0, "user_id": 0}
+    )
+    if cat:
+        return cat
+    count = await db.stock_categories.count_documents({"user_id": user_id})
+    doc = {
+        "id": str(uuid.uuid4())[:8],
+        "user_id": user_id,
+        "name": OTHER_CATEGORY_NAME,
+        "order": count,
+    }
+    await db.stock_categories.insert_one(doc)
+    return {k: v for k, v in doc.items() if k not in ("_id", "user_id")}
+
+
+async def migrate_flat_shortages(user_id: str) -> None:
+    """Ό,τι έμεινε χωρίς (έγκυρη) κατηγορία → «Άλλα». Τίποτα δεν χάνεται."""
+    cat_ids = [
+        c["id"]
+        async for c in db.stock_categories.find({"user_id": user_id}, {"_id": 0, "id": 1})
+    ]
+    item_q = {"user_id": user_id, "category_id": {"$nin": cat_ids}}
+    shop_q = {"user_id": user_id, "category_id": {"$in": [None, ""]}}
+    orphan_items = await db.stock_items.count_documents(item_q)
+    orphan_shop = await db.shopping.count_documents(shop_q)
+    if not orphan_items and not orphan_shop:
+        return
+    other = await ensure_other_category(user_id)
+    if orphan_items:
+        await db.stock_items.update_many(item_q, {"$set": {"category_id": other["id"]}})
+    if orphan_shop:
+        await db.shopping.update_many(
+            shop_q,
+            {"$set": {"category_id": other["id"], "category_name": other["name"]}},
+        )
+
+
 # ============ SHOPPING LIST ============
 class ShoppingItemIn(BaseModel):
     text: str = Field(min_length=1, max_length=200)
+    category_id: Optional[str] = None
 
 
 # ============ PRINT HISTORY (ιστορικό εκτυπώσεων λίστας αγορών) ============
@@ -23,6 +69,9 @@ PRINT_HISTORY_KEEP_DAYS = 90  # κρατάμε τουλάχιστον 30 ημέ�
 class ShortagePrintItemIn(BaseModel):
     text: str = Field(min_length=1, max_length=200)
     bought: bool = False
+    # Κατηγορία τη στιγμή της εκτύπωσης (snapshot). Κενό στις παλιές εγγραφές —
+    # το ιστορικό/επανεκτύπωση δουλεύει ακριβώς όπως πριν.
+    category: str = Field(default="", max_length=80)
 
 
 class ShortagePrintIn(BaseModel):
@@ -38,7 +87,14 @@ async def record_shopping_print(body: ShortagePrintIn, user: dict = Depends(requ
         "user_id": user["id"],
         "printed_at": now.isoformat(),
         "printed_by": actor_name(user),
-        "items": [{"text": it.text.strip(), "bought": bool(it.bought)} for it in body.items],
+        "items": [
+            {
+                "text": it.text.strip(),
+                "bought": bool(it.bought),
+                "category": (it.category or "").strip(),
+            }
+            for it in body.items
+        ],
     }
     await db.shortage_prints.insert_one(doc)
     # Lazy καθαρισμός: ό,τι είναι παλαιότερο από PRINT_HISTORY_KEEP_DAYS φεύγει
@@ -81,15 +137,44 @@ class StockItemPatchIn(BaseModel):
     note: Optional[str] = None
 
 
+class StockReorderIn(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=2000)
+
+
 @router.get("/stock/config")
 async def stock_config(user: dict = Depends(require_staff)):
+    await migrate_flat_shortages(user["id"])
     cats = await db.stock_categories.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
     ).sort("order", 1).to_list(500)
     items = await db.stock_items.find(
         {"user_id": user["id"]}, {"_id": 0, "user_id": 0}
-    ).sort("created_at", 1).to_list(2000)
+    ).to_list(2000)
+    # Σειρά μέσα στην κατηγορία: «order» (νέα είδη/reorder), παλιά χωρίς order → created_at
+    items.sort(key=lambda i: (i.get("order") or 0, i.get("created_at") or ""))
     return {"categories": cats, "items": items}
+
+
+@router.post("/stock/categories/reorder")
+async def reorder_stock_categories(
+    body: StockReorderIn, user: dict = Depends(require_manager)
+):
+    """Νέα σειρά κατηγοριών ελλείψεων: η θέση στη λίστα ids γίνεται το order."""
+    for idx, cid in enumerate(body.ids):
+        await db.stock_categories.update_one(
+            {"id": cid, "user_id": user["id"]}, {"$set": {"order": idx}}
+        )
+    return {"ok": True}
+
+
+@router.post("/stock/items/reorder")
+async def reorder_stock_items(body: StockReorderIn, user: dict = Depends(require_manager)):
+    """Νέα σειρά ειδών μέσα σε μία κατηγορία ελλείψεων."""
+    for idx, iid in enumerate(body.ids):
+        await db.stock_items.update_one(
+            {"id": iid, "user_id": user["id"]}, {"$set": {"order": idx}}
+        )
+    return {"ok": True}
 
 
 @router.post("/stock/categories")
@@ -113,6 +198,11 @@ async def update_stock_category(cid: str, body: StockCategoryIn, user: dict = De
     )
     if r.matched_count == 0:
         raise HTTPException(404, "Not found")
+    # Η λίστα αγορών κρατά snapshot του ονόματος κατηγορίας — κράτα το συγχρονισμένο
+    await db.shopping.update_many(
+        {"user_id": user["id"], "category_id": cid},
+        {"$set": {"category_name": body.name.strip()}},
+    )
     return {"id": cid, "name": body.name.strip(), "order": body.order}
 
 
@@ -130,6 +220,14 @@ async def delete_stock_category(cid: str, user: dict = Depends(require_manager))
     r = await db.stock_categories.delete_one({"id": cid, "user_id": user["id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Not found")
+    # Χειροκίνητες εγγραφές της λίστας αγορών σε αυτή την κατηγορία → «Άλλα»
+    leftover = await db.shopping.count_documents({"user_id": user["id"], "category_id": cid})
+    if leftover:
+        other = await ensure_other_category(user["id"])
+        await db.shopping.update_many(
+            {"user_id": user["id"], "category_id": cid},
+            {"$set": {"category_id": other["id"], "category_name": other["name"]}},
+        )
     return {"ok": True}
 
 
@@ -138,11 +236,15 @@ async def create_stock_item(body: StockItemIn, user: dict = Depends(require_mana
     cat = await db.stock_categories.find_one({"id": body.category_id, "user_id": user["id"]})
     if not cat:
         raise HTTPException(404, "Η κατηγορία δεν βρέθηκε")
+    order = await db.stock_items.count_documents(
+        {"user_id": user["id"], "category_id": body.category_id}
+    )
     doc = {
         "id": str(uuid.uuid4()),
         "user_id": user["id"],
         "name": body.name.strip(),
         "category_id": body.category_id,
+        "order": order,
         "available": bool(body.available),
         "note": body.note.strip(),
         "shopping_item_id": None,
@@ -171,15 +273,24 @@ async def update_stock_item(iid: str, body: StockItemPatchIn, user: dict = Depen
     r = await db.stock_items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
     if r.matched_count == 0:
         raise HTTPException(404, "Not found")
-    # keep linked shopping text in sync on rename
-    if "name" in update:
-        item = await db.stock_items.find_one({"id": iid, "user_id": user["id"]}, {"_id": 0, "shopping_item_id": 1})
+    # keep linked shopping entry (text + κατηγορία) in sync
+    if "name" in update or "category_id" in update:
+        item = await db.stock_items.find_one(
+            {"id": iid, "user_id": user["id"]},
+            {"_id": 0, "shopping_item_id": 1, "category_id": 1},
+        )
         sid = item.get("shopping_item_id") if item else None
         if sid:
-            await db.shopping.update_one(
-                {"id": sid, "user_id": user["id"]},
-                {"$set": {"text": update["name"]}},
-            )
+            sync = {}
+            if "name" in update:
+                sync["text"] = update["name"]
+            if "category_id" in update:
+                cat = await db.stock_categories.find_one(
+                    {"id": item.get("category_id"), "user_id": user["id"]}, {"_id": 0, "name": 1}
+                )
+                sync["category_id"] = item.get("category_id")
+                sync["category_name"] = (cat or {}).get("name", OTHER_CATEGORY_NAME)
+            await db.shopping.update_one({"id": sid, "user_id": user["id"]}, {"$set": sync})
     return {"id": iid, **update}
 
 
@@ -200,6 +311,9 @@ async def toggle_stock_item_shopping(
             existing = await db.shopping.find_one({"id": existing_id, "user_id": user["id"]}, {"_id": 0, "user_id": 0})
             if existing:
                 return {"item_id": iid, "shopping_item_id": existing_id, "shopping_item": existing}
+        cat = await db.stock_categories.find_one(
+            {"id": item.get("category_id"), "user_id": user["id"]}, {"_id": 0, "name": 1}
+        )
         sid = str(uuid.uuid4())
         shopping_doc = {
             "id": sid,
@@ -207,6 +321,8 @@ async def toggle_stock_item_shopping(
             "text": item["name"],
             "bought": False,
             "source_stock_id": iid,
+            "category_id": item.get("category_id"),
+            "category_name": (cat or {}).get("name", OTHER_CATEGORY_NAME),
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         await db.shopping.insert_one(shopping_doc)
@@ -260,11 +376,20 @@ async def reset_shopping(user: dict = Depends(require_manager)):
 
 @router.post("/shopping")
 async def add_shopping(body: ShoppingItemIn, user: dict = Depends(require_manager)):
+    cat = None
+    if body.category_id:
+        cat = await db.stock_categories.find_one(
+            {"id": body.category_id, "user_id": user["id"]}, {"_id": 0, "id": 1, "name": 1}
+        )
+    if not cat:
+        cat = await ensure_other_category(user["id"])
     doc = {
         "id": str(uuid.uuid4()),
         "user_id": user["id"],
         "text": body.text.strip(),
         "bought": False,
+        "category_id": cat["id"],
+        "category_name": cat["name"],
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.shopping.insert_one(doc)
