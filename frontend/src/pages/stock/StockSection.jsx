@@ -21,6 +21,7 @@ export default function StockSection({
   loading,
   groups,
   handleToggleNeed,
+  handleToggleCategoryNeeds,
   handleDeleteItem,
 }) {
   return (
@@ -118,13 +119,49 @@ export default function StockSection({
         </div>
       ) : (
         <div className="space-y-6">
-          {groups.map((g) => (
+          {groups.map((g) => {
+            // Όλα τα είδη της κατηγορίας στη λίστα; → το κουμπί καθαρίζει, αλλιώς επιλέγει όλα
+            const allNeeded =
+              g.items.length > 0 && g.items.every((i) => !!i.shopping_item_id);
+            return (
             <div key={g.id} data-testid={`stock-group-${g.id}`}>
               <div className="flex items-center justify-between gap-3 mb-2">
                 <h3 className="font-heading text-sm font-bold uppercase tracking-widest text-flame">
                   {g.name}
                 </h3>
-                <span className="text-xs text-neutral-500">{g.items.length}</span>
+                <div className="flex items-center gap-2">
+                  {g.items.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleCategoryNeeds(g, !allNeeded)}
+                      data-testid={`stock-group-select-all-${g.id}`}
+                      className={`h-7 px-2.5 rounded-md text-[11px] font-bold uppercase tracking-wider border ${
+                        allNeeded
+                          ? "bg-flame/15 border-flame text-flame"
+                          : "bg-[#3D1620] border-[#723645] text-neutral-300 hover:border-flame"
+                      }`}
+                      title={
+                        allNeeded
+                          ? "Αφαίρεση όλης της κατηγορίας από τη λίστα"
+                          : "Όλη η κατηγορία στη λίστα αγορών"
+                      }
+                    >
+                      {allNeeded ? "Καθαρισμός" : "Επιλογή όλων"}
+                    </button>
+                  )}
+                  {canManage && editMode && (
+                    <button
+                      type="button"
+                      onClick={() => setItemModal({ open: true, editing: null, categoryId: g.id })}
+                      data-testid={`stock-group-add-item-${g.id}`}
+                      className="h-7 px-2.5 rounded-md text-[11px] font-bold uppercase tracking-wider border bg-[#3D1620] border-[#723645] text-neutral-300 hover:border-flame"
+                      title={`Νέο είδος στην κατηγορία ${g.name}`}
+                    >
+                      + Είδος
+                    </button>
+                  )}
+                  <span className="text-xs text-neutral-500">{g.items.length}</span>
+                </div>
               </div>
               {g.items.length === 0 && (
                 <div className="text-xs text-neutral-500 italic py-2">Κενή κατηγορία</div>
@@ -146,7 +183,8 @@ export default function StockSection({
                 ))}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>

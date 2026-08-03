@@ -593,10 +593,30 @@ async def seed_account_from_preset(user_id: str, preset: dict, has_tables: bool)
     await seed_user_menu(user_id, preset)
     stock_names = preset.get("stock_categories") or []
     if stock_names:
-        await db.stock_categories.insert_many([
+        cat_docs = [
             {"id": str(uuid.uuid4())[:8], "user_id": user_id, "name": n, "order": i}
             for i, n in enumerate(stock_names)
-        ])
+        ]
+        await db.stock_categories.insert_many(cat_docs)
+        # Είδη (υποπροϊόντα) κάτω από κάθε κατηγορία ελλείψεων
+        stock_items = preset.get("stock_items") or {}
+        now = datetime.now(timezone.utc).isoformat()
+        item_docs = []
+        for cat in cat_docs:
+            for order, name in enumerate(stock_items.get(cat["name"]) or []):
+                item_docs.append({
+                    "id": str(uuid.uuid4()),
+                    "user_id": user_id,
+                    "name": name,
+                    "category_id": cat["id"],
+                    "order": order,
+                    "available": True,
+                    "note": "",
+                    "shopping_item_id": None,
+                    "created_at": now,
+                })
+        if item_docs:
+            await db.stock_items.insert_many(item_docs)
     if has_tables:
         await db.tables.insert_many([
             {"id": str(uuid.uuid4())[:8], "user_id": user_id, "name": n, "order": i}

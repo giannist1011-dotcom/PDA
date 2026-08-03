@@ -243,7 +243,14 @@ export function shoppingListText({ restaurant_name, printed_at, groups } = {}) {
   }
   gs.forEach((g) => {
     L.push(hr);
-    L.push(String(g.category || "Άλλα").toUpperCase());
+    // Ελληνικά κεφαλαία χωρίς τόνους (ΣΑΚΟΥΛΕΣ, όχι ΣΑΚΟΎΛΕΣ)
+    L.push(
+      String(g.category || "Άλλα")
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .normalize("NFC")
+    );
     (g.items || []).forEach((it) => {
       L.push(...wrap(`${it.bought ? "[x]" : "[ ]"} ${it.text}`, 0));
     });

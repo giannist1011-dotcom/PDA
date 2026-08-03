@@ -298,6 +298,68 @@ class StockShoppingIn(BaseModel):
     needs: bool
 
 
+@router.post("/stock/categories/{cid}/shopping")
+async def toggle_stock_category_shopping(
+    cid: str, body: StockShoppingIn, user: dict = Depends(require_staff)
+):
+    """Ολόκληρη κατηγορία στη λίστα αγορών (ή έξω από αυτήν) με μία κίνηση."""
+    cat = await db.stock_categories.find_one(
+        {"id": cid, "user_id": user["id"]}, {"_id": 0, "id": 1, "name": 1}
+    )
+    if not cat:
+        raise HTTPException(404, "Η κατηγορία δεν βρέθηκε")
+    items = await db.stock_items.find(
+        {"user_id": user["id"], "category_id": cid},
+        {"_id": 0, "id": 1, "name": 1, "shopping_item_id": 1},
+    ).to_list(2000)
+    if not body.needs:
+        sids = [i["shopping_item_id"] for i in items if i.get("shopping_item_id")]
+        if sids:
+            await db.shopping.delete_many({"user_id": user["id"], "id": {"$in": sids}})
+            await db.stock_items.update_many(
+                {"user_id": user["id"], "category_id": cid},
+                {"$set": {"shopping_item_id": None}},
+            )
+        return {"category_id": cid, "links": {i["id"]: None for i in items}, "shopping_items": []}
+
+    now = datetime.now(timezone.utc).isoformat()
+    links: dict[str, str] = {}
+    new_docs = []
+    for it in items:
+        sid = it.get("shopping_item_id")
+        if sid:
+            links[it["id"]] = sid
+            continue
+        sid = str(uuid.uuid4())
+        links[it["id"]] = sid
+        new_docs.append(
+            {
+                "id": sid,
+                "user_id": user["id"],
+                "text": it["name"],
+                "bought": False,
+                "source_stock_id": it["id"],
+                "category_id": cid,
+                "category_name": cat["name"],
+                "created_at": now,
+            }
+        )
+    if new_docs:
+        await db.shopping.insert_many(new_docs)
+        for doc in new_docs:
+            await db.stock_items.update_one(
+                {"id": doc["source_stock_id"], "user_id": user["id"]},
+                {"$set": {"shopping_item_id": doc["id"]}},
+            )
+    return {
+        "category_id": cid,
+        "links": links,
+        "shopping_items": [
+            {k: v for k, v in d.items() if k not in ("_id", "user_id")} for d in new_docs
+        ],
+    }
+
+
 @router.post("/stock/items/{iid}/shopping")
 async def toggle_stock_item_shopping(
     iid: str, body: StockShoppingIn, user: dict = Depends(require_staff)

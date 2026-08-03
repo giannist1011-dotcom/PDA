@@ -292,6 +292,8 @@ export const apiReorderStockItems = (ids) =>
   api.post("/stock/items/reorder", { ids }).then((r) => r.data);
 export const apiToggleStockItemShopping = (id, needs) =>
   api.post(`/stock/items/${id}/shopping`, { needs }).then((r) => r.data);
+export const apiToggleStockCategoryShopping = (cid, needs) =>
+  api.post(`/stock/categories/${cid}/shopping`, { needs }).then((r) => r.data);
 export const apiDeleteStockItem = (id) =>
   api.delete(`/stock/items/${id}`).then((r) => r.data);
 

@@ -12,6 +12,7 @@ import {
   apiUpdateStockItem,
   apiReorderStockItems,
   apiToggleStockItemShopping,
+  apiToggleStockCategoryShopping,
   apiDeleteStockItem,
   apiListShopping,
   apiAddShopping,
@@ -218,6 +219,34 @@ export default function Stock() {
     }
   };
 
+  // Επιλογή/καθαρισμός ολόκληρης κατηγορίας με μία κίνηση (μία κλήση στο backend)
+  const handleToggleCategoryNeeds = async (group, needs) => {
+    try {
+      const res = await apiToggleStockCategoryShopping(group.id, needs);
+      const links = res.links || {};
+      setItems((p) =>
+        p.map((i) =>
+          Object.prototype.hasOwnProperty.call(links, i.id)
+            ? { ...i, shopping_item_id: links[i.id] }
+            : i
+        )
+      );
+      if (needs) {
+        const created = res.shopping_items || [];
+        const ids = new Set(created.map((s) => s.id));
+        setShopping((p) => [...p.filter((s) => !ids.has(s.id)), ...created]);
+        toast.success(`${group.name}: όλα στη λίστα`);
+      } else {
+        const cleared = new Set(Object.keys(links));
+        setShopping((p) => p.filter((s) => !cleared.has(s.source_stock_id)));
+        toast.success(`${group.name}: αφαιρέθηκε από τη λίστα`);
+      }
+    } catch (e) {
+      toast.error(formatApiError(e));
+      load();
+    }
+  };
+
   const handleDeleteItem = async (item) => {
     if (!window.confirm(`Διαγραφή "${item.name}";`)) return;
     try {
@@ -345,6 +374,7 @@ export default function Stock() {
             loading={loading}
             groups={groups}
             handleToggleNeed={handleToggleNeed}
+            handleToggleCategoryNeeds={handleToggleCategoryNeeds}
             handleDeleteItem={handleDeleteItem}
           />
 
@@ -383,7 +413,10 @@ export default function Stock() {
         onClose={() => setItemModal({ open: false, editing: null })}
         categories={categories}
         editing={itemModal.editing}
-        defaultCategoryId={activeCat !== "all" && activeCat !== "needs" ? activeCat : ""}
+        defaultCategoryId={
+          itemModal.categoryId ||
+          (activeCat !== "all" && activeCat !== "needs" ? activeCat : "")
+        }
         onSubmit={handleSubmitItem}
       />
       <PrintHistoryModal
