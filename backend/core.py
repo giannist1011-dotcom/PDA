@@ -97,6 +97,130 @@ def to_athens(iso: str) -> datetime:
     return dt_obj.astimezone(ATHENS)
 
 
+# ============ ΕΡΓΑΣΙΜΗ ΗΜΕΡΑ (business day) ============
+# Η «ημέρα» του μαγαζιού ΔΕΝ είναι η ημερολογιακή: αν κλείνει 02:00, οι
+# παραγγελίες της 01:30 ανήκουν στην ΠΡΟΗΓΟΥΜΕΝΗ ημέρα. Το όριο (cutoff) είναι
+# λεπτά μετά τα μεσάνυχτα και βγαίνει από το ωράριο (store_hours): το πιο αργό
+# κλείσιμο βάρδιας που περνά τα μεσάνυχτα. Χωρίς ωράριο → 06:00.
+WEEK_DAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+BUSINESS_DAY_FALLBACK_MIN = 6 * 60   # 06:00 όταν δεν έχει οριστεί ωράριο
+BUSINESS_DAY_MAX_CUTOFF_MIN = 12 * 60  # ασφαλιστικό πλαφόν (ποτέ μετά το μεσημέρι)
+
+GR_DAY_LONG = ("Δευτέρα", "Τρίτη", "Τετάρτη", "Πέμπτη", "Παρασκευή", "Σάββατο", "Κυριακή")
+GR_DAY_SHORT = ("Δευ", "Τρι", "Τετ", "Πεμ", "Παρ", "Σαβ", "Κυρ")
+
+
+def hhmm_to_min(s) -> Optional[int]:
+    """"HH:MM" → λεπτά μετά τα μεσάνυχτα (None αν δεν είναι έγκυρο)."""
+    try:
+        h, m = str(s).strip().split(":")
+        h, m = int(h), int(m)
+        if 0 <= h <= 23 and 0 <= m <= 59:
+            return h * 60 + m
+    except Exception:
+        pass
+    return None
+
+
+def _day_ranges(hours: dict, day_key: str) -> list:
+    d = (hours or {}).get(day_key) or {}
+    if d.get("closed"):
+        return []
+    out = []
+    for r in d.get("ranges") or []:
+        s, e = hhmm_to_min(r.get("start")), hhmm_to_min(r.get("end"))
+        if s is not None and e is not None:
+            out.append((s, e))
+    return out
+
+
+def business_day_cutoff(user: dict) -> int:
+    """Το όριο της εργάσιμης ημέρας σε λεπτά μετά τα μεσάνυχτα."""
+    hours = user.get("store_hours") or {}
+    latest, any_range = 0, False
+    for key in WEEK_DAY_KEYS:
+        for s, e in _day_ranges(hours, key):
+            any_range = True
+            if e <= s:  # overnight: κλείνει την επόμενη ημερολογιακή ημέρα
+                latest = max(latest, e)
+    if not any_range:
+        return BUSINESS_DAY_FALLBACK_MIN
+    return min(latest, BUSINESS_DAY_MAX_CUTOFF_MIN)
+
+
+def business_day_range(day_from: str, cutoff_min: int, day_to: Optional[str] = None) -> tuple[str, str]:
+    """Εργάσιμες ημέρες (Ελλάδα) → UTC ISO όρια για query στο created_at."""
+    start = datetime.fromisoformat(f"{day_from}T00:00:00").replace(tzinfo=ATHENS) + timedelta(minutes=cutoff_min)
+    end = (
+        datetime.fromisoformat(f"{day_to or day_from}T00:00:00").replace(tzinfo=ATHENS)
+        + timedelta(days=1, minutes=cutoff_min)
+    )
+    return (
+        start.astimezone(timezone.utc).isoformat(),
+        end.astimezone(timezone.utc).isoformat(),
+    )
+
+
+def business_day_of(iso: str, cutoff_min: int) -> str:
+    """Σε ποια εργάσιμη ημέρα (YYYY-MM-DD) ανήκει ένα ISO timestamp."""
+    return (to_athens(iso) - timedelta(minutes=cutoff_min)).date().isoformat()
+
+
+def business_today(cutoff_min: int) -> str:
+    """Η ΤΡΕΧΟΥΣΑ εργάσιμη ημέρα του μαγαζιού."""
+    return (athens_now() - timedelta(minutes=cutoff_min)).date().isoformat()
+
+
+def business_day_expr(cutoff_min: int, field: str = "$created_at") -> dict:
+    """Aggregation: η εργάσιμη ημέρα (YYYY-MM-DD) ενός ISO string πεδίου."""
+    return {
+        "$dateToString": {
+            "date": {
+                "$subtract": [
+                    {"$dateFromString": {"dateString": field, "onError": None, "onNull": None}},
+                    cutoff_min * 60 * 1000,
+                ]
+            },
+            "format": "%Y-%m-%d",
+            "timezone": ATHENS_TZ,
+            "onNull": None,
+        }
+    }
+
+
+def business_day_bounds(user: dict, day: str, cutoff_min: Optional[int] = None) -> dict:
+    """Άνοιγμα → κλείσιμο της εργάσιμης ημέρας, για την κεφαλίδα του Z.
+
+    {'start': ISO τοπικό, 'end': ISO τοπικό, 'label': 'Τρίτη 30/07 17:00 — Τετ 31/07 02:00'}
+    """
+    cutoff = business_day_cutoff(user) if cutoff_min is None else cutoff_min
+    d = datetime.fromisoformat(f"{day}T00:00:00").date()
+    ranges = _day_ranges(user.get("store_hours") or {}, WEEK_DAY_KEYS[d.weekday()])
+    if ranges:
+        start_min = min(s for s, _ in ranges)
+        end_min, end_next = 0, False
+        for s, e in ranges:
+            nxt = e <= s
+            if (nxt, e) > (end_next, end_min):
+                end_min, end_next = e, nxt
+    else:  # κλειστά ή χωρίς ωράριο → το ίδιο το όριο της ημέρας
+        start_min, end_min, end_next = cutoff, cutoff, True
+
+    start_dt = datetime.fromisoformat(f"{day}T00:00:00") + timedelta(minutes=start_min)
+    end_dt = datetime.fromisoformat(f"{day}T00:00:00") + timedelta(
+        days=1 if end_next else 0, minutes=end_min
+    )
+    fmt = lambda dt: f"{dt.day:02d}/{dt.month:02d} {dt.hour:02d}:{dt.minute:02d}"
+    return {
+        "start": start_dt.isoformat(),
+        "end": end_dt.isoformat(),
+        "label": (
+            f"{GR_DAY_LONG[start_dt.weekday()]} {fmt(start_dt)}"
+            f" — {GR_DAY_SHORT[end_dt.weekday()]} {fmt(end_dt)}"
+        ),
+    }
+
+
 def hash_password(pw: str) -> str:
     return bcrypt.hashpw(pw.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
@@ -258,6 +382,9 @@ def public_user(u: dict) -> dict:
         "store_lng": u.get("store_lng"),
         "delivery_radius_km": u.get("delivery_radius_km") or 6,
         "store_hours": u.get("store_hours") or {},
+        # Όριο εργάσιμης ημέρας (λεπτά μετά τα μεσάνυχτα) — το frontend το
+        # χρησιμοποιεί για «σήμερα» σε Ιστορικό/Στατιστικά/Κλείσιμο ημέρας
+        "business_day_cutoff": business_day_cutoff(u),
         "google_review_link": u.get("google_review_link") or "",
         # Ρυθμίσεις καταλόγου/παραγγελιών — το POS τα χρειάζεται για χρέωση delivery + ελάχιστη
         "min_order": u.get("min_order"),

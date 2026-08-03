@@ -6,7 +6,8 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
 import { useAuth } from "@/context/AuthContext";
 import { apiOrdersHeatmap } from "@/lib/api";
-import { athensToday, presetRange } from "@/lib/dates";
+import { presetRange } from "@/lib/dates";
+import { businessToday } from "@/lib/businessDay";
 import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
 import { Button } from "@/components/ui/button";
 
@@ -17,8 +18,9 @@ export default function AddressHeatmap() {
   const { user, isOwner } = useAuth();
   const hasStoreLocation = user?.store_lat != null && user?.store_lng != null;
 
+  const bizToday = businessToday(user);
   const [period, setPeriod] = useState(() => {
-    const r = presetRange("last7");
+    const r = presetRange("last7", businessToday(user));
     return { preset: "last7", from: r.from, to: r.to };
   });
   const [data, setData] = useState(null);
@@ -33,7 +35,7 @@ export default function AddressHeatmap() {
     setLoading(true);
     setError(null);
     try {
-      setData(await apiOrdersHeatmap(f || athensToday(), t || athensToday()));
+      setData(await apiOrdersHeatmap(f || bizToday, t || bizToday));
     } catch {
       setError("Σφάλμα φόρτωσης heatmap");
     } finally {
@@ -136,6 +138,7 @@ export default function AddressHeatmap() {
           onChange={handlePeriodChange}
           testIdPrefix="heatmap"
           pickerClassName="h-9 px-2"
+          today={bizToday}
         />
         <Button
           onClick={() => load()}

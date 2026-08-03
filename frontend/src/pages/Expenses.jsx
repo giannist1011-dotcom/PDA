@@ -25,18 +25,21 @@ import {
 import { eur, formatGRDate } from "@/lib/format";
 import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
 import { presetRange } from "@/lib/dates";
+import { useBusinessDay } from "@/lib/businessDay";
 import ExpenseModal from "./expenses/ExpenseModal";
 import CategoryManagerModal from "./expenses/CategoryManagerModal";
 
 // ---------- Main page ----------
 export default function Expenses() {
+  // Ίδιο όριο ημέρας με το Z/Ιστορικό (ωράριο μαγαζιού)
+  const { today: bizToday } = useBusinessDay();
   const [categories, setCategories] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   // Κοινό pattern presets περιόδου — default «Αυτός ο μήνας» (όπως πριν)
   const [period, setPeriod] = useState(() => ({
     preset: "thisMonth",
-    ...presetRange("thisMonth"),
+    ...presetRange("thisMonth", bizToday),
   }));
   const [filterCat, setFilterCat] = useState("all");
   const [expenseModal, setExpenseModal] = useState({ open: false, editing: null });
@@ -218,6 +221,7 @@ export default function Expenses() {
               value={period}
               onChange={handlePeriodChange}
               testIdPrefix="expenses"
+              today={bizToday}
             />
             <div className="flex flex-col gap-1">
               <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold">

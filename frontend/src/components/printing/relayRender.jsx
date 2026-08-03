@@ -32,7 +32,7 @@ export function renderJobHtml(job, user) {
   if (p?.slip) return renderToStaticMarkup(<KitchenSlip slip={p.slip} />);
   if (p?.report) {
     return renderToStaticMarkup(
-      <ZReportPrint report={p.report} restaurantName={p.restaurant_name} />
+      <ZReportPrint report={p.report} restaurantName={p.restaurant_name} user={user} />
     );
   }
   // Fallback: jobs μόνο με plain text (42 στήλες) — π.χ. παλιά jobs του Print Bridge

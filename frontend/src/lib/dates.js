@@ -43,8 +43,9 @@ export const PERIOD_PRESETS = [
 ];
 
 // Εύρος {from, to} (ISO ημέρες Ελλάδας) για preset · null = χωρίς φίλτρο ("Πάντα")
-export const presetRange = (key) => {
-  const today = athensToday();
+// today: η «σημερινή» ημέρα αναφοράς — τα μαγαζιά περνούν την ΕΡΓΑΣΙΜΗ ημέρα
+// (lib/businessDay), ώστε το «Σήμερα» να συμφωνεί με το Z· default ημερολογιακή.
+export const presetRange = (key, today = athensToday()) => {
   const shift = (fn) => {
     const d = new Date(today + "T00:00:00");
     fn(d);

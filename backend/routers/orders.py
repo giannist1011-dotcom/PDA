@@ -22,8 +22,9 @@ from core import (
     require_owner_or_pin,
     require_feature,
     profile_can,
-    athens_today,
-    local_day_range,
+    business_day_cutoff,
+    business_day_range,
+    business_today,
 )
 from routers.menu import MenuOption
 
@@ -94,7 +95,7 @@ class OrderCreate(BaseModel):
     items: List[OrderItem]
     subtotal: float
     total: float
-    source: Literal["Ταμείο", "Τηλέφωνο", "efood", "Box", "Τραπέζι"]
+    source: Literal["Ταμείο", "Τηλέφωνο", "efood", "Box", "Wolt", "Τραπέζι"]
     note: Optional[str] = Field(default=None, max_length=300)
     # Χρέωση delivery (€) — προστίθεται αυτόματα στις παραγγελίες παράδοσης όταν έχει οριστεί
     delivery_fee: Optional[float] = Field(default=None, ge=0)
@@ -123,11 +124,14 @@ class Order(OrderCreate):
 
 
 # ============ ORDER ROUTES ============
-async def compute_next_order_number(user_id: str) -> int:
-    utc_from, utc_to = local_day_range(athens_today())
+async def compute_next_order_number(user: dict) -> int:
+    """Η αρίθμηση μηδενίζει με την ΕΡΓΑΣΙΜΗ ημέρα — ίδιο όριο με το Z, ώστε μια
+    νύχτα (π.χ. κλείσιμο 02:00) να μην έχει δύο φορές το #1."""
+    cutoff = business_day_cutoff(user)
+    utc_from, utc_to = business_day_range(business_today(cutoff), cutoff)
     docs = await db.orders.find(
         {
-            "user_id": user_id,
+            "user_id": user["id"],
             "created_at": {"$gte": utc_from, "$lt": utc_to},
         },
         {"_id": 0, "order_number": 1},
@@ -137,7 +141,7 @@ async def compute_next_order_number(user_id: str) -> int:
 
 @router.get("/orders/next-number")
 async def next_order_number(user: dict = Depends(require_staff)):
-    return {"next_order_number": await compute_next_order_number(user["id"])}
+    return {"next_order_number": await compute_next_order_number(user)}
 
 
 @router.post("/orders", response_model=Order)
@@ -222,17 +226,19 @@ async def list_scheduled_orders(user: dict = Depends(require_staff)):
 
 
 def _history_query(
-    user_id: str,
+    user: dict,
     date_from: Optional[str],
     date_to: Optional[str],
     source: Optional[str],
     q: Optional[str],
 ) -> dict:
-    query = {"user_id": user_id}
+    query = {"user_id": user["id"]}
     if date_from or date_to:
-        # Τοπικές (Ελλάδα) ημέρες → UTC όρια, αλλιώς χάνονται οι παραγγελίες μετά τα μεσάνυχτα
-        utc_from, _ = local_day_range(date_from or date_to)
-        _, utc_to = local_day_range(date_to or date_from)
+        # ΕΡΓΑΣΙΜΕΣ ημέρες (ωράριο μαγαζιού) → UTC όρια: η νύχτα μετά τα μεσάνυχτα
+        # ανήκει στην ημέρα που άνοιξε, όπως ακριβώς και στο Z
+        cutoff = business_day_cutoff(user)
+        utc_from, _ = business_day_range(date_from or date_to, cutoff)
+        _, utc_to = business_day_range(date_to or date_from, cutoff)
         rng = {}
         if date_from:
             rng["$gte"] = utc_from
@@ -263,7 +269,7 @@ async def list_orders(
     limit: int = 500,
     user: dict = Depends(require_feature("history", require_staff)),
 ):
-    query = _history_query(user["id"], date_from, date_to, source, q)
+    query = _history_query(user, date_from, date_to, source, q)
     docs = (
         await db.orders.find(query, {"_id": 0})
         .sort("created_at", -1)
@@ -285,7 +291,7 @@ async def count_orders(
     user: dict = Depends(require_feature("history", require_staff)),
 ):
     """Συνολικό πλήθος για τα φίλτρα του ιστορικού — το «Χ παραγγελίες» δίπλα στο εύρος."""
-    query = _history_query(user["id"], date_from, date_to, source, q)
+    query = _history_query(user, date_from, date_to, source, q)
     return {"count": await db.orders.count_documents(query)}
 
 
@@ -527,10 +533,11 @@ async def orders_heatmap(
     """Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng) με βάρος
     το πλήθος παραγγελιών ανά διεύθυνση. Μόνο ήδη γεωκωδικοποιημένες διευθύνσεις
     (από το geocode cache του live χάρτη) — δεν γίνεται νέο geocoding εδώ."""
-    today = athens_today()
+    cutoff = business_day_cutoff(user)
+    today = business_today(cutoff)
     df = date_from or today
     dt = date_to or today
-    utc_from, utc_to = local_day_range(df, dt)
+    utc_from, utc_to = business_day_range(df, cutoff, dt)
     docs = await db.orders.find(
         {
             "user_id": user["id"],

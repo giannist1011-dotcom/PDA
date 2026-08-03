@@ -146,21 +146,21 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - POST /onboarding/hide → onboarding_hide @75
 - POST /onboarding/print-test → onboarding_print_test @81 — Καλείται από το frontend όταν γίνει οποιαδήποτε εκτύπωση…
 ### orders.py
-- GET /orders/next-number → next_order_number @139
-- POST /orders → create_order @144
-- GET /orders/scheduled → list_scheduled_orders @200 — Εκκρεμείς προγραμματισμένες + όσες ενεργοποιήθηκαν τις τελευταίες
-- GET /orders → list_orders @257
-- GET /orders/count → count_orders @280 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
-- GET /orders/live-map → live_map_orders @421 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
-- POST /orders/live-map/clear → clear_live_map @474 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
-- GET /orders/address-book → address_book @482 — Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης…
-- GET /orders/heatmap → orders_heatmap @522 — Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng)…
-- GET /orders/{oid} → get_order @575
-- POST /orders/{oid}/activate → activate_order @585 — Move a scheduled order to active (fired /…
-- POST /orders/{oid}/cancel → cancel_order @605
-- DELETE /orders/{oid} → delete_order @632
-- PUT /orders/{oid} → edit_order @756 — Επεξεργασία takeaway/delivery παραγγελίας μετά τη δημιουργία: είδη,
-- GET /customers → list_customers @857 — Aggregate customers from phone/delivery orders, grouped by phone
+- GET /orders/next-number → next_order_number @143
+- POST /orders → create_order @148
+- GET /orders/scheduled → list_scheduled_orders @204 — Εκκρεμείς προγραμματισμένες + όσες ενεργοποιήθηκαν τις τελευταίες
+- GET /orders → list_orders @263
+- GET /orders/count → count_orders @286 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
+- GET /orders/live-map → live_map_orders @427 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
+- POST /orders/live-map/clear → clear_live_map @480 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
+- GET /orders/address-book → address_book @488 — Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης…
+- GET /orders/heatmap → orders_heatmap @528 — Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng)…
+- GET /orders/{oid} → get_order @582
+- POST /orders/{oid}/activate → activate_order @592 — Move a scheduled order to active (fired /…
+- POST /orders/{oid}/cancel → cancel_order @612
+- DELETE /orders/{oid} → delete_order @639
+- PUT /orders/{oid} → edit_order @763 — Επεξεργασία takeaway/delivery παραγγελίας μετά τη δημιουργία: είδη,
+- GET /customers → list_customers @864 — Aggregate customers from phone/delivery orders, grouped by phone
 ### print_jobs.py
 - POST /print/jobs → create_print_job @63
 - GET /print/jobs/stream → print_jobs_stream @91 — SSE stream του σταθμού εκτύπωσης: event `job` μόλις…
@@ -199,12 +199,13 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - PUT /shifts → upsert_shift @102
 - DELETE /shifts → delete_shift @124
 ### stats.py
-- GET /analytics → analytics @20
-- GET /analytics/yoy → analytics_yoy @120 — Ίδια περίοδος πέρσι: έσοδα/παραγγελίες + delta. available=False όταν…
-- GET /reports/day-summary → day_summary @206
-- POST /reports/day-close → close_day @216
-- GET /deck/overview → deck_overview @295
-- GET /reports/day → list_day_reports @379
+- GET /analytics → analytics @25
+- GET /analytics/yoy → analytics_yoy @128 — Ίδια περίοδος πέρσι: έσοδα/παραγγελίες + delta. available=False όταν…
+- GET /reports/day-summary → day_summary @227
+- GET /reports/business-days → list_business_days @236 — Οι εργάσιμες ημέρες με κίνηση (για την επιλογή…
+- POST /reports/day-close → close_day @272 — Κλείνει ΠΑΝΤΑ την τρέχουσα εργάσιμη ημέρα (οι παλιές…
+- GET /deck/overview → deck_overview @354
+- GET /reports/day → list_day_reports @442
 ### stock.py
 - POST /shopping/print → record_shopping_print @82 — Καταγραφή εκτύπωσης της λίστας αγορών: snapshot ειδών +…
 - GET /shopping/prints → list_shopping_prints @109
@@ -350,13 +351,13 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - AdminShops.jsx (55 γρ): AdminShops@12
 - AdminStockPhotos.jsx (289 γρ): Field@51, StockPhotosContent@58, AdminStockPhotos@282
 - AdminSubscriptions.jsx (126 γρ): SubsContent@25, AdminSubscriptions@119
-- Analytics.jsx (308 γρ): Analytics@43
+- Analytics.jsx (304 γρ): Analytics@35
 - Checklist.jsx (136 γρ): Checklist@16
 - DailyBrief.jsx (159 γρ): DailyBrief@40
-- DayClose.jsx (321 γρ): DayClose@47
+- DayClose.jsx (197 γρ): DayClose@24
 - DeckPilot.jsx (13 γρ): DeckPilot@4
-- DeckView.jsx (269 γρ): BigCard@21, Panel@39, DeckView@49
-- Expenses.jsx (397 γρ): Expenses@32
+- DeckView.jsx (275 γρ): BigCard@21, Panel@39, DeckView@49
+- Expenses.jsx (401 γρ): Expenses@33
 - FleetDispatch.jsx (228 γρ): FleetDispatch@21
 - FleetDriver.jsx (366 γρ): FleetDriver@41
 - FleetDriverLogin.jsx (249 γρ): FleetDriverLogin@19
@@ -367,7 +368,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - FleetSettings.jsx (93 γρ): FleetSettings@13
 - FleetSignup.jsx (291 γρ): Field@10, FleetSignup@38
 - FleetStats.jsx (179 γρ): FleetStats@21
-- History.jsx (301 γρ): History@28
+- History.jsx (305 γρ): History@28
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
 - MenuManagement.jsx (394 γρ): MenuManagement@32
@@ -407,7 +408,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - admin-shops/ShopModal.jsx (466 γρ): ShopModal@26
 - admin-shops/ShopsContent.jsx (231 γρ): ShopsContent@17
 - admin-shops/utils.js (15 γρ)
-- analytics/AddressHeatmap.jsx (177 γρ): AddressHeatmap@16
+- analytics/AddressHeatmap.jsx (180 γρ): AddressHeatmap@17
 - analytics/ChangeBadge.jsx (26 γρ): ChangeBadge@3
 - analytics/ChartsRow.jsx (125 γρ): ChartsRow@19
 - analytics/CompareCard.jsx (34 γρ): CompareCard@4
@@ -419,11 +420,14 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - checklist/ManageList.jsx (242 γρ): ManageList@25
 - checklist/TickList.jsx (76 γρ): TickList@6
 - checklist/utils.js (19 γρ)
+- day-close/DayPicker.jsx (41 γρ): DayPicker@6
+- day-close/DaySummary.jsx (164 γρ): DaySummary@20
+- day-close/PastReports.jsx (73 γρ): PastReports@6
 - day-close/SummaryRow.jsx (15 γρ): SummaryRow@1
-- day-close/ZReportPrint.jsx (76 γρ): ZReportPrint@5
+- day-close/ZReportPrint.jsx (101 γρ): ZReportPrint@6
 - day-close/utils.js (2 γρ)
 - expenses/CategoryManagerModal.jsx (114 γρ): CategoryManagerModal@6
-- expenses/ExpenseModal.jsx (141 γρ): ExpenseModal@8
+- expenses/ExpenseModal.jsx (142 γρ): ExpenseModal@8
 - fleet/DayTotals.jsx (67 γρ): DayTotals@9
 - fleet/DriverCard.jsx (98 γρ): DriverCard@14
 - fleet/DriverHistory.jsx (93 γρ): DriverHistory@13
@@ -442,9 +446,9 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - history/CustomerDetailModal.jsx (119 γρ): CustomerDetailModal@5
 - history/CustomersTab.jsx (84 γρ): CustomersTab@4
 - history/OrderDetailModal.jsx (257 γρ): OrderDetailModal@18
-- history/OrdersTab.jsx (168 γρ): OrdersTab@11
+- history/OrdersTab.jsx (170 γρ): OrdersTab@11
 - history/ScheduledBadge.jsx (21 γρ): ScheduledBadge@5
-- history/utils.js (16 γρ)
+- history/utils.js (17 γρ)
 - landing/DemoModal.jsx (147 γρ): DemoModal@8
 - landing/FaqItem.jsx (19 γρ): FaqItem@4
 - landing/Logo.jsx (5 γρ): Logo@1
@@ -524,7 +528,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - OfflineBanner.jsx (67 γρ): OfflineBanner@10
 - OnboardingChecklist.jsx (100 γρ): OnboardingChecklist@18
 - OrderPanel.jsx (492 γρ): OrderPanel@27
-- PeriodFilter.jsx (91 γρ): PeriodFilter@20
+- PeriodFilter.jsx (92 γρ): PeriodFilter@20
 - PinGateModal.jsx (179 γρ): PinGateModal@16
 - PrintingSettings.jsx (231 γρ): PrintingSettings@36
 - ProfilesManager.jsx (322 γρ): ProfileModal@20, ProfilesManager@176
@@ -647,6 +651,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiDaySummary(date) → GET /reports/day-summary
 - apiCloseDay(date) → POST /reports/day-close
 - apiListDayReports() → GET /reports/day
+- apiBusinessDays() → GET /reports/business-days
 - fetchAnalytics(dateFrom, dateTo) → GET /analytics
 - fetchAnalyticsYoY(dateFrom, dateTo) → GET /analytics/yoy
 - apiOrdersHeatmap(dateFrom, dateTo) → GET /orders/heatmap

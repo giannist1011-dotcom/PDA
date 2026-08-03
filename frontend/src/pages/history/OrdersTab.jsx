@@ -22,6 +22,7 @@ export default function OrdersTab({
   setSelectedOrder,
   hasMore,
   loadOrders,
+  businessToday,
 }) {
   return (
     <>
@@ -32,6 +33,7 @@ export default function OrdersTab({
           onChange={setPeriod}
           includeAll
           testIdPrefix="history"
+          today={businessToday}
         />
         <form onSubmit={submitSearch} className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">

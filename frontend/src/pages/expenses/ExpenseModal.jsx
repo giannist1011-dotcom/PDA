@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { todayISO } from "@/lib/format";
+import { useBusinessDay } from "@/lib/businessDay";
 import DatePicker from "@/components/DatePicker";
 
 // ---------- Expense create/edit modal ----------
@@ -9,7 +9,8 @@ export default function ExpenseModal({ open, onClose, categories, initial, onSub
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [date, setDate] = useState(todayISO());
+  const { today: bizToday } = useBusinessDay();
+  const [date, setDate] = useState(bizToday);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -17,9 +18,9 @@ export default function ExpenseModal({ open, onClose, categories, initial, onSub
       setAmount(initial ? String(initial.amount) : "");
       setDescription(initial?.description || "");
       setCategoryId(initial?.category_id || categories[0]?.id || "");
-      setDate(initial?.date || todayISO());
+      setDate(initial?.date || bizToday);
     }
-  }, [open, initial, categories]);
+  }, [open, initial, categories, bizToday]);
 
   if (!open) return null;
 

@@ -80,6 +80,12 @@ export default function DeckView() {
         <div className="flex items-center justify-between mb-5">
           <div className="text-sm text-neutral-400">
             Ζωντανή εικόνα ημέρας
+            {/* Εργάσιμη ημέρα (ωράριο μαγαζιού) — ίδιο όριο με το Z */}
+            {data?.range_label && (
+              <span className="ml-2 text-neutral-500" data-testid="deck-range-label">
+                · {data.range_label}
+              </span>
+            )}
             {data?.as_of && (
               <span className="ml-2 font-mono text-neutral-500">
                 · ενημέρωση {formatGRTime(data.as_of)}

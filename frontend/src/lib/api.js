@@ -382,6 +382,9 @@ export const apiDaySummary = (date) =>
 export const apiCloseDay = (date) =>
   api.post("/reports/day-close", { date: date || null }).then((r) => r.data);
 export const apiListDayReports = () => api.get("/reports/day").then((r) => r.data);
+// Εργάσιμες ημέρες με κίνηση — για την επιλογή παλιάς ημέρας στο Z
+export const apiBusinessDays = () =>
+  api.get("/reports/business-days").then((r) => r.data);
 
 // ANALYTICS
 export const fetchAnalytics = (dateFrom, dateTo) =>

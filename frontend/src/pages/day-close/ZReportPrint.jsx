@@ -1,8 +1,9 @@
 import { eur, formatGRDateTime } from "@/lib/format";
+import { reportRangeLabel } from "@/lib/businessDay";
 import { TYPE_LABELS } from "./utils";
 
 // ---------- Printable Z-report (uses the global 80mm #print-area CSS) ----------
-export default function ZReportPrint({ report, restaurantName }) {
+export default function ZReportPrint({ report, restaurantName, user }) {
   if (!report) return null;
   return (
     <div id="print-area" className="hidden print:block">
@@ -12,9 +13,17 @@ export default function ZReportPrint({ report, restaurantName }) {
       <div className="rc-big" style={{ textAlign: "center" }}>
         ΚΛΕΙΣΙΜΟ ΗΜΕΡΑΣ (Z)
       </div>
+      {report.reprint && (
+        <div style={{ textAlign: "center", fontWeight: 800 }}>ΕΠΑΝΕΚΤΥΠΩΣΗ</div>
+      )}
       <hr />
-      <div>Ημέρα: {report.date}</div>
-      <div>Κλείσιμο: {formatGRDateTime(report.closed_at || new Date().toISOString())}</div>
+      {/* Εργάσιμη ημέρα (ωράριο μαγαζιού), όχι ημερολογιακή */}
+      <div>Ημέρα: {reportRangeLabel(report, user)}</div>
+      <div>
+        {report.closed_at
+          ? `Κλείσιμο: ${formatGRDateTime(report.closed_at)}`
+          : `Εκτύπωση: ${formatGRDateTime(new Date().toISOString())}`}
+      </div>
       <hr />
       <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
         <span>Παραγγελίες</span>
@@ -32,6 +41,22 @@ export default function ZReportPrint({ report, restaurantName }) {
           <span>{eur(s.revenue)}</span>
         </div>
       ))}
+      {(report.by_platform || []).length > 0 && (
+        <>
+          <hr />
+          <div style={{ fontWeight: 800 }}>ΠΛΑΤΦΟΡΜΕΣ</div>
+          {report.by_platform.map((p) => (
+            <div key={p.source} style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>{p.source} ({p.count})</span>
+              <span>{eur(p.revenue)}</span>
+            </div>
+          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
+            <span>Σύνολο πλατφορμών</span>
+            <span>{eur(report.platform_revenue || 0)}</span>
+          </div>
+        </>
+      )}
       {(report.by_type || []).length > 0 && (
         <>
           <hr />

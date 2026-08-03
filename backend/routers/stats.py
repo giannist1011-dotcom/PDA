@@ -4,15 +4,20 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from core import (
     db, require_staff, require_owner, require_manager, require_feature,
-    athens_now, athens_today, local_day_range, to_athens,
+    athens_now, to_athens,
+    business_day_cutoff, business_day_range, business_day_expr,
+    business_day_bounds, business_today,
 )
 
 router = APIRouter()
+
+# Παραγγελίες από πλατφόρμες delivery — ομαδοποιούνται ξεχωριστά στο Z
+PLATFORM_SOURCES = ("efood", "Box", "Wolt")
 
 
 # ============ ANALYTICS ============
@@ -22,10 +27,11 @@ async def analytics(
     date_to: Optional[str] = None,
     user: dict = Depends(require_feature("analytics", require_owner)),
 ):
-    today = athens_today()
+    cutoff = business_day_cutoff(user)
+    today = business_today(cutoff)
     df = date_from or today
     dt = date_to or today
-    utc_from, utc_to = local_day_range(df, dt)
+    utc_from, utc_to = business_day_range(df, cutoff, dt)
     query = {
         "user_id": user["id"],
         "created_at": {"$gte": utc_from, "$lt": utc_to},
@@ -55,10 +61,12 @@ async def analytics(
             item_counter[k] += item.get("quantity", 1)
             item_revenue[k] += item.get("line_total", 0)
 
+    # Οι ώρες ξεκινούν από την αρχή της εργάσιμης ημέρας (π.χ. όριο 02:00 →
+    # 02,03,…,01), ώστε η νύχτα να μη βρίσκεται στην αρχή του διαγράμματος
     hourly_list = [
         {"hour": h, "label": f"{h:02d}:00",
          "orders": hourly[h]["orders"], "revenue": round(hourly[h]["revenue"], 2)}
-        for h in range(24)
+        for h in ((cutoff // 60 + i) % 24 for i in range(24))
     ]
     popular = [
         {"name": n, "quantity": q, "revenue": round(item_revenue[n], 2)}
@@ -97,8 +105,8 @@ def _minus_one_year(day: str) -> str:
         return f"{int(y) - 1}-02-28"
 
 
-async def _range_totals(user_id: str, day_from: str, day_to: str) -> dict:
-    utc_from, utc_to = local_day_range(day_from, day_to)
+async def _range_totals(user_id: str, day_from: str, day_to: str, cutoff: int) -> dict:
+    utc_from, utc_to = business_day_range(day_from, cutoff, day_to)
     docs = await db.orders.find(
         {
             "user_id": user_id,
@@ -124,7 +132,8 @@ async def analytics_yoy(
 ):
     """Ίδια περίοδος πέρσι: έσοδα/παραγγελίες + delta. available=False όταν το
     μαγαζί δεν έχει καθόλου δεδομένα που να φτάνουν την περσινή περίοδο."""
-    today = athens_today()
+    cutoff = business_day_cutoff(user)
+    today = business_today(cutoff)
     df = date_from or today
     dt = date_to or today
     ly_from, ly_to = _minus_one_year(df), _minus_one_year(dt)
@@ -132,23 +141,24 @@ async def analytics_yoy(
     earliest = await db.orders.find_one(
         {"user_id": user["id"]}, {"_id": 0, "created_at": 1}, sort=[("created_at", 1)]
     )
-    _, ly_utc_to = local_day_range(ly_from, ly_to)
+    _, ly_utc_to = business_day_range(ly_from, cutoff, ly_to)
     available = bool(earliest and earliest["created_at"] < ly_utc_to)
     if not available:
         return {"available": False, "current": None, "last_year": None}
 
-    current = await _range_totals(user["id"], df, dt)
-    last_year = await _range_totals(user["id"], ly_from, ly_to)
+    current = await _range_totals(user["id"], df, dt, cutoff)
+    last_year = await _range_totals(user["id"], ly_from, ly_to, cutoff)
     return {"available": True, "current": current, "last_year": last_year}
 
 
 # ============ DAY CLOSE (Z-REPORT) ============
-async def compute_day_summary(user_id: str, day: str) -> dict:
-    """Aggregate a single day's orders + expenses into a Z-report summary."""
-    utc_from, utc_to = local_day_range(day)
+async def compute_day_summary(user: dict, day: str) -> dict:
+    """Σύνοψη Z μιας ΕΡΓΑΣΙΜΗΣ ημέρας (ωράριο μαγαζιού, όχι ημερολογιακή)."""
+    cutoff = business_day_cutoff(user)
+    utc_from, utc_to = business_day_range(day, cutoff)
     docs = await db.orders.find(
         {
-            "user_id": user_id,
+            "user_id": user["id"],
             "created_at": {"$gte": utc_from, "$lt": utc_to},
         },
         {"_id": 0},
@@ -177,19 +187,30 @@ async def compute_day_summary(user_id: str, day: str) -> dict:
         total_discounts += disc.get("amount", 0) or 0
 
     exp_docs = await db.expenses.find(
-        {"user_id": user_id, "date": day}, {"_id": 0, "amount": 1}
+        {"user_id": user["id"], "date": day}, {"_id": 0, "amount": 1}
     ).to_list(50000)
     total_expenses = round(sum(e.get("amount", 0) for e in exp_docs), 2)
     total_revenue = round(sum(d.get("total", 0) for d in counted), 2)
 
+    sources_list = [
+        {"source": s, "count": v["count"], "revenue": round(v["revenue"], 2)}
+        for s, v in by_source.items()
+    ]
+    platform_rows = [s for s in sources_list if s["source"] in PLATFORM_SOURCES]
+    bounds = business_day_bounds(user, day, cutoff)
+
     return {
         "date": day,
+        "range_start": bounds["start"],
+        "range_end": bounds["end"],
+        "range_label": bounds["label"],
         "total_orders": len(counted),
         "total_revenue": total_revenue,
-        "by_source": [
-            {"source": s, "count": v["count"], "revenue": round(v["revenue"], 2)}
-            for s, v in by_source.items()
-        ],
+        "by_source": sources_list,
+        # Πλατφόρμες (efood/Box/Wolt) ξεχωριστά, με δικό τους υποσύνολο
+        "by_platform": sorted(platform_rows, key=lambda r: -r["revenue"]),
+        "platform_orders": sum(r["count"] for r in platform_rows),
+        "platform_revenue": round(sum(r["revenue"] for r in platform_rows), 2),
         "by_type": [
             {"type": t, "count": v["count"], "revenue": round(v["revenue"], 2)}
             for t, v in by_type.items()
@@ -204,8 +225,43 @@ async def compute_day_summary(user_id: str, day: str) -> dict:
 
 @router.get("/reports/day-summary")
 async def day_summary(date: Optional[str] = None, user: dict = Depends(require_feature("day_close", require_owner))):
-    day = date or athens_today()
-    return await compute_day_summary(user["id"], day)
+    cutoff = business_day_cutoff(user)
+    day = date or business_today(cutoff)
+    summary = await compute_day_summary(user, day)
+    summary["is_current"] = day == business_today(cutoff)
+    return summary
+
+
+@router.get("/reports/business-days")
+async def list_business_days(
+    limit: int = 90, user: dict = Depends(require_feature("day_close", require_owner))
+):
+    """Οι εργάσιμες ημέρες με κίνηση (για την επιλογή παλιάς ημέρας στο Z).
+    Η τρέχουσα ημέρα μπαίνει πάντα πρώτη, ακόμη κι αν δεν έχει παραγγελίες."""
+    cutoff = business_day_cutoff(user)
+    rows = await db.orders.aggregate([
+        {"$match": {"user_id": user["id"]}},
+        {"$group": {
+            "_id": business_day_expr(cutoff),
+            "orders": {"$sum": 1},
+        }},
+        {"$sort": {"_id": -1}},
+        {"$limit": max(1, min(limit, 365))},
+    ]).to_list(365)
+    closed = await db.day_reports.find(
+        {"user_id": user["id"]}, {"_id": 0, "date": 1}
+    ).to_list(1000)
+    closed_days = {r["date"] for r in closed}
+
+    today = business_today(cutoff)
+    days = [
+        {"date": r["_id"], "orders": r["orders"], "closed": r["_id"] in closed_days}
+        for r in rows
+        if r["_id"]
+    ]
+    if not any(d["date"] == today for d in days):
+        days.insert(0, {"date": today, "orders": 0, "closed": today in closed_days})
+    return {"today": today, "cutoff_min": cutoff, "days": days}
 
 
 class DayCloseIn(BaseModel):
@@ -214,8 +270,11 @@ class DayCloseIn(BaseModel):
 
 @router.post("/reports/day-close")
 async def close_day(body: Optional[DayCloseIn] = None, user: dict = Depends(require_feature("day_close", require_owner))):
-    day = (body.date if body and body.date else None) or athens_today()
-    summary = await compute_day_summary(user["id"], day)
+    """Κλείνει ΠΑΝΤΑ την τρέχουσα εργάσιμη ημέρα (οι παλιές είναι read-only)."""
+    day = business_today(business_day_cutoff(user))
+    if body and body.date and body.date != day:
+        raise HTTPException(400, "Κλείνει μόνο η τρέχουσα εργάσιμη ημέρα")
+    summary = await compute_day_summary(user, day)
     doc = {
         "id": str(uuid.uuid4()),
         "user_id": user["id"],
@@ -294,8 +353,10 @@ async def _on_shift_now(user_id: str, now_local: datetime) -> list:
 @router.get("/deck/overview")
 async def deck_overview(user: dict = Depends(require_owner)):
     now_local = athens_now()
-    today = now_local.date().isoformat()
-    utc_from, utc_to = local_day_range(today)
+    cutoff = business_day_cutoff(user)
+    today = business_today(cutoff)          # εργάσιμη ημέρα, όχι ημερολογιακή
+    calendar_today = now_local.date().isoformat()
+    utc_from, utc_to = business_day_range(today, cutoff)
 
     docs = await db.orders.find(
         {
@@ -339,14 +400,15 @@ async def deck_overview(user: dict = Depends(require_owner)):
     ]
     open_tables.sort(key=lambda x: x["table_name"])
 
-    # Checklist ημέρας — μικρή ένδειξη "Άνοιγμα: 5/6" στο Deck View
+    # Checklist ημέρας — μικρή ένδειξη "Άνοιγμα: 5/6" στο Deck View.
+    # Οι λίστες γράφονται με ημερολογιακή ημέρα (checklist.py) → ίδιο κλειδί εδώ.
     cl_templates = await db.checklist_templates.find(
         {"user_id": user["id"]}, {"_id": 0, "id": 1, "list": 1, "date": 1}
     ).to_list(500)
     # Έκτακτες (one-off) εργασίες μετράνε μόνο τη δική τους μέρα
-    cl_templates = [t for t in cl_templates if not t.get("date") or t["date"] == today]
+    cl_templates = [t for t in cl_templates if not t.get("date") or t["date"] == calendar_today]
     cl_ticks = await db.checklist_ticks.find(
-        {"user_id": user["id"], "date": today}, {"_id": 0, "template_id": 1}
+        {"user_id": user["id"], "date": calendar_today}, {"_id": 0, "template_id": 1}
     ).to_list(1000)
     ticked = {t["template_id"] for t in cl_ticks}
     checklist = {
@@ -360,6 +422,7 @@ async def deck_overview(user: dict = Depends(require_owner)):
     return {
         "checklist": checklist,
         "date": today,
+        "range_label": business_day_bounds(user, today, cutoff)["label"],
         "as_of": now_local.isoformat(),
         "total_orders": total_orders,
         "total_revenue": total_revenue,

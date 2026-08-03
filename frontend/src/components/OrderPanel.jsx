@@ -132,7 +132,7 @@ export default function OrderPanel({
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-1 p-1 mt-3 lg:mt-4 bg-[#2A0E14] rounded-md" data-testid="source-toggle">
+        <div className="grid grid-cols-5 gap-1 p-1 mt-3 lg:mt-4 bg-[#2A0E14] rounded-md" data-testid="source-toggle">
           {ORDER_SOURCES.map((s) => {
             const active = source === s;
             return (

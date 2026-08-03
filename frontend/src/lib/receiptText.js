@@ -186,14 +186,25 @@ export function zReportText(report, restaurantName) {
   const L = [];
   L.push(center((restaurantName || "POS").toUpperCase()));
   L.push(center("ΚΛΕΙΣΙΜΟ ΗΜΕΡΑΣ (Z)"));
+  if (report.reprint) L.push(center("ΕΠΑΝΕΚΤΥΠΩΣΗ"));
   L.push(hr);
-  L.push(`Ημέρα: ${report.date}`);
-  L.push(`Κλείσιμο: ${formatGRDateTime(report.closed_at || new Date().toISOString())}`);
+  // Εργάσιμη ημέρα (ωράριο μαγαζιού) — π.χ. «Τρίτη 30/07 17:00 — Τετ 31/07 02:00»
+  L.push(`Ημέρα: ${report.range_label || report.date}`);
+  L.push(
+    report.closed_at
+      ? `Κλείσιμο: ${formatGRDateTime(report.closed_at)}`
+      : `Εκτύπωση: ${formatGRDateTime(new Date().toISOString())}`
+  );
   L.push(hr);
   L.push(row("Παραγγελίες", String(report.total_orders)));
   L.push(row("ΤΖΙΡΟΣ", eur(report.total_revenue)));
   L.push(hr, "ΑΝΑ ΠΗΓΗ");
   (report.by_source || []).forEach((s) => L.push(row(`${s.source} (${s.count})`, eur(s.revenue))));
+  if ((report.by_platform || []).length > 0) {
+    L.push(hr, "ΠΛΑΤΦΟΡΜΕΣ");
+    report.by_platform.forEach((p) => L.push(row(`${p.source} (${p.count})`, eur(p.revenue))));
+    L.push(row("Σύνολο πλατφορμών", eur(report.platform_revenue || 0)));
+  }
   if ((report.by_type || []).length > 0) {
     L.push(hr, "ΑΝΑ ΤΥΠΟ");
     (report.by_type || []).forEach((t) =>

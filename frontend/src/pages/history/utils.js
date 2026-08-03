@@ -11,5 +11,6 @@ export const sourceBadgeCls = {
   "Τηλέφωνο": "bg-[#00B0FF]/15 text-[#00B0FF]",
   efood: "bg-[#00E676]/15 text-[#00E676]",
   Box: "bg-gold/15 text-gold",
+  Wolt: "bg-[#00B0FF]/15 text-[#00B0FF]",
   "Τραπέζι": "bg-[#B388FF]/15 text-[#B388FF]",
 };

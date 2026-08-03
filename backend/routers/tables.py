@@ -295,7 +295,7 @@ async def close_tab(tab_id: str, user: dict = Depends(get_current_user)):
     doc = {
         "id": str(uuid.uuid4()),
         "user_id": user["id"],
-        "order_number": await compute_next_order_number(user["id"]),
+        "order_number": await compute_next_order_number(user),
         "items": items,
         "subtotal": total,
         "total": total,

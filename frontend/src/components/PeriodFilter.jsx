@@ -23,13 +23,14 @@ export default function PeriodFilter({
   includeAll = false,
   pickerClassName = "h-11 px-3",
   testIdPrefix = "period",
+  today, // εργάσιμη «σήμερα» (μαγαζί) — κενό = ημερολογιακή
 }) {
   const presets = includeAll
     ? PERIOD_PRESETS
     : PERIOD_PRESETS.filter((p) => p.key !== "all");
 
   const pickPreset = (key) => {
-    const r = presetRange(key);
+    const r = presetRange(key, today || undefined);
     onChange({ preset: key, from: r?.from || "", to: r?.to || "" }, { fromPreset: true });
   };
 

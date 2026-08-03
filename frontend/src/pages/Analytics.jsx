@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { fetchAnalytics, fetchAnalyticsYoY } from "@/lib/api";
-import { eur, todayISO } from "@/lib/format";
-import { athensToday } from "@/lib/dates";
+import { eur } from "@/lib/format";
+import { useBusinessDay } from "@/lib/businessDay";
 import { Button } from "@/components/ui/button";
 import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
 import StatCard from "@/components/StatCard";
@@ -22,17 +22,9 @@ import YoYSection from "./analytics/YoYSection";
 import AddressHeatmap from "./analytics/AddressHeatmap";
 
 // ---------- Comparison helpers ----------
-const iso7DaysAgo = () => {
-  const d = new Date();
-  d.setDate(d.getDate() - 6);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-};
-
-const isoNDaysBack = (n) => {
-  const d = new Date();
+// base = εργάσιμη «σήμερα» του μαγαζιού (όχι ημερολογιακή/συσκευής)
+const isoNDaysBack = (n, base) => {
+  const d = new Date(base + "T00:00:00");
   d.setDate(d.getDate() - n);
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -41,28 +33,31 @@ const isoNDaysBack = (n) => {
 };
 
 export default function Analytics() {
-  // Κύριο φίλτρο: κοινό pattern presets + custom εύρος (ημέρες Ελλάδας)
-  const [period, setPeriod] = useState(() => {
-    const t = athensToday();
-    return { preset: "today", from: t, to: t };
-  });
+  // Οι ημέρες των στατιστικών είναι ΕΡΓΑΣΙΜΕΣ (ωράριο μαγαζιού) — ίδιο όριο με το Z
+  const { today: bizToday } = useBusinessDay();
+  // Κύριο φίλτρο: κοινό pattern presets + custom εύρος
+  const [period, setPeriod] = useState(() => ({
+    preset: "today",
+    from: bizToday,
+    to: bizToday,
+  }));
   const [data, setData] = useState(null);
   const [yoy, setYoy] = useState(null); // σύγκριση με πέρσι για το ίδιο εύρος
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Δημοφιλέστερα προϊόντα — δικό τους date range (ανεξάρτητο από το κύριο φίλτρο)
-  const [popFrom, setPopFrom] = useState(todayISO());
-  const [popTo, setPopTo] = useState(todayISO());
+  const [popFrom, setPopFrom] = useState(bizToday);
+  const [popTo, setPopTo] = useState(bizToday);
   const [popItems, setPopItems] = useState(null); // null → χρήση του κύριου range
   const [popLoading, setPopLoading] = useState(false);
   const [popError, setPopError] = useState(null);
 
   // Comparison state
-  const [cmpFromA, setCmpFromA] = useState(isoNDaysBack(13));
-  const [cmpToA, setCmpToA] = useState(isoNDaysBack(7));
-  const [cmpFromB, setCmpFromB] = useState(iso7DaysAgo());
-  const [cmpToB, setCmpToB] = useState(todayISO());
+  const [cmpFromA, setCmpFromA] = useState(() => isoNDaysBack(13, bizToday));
+  const [cmpToA, setCmpToA] = useState(() => isoNDaysBack(7, bizToday));
+  const [cmpFromB, setCmpFromB] = useState(() => isoNDaysBack(6, bizToday));
+  const [cmpToB, setCmpToB] = useState(bizToday);
   const [cmpDataA, setCmpDataA] = useState(null);
   const [cmpDataB, setCmpDataB] = useState(null);
   const [cmpLoading, setCmpLoading] = useState(false);
@@ -139,20 +134,20 @@ export default function Analytics() {
 
   const applyComparePreset = (preset) => {
     if (preset === "this-vs-last-week") {
-      setCmpFromA(isoNDaysBack(13));
-      setCmpToA(isoNDaysBack(7));
-      setCmpFromB(isoNDaysBack(6));
-      setCmpToB(todayISO());
+      setCmpFromA(isoNDaysBack(13, bizToday));
+      setCmpToA(isoNDaysBack(7, bizToday));
+      setCmpFromB(isoNDaysBack(6, bizToday));
+      setCmpToB(bizToday);
     } else if (preset === "this-vs-last-month") {
-      setCmpFromA(isoNDaysBack(59));
-      setCmpToA(isoNDaysBack(30));
-      setCmpFromB(isoNDaysBack(29));
-      setCmpToB(todayISO());
+      setCmpFromA(isoNDaysBack(59, bizToday));
+      setCmpToA(isoNDaysBack(30, bizToday));
+      setCmpFromB(isoNDaysBack(29, bizToday));
+      setCmpToB(bizToday);
     } else if (preset === "yesterday-vs-today") {
-      setCmpFromA(isoNDaysBack(1));
-      setCmpToA(isoNDaysBack(1));
-      setCmpFromB(todayISO());
-      setCmpToB(todayISO());
+      setCmpFromA(isoNDaysBack(1, bizToday));
+      setCmpToA(isoNDaysBack(1, bizToday));
+      setCmpFromB(bizToday);
+      setCmpToB(bizToday);
     }
     setTimeout(loadCompare, 0);
   };
@@ -186,6 +181,7 @@ export default function Analytics() {
               value={period}
               onChange={handlePeriodChange}
               testIdPrefix="analytics"
+              today={bizToday}
             />
             <Button
               onClick={() => load()}

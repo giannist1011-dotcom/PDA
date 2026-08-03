@@ -14,7 +14,7 @@ import PinGateModal from "@/components/PinGateModal";
 import { useAuth } from "@/context/AuthContext";
 import { fetchOrders, fetchOrdersCount, apiGetOrder, apiCancelOrder, apiDeleteOrder, apiListCustomers, formatApiError } from "@/lib/api";
 import { can } from "@/lib/perms";
-import { athensToday } from "@/lib/dates";
+import { useBusinessDay } from "@/lib/businessDay";
 import { printReceiptJob } from "@/lib/print";
 import { receiptStoreName } from "@/lib/receiptText";
 import OrderDetailModal from "./history/OrderDetailModal";
@@ -29,13 +29,16 @@ export default function History() {
   const { user, isOwner, canManage } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState("map");
+  // «Σήμερα» = τρέχουσα ΕΡΓΑΣΙΜΗ ημέρα (ωράριο μαγαζιού) — ίδιο όριο με το Z
+  const { today: bizToday } = useBusinessDay();
 
   // ---- Tab 1: orders ----
-  // Φίλτρο περιόδου: preset ή custom εύρος ημερών (Ελλάδας) · "all" = χωρίς date filter
-  const [period, setPeriod] = useState(() => {
-    const t = athensToday();
-    return { preset: "today", from: t, to: t };
-  });
+  // Φίλτρο περιόδου: preset ή custom εύρος εργάσιμων ημερών · "all" = χωρίς date filter
+  const [period, setPeriod] = useState(() => ({
+    preset: "today",
+    from: bizToday,
+    to: bizToday,
+  }));
   const [source, setSource] = useState("all");
   const [search, setSearch] = useState("");
   const [orders, setOrders] = useState([]);
@@ -256,6 +259,7 @@ export default function History() {
             setSelectedOrder={setSelectedOrder}
             hasMore={hasMore}
             loadOrders={loadOrders}
+            businessToday={bizToday}
           />
         ) : (
           <CustomersTab

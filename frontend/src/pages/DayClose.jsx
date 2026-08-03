@@ -1,19 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  CalendarCheck,
-  Printer,
-  RefreshCcw,
-  Receipt as ReceiptIcon,
-  Euro,
-  Percent,
-  Ban,
-  Wallet,
-  Scale,
-  Truck,
-  ShoppingBag,
-  Store,
-} from "lucide-react";
+import { CalendarCheck, Printer, RefreshCcw } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -21,31 +8,25 @@ import {
   apiDaySummary,
   apiCloseDay,
   apiListDayReports,
+  apiBusinessDays,
   formatApiError,
 } from "@/lib/api";
-import { eur, todayISO, formatGRDateTime } from "@/lib/format";
 import { printZReport } from "@/lib/print";
+import { useBusinessDay, businessDayLabel } from "@/lib/businessDay";
 import ZReportPrint from "./day-close/ZReportPrint";
-import SummaryRow from "./day-close/SummaryRow";
-import { TYPE_LABELS } from "./day-close/utils";
+import DayPicker from "./day-close/DayPicker";
+import DaySummary from "./day-close/DaySummary";
+import PastReports from "./day-close/PastReports";
 
-const TYPE_ICONS = { delivery: Truck, takeaway: ShoppingBag, store: Store };
-
-const fmtDateGR = (iso) => {
-  try {
-    return new Date(iso + "T00:00:00").toLocaleDateString("el-GR", {
-      weekday: "long",
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-  } catch {
-    return iso;
-  }
-};
-
+// Το «Κλείσιμο ημέρας» δουλεύει σε ΕΡΓΑΣΙΜΕΣ ημέρες (ωράριο μαγαζιού): αν το
+// μαγαζί κλείνει 02:00, οι παραγγελίες της 01:30 ανήκουν στην προηγούμενη ημέρα.
+// Κλείνει πάντα η τρέχουσα· οι παλιές ημέρες είναι μόνο για επανεκτύπωση.
 export default function DayClose() {
   const { user, canManage } = useAuth();
+  const { today: bizToday, rangeLabel } = useBusinessDay();
+  const [days, setDays] = useState([]);
+  const [today, setToday] = useState(bizToday);
+  const [selected, setSelected] = useState(bizToday);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState(false);
@@ -53,13 +34,27 @@ export default function DayClose() {
   const [printReport, setPrintReport] = useState(null);
 
   const restaurantName = user?.restaurant_name || "";
+  const isCurrent = selected === today;
 
-  const load = async () => {
-    setLoading(true);
+  const loadDays = async () => {
     try {
-      setSummary(await apiDaySummary(todayISO()));
+      const d = await apiBusinessDays();
+      setDays(d.days || []);
+      setToday(d.today);
+      return d.today;
     } catch (e) {
       toast.error(formatApiError(e));
+      return null;
+    }
+  };
+
+  const loadSummary = async (day) => {
+    setLoading(true);
+    try {
+      setSummary(await apiDaySummary(day));
+    } catch (e) {
+      toast.error(formatApiError(e));
+      setSummary(null);
     } finally {
       setLoading(false);
     }
@@ -75,10 +70,19 @@ export default function DayClose() {
   };
 
   useEffect(() => {
-    load();
-    loadReports();
+    (async () => {
+      const t = await loadDays();
+      if (t) setSelected(t);
+      await loadSummary(t || bizToday);
+      await loadReports();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const pickDay = (day) => {
+    setSelected(day);
+    loadSummary(day);
+  };
 
   const printZ = (report) => {
     setPrintReport(report);
@@ -87,7 +91,13 @@ export default function DayClose() {
 
   const handleClose = async () => {
     if (!summary) return;
-    if (!window.confirm(`Κλείσιμο ημέρας ${fmtDateGR(summary.date)}; Η αναφορά θα αποθηκευτεί και θα εκτυπωθεί.`)) {
+    if (
+      !window.confirm(
+        `Κλείσιμο ημέρας ${businessDayLabel(summary.date)}; Καλύπτει ${rangeLabel(
+          summary
+        )}. Η αναφορά θα αποθηκευτεί και θα εκτυπωθεί.`
+      )
+    ) {
       return;
     }
     setClosing(true);
@@ -95,7 +105,7 @@ export default function DayClose() {
       const saved = await apiCloseDay(summary.date);
       printZ(saved);
       toast.success("Η ημέρα έκλεισε — η αναφορά αποθηκεύτηκε");
-      await loadReports();
+      await Promise.all([loadReports(), loadDays()]);
     } catch (e) {
       toast.error(formatApiError(e));
     } finally {
@@ -103,8 +113,11 @@ export default function DayClose() {
     }
   };
 
-  const bySource = summary?.by_source || [];
-  const byType = summary?.by_type || [];
+  // Παλιά ημέρα: επανεκτύπωση της σύνοψης όπως είναι τώρα (read-only)
+  const handleReprint = () => {
+    if (!summary) return;
+    printZ({ ...summary, reprint: true });
+  };
 
   return (
     <AppShell title="Κλείσιμο ημέρας">
@@ -116,205 +129,68 @@ export default function DayClose() {
               Κλείσιμο ημέρας
             </h2>
             <p className="text-sm text-neutral-400 mt-1" data-testid="dayclose-date">
-              {summary ? fmtDateGR(summary.date) : "…"}
+              {summary ? rangeLabel(summary) : "…"}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={load}
-              disabled={loading}
-              data-testid="dayclose-refresh-btn"
-              className="h-11 bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
-            >
-              <RefreshCcw className="w-4 h-4 mr-2" />
-              Ανανέωση
-            </Button>
-            <Button
-              onClick={handleClose}
-              disabled={loading || closing || !summary}
-              data-testid="dayclose-print-btn"
-              className="h-11 px-5 bg-brand hover:bg-brand-hover font-bold"
-            >
-              <Printer className="w-4 h-4 mr-2" />
-              {closing ? "Κλείσιμο..." : "Εκτύπωση αναφοράς"}
-            </Button>
+          <div className="flex flex-wrap items-end gap-3">
+            <DayPicker days={days} value={selected} onChange={pickDay} today={today} />
+            <div className="flex gap-2">
+              <Button
+                onClick={() => loadSummary(selected)}
+                disabled={loading}
+                data-testid="dayclose-refresh-btn"
+                className="h-11 bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
+              >
+                <RefreshCcw className="w-4 h-4 mr-2" />
+                Ανανέωση
+              </Button>
+              {isCurrent ? (
+                <Button
+                  onClick={handleClose}
+                  disabled={loading || closing || !summary}
+                  data-testid="dayclose-print-btn"
+                  className="h-11 px-5 bg-brand hover:bg-brand-hover font-bold"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  {closing ? "Κλείσιμο..." : "Εκτύπωση αναφοράς"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleReprint}
+                  disabled={loading || !summary}
+                  data-testid="dayclose-reprint-btn"
+                  className="h-11 px-5 bg-brand hover:bg-brand-hover font-bold"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Επανεκτύπωση
+                </Button>
+              )}
+            </div>
           </div>
         </div>
+
+        {!isCurrent && (
+          <div
+            className="mb-5 px-4 py-3 rounded-lg bg-[#4A1B27] border border-[#723645] text-sm text-neutral-300"
+            data-testid="dayclose-readonly-note"
+          >
+            Παλαιότερη εργάσιμη ημέρα — μόνο προβολή και επανεκτύπωση. Το κλείσιμο
+            αφορά πάντα την τρέχουσα ημέρα ({businessDayLabel(today)}).
+          </div>
+        )}
 
         {loading ? (
           <div className="text-neutral-500 py-12 text-center">Φόρτωση...</div>
         ) : !summary ? (
           <div className="text-neutral-500 py-12 text-center">Σφάλμα φόρτωσης</div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Totals */}
-            <section className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg space-y-2">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">
-                Σύνοψη ημέρας
-              </h3>
-              <SummaryRow
-                icon={ReceiptIcon}
-                label="Παραγγελίες"
-                value={summary.total_orders}
-                testId="dayclose-orders"
-              />
-              <SummaryRow
-                icon={Euro}
-                label="Τζίρος"
-                value={eur(summary.total_revenue)}
-                valueClass="text-gold text-lg"
-                testId="dayclose-revenue"
-              />
-              <SummaryRow
-                icon={Percent}
-                label="Σύνολο εκπτώσεων"
-                value={`-${eur(summary.total_discounts)}`}
-                valueClass="text-[#00E676]"
-                testId="dayclose-discounts"
-              />
-              <SummaryRow
-                icon={Ban}
-                label="Ακυρωμένες παραγγελίες"
-                value={summary.cancelled_count}
-                valueClass="text-[#FF6961]"
-                testId="dayclose-cancelled"
-              />
-              <SummaryRow
-                icon={Wallet}
-                label="Έξοδα ημέρας"
-                value={`-${eur(summary.total_expenses)}`}
-                valueClass="text-gold"
-                testId="dayclose-expenses"
-              />
-              <SummaryRow
-                icon={Scale}
-                label="Καθαρό αποτέλεσμα"
-                value={eur(summary.net_result)}
-                valueClass={summary.net_result >= 0 ? "text-[#00E676] text-lg" : "text-[#FF6961] text-lg"}
-                testId="dayclose-net"
-              />
-            </section>
-
-            {/* Breakdowns */}
-            <section className="p-5 bg-[#3D1620] border border-[#723645] rounded-lg">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">
-                Ανά πηγή
-              </h3>
-              {bySource.length === 0 ? (
-                <div className="text-neutral-500 text-sm py-3">Δεν υπάρχουν παραγγελίες</div>
-              ) : (
-                <div className="space-y-2 mb-5">
-                  {bySource.map((s) => (
-                    <div
-                      key={s.source}
-                      className="flex items-center justify-between text-sm"
-                      data-testid={`dayclose-source-${s.source}`}
-                    >
-                      <span className="text-neutral-300">
-                        {s.source} <span className="text-neutral-500">({s.count})</span>
-                      </span>
-                      <span className="font-mono font-bold text-white">{eur(s.revenue)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">
-                Ανά τύπο
-              </h3>
-              {byType.length === 0 ? (
-                <div className="text-neutral-500 text-sm py-3">Δεν υπάρχουν παραγγελίες</div>
-              ) : (
-                <div className="space-y-2">
-                  {byType.map((t) => {
-                    const Icon = TYPE_ICONS[t.type] || Store;
-                    return (
-                      <div
-                        key={t.type}
-                        className="flex items-center justify-between text-sm"
-                        data-testid={`dayclose-type-${t.type}`}
-                      >
-                        <span className="flex items-center gap-2 text-neutral-300">
-                          <Icon className="w-4 h-4 text-flame" />
-                          {TYPE_LABELS[t.type] || t.type}{" "}
-                          <span className="text-neutral-500">({t.count})</span>
-                        </span>
-                        <span className="font-mono font-bold text-white">{eur(t.revenue)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          </div>
+          <DaySummary summary={summary} />
         )}
 
-        {/* Past reports (owner only) */}
-        {canManage && (
-          <section className="mt-8 p-5 bg-[#3D1620] border border-[#723645] rounded-lg" data-testid="dayclose-history">
-            <h3 className="font-heading text-lg font-bold mb-4">Προηγούμενα κλεισίματα</h3>
-            {reports.length === 0 ? (
-              <div className="text-neutral-500 text-sm py-4 text-center">
-                Δεν υπάρχουν αποθηκευμένες αναφορές
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px]">
-                  <thead>
-                    <tr className="text-left text-xs uppercase tracking-widest text-neutral-400 border-b border-[#723645]">
-                      <th className="py-2 px-3">Ημέρα</th>
-                      <th className="py-2 px-3">Ώρα κλεισίματος</th>
-                      <th className="py-2 px-3 text-right">Παραγγελίες</th>
-                      <th className="py-2 px-3 text-right">Τζίρος</th>
-                      <th className="py-2 px-3 text-right">Καθαρό</th>
-                      <th className="py-2 px-3 w-14"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reports.map((r) => (
-                      <tr
-                        key={r.id}
-                        className="border-b border-[#431A25] last:border-0"
-                        data-testid={`dayreport-row-${r.id}`}
-                      >
-                        <td className="py-2.5 px-3 font-mono text-white">{r.date}</td>
-                        <td className="py-2.5 px-3 text-neutral-400 text-sm">
-                          {formatGRDateTime(r.closed_at)}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-neutral-300">
-                          {r.total_orders}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-gold">
-                          {eur(r.total_revenue)}
-                        </td>
-                        <td
-                          className={`py-2.5 px-3 text-right font-mono font-bold ${
-                            r.net_result >= 0 ? "text-[#00E676]" : "text-[#FF6961]"
-                          }`}
-                        >
-                          {eur(r.net_result)}
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <button
-                            onClick={() => printZ(r)}
-                            data-testid={`dayreport-print-${r.id}`}
-                            className="p-2 text-neutral-400 hover:text-flame"
-                            title="Επανεκτύπωση αναφοράς"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-        )}
+        {canManage && <PastReports reports={reports} onPrint={printZ} />}
       </main>
 
-      <ZReportPrint report={printReport} restaurantName={restaurantName} />
+      <ZReportPrint report={printReport} restaurantName={restaurantName} user={user} />
     </AppShell>
   );
 }
