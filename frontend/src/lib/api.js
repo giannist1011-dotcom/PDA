@@ -235,6 +235,7 @@ export const apiDeleteItem = (id) => api.delete(`/menu/items/${id}`).then((r) =>
 export const apiUpdateCustomization = (payload) => api.put("/menu/customization", payload).then((r) => r.data);
 export const apiBulkItems = (payload) => api.post("/menu/items/bulk", payload).then((r) => r.data);
 export const apiAutoNumberItems = () => api.post("/menu/items/auto-number").then((r) => r.data);
+export const apiRenumberItems = (payload) => api.post("/menu/items/renumber", payload).then((r) => r.data);
 
 // PROFILES / ROLES
 export const apiListProfiles = () => api.get("/profiles").then((r) => r.data);

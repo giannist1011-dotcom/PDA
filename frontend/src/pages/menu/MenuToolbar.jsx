@@ -1,7 +1,14 @@
-import { Hash, Pencil, X } from "lucide-react";
+import { Hash, ListOrdered, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function MenuToolbar({ editMode, exitEdit, setEditMode, setCustModalOpen, onAutoNumber }) {
+export default function MenuToolbar({
+  editMode,
+  exitEdit,
+  setEditMode,
+  setCustModalOpen,
+  onAutoNumber,
+  onRenumber,
+}) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 px-4 md:px-6 py-3 border-b border-[#431A25]">
       <Button
@@ -30,6 +37,13 @@ export default function MenuToolbar({ editMode, exitEdit, setEditMode, setCustMo
           className="bg-[#3D1620] border border-[#723645] hover:border-flame text-white h-11"
         >
           <Hash className="w-4 h-4 mr-2" /> Αυτόματη αρίθμηση
+        </Button>
+        <Button
+          onClick={onRenumber}
+          data-testid="renumber-btn"
+          className="bg-[#3D1620] border border-[#723645] hover:border-flame text-white h-11"
+        >
+          <ListOrdered className="w-4 h-4 mr-2" /> Επαναρίθμηση όλων
         </Button>
         <Button
           onClick={() => setCustModalOpen(true)}

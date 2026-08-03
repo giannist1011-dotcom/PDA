@@ -404,6 +404,63 @@ async def auto_number_items(user: dict = Depends(require_feature("menu", require
     return {"ok": True, "affected": affected}
 
 
+class RenumberIn(BaseModel):
+    # Από ποιον αριθμό ξεκινά η αρίθμηση (προεπιλογή 1)
+    start: int = Field(default=1, ge=0, le=99999)
+    # True → μόνο προεπισκόπηση (τίποτα δεν αποθηκεύεται)
+    dry_run: bool = False
+
+
+@router.post("/menu/items/renumber")
+async def renumber_items(
+    body: RenumberIn, user: dict = Depends(require_feature("menu", require_manager))
+):
+    """«Επαναρίθμηση όλων»: καθαροί διαδοχικοί κωδικοί σε ΟΛΑ τα προϊόντα με τη σειρά που
+    φαίνονται στη λίστα (κατηγορία → θέση μέσα στην κατηγορία), ξεκινώντας από το `start`.
+    ΑΝΤΙΚΑΘΙΣΤΑ τους υπάρχοντες κωδικούς. Με dry_run=True επιστρέφει μόνο την προεπισκόπηση."""
+    cats = await db.categories.find(
+        {"user_id": user["id"]}, {"_id": 0, "id": 1, "name": 1, "order": 1}
+    ).to_list(500)
+    cat_order = {c["id"]: c.get("order", 0) for c in cats}
+    cat_name = {c["id"]: c.get("name", "") for c in cats}
+    items = await db.items.find(
+        {"user_id": user["id"]},
+        {"_id": 0, "id": 1, "name": 1, "code": 1, "category": 1, "sort_order": 1},
+    ).to_list(2000)
+    items.sort(
+        key=lambda i: (
+            cat_order.get(i.get("category"), 10_000),
+            i.get("sort_order", 0),
+            i.get("name", ""),
+        )
+    )
+    changes = [
+        {
+            "id": it["id"],
+            "name": it.get("name", ""),
+            "category": cat_name.get(it.get("category"), ""),
+            "old_code": str(it.get("code") or "").strip(),
+            "new_code": str(body.start + idx),
+        }
+        for idx, it in enumerate(items)
+    ]
+    changed = [c for c in changes if c["old_code"] != c["new_code"]]
+    if not body.dry_run:
+        for c in changed:
+            await db.items.update_one(
+                {"id": c["id"], "user_id": user["id"]}, {"$set": {"code": c["new_code"]}}
+            )
+        if changed:
+            await _mark_menu_customized(user["id"])
+    return {
+        "ok": True,
+        "dry_run": body.dry_run,
+        "total": len(changes),
+        "affected": len(changed),
+        "changes": changes,
+    }
+
+
 @router.put("/menu/customization")
 async def update_customization(body: CustomizationConfig, user: dict = Depends(require_feature("menu", require_manager))):
     payload = body.model_dump()

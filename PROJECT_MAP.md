@@ -135,11 +135,12 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - DELETE /menu/items/{iid} → delete_item @263
 - POST /menu/items/bulk → bulk_items @293
 - POST /menu/items/auto-number → auto_number_items @375 — «Αυτόματη αρίθμηση»: διαδοχικοί αριθμητικοί κωδικοί σε ΟΛΑ τα…
-- PUT /menu/customization → update_customization @408
-- GET /photos → list_photos @424
-- POST /photos → create_photo @432
-- POST /photos/import-stock/{stock_id} → import_stock_photo @448 — Επιλογή stock φωτογραφίας από τη βιβλιοθήκη OrderDeck →…
-- DELETE /photos/{pid} → delete_photo @477
+- POST /menu/items/renumber → renumber_items @415 — «Επαναρίθμηση όλων»: καθαροί διαδοχικοί κωδικοί σε ΟΛΑ τα…
+- PUT /menu/customization → update_customization @465
+- GET /photos → list_photos @481
+- POST /photos → create_photo @489
+- POST /photos/import-stock/{stock_id} → import_stock_photo @505 — Επιλογή stock φωτογραφίας από τη βιβλιοθήκη OrderDeck →…
+- DELETE /photos/{pid} → delete_photo @534
 ### onboarding.py
 - GET /onboarding/status → onboarding_status @70
 - POST /onboarding/hide → onboarding_hide @75
@@ -369,7 +370,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - History.jsx (301 γρ): History@28
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
-- MenuManagement.jsx (389 γρ): MenuManagement@31
+- MenuManagement.jsx (394 γρ): MenuManagement@32
 - PDA.jsx (717 γρ): PDA@83
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
@@ -456,9 +457,10 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - menu/ItemModal.jsx (381 γρ): ItemModal@31
 - menu/ItemPhotoPicker.jsx (135 γρ): ItemPhotoPicker@4
 - menu/ItemsPanel.jsx (221 γρ): ItemsPanel@15
-- menu/MenuToolbar.jsx (45 γρ): MenuToolbar@4
+- menu/MenuToolbar.jsx (59 γρ): MenuToolbar@4
 - menu/OptionGroupsEditor.jsx (130 γρ): OptionGroupsEditor@5
 - menu/PricedOptionList.jsx (62 γρ): PricedOptionList@4
+- menu/RenumberDialog.jsx (147 γρ): RenumberDialog@22
 - menu/utils.js (13 γρ)
 - pda/DiscountModal.jsx (106 γρ): DiscountModal@7
 - pda/MenuSection.jsx (91 γρ): MenuSection@17
@@ -572,6 +574,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiUpdateCustomization(payload) → PUT /menu/customization
 - apiBulkItems(payload) → POST /menu/items/bulk
 - apiAutoNumberItems() → POST /menu/items/auto-number
+- apiRenumberItems(payload) → POST /menu/items/renumber
 - apiListProfiles() → GET /profiles
 - apiSelectProfile(profileId, pin) → POST /profile/select
 - apiExitProfile() → POST /profile/exit

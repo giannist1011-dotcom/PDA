@@ -26,6 +26,7 @@ import CategoriesPanel from "./menu/CategoriesPanel";
 import ItemsPanel from "./menu/ItemsPanel";
 import { DeleteItemDialog, DeleteCategoryDialog } from "./menu/DeleteDialogs";
 import AutoNumberDialog from "./menu/AutoNumberDialog";
+import RenumberDialog from "./menu/RenumberDialog";
 
 // ---------- Main Page ----------
 export default function MenuManagement() {
@@ -46,6 +47,7 @@ export default function MenuManagement() {
   const [dragCatId, setDragCatId] = useState(null);
   const [dragItemId, setDragItemId] = useState(null);
   const [autoNumberOpen, setAutoNumberOpen] = useState(false);
+  const [renumberOpen, setRenumberOpen] = useState(false);
   const load = async () => {
     try {
       const c = await apiGetMenuConfig();
@@ -289,6 +291,7 @@ export default function MenuManagement() {
         setEditMode={setEditMode}
         setCustModalOpen={setCustModalOpen}
         onAutoNumber={() => setAutoNumberOpen(true)}
+        onRenumber={() => setRenumberOpen(true)}
       />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 md:gap-6">
@@ -383,6 +386,8 @@ export default function MenuManagement() {
         uncodedCount={config.items.filter((i) => !String(i.code || "").trim()).length}
         onConfirm={runAutoNumber}
       />
+
+      <RenumberDialog open={renumberOpen} setOpen={setRenumberOpen} onDone={load} />
     </AppShell>
   );
 }
