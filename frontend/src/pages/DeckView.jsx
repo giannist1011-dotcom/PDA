@@ -13,6 +13,9 @@ import {
 import { Link } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
+import SourceFilter from "@/components/SourceFilter";
+import SourceMix from "@/components/SourceMix";
+import { usePlatformOrders } from "@/context/PlatformOrdersContext";
 import { fetchDeckOverview } from "@/lib/api";
 import { eur, formatGRTime } from "@/lib/format";
 
@@ -50,12 +53,18 @@ export default function DeckView() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  // Προέλευση: «Όλα» (all-around) ή μία πηγή — ίδιο φίλτρο με τα Στατιστικά
+  const { enabled: enabledPlatforms } = usePlatformOrders();
+  const [source, setSource] = useState("all");
   const timer = useRef(null);
+  // Το interval δεν ξαναστήνεται σε κάθε αλλαγή — διαβάζει πάντα την τρέχουσα πηγή
+  const sourceRef = useRef(source);
+  sourceRef.current = source;
 
   const load = async (manual = false) => {
     if (manual) setRefreshing(true);
     try {
-      const d = await fetchDeckOverview();
+      const d = await fetchDeckOverview(sourceRef.current);
       setData(d);
       setError(null);
     } catch (e) {
@@ -71,6 +80,12 @@ export default function DeckView() {
     return () => clearInterval(timer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleSourceChange = (next) => {
+    setSource(next);
+    sourceRef.current = next;
+    load(true);
+  };
 
   const net = data?.net_result ?? 0;
 
@@ -111,6 +126,15 @@ export default function DeckView() {
 
         {/* Onboarding: πρώτα βήματα νέου μαγαζιού */}
         <OnboardingChecklist />
+
+        <div className="mb-5">
+          <SourceFilter
+            value={source}
+            onChange={handleSourceChange}
+            enabledPlatforms={enabledPlatforms}
+            testIdPrefix="deck-source"
+          />
+        </div>
 
         {/* Checklist ημέρας — μικρή ένδειξη */}
         {data?.checklist &&
@@ -163,22 +187,34 @@ export default function DeckView() {
             sub="ανά παραγγελία"
             testId="deck-avg"
           />
-          <BigCard
-            icon={Wallet}
-            label="Έξοδα σήμερα"
-            value={eur(data?.total_expenses ?? 0)}
-            testId="deck-expenses"
-          />
-          <BigCard
-            icon={Scale}
-            label="Καθαρό αποτέλεσμα"
-            value={eur(net)}
-            sub="τζίρος − έξοδα"
-            valueClass={net >= 0 ? "text-[#00E676]" : "text-[#FF6961]"}
-            iconClass={net >= 0 ? "text-[#00E676]" : "text-[#FF6961]"}
-            testId="deck-net"
-          />
+          {/* Τα έξοδα δεν μερίζονται ανά προέλευση — μόνο στην προβολή «Όλα» */}
+          {data?.has_expenses !== false && (
+            <>
+              <BigCard
+                icon={Wallet}
+                label="Έξοδα σήμερα"
+                value={eur(data?.total_expenses ?? 0)}
+                testId="deck-expenses"
+              />
+              <BigCard
+                icon={Scale}
+                label="Καθαρό αποτέλεσμα"
+                value={eur(net)}
+                sub="τζίρος − έξοδα"
+                valueClass={net >= 0 ? "text-[#00E676]" : "text-[#FF6961]"}
+                iconClass={net >= 0 ? "text-[#00E676]" : "text-[#FF6961]"}
+                testId="deck-net"
+              />
+            </>
+          )}
         </div>
+
+        {/* Μείγμα προέλευσης — μόνο στην all-around προβολή */}
+        {source === "all" && (
+          <div className="mb-6">
+            <SourceMix mix={data?.source_mix} title="Μείγμα προέλευσης σήμερα" />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Τζίρος ανά πηγή */}

@@ -95,6 +95,11 @@ export function receiptText(order, label = null) {
   const L = [];
   if (label) L.push(center(`== ${label} ==`), "");
   L.push(center((order.restaurant_name || "POS").toUpperCase()));
+  // Παραγγελία πλατφόρμας: banner με τον κωδικό της (π.χ. «EFOOD #123»)
+  if (order.platform_ref) {
+    L.push(hr);
+    L.push(center(`** ${order.platform_ref} **`));
+  }
   const schedHead = scheduledHeader(order);
   if (schedHead) {
     L.push(hr);

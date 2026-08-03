@@ -18,6 +18,7 @@ Multi-tenant SaaS POS/PDA για ελληνικά καταστήματα εστ�
   - routers/schedule.py → employees, βάρδιες
   - routers/stats.py → analytics, day-summary/κλείσιμο ημέρας
   - routers/expenses.py → έξοδα + κατηγορίες εξόδων
+  - routers/platforms.py → παραγγελίες efood/Box/Wolt: ρυθμίσεις & ήχοι ανά κατάστημα, αποδοχή/απόρριψη/καθ' οδόν, δοκιμαστικές παραγγελίες. Η σύνδεση με πραγματικά API πλατφορμών ζει ΜΟΝΟ στο platform_integrations.py (connectors + capabilities) — ήχοι από platform_sounds.py (συνθέτονται, κανένα proprietary asset)
   - routers/promo.py → εκπτωτικοί κωδικοί: admin CRUD (X-Admin-Password header = env PROMO_ADMIN_PASSWORD, ΟΧΙ JWT μαγαζιού) + public /promo/validate για το wizard εγγραφής
   - presets/ και seed_data.py ως έχουν. Νέο endpoint → στον αντίστοιχο router, νέο index → στο startup του server.py
 - DB: MongoDB Atlas (motor async driver)

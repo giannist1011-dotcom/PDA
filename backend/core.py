@@ -244,6 +244,7 @@ FEATURE_KEYS = [
     "day_close",      # Κλείσιμο ημέρας / Z-report
     "discounts",      # Εκπτώσεις στο ταμείο
     "cancel_orders",  # Ακύρωση/διαγραφή/επεξεργασία παραγγελιών
+    "platforms",      # Παραγγελίες πλατφορμών (efood/Box/Wolt)
 ]
 
 
@@ -398,6 +399,12 @@ def public_user(u: dict) -> dict:
         "is_demo": bool(u.get("is_demo", False)),
         "demo_expires_at": u.get("demo_expires_at"),
         "ai_features_enabled": bool(u.get("ai_features_enabled", False)),
+        # Ενεργές πλατφόρμες delivery — το UI ξέρει από την πρώτη στιγμή αν πρέπει
+        # να δείξει καρτέλες/popup, χωρίς επιπλέον κλήση (λεπτομέρειες: /platforms/settings)
+        "platforms_enabled": [
+            p for p in ("efood", "box", "wolt")
+            if ((u.get("platform_settings") or {}).get(p) or {}).get("enabled")
+        ],
         "perms": u.get("perms") or {},
     }
 

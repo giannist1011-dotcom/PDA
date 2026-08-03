@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Receipt as ReceiptIcon,
   Euro,
@@ -15,6 +16,9 @@ import { useBusinessDay } from "@/lib/businessDay";
 import { Button } from "@/components/ui/button";
 import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
 import StatCard from "@/components/StatCard";
+import SourceFilter from "@/components/SourceFilter";
+import SourceMix from "@/components/SourceMix";
+import { usePlatformOrders } from "@/context/PlatformOrdersContext";
 import ChartsRow from "./analytics/ChartsRow";
 import PopularItems from "./analytics/PopularItems";
 import CompareSection from "./analytics/CompareSection";
@@ -45,6 +49,11 @@ export default function Analytics() {
   const [yoy, setYoy] = useState(null); // σύγκριση με πέρσι για το ίδιο εύρος
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Προέλευση: «Όλα» (all-around) ή μία πηγή — έρχεται και ως ?source= από την
+  // καρτέλα της πλατφόρμας («Στατιστικά efood»)
+  const { enabled: enabledPlatforms } = usePlatformOrders();
+  const [searchParams] = useSearchParams();
+  const [source, setSource] = useState(() => searchParams.get("source") || "all");
 
   // Δημοφιλέστερα προϊόντα — δικό τους date range (ανεξάρτητο από το κύριο φίλτρο)
   const [popFrom, setPopFrom] = useState(bizToday);
@@ -63,12 +72,12 @@ export default function Analytics() {
   const [cmpLoading, setCmpLoading] = useState(false);
   const [cmpError, setCmpError] = useState(null);
 
-  const load = async (f = period.from, t = period.to) => {
+  const load = async (f = period.from, t = period.to, src = source) => {
     setLoading(true);
     setError(null);
     try {
       const [d, y] = await Promise.all([
-        fetchAnalytics(f, t),
+        fetchAnalytics(f, t, src),
         fetchAnalyticsYoY(f, t).catch(() => null), // η σύγκριση δεν μπλοκάρει τα βασικά
       ]);
       setData(d);
@@ -89,6 +98,12 @@ export default function Analytics() {
   const handlePeriodChange = (next, meta) => {
     setPeriod(next);
     if (meta.fromPreset) load(next.from, next.to);
+  };
+
+  // Αλλαγή προέλευσης → άμεση επαναφόρτωση με το ίδιο εύρος
+  const handleSourceChange = (next) => {
+    setSource(next);
+    load(period.from, period.to, next);
   };
 
   // Μία μπάρα ανά ώρα — κρατάμε το συνεχόμενο παράθυρο από την πρώτη έως την
@@ -193,6 +208,12 @@ export default function Analytics() {
               {loading ? "Φόρτωση..." : "Εφαρμογή"}
             </Button>
           </div>
+          <SourceFilter
+            value={source}
+            onChange={handleSourceChange}
+            enabledPlatforms={enabledPlatforms}
+            testIdPrefix="analytics-source"
+          />
           <div className="pt-3 border-t border-[#431A25] text-sm text-neutral-300">
             Εύρος:{" "}
             <span className="font-mono font-bold text-white" data-testid="analytics-period-label">
@@ -239,23 +260,35 @@ export default function Analytics() {
                 : ""
             }
           />
-          <StatCard
-            icon={Wallet}
-            label="Έξοδα"
-            value={eur(data?.total_expenses ?? 0)}
-            testId="stat-total-expenses"
-            sub="της περιόδου"
-          />
-          <StatCard
-            icon={Scale}
-            label="Καθαρό αποτέλεσμα"
-            value={eur(data?.net_result ?? 0)}
-            testId="stat-net-result"
-            sub="έσοδα − έξοδα"
-            valueClass={(data?.net_result ?? 0) >= 0 ? "text-[#00E676]" : "text-[#FF6961]"}
-            iconClass={(data?.net_result ?? 0) >= 0 ? "text-[#00E676]" : "text-[#FF6961]"}
-          />
+          {/* Τα έξοδα δεν μερίζονται ανά προέλευση — μόνο στην προβολή «Όλα» */}
+          {data?.has_expenses !== false && (
+            <>
+              <StatCard
+                icon={Wallet}
+                label="Έξοδα"
+                value={eur(data?.total_expenses ?? 0)}
+                testId="stat-total-expenses"
+                sub="της περιόδου"
+              />
+              <StatCard
+                icon={Scale}
+                label="Καθαρό αποτέλεσμα"
+                value={eur(data?.net_result ?? 0)}
+                testId="stat-net-result"
+                sub="έσοδα − έξοδα"
+                valueClass={(data?.net_result ?? 0) >= 0 ? "text-[#00E676]" : "text-[#FF6961]"}
+                iconClass={(data?.net_result ?? 0) >= 0 ? "text-[#00E676]" : "text-[#FF6961]"}
+              />
+            </>
+          )}
         </div>
+
+        {/* Μείγμα προέλευσης — μόνο στην all-around προβολή */}
+        {source === "all" && (
+          <div className="mb-6">
+            <SourceMix mix={data?.source_mix} />
+          </div>
+        )}
 
         {/* Σύγκριση με πέρσι (ίδια περίοδος πριν 1 έτος) */}
         <YoYSection yoy={yoy} />

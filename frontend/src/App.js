@@ -2,6 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
+import { PlatformOrdersProvider } from "@/context/PlatformOrdersContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { StartupOverlay } from "@/components/LoadingScreen";
 import Landing from "@/pages/Landing";
@@ -150,6 +151,9 @@ function App() {
         <AuthProvider>
           {/* Branded οθόνη εκκίνησης όσο εκκρεμεί το /auth/me (και το cold start) */}
           <StartupOverlay />
+          {/* Παραγγελίες πλατφορμών: πάνω από τα routes ώστε ήχος & popup να
+              φτάνουν σε ΟΠΟΙΑΔΗΠΟΤΕ οθόνη του καταστήματος */}
+          <PlatformOrdersProvider>
           <Routes>
             {/* Public landing page */}
             <Route path="/" element={<Landing />} />
@@ -362,6 +366,7 @@ function App() {
             <Route path="/app/*" element={<Navigate to="/app" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </PlatformOrdersProvider>
         </AuthProvider>
       </BrowserRouter>
       <Toaster theme="dark" position="top-center" richColors />

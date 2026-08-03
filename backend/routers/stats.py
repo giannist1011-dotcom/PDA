@@ -19,12 +19,64 @@ router = APIRouter()
 # Παραγγελίες από πλατφόρμες delivery — ομαδοποιούνται ξεχωριστά στο Z
 PLATFORM_SOURCES = ("efood", "Box", "Wolt")
 
+# Φίλτρο προέλευσης (Στατιστικά & Deck View): «Όλα» = all-around, «Ταμείο» = ό,τι
+# γράφτηκε μέσα στο μαγαζί (ταμείο/τηλέφωνο/τραπέζι), και μία επιλογή ανά πλατφόρμα.
+SOURCE_FILTERS = {
+    "all": None,
+    "pos": {"$nin": list(PLATFORM_SOURCES)},
+    "efood": "efood",
+    "box": "Box",
+    "wolt": "Wolt",
+}
+SOURCE_LABELS = {"all": "Όλα", "pos": "Ταμείο", "efood": "efood", "box": "Box", "wolt": "Wolt"}
+
+
+def source_key_of(src: str) -> str:
+    """Η «προέλευση» μιας παραγγελίας για το source-mix (πλατφόρμα ή ταμείο)."""
+    if src == "efood":
+        return "efood"
+    if src == "Box":
+        return "box"
+    if src == "Wolt":
+        return "wolt"
+    return "pos"
+
+
+def source_clause(source: Optional[str]) -> dict:
+    """Το κομμάτι του query για το φίλτρο προέλευσης ({} όταν είναι «Όλα»)."""
+    key = (source or "all").lower()
+    if key not in SOURCE_FILTERS:
+        raise HTTPException(400, "Άγνωστη προέλευση")
+    clause = SOURCE_FILTERS[key]
+    return {} if clause is None else {"source": clause}
+
+
+def source_mix(docs: list) -> list:
+    """Κατανομή παραγγελιών/τζίρου ανά προέλευση — πίτα/στοιβαγμένες μπάρες."""
+    agg = defaultdict(lambda: {"count": 0, "revenue": 0.0})
+    for d in docs:
+        k = source_key_of(d.get("source", "Ταμείο"))
+        agg[k]["count"] += 1
+        agg[k]["revenue"] += d.get("total", 0)
+    total = round(sum(v["revenue"] for v in agg.values()), 2)
+    return [
+        {
+            "key": k,
+            "label": SOURCE_LABELS[k],
+            "count": v["count"],
+            "revenue": round(v["revenue"], 2),
+            "share": round(v["revenue"] / total * 100, 1) if total else 0.0,
+        }
+        for k, v in sorted(agg.items(), key=lambda kv: -kv[1]["revenue"])
+    ]
+
 
 # ============ ANALYTICS ============
 @router.get("/analytics")
 async def analytics(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    source: Optional[str] = None,
     user: dict = Depends(require_feature("analytics", require_owner)),
 ):
     cutoff = business_day_cutoff(user)
@@ -37,6 +89,8 @@ async def analytics(
         "created_at": {"$gte": utc_from, "$lt": utc_to},
         "cancelled": {"$ne": True},
         "status": {"$ne": "scheduled"},  # not fired yet → no revenue
+        # Φίλτρο προέλευσης: Όλα / Ταμείο / efood / Box / Wolt
+        **source_clause(source),
     }
     docs = await db.orders.find(query, {"_id": 0}).to_list(50000)
     total_orders = len(docs)
@@ -76,18 +130,27 @@ async def analytics(
         {"source": s, "count": v["count"], "revenue": round(v["revenue"], 2)}
         for s, v in by_source.items()
     ]
-    exp_docs = await db.expenses.find(
-        {"user_id": user["id"], "date": {"$gte": df, "$lte": dt}},
-        {"_id": 0, "amount": 1},
-    ).to_list(50000)
-    total_expenses = round(sum(d.get("amount", 0) for d in exp_docs), 2)
+    # Τα έξοδα δεν έχουν προέλευση — σε φιλτραρισμένη προβολή δεν εμφανίζονται καθόλου
+    # (αλλιώς το «καθαρό αποτέλεσμα» θα χρέωνε όλα τα έξοδα σε μία πλατφόρμα)
+    has_expenses = (source or "all").lower() == "all"
+    total_expenses = 0.0
+    if has_expenses:
+        exp_docs = await db.expenses.find(
+            {"user_id": user["id"], "date": {"$gte": df, "$lte": dt}},
+            {"_id": 0, "amount": 1},
+        ).to_list(50000)
+        total_expenses = round(sum(d.get("amount", 0) for d in exp_docs), 2)
     return {
         "date_from": df,
         "date_to": dt,
+        "source": (source or "all").lower(),
+        # Μείγμα προέλευσης — δείχνεται μόνο στην «all-around» προβολή
+        "source_mix": source_mix(docs),
         "total_orders": total_orders,
         "total_revenue": total_revenue,
         "avg_order_value": avg_order,
         "total_expenses": total_expenses,
+        "has_expenses": has_expenses,
         "net_result": round(total_revenue - total_expenses, 2),
         "by_source": sources_list,
         "popular_items": popular,
@@ -351,7 +414,7 @@ async def _on_shift_now(user_id: str, now_local: datetime) -> list:
 
 
 @router.get("/deck/overview")
-async def deck_overview(user: dict = Depends(require_owner)):
+async def deck_overview(source: Optional[str] = None, user: dict = Depends(require_owner)):
     now_local = athens_now()
     cutoff = business_day_cutoff(user)
     today = business_today(cutoff)          # εργάσιμη ημέρα, όχι ημερολογιακή
@@ -364,6 +427,7 @@ async def deck_overview(user: dict = Depends(require_owner)):
             "created_at": {"$gte": utc_from, "$lt": utc_to},
             "cancelled": {"$ne": True},
             "status": {"$ne": "scheduled"},
+            **source_clause(source),
         },
         {"_id": 0, "total": 1, "source": 1},
     ).to_list(50000)
@@ -376,10 +440,14 @@ async def deck_overview(user: dict = Depends(require_owner)):
         by_source[src]["count"] += 1
         by_source[src]["revenue"] += d.get("total", 0)
 
-    exp_docs = await db.expenses.find(
-        {"user_id": user["id"], "date": today}, {"_id": 0, "amount": 1}
-    ).to_list(50000)
-    total_expenses = round(sum(e.get("amount", 0) for e in exp_docs), 2)
+    # Όπως και στα Στατιστικά: τα έξοδα δεν μερίζονται ανά προέλευση
+    has_expenses = (source or "all").lower() == "all"
+    total_expenses = 0.0
+    if has_expenses:
+        exp_docs = await db.expenses.find(
+            {"user_id": user["id"], "date": today}, {"_id": 0, "amount": 1}
+        ).to_list(50000)
+        total_expenses = round(sum(e.get("amount", 0) for e in exp_docs), 2)
 
     # Ανοιχτά τραπέζια (open tabs) με τρέχον σύνολο
     tabs = await db.table_tabs.find(
@@ -424,10 +492,13 @@ async def deck_overview(user: dict = Depends(require_owner)):
         "date": today,
         "range_label": business_day_bounds(user, today, cutoff)["label"],
         "as_of": now_local.isoformat(),
+        "source": (source or "all").lower(),
+        "source_mix": source_mix(docs),
         "total_orders": total_orders,
         "total_revenue": total_revenue,
         "avg_order_value": avg_order,
         "total_expenses": total_expenses,
+        "has_expenses": has_expenses,
         "net_result": round(total_revenue - total_expenses, 2),
         "by_source": [
             {"source": s, "count": v["count"], "revenue": round(v["revenue"], 2)}

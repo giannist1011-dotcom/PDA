@@ -46,6 +46,15 @@ export function ReceiptCopy({ order, label }) {
       <div className="receipt-title text-center">
         {(order.restaurant_name || "POS").toUpperCase()}
       </div>
+      {/* Παραγγελία πλατφόρμας: banner με τον κωδικό της (π.χ. «EFOOD #123») */}
+      {order.platform_ref && (
+        <div
+          className="rc-big"
+          style={{ textAlign: "center", border: "2px solid #000", padding: "2px 0", margin: "4px 0" }}
+        >
+          {order.platform_ref}
+        </div>
+      )}
       {schedHead && (
         <div
           className="rc-big"

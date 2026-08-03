@@ -146,21 +146,36 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - POST /onboarding/hide → onboarding_hide @75
 - POST /onboarding/print-test → onboarding_print_test @81 — Καλείται από το frontend όταν γίνει οποιαδήποτε εκτύπωση…
 ### orders.py
-- GET /orders/next-number → next_order_number @143
-- POST /orders → create_order @148
-- GET /orders/scheduled → list_scheduled_orders @204 — Εκκρεμείς προγραμματισμένες + όσες ενεργοποιήθηκαν τις τελευταίες
-- GET /orders → list_orders @263
-- GET /orders/count → count_orders @286 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
-- GET /orders/live-map → live_map_orders @427 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
-- POST /orders/live-map/clear → clear_live_map @480 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
-- GET /orders/address-book → address_book @488 — Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης…
-- GET /orders/heatmap → orders_heatmap @528 — Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng)…
-- GET /orders/{oid} → get_order @582
-- POST /orders/{oid}/activate → activate_order @592 — Move a scheduled order to active (fired /…
-- POST /orders/{oid}/cancel → cancel_order @612
-- DELETE /orders/{oid} → delete_order @639
-- PUT /orders/{oid} → edit_order @763 — Επεξεργασία takeaway/delivery παραγγελίας μετά τη δημιουργία: είδη,
-- GET /customers → list_customers @864 — Aggregate customers from phone/delivery orders, grouped by phone
+- GET /orders/next-number → next_order_number @149
+- POST /orders → create_order @154
+- GET /orders/scheduled → list_scheduled_orders @210 — Εκκρεμείς προγραμματισμένες + όσες ενεργοποιήθηκαν τις τελευταίες
+- GET /orders → list_orders @269
+- GET /orders/count → count_orders @292 — Συνολικό πλήθος για τα φίλτρα του ιστορικού —…
+- GET /orders/live-map → live_map_orders @433 — Παραγγελίες παράδοσης των τελευταίων 30' με συντεταγμένες για…
+- POST /orders/live-map/clear → clear_live_map @486 — Χειροκίνητος καθαρισμός: κρύβει από τον χάρτη όλες τις…
+- GET /orders/address-book → address_book @494 — Γνωστές διευθύνσεις πελατών για autocomplete στη φόρμα παράδοσης…
+- GET /orders/heatmap → orders_heatmap @534 — Heatmap διευθύνσεων παράδοσης για τα Στατιστικά: σημεία (lat/lng)…
+- GET /orders/{oid} → get_order @588
+- POST /orders/{oid}/activate → activate_order @598 — Move a scheduled order to active (fired /…
+- POST /orders/{oid}/cancel → cancel_order @618
+- DELETE /orders/{oid} → delete_order @645
+- PUT /orders/{oid} → edit_order @769 — Επεξεργασία takeaway/delivery παραγγελίας μετά τη δημιουργία: είδη,
+- GET /customers → list_customers @870 — Aggregate customers from phone/delivery orders, grouped by phone
+### platforms.py
+- GET /platforms/settings → platform_settings @103
+- PUT /platforms/{platform}/enabled → toggle_platform @118 — Εμφάνιση/απόκρυψη της καρτέλας της πλατφόρμας στις Παραγγελίες.
+- PUT /platforms/{platform}/store-open → set_store_open @137 — «Ανοιχτό στο efood»: περνά από τον connector —…
+- GET /platforms/{platform}/sound → get_platform_sound @159 — Ο ήχος της πλατφόρμας: ο δικός του καταστήματος…
+- PUT /platforms/{platform}/sound → upload_platform_sound @182
+- DELETE /platforms/{platform}/sound → reset_platform_sound @206 — Επαναφορά στον προεπιλεγμένο ήχο του OrderDeck για την…
+- GET /platforms/orders → list_platform_orders @229 — Ενεργές παραγγελίες όλων (ή μίας) πλατφόρμας: εισερχόμενες +…
+- GET /platforms/orders/recent → recent_platform_orders @243 — «Πρόσφατες παραγγελίες» της πλατφόρμας — ολοκληρωμένες & απορριφθείσες.
+- POST /platforms/orders/{oid}/accept → accept_platform_order @342
+- POST /platforms/orders/{oid}/reject → reject_platform_order @377
+- POST /platforms/orders/{oid}/ready-time → change_ready_time @405 — Αλλαγή χρόνου παράδοσης μετά την αποδοχή — μετακινεί…
+- POST /platforms/orders/{oid}/out-for-delivery → out_for_delivery @435 — «ΚΑΘ' ΟΔΟΝ» — η κατάσταση φεύγει προς την…
+- POST /platforms/orders/{oid}/complete → complete_platform_order @468 — Ολοκλήρωση — φεύγει από τις «Σε εξέλιξη» και…
+- POST /platforms/test-order → create_test_order @503 — Παράγει ρεαλιστική εισερχόμενη παραγγελία από το ΠΡΑΓΜΑΤΙΚΟ μενού…
 ### print_jobs.py
 - POST /print/jobs → create_print_job @63
 - GET /print/jobs/stream → print_jobs_stream @91 — SSE stream του σταθμού εκτύπωσης: event `job` μόλις…
@@ -199,13 +214,13 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - PUT /shifts → upsert_shift @102
 - DELETE /shifts → delete_shift @124
 ### stats.py
-- GET /analytics → analytics @25
-- GET /analytics/yoy → analytics_yoy @128 — Ίδια περίοδος πέρσι: έσοδα/παραγγελίες + delta. available=False όταν…
-- GET /reports/day-summary → day_summary @227
-- GET /reports/business-days → list_business_days @236 — Οι εργάσιμες ημέρες με κίνηση (για την επιλογή…
-- POST /reports/day-close → close_day @272 — Κλείνει ΠΑΝΤΑ την τρέχουσα εργάσιμη ημέρα (οι παλιές…
-- GET /deck/overview → deck_overview @354
-- GET /reports/day → list_day_reports @442
+- GET /analytics → analytics @76
+- GET /analytics/yoy → analytics_yoy @191 — Ίδια περίοδος πέρσι: έσοδα/παραγγελίες + delta. available=False όταν…
+- GET /reports/day-summary → day_summary @290
+- GET /reports/business-days → list_business_days @299 — Οι εργάσιμες ημέρες με κίνηση (για την επιλογή…
+- POST /reports/day-close → close_day @335 — Κλείνει ΠΑΝΤΑ την τρέχουσα εργάσιμη ημέρα (οι παλιές…
+- GET /deck/overview → deck_overview @417
+- GET /reports/day → list_day_reports @513
 ### stock.py
 - POST /shopping/print → record_shopping_print @82 — Καταγραφή εκτύπωσης της λίστας αγορών: snapshot ειδών +…
 - GET /shopping/prints → list_shopping_prints @109
@@ -272,14 +287,15 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - fleet_counters: routers/admin_fleet.py, routers/fleet.py, server.py
 - fleet_events: routers/admin_fleet.py, routers/fleet.py, server.py
 - fleet_members: routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
-- fleet_orders: core.py, routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/orders.py, routers/store_fleet.py, server.py
+- fleet_orders: core.py, routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/orders.py, routers/platforms.py, routers/store_fleet.py, server.py
 - fleet_partnerships: core.py, routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
 - fleet_shifts: routers/fleet.py, server.py
 - fleet_teams: routers/admin_fleet.py, routers/admin_overview.py, routers/fleet.py, routers/store_fleet.py, server.py
 - geocode_cache: routers/orders.py, routers/tables.py, server.py
-- items: core.py, routers/admin.py, routers/ai.py, routers/menu.py, routers/public_menu.py, server.py
-- orders: routers/admin.py, routers/admin_overview.py, routers/ai.py, routers/orders.py, routers/stats.py, routers/tables.py, server.py
+- items: core.py, routers/admin.py, routers/ai.py, routers/menu.py, routers/platforms.py, routers/public_menu.py, server.py
+- orders: routers/admin.py, routers/admin_overview.py, routers/ai.py, routers/orders.py, routers/platforms.py, routers/stats.py, routers/tables.py, server.py
 - photos: routers/menu.py, routers/public_menu.py, server.py
+- platform_orders: platform_integrations.py, routers/platforms.py, server.py
 - print_jobs: routers/print_jobs.py, server.py
 - profiles: core.py, routers/admin.py, routers/admin_fleet.py, routers/auth.py, server.py
 - promo_codes: routers/promo.py, server.py
@@ -292,7 +308,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - stock_photos: routers/menu.py, routers/stock_photos.py, server.py
 - table_tabs: routers/stats.py, routers/tables.py, server.py
 - tables: core.py, routers/stats.py, routers/tables.py, server.py
-- users: core.py, routers/admin.py, routers/admin_fleet.py, routers/admin_overview.py, routers/auth.py, routers/billing.py, routers/fleet.py, routers/menu.py, routers/onboarding.py, routers/orders.py, routers/print_jobs.py, routers/promo.py, routers/public_menu.py, routers/tables.py, server.py
+- users: core.py, routers/admin.py, routers/admin_fleet.py, routers/admin_overview.py, routers/auth.py, routers/billing.py, routers/fleet.py, routers/menu.py, routers/onboarding.py, routers/orders.py, routers/platforms.py, routers/print_jobs.py, routers/promo.py, routers/public_menu.py, routers/tables.py, server.py
 
 ## FRONTEND — routes (frontend/src/App.js)
 - login → FleetLogin
@@ -351,12 +367,12 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - AdminShops.jsx (55 γρ): AdminShops@12
 - AdminStockPhotos.jsx (289 γρ): Field@51, StockPhotosContent@58, AdminStockPhotos@282
 - AdminSubscriptions.jsx (126 γρ): SubsContent@25, AdminSubscriptions@119
-- Analytics.jsx (304 γρ): Analytics@35
+- Analytics.jsx (337 γρ): Analytics@39
 - Checklist.jsx (136 γρ): Checklist@16
 - DailyBrief.jsx (159 γρ): DailyBrief@40
 - DayClose.jsx (197 γρ): DayClose@24
 - DeckPilot.jsx (13 γρ): DeckPilot@4
-- DeckView.jsx (275 γρ): BigCard@21, Panel@39, DeckView@49
+- DeckView.jsx (311 γρ): BigCard@24, Panel@42, DeckView@52
 - Expenses.jsx (401 γρ): Expenses@33
 - FleetDispatch.jsx (228 γρ): FleetDispatch@21
 - FleetDriver.jsx (366 γρ): FleetDriver@41
@@ -372,13 +388,13 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
 - MenuManagement.jsx (394 γρ): MenuManagement@32
-- PDA.jsx (717 γρ): PDA@83
+- PDA.jsx (739 γρ): PDA@86
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
 - PublicMenu.jsx (209 γρ): PublicMenu@19
 - Register.jsx (244 γρ): Register@23
 - Schedule.jsx (338 γρ): Schedule@30
-- Settings.jsx (128 γρ): Section@20, Settings@35
+- Settings.jsx (140 γρ): Section@22, Settings@37
 - Stock.jsx (398 γρ): Stock@32
 - StoreFleet.jsx (169 γρ): StoreFleet@16
 - StoreFleetPartners.jsx (159 γρ): StoreFleetPartners@22
@@ -446,7 +462,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - history/CustomerDetailModal.jsx (119 γρ): CustomerDetailModal@5
 - history/CustomersTab.jsx (84 γρ): CustomersTab@4
 - history/OrderDetailModal.jsx (257 γρ): OrderDetailModal@18
-- history/OrdersTab.jsx (170 γρ): OrdersTab@11
+- history/OrdersTab.jsx (184 γρ): OrdersTab@12
 - history/ScheduledBadge.jsx (21 γρ): ScheduledBadge@5
 - history/utils.js (17 γρ)
 - landing/DemoModal.jsx (147 γρ): DemoModal@8
@@ -470,9 +486,14 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - pda/MenuSection.jsx (91 γρ): MenuSection@17
 - pda/MobileTabs.jsx (40 γρ): MobileTabs@2
 - pda/PDAModals.jsx (85 γρ): PDAModals@8
+- pda/PlatformTabs.jsx (61 γρ): PlatformTabs@6
 - pda/ReprintPromptModal.jsx (70 γρ): ReprintPromptModal@6
 - pda/ScheduledOrdersModal.jsx (98 γρ): ScheduledOrdersModal@5
 - pda/ScheduledPanel.jsx (90 γρ): ScheduledPanel@8
+- pda/platform/ActiveCard.jsx (112 γρ): ActiveCard@12
+- pda/platform/IncomingCard.jsx (83 γρ): IncomingCard@11
+- pda/platform/PlatformTab.jsx (218 γρ): PlatformTab@24
+- pda/platform/RecentOrdersModal.jsx (142 γρ): RecentOrdersModal@13
 - pda/utils.js (62 γρ)
 - profile-select/ForcePinChange.jsx (101 γρ): ForcePinChange@8
 - public-menu/CategoryBar.jsx (142 γρ): CategoryBar@9
@@ -511,7 +532,7 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - AddressAutocomplete.jsx (431 γρ): AddressAutocomplete@104
 - AdminShell.jsx (355 γρ): useAdminPw@31, useAdminInfo@35, MasterOnly@38, LoginForm@67, ForcePasswordChange@146, AdminShell@210
 - AnnouncementBanner.jsx (88 γρ): AnnouncementBanner@32
-- AppShell.jsx (549 γρ): BetaBadge@103, DemoBanner@127, AppShell@170
+- AppShell.jsx (553 γρ): BetaBadge@104, DemoBanner@128, AppShell@171
 - BulkActionsBar.jsx (478 γρ): PriceChangeDialog@32, CategoryDialog@126, OptionGroupDialog@186, BulkActionsBar@362
 - BusinessDetailsForm.jsx (244 γρ): BusinessDetailsForm@27
 - CodeNumpad.jsx (110 γρ): CodeNumpad@11
@@ -530,16 +551,23 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - OrderPanel.jsx (492 γρ): OrderPanel@27
 - PeriodFilter.jsx (92 γρ): PeriodFilter@20
 - PinGateModal.jsx (179 γρ): PinGateModal@16
+- PlatformOrderPopup.jsx (102 γρ): PlatformOrderPopup@13
+- PlatformSettings.jsx (209 γρ): PlatformSettings@20
 - PrintingSettings.jsx (231 γρ): PrintingSettings@36
 - ProfilesManager.jsx (322 γρ): ProfileModal@20, ProfilesManager@176
 - ProtectedRoute.jsx (40 γρ): ProtectedRoute@12
 - PublicMenuSettings.jsx (410 γρ): PublicMenuSettings@29
-- Receipt.jsx (158 γρ): ReceiptCopy@15, Receipt@143
+- Receipt.jsx (167 γρ): ReceiptCopy@15, Receipt@152
+- SourceFilter.jsx (39 γρ): SourceFilter@5
+- SourceMix.jsx (57 γρ): SourceMix@7
 - StatCard.jsx (21 γρ): StatCard@4
 - StoreDetailsSettings.jsx (165 γρ): StoreDetailsSettings@16
 - StoreHoursEditor.jsx (123 γρ): StoreHoursEditor@19
 - TablesEditor.jsx (164 γρ): TablesEditor@14
 - TimePicker.jsx (119 γρ): Column@23, TimePicker@60
+- platform/Countdown.jsx (37 γρ): Countdown@7
+- platform/PlatformOrderBody.jsx (79 γρ): PlatformOrderBody@6
+- platform/ReadyTimePicker.jsx (37 γρ): ReadyTimePicker@6
 - printing/BridgeSetup.jsx (185 γρ): BridgeSetup@17
 - printing/KioskSetup.jsx (82 γρ): KioskSetup@12
 - printing/RelayAgent.jsx (243 γρ): StationLoop@27, StationDownBanner@195, RelayAgent@234
@@ -652,10 +680,10 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiCloseDay(date) → POST /reports/day-close
 - apiListDayReports() → GET /reports/day
 - apiBusinessDays() → GET /reports/business-days
-- fetchAnalytics(dateFrom, dateTo) → GET /analytics
+- fetchAnalytics(dateFrom, dateTo, source = "all") → GET /analytics
 - fetchAnalyticsYoY(dateFrom, dateTo) → GET /analytics/yoy
 - apiOrdersHeatmap(dateFrom, dateTo) → GET /orders/heatmap
-- fetchDeckOverview() → GET /deck/overview
+- fetchDeckOverview(source = "all") → GET /deck/overview
 - apiListExpenseCategories() → GET /expenses/categories
 - apiCreateExpenseCategory(payload) → POST /expenses/categories
 - apiUpdateExpenseCategory(id, payload) → PUT /expenses/categories/${id}
@@ -744,4 +772,18 @@ Frontend: Name@γραμμή = component/hook ορισμένο στο αρχεί�
 - apiStoreFleetCancelOrder(id) → POST /store/fleet/orders/${id}/cancel
 - apiStoreFleetAddressBook() → GET /store/fleet/address-book
 - apiStoreFleetStats(params) → GET /store/fleet/stats
+- apiPlatformSettings() → GET /platforms/settings
+- apiTogglePlatform(platform, enabled) → PUT /platforms/${platform}/enabled
+- apiSetPlatformStoreOpen(platform, isOpen) → PUT /platforms/${platform}/store-open
+- apiUploadPlatformSound(platform, dataUrl, name) → PUT /platforms/${platform}/sound
+- apiResetPlatformSound(platform) → DELETE /platforms/${platform}/sound
+- apiFetchPlatformSound(platform) → GET /platforms/${platform}/sound
+- apiPlatformOrders(platform) → GET /platforms/orders
+- apiPlatformRecent(platform, skip = 0, limit = 20) → GET /platforms/orders/recent
+- apiAcceptPlatformOrder(id, readyMinutes) → POST /platforms/orders/${id}/accept
+- apiRejectPlatformOrder(id, reason = null) → POST /platforms/orders/${id}/reject
+- apiPlatformReadyTime(id, readyMinutes) → POST /platforms/orders/${id}/ready-time
+- apiPlatformOutForDelivery(id) → POST /platforms/orders/${id}/out-for-delivery
+- apiCompletePlatformOrder(id) → POST /platforms/orders/${id}/complete
+- apiCreateTestPlatformOrder(platform) → POST /platforms/test-order
 - formatApiError(e)

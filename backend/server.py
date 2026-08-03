@@ -9,7 +9,7 @@ from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, ensure_demo_account, migrate_items_sort_order
-from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, admin_admins, admin_fleet, admin_overview, announcements, onboarding, billing, fleet, store_fleet, print_jobs
+from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, admin_admins, admin_fleet, admin_overview, announcements, onboarding, billing, fleet, store_fleet, print_jobs, platforms
 
 app = FastAPI(title="OrderDeck")
 
@@ -52,6 +52,7 @@ api.include_router(billing.router)
 api.include_router(fleet.router)
 api.include_router(store_fleet.router)
 api.include_router(print_jobs.router)
+api.include_router(platforms.router)
 
 app.include_router(api)
 
@@ -171,6 +172,11 @@ async def on_startup():
     await db.users.create_index("print_bridge_token", unique=True, sparse=True)
     # Ανακοινώσεις πλατφόρμας: γρήγορη εύρεση ενεργής ανά μαγαζί
     await db.announcements.create_index([("active", 1), ("created_at", -1)])
+    # Παραγγελίες πλατφορμών delivery (efood/Box/Wolt): ενεργές ανά μαγαζί (poll
+    # για badges/ήχο/popup) + «Πρόσφατες» ανά πλατφόρμα
+    await db.platform_orders.create_index([("user_id", 1), ("status", 1), ("received_at", 1)])
+    await db.platform_orders.create_index([("user_id", 1), ("platform", 1), ("received_at", -1)])
+    await db.platform_orders.create_index([("user_id", 1), ("id", 1)])
     # Μία φορά: ενοποίηση πεδίου πόλης — παλιοί λογαριασμοί με city από την εγγραφή
     # αλλά χωρίς store_city (το κανονικό πεδίο) → αντιγραφή city → store_city
     await db.users.update_many(

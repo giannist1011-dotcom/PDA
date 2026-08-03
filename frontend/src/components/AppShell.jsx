@@ -36,6 +36,7 @@ import DeckPilotChat from "@/components/DeckPilotChat";
 import OfflineBanner from "@/components/OfflineBanner";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import RelayAgent from "@/components/printing/RelayAgent";
+import PlatformOrderPopup from "@/components/PlatformOrderPopup";
 import { useOfflineStatus } from "@/lib/offline";
 import { apiFleetExchange, formatApiError } from "@/lib/api";
 import { setFleetToken } from "@/lib/fleetApi";
@@ -360,6 +361,9 @@ export default function AppShell({ title, children }) {
 
       {/* Kiosk Relay: poll/εκτύπωση στον σταθμό, warning banner στις άλλες συσκευές */}
       <RelayAgent />
+
+      {/* Νέα παραγγελία πλατφόρμας — popup πάνω δεξιά σε κάθε οθόνη */}
+      <PlatformOrderPopup />
 
       {open && (
         <>

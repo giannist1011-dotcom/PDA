@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Users, Globe, Store, CreditCard, SlidersHorizontal, LayoutGrid, Printer } from "lucide-react";
+import { Users, Globe, Store, CreditCard, SlidersHorizontal, LayoutGrid, Printer, Bike } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import StoreDetailsSettings from "@/components/StoreDetailsSettings";
 import ProfilesManager from "@/components/ProfilesManager";
 import PublicMenuSettings from "@/components/PublicMenuSettings";
 import PrintingSettings from "@/components/PrintingSettings";
+import PlatformSettings from "@/components/PlatformSettings";
 import TablesSettings from "./settings/TablesSettings";
 import SubscriptionSettings from "./settings/SubscriptionSettings";
 
@@ -12,6 +13,7 @@ import SubscriptionSettings from "./settings/SubscriptionSettings";
 const CATEGORIES = [
   { key: "store", label: "Στοιχεία καταστήματος", icon: Store },
   { key: "catalog", label: "Κατάλογος", icon: Globe },
+  { key: "platforms", label: "Πλατφόρμες", icon: Bike },
   { key: "staff", label: "Προσωπικό", icon: Users },
   { key: "subscription", label: "Συνδρομή", icon: CreditCard },
   { key: "misc", label: "Λοιπά", icon: SlidersHorizontal },
@@ -79,6 +81,16 @@ export default function Settings() {
               subtitle="Λογότυπο και δημόσια σελίδα μενού με σύνδεσμο και QR κώδικα για τους πελάτες σας"
             >
               <PublicMenuSettings />
+            </Section>
+          )}
+
+          {cat === "platforms" && (
+            <Section
+              icon={Bike}
+              title="Πλατφόρμες delivery"
+              subtitle="efood, Box και Wolt: καρτέλα παραγγελιών ανά πλατφόρμα και ήχος ειδοποίησης"
+            >
+              <PlatformSettings />
             </Section>
           )}
 

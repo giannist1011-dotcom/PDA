@@ -121,6 +121,12 @@ class Order(OrderCreate):
     # Επεξεργασία μετά τη δημιουργία: πότε άλλαξε τελευταία + change log (ποιος/πότε/τι)
     modified_at: Optional[str] = None
     edits: List[dict] = Field(default_factory=list)
+    # Παραγγελία πλατφόρμας (efood/Box/Wolt): σήμανση για το banner της απόδειξης
+    # και τον χρόνο παράδοσης που δείχνει countdown στη λίστα παραγγελιών
+    platform: Optional[str] = None
+    platform_ref: Optional[str] = None
+    platform_order_id: Optional[str] = None
+    platform_due_at: Optional[str] = None
 
 
 # ============ ORDER ROUTES ============

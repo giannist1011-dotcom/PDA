@@ -387,8 +387,10 @@ export const apiBusinessDays = () =>
   api.get("/reports/business-days").then((r) => r.data);
 
 // ANALYTICS
-export const fetchAnalytics = (dateFrom, dateTo) =>
-  api.get("/analytics", { params: { date_from: dateFrom, date_to: dateTo } }).then((r) => r.data);
+export const fetchAnalytics = (dateFrom, dateTo, source = "all") =>
+  api
+    .get("/analytics", { params: { date_from: dateFrom, date_to: dateTo, source } })
+    .then((r) => r.data);
 
 export const fetchAnalyticsYoY = (dateFrom, dateTo) =>
   api.get("/analytics/yoy", { params: { date_from: dateFrom, date_to: dateTo } }).then((r) => r.data);
@@ -396,7 +398,8 @@ export const apiOrdersHeatmap = (dateFrom, dateTo) =>
   api.get("/orders/heatmap", { params: { date_from: dateFrom, date_to: dateTo } }).then((r) => r.data);
 
 // DECK VIEW (live overview ημέρας)
-export const fetchDeckOverview = () => api.get("/deck/overview").then((r) => r.data);
+export const fetchDeckOverview = (source = "all") =>
+  api.get("/deck/overview", { params: { source } }).then((r) => r.data);
 
 // EXPENSES
 export const apiListExpenseCategories = () =>
@@ -669,6 +672,36 @@ export const apiStoreFleetAddressBook = () =>
   api.get("/store/fleet/address-book").then((r) => r.data);
 export const apiStoreFleetStats = (params) =>
   api.get("/store/fleet/stats", { params }).then((r) => r.data);
+
+// ---------- Πλατφόρμες delivery (efood / Box / Wolt) ----------
+export const apiPlatformSettings = () => api.get("/platforms/settings").then((r) => r.data);
+export const apiTogglePlatform = (platform, enabled) =>
+  api.put(`/platforms/${platform}/enabled`, { enabled }).then((r) => r.data);
+export const apiSetPlatformStoreOpen = (platform, isOpen) =>
+  api.put(`/platforms/${platform}/store-open`, { is_open: isOpen }).then((r) => r.data);
+export const apiUploadPlatformSound = (platform, dataUrl, name) =>
+  api.put(`/platforms/${platform}/sound`, { data_url: dataUrl, name }).then((r) => r.data);
+export const apiResetPlatformSound = (platform) =>
+  api.delete(`/platforms/${platform}/sound`).then((r) => r.data);
+// Ο ήχος έρχεται ως bytes από το ΔΙΚΟ ΜΑΣ API και γίνεται blob στη συσκευή (cached)
+export const apiFetchPlatformSound = (platform) =>
+  api.get(`/platforms/${platform}/sound`, { responseType: "blob" }).then((r) => r.data);
+export const apiPlatformOrders = (platform) =>
+  api.get("/platforms/orders", { params: platform ? { platform } : {} }).then((r) => r.data);
+export const apiPlatformRecent = (platform, skip = 0, limit = 20) =>
+  api.get("/platforms/orders/recent", { params: { platform, skip, limit } }).then((r) => r.data);
+export const apiAcceptPlatformOrder = (id, readyMinutes) =>
+  api.post(`/platforms/orders/${id}/accept`, { ready_minutes: readyMinutes }).then((r) => r.data);
+export const apiRejectPlatformOrder = (id, reason = null) =>
+  api.post(`/platforms/orders/${id}/reject`, { reason }).then((r) => r.data);
+export const apiPlatformReadyTime = (id, readyMinutes) =>
+  api.post(`/platforms/orders/${id}/ready-time`, { ready_minutes: readyMinutes }).then((r) => r.data);
+export const apiPlatformOutForDelivery = (id) =>
+  api.post(`/platforms/orders/${id}/out-for-delivery`).then((r) => r.data);
+export const apiCompletePlatformOrder = (id) =>
+  api.post(`/platforms/orders/${id}/complete`).then((r) => r.data);
+export const apiCreateTestPlatformOrder = (platform) =>
+  api.post("/platforms/test-order", { platform }).then((r) => r.data);
 
 // Error helper
 export function formatApiError(e) {

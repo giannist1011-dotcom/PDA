@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ORDER_SOURCES } from "@/data/menu";
 import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
 import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
+import Countdown from "@/components/platform/Countdown";
 import ScheduledBadge from "./ScheduledBadge";
 import { typeLabel, sourceBadgeCls } from "./utils";
 
@@ -129,6 +130,19 @@ export default function OrdersTab({
                       </span>
                     )}
                     <ScheduledBadge order={o} />
+                    {/* Παραγγελία πλατφόρμας: ίδιο countdown με την καρτέλα της */}
+                    {o.platform_due_at && !o.cancelled && (
+                      <>
+                        <span className="text-[10px] font-mono text-neutral-500">
+                          {o.platform_ref}
+                        </span>
+                        <Countdown
+                          dueAt={o.platform_due_at}
+                          size="sm"
+                          testId={`history-countdown-${o.id}`}
+                        />
+                      </>
+                    )}
                   </div>
                   <div className="text-xs text-neutral-500 mt-1">
                     {formatGRDateTime(o.created_at)}
