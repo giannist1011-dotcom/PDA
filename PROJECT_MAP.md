@@ -144,24 +144,26 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - GET /deck/overview → deck_overview @417
 - GET /reports/day → list_day_reports @513
 ### pos/stock.py
-- POST /shopping/print → record_shopping_print @82 — Καταγραφή εκτύπωσης της λίστας αγορών: snapshot ειδών +…
-- GET /shopping/prints → list_shopping_prints @109
-- GET /stock/config → stock_config @145
-- POST /stock/categories/reorder → reorder_stock_categories @159 — Νέα σειρά κατηγοριών ελλείψεων: η θέση στη λίστα…
-- POST /stock/items/reorder → reorder_stock_items @171 — Νέα σειρά ειδών μέσα σε μία κατηγορία ελλείψεων.
-- POST /stock/categories → create_stock_category @181
-- PUT /stock/categories/{cid} → update_stock_category @194
-- DELETE /stock/categories/{cid} → delete_stock_category @210
-- POST /stock/items → create_stock_item @235
-- PATCH /stock/items/{iid} → update_stock_item @258
-- POST /stock/categories/{cid}/shopping → toggle_stock_category_shopping @302 — Ολόκληρη κατηγορία στη λίστα αγορών (ή έξω από…
-- POST /stock/items/{iid}/shopping → toggle_stock_item_shopping @364
-- DELETE /stock/items/{iid} → delete_stock_item @410
-- GET /shopping → list_shopping @421
-- POST /shopping/reset → reset_shopping @429 — Wipe entire shopping list and clear shopping_item_id on…
-- POST /shopping → add_shopping @440
-- PUT /shopping/{sid} → update_shopping @467
-- DELETE /shopping/{sid} → delete_shopping @482
+- POST /shopping/print → record_shopping_print @83 — Καταγραφή εκτύπωσης της λίστας αγορών: snapshot ειδών +…
+- GET /shopping/prints → list_shopping_prints @110
+- GET /stock/config → stock_config @200
+- POST /stock/categories/reorder → reorder_stock_categories @214 — Νέα σειρά κατηγοριών ελλείψεων: η θέση στη λίστα…
+- POST /stock/items/reorder → reorder_stock_items @226 — Νέα σειρά ειδών μέσα σε μία κατηγορία ελλείψεων.
+- POST /stock/categories → create_stock_category @236
+- PUT /stock/categories/{cid} → update_stock_category @249
+- DELETE /stock/categories/{cid} → delete_stock_category @265
+- POST /stock/items → create_stock_item @290
+- PATCH /stock/items/{iid} → update_stock_item @315
+- POST /stock/categories/{cid}/shopping → toggle_stock_category_shopping @369 — Ολόκληρη κατηγορία στη λίστα αγορών (ή έξω από…
+- POST /stock/items/{iid}/shopping → toggle_stock_item_shopping @448
+- GET /stock/variant-suggestions → stock_variant_suggestions @531 — Ομάδες ειδών της ίδιας κατηγορίας που μοιράζονται την…
+- POST /stock/items/merge-variants → merge_stock_items_to_variants @578 — Ενώνει τα είδη κάθε ομάδας σε ένα είδος…
+- DELETE /stock/items/{iid} → delete_stock_item @630
+- GET /shopping → list_shopping @641
+- POST /shopping/reset → reset_shopping @649 — Wipe entire shopping list and clear shopping_item_id on…
+- POST /shopping → add_shopping @660
+- PUT /shopping/{sid} → update_shopping @687
+- DELETE /shopping/{sid} → delete_shopping @702
 ### pos/tables.py
 - PUT /settings/business → update_business_type @54
 - PUT /settings/store → update_store_details @92 — Στοιχεία καταστήματος — όνομα, τηλέφωνο, διεύθυνση, συντεταγμένες (lat/lng).
@@ -424,7 +426,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - Register.jsx (244 γρ): Register@23
 - Schedule.jsx (338 γρ): Schedule@30
 - Settings.jsx (140 γρ): Section@22, Settings@37
-- Stock.jsx (431 γρ): Stock@33
+- Stock.jsx (103 γρ): Stock@12
 - StoreFleet.jsx (169 γρ): StoreFleet@16
 - StoreFleetPartners.jsx (159 γρ): StoreFleetPartners@22
 - StoreFleetSettings.jsx (47 γρ): StoreFleetSettings@9
@@ -540,14 +542,19 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - schedule/utils.js (67 γρ)
 - settings/SubscriptionSettings.jsx (146 γρ): SubscriptionSettings@20
 - settings/TablesSettings.jsx (65 γρ): TablesSettings@8
-- stock/AddItemModal.jsx (87 γρ): AddItemModal@5
+- stock/AddItemModal.jsx (97 γρ): AddItemModal@6
 - stock/CategoryModal.jsx (61 γρ): CategoryModal@5
 - stock/CategoryRail.jsx (97 γρ): CategoryRail@4
+- stock/MergeVariantsModal.jsx (139 γρ): MergeVariantsModal@10
 - stock/PrintHistoryModal.jsx (185 γρ): PrintHistoryModal@25
 - stock/ShoppingListPanel.jsx (145 γρ): ShoppingListPanel@6
-- stock/StockRow.jsx (123 γρ): StockRow@6
-- stock/StockSection.jsx (193 γρ): StockSection@7
-- stock/utils.js (43 γρ)
+- stock/StockRow.jsx (145 γρ): StockRow@7
+- stock/StockSection.jsx (206 γρ): StockSection@7
+- stock/VariantPickerModal.jsx (109 γρ): VariantPickerModal@8
+- stock/VariantsEditor.jsx (119 γρ): VariantsEditor@7
+- stock/shortagePrint.test.js (60 γρ)
+- stock/useStockPage.js (458 γρ): useStockPage@29
+- stock/utils.js (53 γρ)
 - store-fleet/StoreOrderForm.jsx (250 γρ): StoreOrderForm@31
 - table-order/KitchenSlip.jsx (33 γρ): KitchenSlip@4
 - table-order/TabPanel.jsx (184 γρ): TabPanel@15
@@ -663,9 +670,11 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - apiCreateStockItem(payload) → POST /stock/items
 - apiUpdateStockItem(id, payload) → PATCH /stock/items/${id}
 - apiReorderStockItems(ids) → POST /stock/items/reorder
-- apiToggleStockItemShopping(id, needs) → POST /stock/items/${id}/shopping
+- apiToggleStockItemShopping(id, needs, variantIds = null) → POST /stock/items/${id}/shopping
 - apiToggleStockCategoryShopping(cid, needs) → POST /stock/categories/${cid}/shopping
 - apiDeleteStockItem(id) → DELETE /stock/items/${id}
+- apiStockVariantSuggestions() → GET /stock/variant-suggestions
+- apiMergeStockVariants(groups) → POST /stock/items/merge-variants
 - apiChecklistToday() → GET /checklist/today
 - apiChecklistTick(templateId, done) → POST /checklist/tick
 - apiChecklistTemplates() → GET /checklist/templates

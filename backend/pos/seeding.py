@@ -79,7 +79,11 @@ async def seed_account_from_preset(user_id: str, preset: dict, has_tables: bool)
         now = datetime.now(timezone.utc).isoformat()
         item_docs = []
         for cat in cat_docs:
-            for order, name in enumerate(stock_items.get(cat["name"]) or []):
+            # Κάθε είδος: σκέτο όνομα ή {"name": ..., "variants": [...]} για είδη
+            # με παραλλαγές (π.χ. Σακούλες → 35άρες/40άρες/45άρες)
+            for order, entry in enumerate(stock_items.get(cat["name"]) or []):
+                name = entry["name"] if isinstance(entry, dict) else entry
+                variants = entry.get("variants") or [] if isinstance(entry, dict) else []
                 item_docs.append({
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
@@ -88,6 +92,10 @@ async def seed_account_from_preset(user_id: str, preset: dict, has_tables: bool)
                     "order": order,
                     "available": True,
                     "note": "",
+                    "variants": [
+                        {"id": str(uuid.uuid4())[:8], "name": v} for v in variants
+                    ],
+                    "selected_variant_ids": [],
                     "shopping_item_id": None,
                     "created_at": now,
                 })

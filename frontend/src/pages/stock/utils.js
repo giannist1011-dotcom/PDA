@@ -31,12 +31,22 @@ export function groupShoppingByCategory(items, categories = []) {
 // Bridge γίνεται print_job, αλλιώς τυπώνεται στο κρυφό iframe 72mm.
 // when: προαιρετική ημερομηνία (ISO) για επανεκτύπωση παλιάς λίστας — default τώρα.
 export function printShoppingList({ user, restaurantName, items, categories = [], when = null }) {
-  printShoppingListJob(user, {
+  printShoppingListJob(
+    user,
+    buildShoppingListPayload({ restaurantName, items, categories, when })
+  );
+}
+
+// Το payload της εκτύπωσης. Κάθε γραμμή είναι το `text` της εγγραφής, δηλαδή
+// «Σακούλες: 35άρες, 45άρες» για είδη με παραλλαγές και σκέτο το όνομα για τα
+// υπόλοιπα — το σύνθετο κείμενο το φτιάχνει το backend όταν μπαίνει στη λίστα.
+export function buildShoppingListPayload({ restaurantName, items, categories = [], when = null }) {
+  return {
     restaurant_name: restaurantName || "",
     printed_at: when || new Date().toISOString(),
     groups: groupShoppingByCategory(items, categories).map((g) => ({
       category: g.category,
       items: g.items.map((it) => ({ text: it.text, bought: !!it.bought })),
     })),
-  });
+  };
 }

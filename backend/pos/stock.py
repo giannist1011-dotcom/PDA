@@ -1,4 +1,5 @@
 """Ελλείψεις (stock) & λίστα αγορών (shopping list)."""
+import unicodedata
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -117,6 +118,58 @@ async def list_shopping_prints(
     return docs
 
 
+# ============ ΠΑΡΑΛΛΑΓΕΣ ΕΙΔΟΥΣ (variants) ============
+# Ένα είδος ελλείψεων μπορεί προαιρετικά να έχει παραλλαγές (π.χ. Σακούλες →
+# 35άρες / 40άρες / 45άρες), όπως ακριβώς οι επιλογές ενός προϊόντος καταλόγου.
+# Χωρίς παραλλαγές το είδος συμπεριφέρεται όπως πάντα: tap = επιλογή.
+MAX_VARIANTS = 30
+
+
+class VariantIn(BaseModel):
+    id: Optional[str] = None
+    name: str = Field(min_length=1, max_length=80)
+
+
+def normalize_variants(raw: Optional[list[VariantIn]]) -> list[dict]:
+    """Καθαρή λίστα {id, name}: κρατά τα υπάρχοντα ids (ώστε να μη χάνονται οι
+    ήδη επιλεγμένες παραλλαγές σε μετονομασία/αναδιάταξη) και δίνει νέα στα νέα."""
+    out: list[dict] = []
+    seen_ids: set[str] = set()
+    seen_names: set[str] = set()
+    for v in raw or []:
+        name = (v.name or "").strip()
+        if not name or name.lower() in seen_names:
+            continue
+        vid = (v.id or "").strip() or str(uuid.uuid4())[:8]
+        if vid in seen_ids:
+            vid = str(uuid.uuid4())[:8]
+        seen_ids.add(vid)
+        seen_names.add(name.lower())
+        out.append({"id": vid, "name": name})
+        if len(out) >= MAX_VARIANTS:
+            break
+    return out
+
+
+def shopping_text(item_name: str, variant_names: list[str]) -> str:
+    """«Σακούλες: 35άρες, 45άρες» — μία γραμμή, ίδια και στην οθόνη και στο χαρτί."""
+    if variant_names:
+        return f"{item_name}: {', '.join(variant_names)}"
+    return item_name
+
+
+def pick_variants(item: dict, variant_ids: Optional[list[str]]) -> list[dict]:
+    """Οι επιλεγμένες παραλλαγές με τη σειρά που τις όρισε ο ιδιοκτήτης.
+    variant_ids=None → όλες (χρησιμοποιείται από την «Επιλογή όλων» κατηγορίας)."""
+    variants = item.get("variants") or []
+    if not variants:
+        return []
+    if variant_ids is None:
+        return list(variants)
+    wanted = set(variant_ids)
+    return [v for v in variants if v.get("id") in wanted]
+
+
 # ============ STOCK (INDEPENDENT INVENTORY) ============
 class StockCategoryIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
@@ -128,6 +181,7 @@ class StockItemIn(BaseModel):
     category_id: str
     available: bool = True
     note: str = ""
+    variants: list[VariantIn] = Field(default_factory=list, max_length=MAX_VARIANTS)
 
 
 class StockItemPatchIn(BaseModel):
@@ -135,6 +189,7 @@ class StockItemPatchIn(BaseModel):
     category_id: Optional[str] = None
     available: Optional[bool] = None
     note: Optional[str] = None
+    variants: Optional[list[VariantIn]] = Field(default=None, max_length=MAX_VARIANTS)
 
 
 class StockReorderIn(BaseModel):
@@ -247,6 +302,8 @@ async def create_stock_item(body: StockItemIn, user: dict = Depends(require_mana
         "order": order,
         "available": bool(body.available),
         "note": body.note.strip(),
+        "variants": normalize_variants(body.variants),
+        "selected_variant_ids": [],
         "shopping_item_id": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -256,6 +313,9 @@ async def create_stock_item(body: StockItemIn, user: dict = Depends(require_mana
 
 @router.patch("/stock/items/{iid}")
 async def update_stock_item(iid: str, body: StockItemPatchIn, user: dict = Depends(require_staff)):
+    current = await db.stock_items.find_one({"id": iid, "user_id": user["id"]}, {"_id": 0, "user_id": 0})
+    if not current:
+        raise HTTPException(404, "Not found")
     update = {}
     if body.name is not None:
         update["name"] = body.name.strip()
@@ -268,34 +328,41 @@ async def update_stock_item(iid: str, body: StockItemPatchIn, user: dict = Depen
         update["available"] = bool(body.available)
     if body.note is not None:
         update["note"] = body.note.strip()
+    if body.variants is not None:
+        variants = normalize_variants(body.variants)
+        update["variants"] = variants
+        # Οι ήδη επιλεγμένες παραλλαγές που εξακολουθούν να υπάρχουν παραμένουν
+        # επιλεγμένες — προσθήκη/μετονομασία παραλλαγής δεν χαλάει την επιλογή.
+        alive = {v["id"] for v in variants}
+        update["selected_variant_ids"] = [
+            vid for vid in (current.get("selected_variant_ids") or []) if vid in alive
+        ]
     if not update:
         raise HTTPException(400, "Nothing to update")
-    r = await db.stock_items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
-    if r.matched_count == 0:
-        raise HTTPException(404, "Not found")
+    await db.stock_items.update_one({"id": iid, "user_id": user["id"]}, {"$set": update})
     # keep linked shopping entry (text + κατηγορία) in sync
-    if "name" in update or "category_id" in update:
-        item = await db.stock_items.find_one(
-            {"id": iid, "user_id": user["id"]},
-            {"_id": 0, "shopping_item_id": 1, "category_id": 1},
-        )
-        sid = item.get("shopping_item_id") if item else None
-        if sid:
-            sync = {}
-            if "name" in update:
-                sync["text"] = update["name"]
-            if "category_id" in update:
-                cat = await db.stock_categories.find_one(
-                    {"id": item.get("category_id"), "user_id": user["id"]}, {"_id": 0, "name": 1}
-                )
-                sync["category_id"] = item.get("category_id")
-                sync["category_name"] = (cat or {}).get("name", OTHER_CATEGORY_NAME)
-            await db.shopping.update_one({"id": sid, "user_id": user["id"]}, {"$set": sync})
+    sid = current.get("shopping_item_id")
+    if sid and ("name" in update or "category_id" in update or "variants" in update):
+        merged = {**current, **update}
+        selected = pick_variants(merged, merged.get("selected_variant_ids") or [])
+        sync = {
+            "text": shopping_text(merged.get("name", ""), [v["name"] for v in selected]),
+            "variants": [v["name"] for v in selected],
+        }
+        if "category_id" in update:
+            cat = await db.stock_categories.find_one(
+                {"id": update["category_id"], "user_id": user["id"]}, {"_id": 0, "name": 1}
+            )
+            sync["category_id"] = update["category_id"]
+            sync["category_name"] = (cat or {}).get("name", OTHER_CATEGORY_NAME)
+        await db.shopping.update_one({"id": sid, "user_id": user["id"]}, {"$set": sync})
     return {"id": iid, **update}
 
 
 class StockShoppingIn(BaseModel):
     needs: bool
+    # Ποιες παραλλαγές λείπουν. None = όλες (είδη χωρίς παραλλαγές το αγνοούν).
+    variant_ids: Optional[list[str]] = None
 
 
 @router.post("/stock/categories/{cid}/shopping")
@@ -310,7 +377,7 @@ async def toggle_stock_category_shopping(
         raise HTTPException(404, "Η κατηγορία δεν βρέθηκε")
     items = await db.stock_items.find(
         {"user_id": user["id"], "category_id": cid},
-        {"_id": 0, "id": 1, "name": 1, "shopping_item_id": 1},
+        {"_id": 0, "id": 1, "name": 1, "shopping_item_id": 1, "variants": 1},
     ).to_list(2000)
     if not body.needs:
         sids = [i["shopping_item_id"] for i in items if i.get("shopping_item_id")]
@@ -318,25 +385,36 @@ async def toggle_stock_category_shopping(
             await db.shopping.delete_many({"user_id": user["id"], "id": {"$in": sids}})
             await db.stock_items.update_many(
                 {"user_id": user["id"], "category_id": cid},
-                {"$set": {"shopping_item_id": None}},
+                {"$set": {"shopping_item_id": None, "selected_variant_ids": []}},
             )
-        return {"category_id": cid, "links": {i["id"]: None for i in items}, "shopping_items": []}
+        return {
+            "category_id": cid,
+            "links": {i["id"]: None for i in items},
+            "selections": {i["id"]: [] for i in items},
+            "shopping_items": [],
+        }
 
     now = datetime.now(timezone.utc).isoformat()
     links: dict[str, str] = {}
+    selections: dict[str, list[str]] = {}
     new_docs = []
     for it in items:
         sid = it.get("shopping_item_id")
         if sid:
             links[it["id"]] = sid
             continue
+        # «Επιλογή όλων» → για τα είδη με παραλλαγές μπαίνουν όλες οι παραλλαγές
+        variants = it.get("variants") or []
+        names = [v["name"] for v in variants]
+        selections[it["id"]] = [v["id"] for v in variants]
         sid = str(uuid.uuid4())
         links[it["id"]] = sid
         new_docs.append(
             {
                 "id": sid,
                 "user_id": user["id"],
-                "text": it["name"],
+                "text": shopping_text(it["name"], names),
+                "variants": names,
                 "bought": False,
                 "source_stock_id": it["id"],
                 "category_id": cid,
@@ -349,11 +427,17 @@ async def toggle_stock_category_shopping(
         for doc in new_docs:
             await db.stock_items.update_one(
                 {"id": doc["source_stock_id"], "user_id": user["id"]},
-                {"$set": {"shopping_item_id": doc["id"]}},
+                {
+                    "$set": {
+                        "shopping_item_id": doc["id"],
+                        "selected_variant_ids": selections.get(doc["source_stock_id"], []),
+                    }
+                },
             )
     return {
         "category_id": cid,
         "links": links,
+        "selections": selections,
         "shopping_items": [
             {k: v for k, v in d.items() if k not in ("_id", "user_id")} for d in new_docs
         ],
@@ -368,11 +452,33 @@ async def toggle_stock_item_shopping(
     if not item:
         raise HTTPException(404, "Not found")
     existing_id = item.get("shopping_item_id")
-    if body.needs:
+    has_variants = bool(item.get("variants"))
+    selected = pick_variants(item, body.variant_ids) if body.needs else []
+    # Είδος με παραλλαγές και καμία επιλεγμένη → ισοδυναμεί με αφαίρεση
+    if body.needs and (not has_variants or selected):
+        selected_ids = [v["id"] for v in selected]
+        names = [v["name"] for v in selected]
+        text = shopping_text(item["name"], names)
         if existing_id:
-            existing = await db.shopping.find_one({"id": existing_id, "user_id": user["id"]}, {"_id": 0, "user_id": 0})
+            existing = await db.shopping.find_one(
+                {"id": existing_id, "user_id": user["id"]}, {"_id": 0, "user_id": 0}
+            )
             if existing:
-                return {"item_id": iid, "shopping_item_id": existing_id, "shopping_item": existing}
+                # Ξαναάνοιγμα του picker → ενημέρωση της ίδιας εγγραφής, όχι διπλή
+                await db.shopping.update_one(
+                    {"id": existing_id, "user_id": user["id"]},
+                    {"$set": {"text": text, "variants": names}},
+                )
+                await db.stock_items.update_one(
+                    {"id": iid, "user_id": user["id"]},
+                    {"$set": {"selected_variant_ids": selected_ids}},
+                )
+                return {
+                    "item_id": iid,
+                    "shopping_item_id": existing_id,
+                    "selected_variant_ids": selected_ids,
+                    "shopping_item": {**existing, "text": text, "variants": names},
+                }
         cat = await db.stock_categories.find_one(
             {"id": item.get("category_id"), "user_id": user["id"]}, {"_id": 0, "name": 1}
         )
@@ -380,7 +486,8 @@ async def toggle_stock_item_shopping(
         shopping_doc = {
             "id": sid,
             "user_id": user["id"],
-            "text": item["name"],
+            "text": text,
+            "variants": names,
             "bought": False,
             "source_stock_id": iid,
             "category_id": item.get("category_id"),
@@ -389,21 +496,134 @@ async def toggle_stock_item_shopping(
         }
         await db.shopping.insert_one(shopping_doc)
         await db.stock_items.update_one(
-            {"id": iid, "user_id": user["id"]}, {"$set": {"shopping_item_id": sid}}
+            {"id": iid, "user_id": user["id"]},
+            {"$set": {"shopping_item_id": sid, "selected_variant_ids": selected_ids}},
         )
         return {
             "item_id": iid,
             "shopping_item_id": sid,
+            "selected_variant_ids": selected_ids,
             "shopping_item": {k: v for k, v in shopping_doc.items() if k not in ("_id", "user_id")},
         }
-    # needs=false → remove linked shopping entry
+    # needs=false (ή καμία παραλλαγή επιλεγμένη) → remove linked shopping entry
     if existing_id:
         await db.shopping.delete_one({"id": existing_id, "user_id": user["id"]})
-        await db.stock_items.update_one(
-            {"id": iid, "user_id": user["id"]}, {"$set": {"shopping_item_id": None}}
-        )
-    return {"item_id": iid, "shopping_item_id": None}
+    await db.stock_items.update_one(
+        {"id": iid, "user_id": user["id"]},
+        {"$set": {"shopping_item_id": None, "selected_variant_ids": []}},
+    )
+    return {"item_id": iid, "shopping_item_id": None, "selected_variant_ids": []}
 
+
+
+# ============ ΜΕΤΑΤΡΟΠΗ ΠΑΛΙΩΝ ΕΙΔΩΝ ΣΕ ΠΑΡΑΛΛΑΓΕΣ ============
+# Παλιότερα το «Σακούλες 35άρες / 40άρες / 45άρες» ήταν τρία ξεχωριστά είδη.
+# Εδώ τα εντοπίζουμε και (μετά από έγκριση του ιδιοκτήτη) τα ενώνουμε σε ένα
+# είδος «Σακούλες» με τρεις παραλλαγές. Το ιστορικό εκτυπώσεων δεν αγγίζεται.
+def _fold(s: str) -> str:
+    """Πεζά χωρίς τόνους — για να ταιριάζει «Νερό» με «νερο»."""
+    return "".join(
+        c for c in unicodedata.normalize("NFD", (s or "").lower()) if not unicodedata.combining(c)
+    )
+
+
+@router.get("/stock/variant-suggestions")
+async def stock_variant_suggestions(user: dict = Depends(require_manager)):
+    """Ομάδες ειδών της ίδιας κατηγορίας που μοιράζονται την πρώτη λέξη."""
+    cats = await db.stock_categories.find(
+        {"user_id": user["id"]}, {"_id": 0, "id": 1, "name": 1, "order": 1}
+    ).sort("order", 1).to_list(500)
+    items = await db.stock_items.find(
+        {"user_id": user["id"]}, {"_id": 0, "id": 1, "name": 1, "category_id": 1, "order": 1, "variants": 1}
+    ).to_list(2000)
+    items.sort(key=lambda i: (i.get("order") or 0))
+    buckets: dict[tuple[str, str], list[dict]] = {}
+    for it in items:
+        if it.get("variants"):
+            continue  # έχει ήδη παραλλαγές — δεν το πειράζουμε
+        parts = (it.get("name") or "").split()
+        if len(parts) < 2:
+            continue
+        key = (it.get("category_id") or "", _fold(parts[0]))
+        buckets.setdefault(key, []).append(
+            {"id": it["id"], "name": it["name"], "base": parts[0], "variant": " ".join(parts[1:])}
+        )
+    cat_names = {c["id"]: c["name"] for c in cats}
+    groups = []
+    for (cid, _key), members in buckets.items():
+        if len(members) < 2:
+            continue
+        groups.append(
+            {
+                "category_id": cid,
+                "category_name": cat_names.get(cid, OTHER_CATEGORY_NAME),
+                "base_name": members[0]["base"],
+                "items": [{"id": m["id"], "name": m["name"], "variant": m["variant"]} for m in members],
+            }
+        )
+    groups.sort(key=lambda g: (g["category_name"], g["base_name"]))
+    return {"groups": groups}
+
+
+class MergeGroupIn(BaseModel):
+    item_ids: list[str] = Field(min_length=2, max_length=MAX_VARIANTS)
+    base_name: str = Field(min_length=1, max_length=120)
+
+
+class MergeVariantsIn(BaseModel):
+    groups: list[MergeGroupIn] = Field(min_length=1, max_length=100)
+
+
+@router.post("/stock/items/merge-variants")
+async def merge_stock_items_to_variants(
+    body: MergeVariantsIn, user: dict = Depends(require_manager)
+):
+    """Ενώνει τα είδη κάθε ομάδας σε ένα είδος με παραλλαγές.
+    Κρατά το πρώτο είδος (θέση/κατηγορία του) και σβήνει τα υπόλοιπα."""
+    merged = 0
+    removed_ids: list[str] = []
+    kept: list[dict] = []
+    for g in body.groups:
+        docs = await db.stock_items.find(
+            {"user_id": user["id"], "id": {"$in": g.item_ids}}, {"_id": 0, "user_id": 0}
+        ).to_list(MAX_VARIANTS)
+        if len(docs) < 2:
+            continue
+        by_id = {d["id"]: d for d in docs}
+        ordered = [by_id[i] for i in g.item_ids if i in by_id]
+        if len({d.get("category_id") for d in ordered}) != 1:
+            raise HTTPException(400, "Τα είδη μιας ομάδας πρέπει να είναι στην ίδια κατηγορία")
+        base = g.base_name.strip()
+        keep = ordered[0]
+        drop = ordered[1:]
+        variants = normalize_variants(
+            [
+                VariantIn(name=(d["name"][len(base):].strip() or d["name"]))
+                if _fold(d["name"]).startswith(_fold(base))
+                else VariantIn(name=d["name"])
+                for d in ordered
+            ]
+        )
+        # Οι εγγραφές των διαγραφόμενων ειδών φεύγουν από τη λίστα αγορών
+        drop_ids = [d["id"] for d in drop]
+        drop_sids = [d["shopping_item_id"] for d in drop if d.get("shopping_item_id")]
+        if drop_sids:
+            await db.shopping.delete_many({"user_id": user["id"], "id": {"$in": drop_sids}})
+        await db.stock_items.delete_many({"user_id": user["id"], "id": {"$in": drop_ids}})
+        await db.stock_items.update_one(
+            {"id": keep["id"], "user_id": user["id"]},
+            {"$set": {"name": base, "variants": variants, "selected_variant_ids": []}},
+        )
+        # Το ενωμένο είδος ξεκινά χωρίς επιλογές: η παλιά του εγγραφή στη λίστα φεύγει
+        if keep.get("shopping_item_id"):
+            await db.shopping.delete_one({"id": keep["shopping_item_id"], "user_id": user["id"]})
+            await db.stock_items.update_one(
+                {"id": keep["id"], "user_id": user["id"]}, {"$set": {"shopping_item_id": None}}
+            )
+        removed_ids.extend(drop_ids)
+        kept.append({**keep, "name": base, "variants": variants, "selected_variant_ids": [], "shopping_item_id": None})
+        merged += 1
+    return {"merged": merged, "removed_item_ids": removed_ids, "items": kept}
 
 
 @router.delete("/stock/items/{iid}")

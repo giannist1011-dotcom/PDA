@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import VariantsEditor from "./VariantsEditor";
 
-// ---------- Είδος ελλείψεων: προσθήκη ή επεξεργασία (όνομα + κατηγορία) ----------
+// ---------- Είδος ελλείψεων: όνομα + κατηγορία + προαιρετικές παραλλαγές ----------
 export default function AddItemModal({
   open,
   onClose,
@@ -12,11 +13,13 @@ export default function AddItemModal({
 }) {
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState(defaultCategoryId || "");
+  const [variants, setVariants] = useState([]);
 
   useEffect(() => {
     if (open) {
       setName(editing?.name || "");
       setCategoryId(editing?.category_id || defaultCategoryId || (categories[0]?.id ?? ""));
+      setVariants(editing?.variants || []);
     }
   }, [open, editing, defaultCategoryId, categories]);
 
@@ -25,7 +28,13 @@ export default function AddItemModal({
   const submit = async (e) => {
     e.preventDefault();
     if (!name.trim() || !categoryId) return;
-    await onSubmit({ name: name.trim(), category_id: categoryId });
+    await onSubmit({
+      name: name.trim(),
+      category_id: categoryId,
+      variants: variants
+        .map((v) => ({ ...v, name: (v.name || "").trim() }))
+        .filter((v) => v.name),
+    });
     onClose();
   };
 
@@ -36,7 +45,7 @@ export default function AddItemModal({
     >
       <form
         onSubmit={submit}
-        className="bg-[#3D1620] border border-[#723645] rounded-lg p-6 w-full max-w-md"
+        className="bg-[#3D1620] border border-[#723645] rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
       >
         <h3 className="font-heading text-xl font-bold mb-4">
           {editing ? "Επεξεργασία είδους" : "Νέο είδος ελλείψεων"}
@@ -46,7 +55,7 @@ export default function AddItemModal({
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="π.χ. 35άρες"
+          placeholder="π.χ. Σακούλες"
           data-testid="stock-item-name-input"
           className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         />
@@ -55,7 +64,7 @@ export default function AddItemModal({
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
           data-testid="stock-item-category-select"
-          className="w-full h-11 mt-1 mb-6 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+          className="w-full h-11 mt-1 mb-5 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -63,7 +72,8 @@ export default function AddItemModal({
             </option>
           ))}
         </select>
-        <div className="flex justify-end gap-2">
+        <VariantsEditor value={variants} onChange={setVariants} />
+        <div className="flex justify-end gap-2 mt-6">
           <button
             type="button"
             onClick={onClose}

@@ -290,12 +290,20 @@ export const apiUpdateStockItem = (id, payload) =>
   api.patch(`/stock/items/${id}`, payload).then((r) => r.data);
 export const apiReorderStockItems = (ids) =>
   api.post("/stock/items/reorder", { ids }).then((r) => r.data);
-export const apiToggleStockItemShopping = (id, needs) =>
-  api.post(`/stock/items/${id}/shopping`, { needs }).then((r) => r.data);
+// variantIds: ποιες παραλλαγές λείπουν (null = όλες / είδος χωρίς παραλλαγές)
+export const apiToggleStockItemShopping = (id, needs, variantIds = null) =>
+  api
+    .post(`/stock/items/${id}/shopping`, { needs, variant_ids: variantIds })
+    .then((r) => r.data);
 export const apiToggleStockCategoryShopping = (cid, needs) =>
   api.post(`/stock/categories/${cid}/shopping`, { needs }).then((r) => r.data);
 export const apiDeleteStockItem = (id) =>
   api.delete(`/stock/items/${id}`).then((r) => r.data);
+// Μετατροπή παλιών ειδών («Σακούλες 35άρες») σε ένα είδος με παραλλαγές
+export const apiStockVariantSuggestions = () =>
+  api.get("/stock/variant-suggestions").then((r) => r.data);
+export const apiMergeStockVariants = (groups) =>
+  api.post("/stock/items/merge-variants", { groups }).then((r) => r.data);
 
 // CHECKLIST (άνοιγμα/κλείσιμο καταστήματος)
 export const apiChecklistToday = () => api.get("/checklist/today").then((r) => r.data);

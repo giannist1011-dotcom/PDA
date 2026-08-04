@@ -1,4 +1,4 @@
-import { Plus, FolderPlus, Package, Pencil, Check as CheckIcon } from "lucide-react";
+import { Plus, FolderPlus, Package, Pencil, Wand2, Check as CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StockRow from "./StockRow";
 import CategoryRail from "./CategoryRail";
@@ -15,6 +15,7 @@ export default function StockSection({
   setEditMode,
   setCatModal,
   setItemModal,
+  onMergeVariants,
   handleDeleteCategory,
   handleMoveCategory,
   handleMoveItem,
@@ -33,7 +34,8 @@ export default function StockSection({
             <h2 className="font-heading text-2xl font-bold">Ελλείψεις καταστήματος</h2>
           </div>
           <p className="text-sm text-neutral-400 mt-1">
-            Κατηγορίες με είδη από κάτω — τσεκάρετε ό,τι τελειώνει και μπαίνει στη λίστα →
+            Τσεκάρετε ό,τι τελειώνει και μπαίνει στη λίστα → Είδη με παραλλαγές
+            ανοίγουν επιλογή (π.χ. Σακούλες → 35άρες, 45άρες)
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -55,6 +57,17 @@ export default function StockSection({
                 )}
                 {editMode ? "Τέλος" : "Επεξεργασία"}
               </Button>
+              {editMode && (
+                <Button
+                  onClick={onMergeVariants}
+                  data-testid="stock-merge-variants-btn"
+                  className="h-10 bg-[#3D1620] border border-[#723645] hover:border-flame text-white"
+                  title="Ένωση παλιών ειδών σε ένα είδος με παραλλαγές"
+                >
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Σε παραλλαγές
+                </Button>
+              )}
               <Button
                 onClick={() => setCatModal({ open: true, editing: null })}
                 data-testid="stock-add-category-btn"
