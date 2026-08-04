@@ -1,14 +1,15 @@
 import { ShoppingCart, Send } from "lucide-react";
 import { platformById } from "@/lib/platforms";
 
-// Καρτέλες στην ΚΟΡΥΦΗ της σελίδας παραγγελιών (πάνω από την αναζήτηση):
+// Καρτέλες της σελίδας παραγγελιών — ζουν ΜΕΣΑ στο header bar (AppShell
+// headerTabs), δεξιά από το «<Κατάστημα> · ΠΑΡΑΓΓΕΛΙΕΣ», σε compact μορφή pills:
 // «Παραγγελίες» = όλο το POS (ταμείο + τηλεφωνικές, η προεπιλογή) · μία καρτέλα
 // ανά ΕΝΕΡΓΗ πλατφόρμα (efood/Box/Wolt) με badge εκκρεμών, που ανοίγει ΔΙΚΟ της
-// dashboard — όχι panel μέσα στο POS · «Αποστολή παραγγελίας» = η μελλοντική
-// προβολή ανεβάσματος στο OrderDeck Fleet — εμφανίζεται ΜΟΝΟ σε καταστήματα
-// με πλάνο orderdeck_fleet (showDispatch), αλλιώς δεν υπάρχει καθόλου.
+// dashboard — όχι panel μέσα στο POS · «Αποστολή παραγγελίας» = ανέβασμα στην
+// εταιρεία διανομής — ΜΟΝΟ σε καταστήματα με πλάνο orderdeck_fleet (showDispatch).
+// Σε στενά πλάτη η γραμμή γίνεται scrollable μέσα στο header (no-scrollbar).
 const TAB_BASE =
-  "shrink-0 h-10 px-4 rounded-md border text-sm font-bold flex items-center gap-2 transition-colors no-select";
+  "shrink-0 h-9 px-3 rounded-full border text-[13px] font-bold flex items-center gap-1.5 transition-colors no-select";
 const TAB_OFF = "bg-[#4A1B27] text-neutral-300 border-[#723645] hover:border-flame";
 
 export default function PlatformTabs({
@@ -19,10 +20,7 @@ export default function PlatformTabs({
   showDispatch,
 }) {
   return (
-    <div
-      className="shrink-0 flex items-center gap-1.5 px-3 md:px-4 xl:px-6 pt-2 pb-1.5 overflow-x-auto"
-      data-testid="platform-tabs"
-    >
+    <div className="flex items-center gap-1.5 min-w-0" data-testid="platform-tabs">
       <button
         onClick={() => setTab("orders")}
         data-testid="platform-tab-orders"
@@ -67,17 +65,18 @@ export default function PlatformTabs({
         );
       })}
       {showDispatch && (
-      <button
-        onClick={() => setTab("dispatch")}
-        data-testid="platform-tab-dispatch"
-        data-state={tab === "dispatch" ? "on" : "off"}
-        className={`${TAB_BASE} ${
-          tab === "dispatch" ? "bg-flame text-white border-flame" : TAB_OFF
-        }`}
-      >
-        <Send className="w-4 h-4" />
-        Αποστολή παραγγελίας
-      </button>
+        <button
+          onClick={() => setTab("dispatch")}
+          data-testid="platform-tab-dispatch"
+          data-state={tab === "dispatch" ? "on" : "off"}
+          className={`${TAB_BASE} ${
+            tab === "dispatch" ? "bg-flame text-white border-flame" : TAB_OFF
+          }`}
+        >
+          <Send className="w-4 h-4" />
+          Αποστολή
+          <span className="hidden xl:inline">παραγγελίας</span>
+        </button>
       )}
     </div>
   );

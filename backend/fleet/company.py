@@ -410,6 +410,28 @@ EDIT_FIELD_LABELS = {
 
 
 # ============ UNIFIED AUTH (account_type στους users — όχι παράλληλο σύστημα) ============
+def team_kind_for_user(u: dict) -> str:
+    """Η ΤΑΥΤΟΤΗΤΑ της ομάδας κρίνεται ΜΟΝΟ από το account_type του λογαριασμού:
+
+    · «company» → εταιρεία διανομής (users.account_type=fleet_company). ΜΟΝΟ αυτές
+      εμφανίζονται στις λίστες εταιρειών (συνεργασίες, admin, χάρτης).
+    · «store»   → η δική του ομάδα ενός ΚΑΤΑΣΤΗΜΑΤΟΣ (πλάνο OrderDeck Fleet). Ποτέ
+      στις λίστες εταιρειών — το μαγαζί δεν είναι εταιρεία διανομής.
+
+    ΠΟΤΕ από πλάνο ή όνομα: το πλάνο λέει τι μπορεί να κάνει ο λογαριασμός, όχι τι είναι.
+    """
+    return "company" if u.get("account_type") == "fleet_company" else "store"
+
+
+def owns_delivery_team(u: dict) -> bool:
+    """Ποιοι λογαριασμοί δικαιούνται ΔΙΚΗ τους ομάδα διανομής: οι εταιρείες και τα
+    καταστήματα με πλάνο OrderDeck Fleet. Το πλάνο «fleet» (FleetDeck καταστήματος)
+    ΔΕΝ έχει ομάδα — ανεβάζει παραγγελίες σε συνεργαζόμενες εταιρείες."""
+    if u.get("account_type") == "fleet_company":
+        return True
+    return (u.get("plan") or "orderdeck") == "orderdeck_fleet"
+
+
 async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Διαχειριστής") -> dict:
     """Βρίσκει ή δημιουργεί το fleet_team ενός unified λογαριασμού (users.account_type).
 
@@ -417,8 +439,15 @@ async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Διαχειρ�
     /fleet/exchange — καλύπτει και λογαριασμούς που παίρνουν Fleet αργότερα από τον admin.
     Το πρώτο μέλος-διαχειριστής κληρονομεί το PIN ιδιοκτήτη του λογαριασμού.
     """
+    if not owns_delivery_team(u):
+        raise HTTPException(403, "Ο λογαριασμός δεν διαθέτει δική του ομάδα διανομής")
+    kind = team_kind_for_user(u)
     team = await db.fleet_teams.find_one({"owner_user_id": u["id"]}, {"_id": 0})
     if team:
+        # Self-healing: παλιά ομάδα χωρίς/με λάθος kind παίρνει την ταυτότητα του κατόχου
+        if team.get("kind") != kind:
+            await db.fleet_teams.update_one({"id": team["id"]}, {"$set": {"kind": kind}})
+            team["kind"] = kind
         return team
     email = u["email"]
     if await db.fleet_teams.find_one({"email": email}):
@@ -436,6 +465,7 @@ async def ensure_fleet_team_for_user(u: dict, admin_name: str = "Διαχειρ�
         "city": u.get("store_city") or u.get("city") or "",
         "email": email,
         "owner_user_id": u["id"],
+        "kind": kind,
         "invite_code": invite,
         "created_at": now,
     }
@@ -546,6 +576,8 @@ async def fleet_register(body: FleetRegisterIn, request: Request):
         "city": body.city.strip(),
         "email": email,
         "password_hash": hash_password(body.password),
+        # Αυτόνομη (legacy) εγγραφή εταιρείας — χωρίς λογαριασμό users από πίσω
+        "kind": "company",
         "invite_code": invite,
         "created_at": now,
     }

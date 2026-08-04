@@ -646,31 +646,32 @@ export default function PDA() {
           ? `Επεξεργασία #${String(editOrder.order_number).padStart(3, "0")}`
           : "Παραγγελίες"
       }
+      /* Οι καρτέλες σελίδας μπαίνουν ΜΕΣΑ στο header (δεξιά από τον τίτλο) — δεν
+         καταλαμβάνουν δική τους σειρά κάτω από αυτό. Badges/ήχοι/gating αμετάβλητα. */
+      headerTabs={
+        <PlatformTabs
+          tab={topTab}
+          setTab={setTopTab}
+          platforms={platformTabs}
+          pendingByPlatform={pendingByPlatform}
+          showDispatch={canDispatch}
+        />
+      }
     >
       {/* Δίστηλο από sm (640px) και πάνω — tablet portrait/landscape & desktop.
           Το breakpoint βασίζεται σε CSS viewport width (Tailwind media queries),
           όχι σε user-agent/touch. Android tablets 1280x800 με DPR ~1.33 δίνουν
           ~960 CSS px, γι' αυτό το παλιό lg: (1024px) τα έριχνε σε mobile layout.
           ΔΟΜΗ: οι δύο στήλες είναι αδέρφια ΟΛΟΥ του ύψους της περιοχής
-          περιεχομένου — οι καρτέλες σελίδας ζουν ΜΕΣΑ στην αριστερή στήλη, ώστε
-          το πλαίσιο παραγγελίας να ξεκινά ψηλά (κάτω από το header / τη μπάρα
-          ανακοίνωσης ή σταθμού εκτύπωσης), όχι στο ύψος των καρτελών. */}
+          περιεχομένου. Οι καρτέλες σελίδας έχουν μετακομίσει ΜΕΣΑ στο header
+          (AppShell headerTabs) — εδώ κάτω δεν υπάρχει καμία σειρά καρτελών, η
+          πρώτη γραμμή του περιεχομένου είναι η αναζήτηση + ο διακόπτης προβολής. */}
       <div className="flex-1 min-h-0 flex flex-col sm:flex-row overflow-hidden">
         <div
           className={`min-w-0 min-h-0 flex flex-col overflow-hidden sm:flex-1 ${
             topTab === "orders" && mobileTab === "order" ? "flex-none" : "flex-1"
           }`}
         >
-          {/* Καρτέλες σελίδας (πάνω από την αναζήτηση): «Παραγγελίες» = όλο το POS,
-              μία ανά ενεργή πλατφόρμα (δικό της dashboard) και «Αποστολή παραγγελίας». */}
-          <PlatformTabs
-            tab={topTab}
-            setTab={setTopTab}
-            platforms={platformTabs}
-            pendingByPlatform={pendingByPlatform}
-            showDispatch={canDispatch}
-          />
-
           {topTab === "dispatch" && canDispatch ? (
             <DispatchTab />
           ) : topTab !== "orders" && platformTabs.includes(topTab) ? (

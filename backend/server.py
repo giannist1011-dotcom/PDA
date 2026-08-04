@@ -24,6 +24,8 @@ from admin import (
     overview as admin_overview, promo, shops as admin_shops, stock_photos,
 )
 
+logger = logging.getLogger("orderdeck")
+
 app = FastAPI(title="OrderDeck")
 
 api = APIRouter(prefix="/api")
@@ -152,6 +154,8 @@ async def on_startup():
     await db.fleet_teams.create_index("invite_code", unique=True)
     # Unified auth: ομάδα ↔ λογαριασμός users (fleet_company ή store plan με Fleet)
     await db.fleet_teams.create_index("owner_user_id", unique=True, sparse=True)
+    # Λίστες εταιρειών (συνεργασίες/admin): ΜΟΝΟ kind="company", με φίλτρο πόλης
+    await db.fleet_teams.create_index([("kind", 1), ("city", 1)])
     await db.fleet_members.create_index([("team_id", 1), ("created_at", 1)])
     await db.fleet_members.create_index("account_id")
     await db.fleet_accounts.create_index("phone", unique=True, sparse=True)
@@ -205,6 +209,42 @@ async def on_startup():
         },
         [{"$set": {"store_city": "$city"}}],
     )
+    # ---- ΤΑΥΤΟΤΗΤΑ ΛΟΓΑΡΙΑΣΜΟΥ: κατάστημα ή εταιρεία διανομής κρίνεται ΜΟΝΟ από
+    # το account_type. Παλιοί λογαριασμοί χωρίς το πεδίο (π.χ. το seeded demo
+    # «Πεινώκιο») ή με λάθος τιμή διορθώνονται εδώ ΠΡΙΝ από κάθε άλλο migration —
+    # τα πλάνα των εταιρειών (fleet15/fleet30) είναι ξένα προς τα καταστήματα.
+    company_plans = ["fleet15", "fleet30"]
+    store_plans = ["orderdeck", "fleet", "orderdeck_fleet", "pro", "trial", "pro_deckpilot"]
+    fixed_store = await db.users.update_many(
+        {"account_type": "fleet_company", "plan": {"$in": store_plans}},
+        {"$set": {"account_type": "store"}},
+    )
+    fixed_company = await db.users.update_many(
+        {"account_type": {"$ne": "fleet_company"}, "plan": {"$in": company_plans}},
+        {"$set": {"account_type": "fleet_company"}},
+    )
+    backfilled = await db.users.update_many(
+        {"account_type": {"$in": [None, ""]}}, {"$set": {"account_type": "store"}}
+    )
+    if fixed_store.modified_count or fixed_company.modified_count or backfilled.modified_count:
+        logger.info(
+            "account_type: %d → store (λάθος εταιρεία), %d → fleet_company, %d backfill",
+            fixed_store.modified_count, fixed_company.modified_count,
+            backfilled.modified_count,
+        )
+    # Οι ομάδες διανομής παίρνουν την ταυτότητα του κατόχου τους: μόνο οι «company»
+    # εμφανίζονται στις λίστες εταιρειών (συνεργασίες/admin/χάρτης)
+    company_ids = {
+        u["id"] async for u in db.users.find(
+            {"account_type": "fleet_company"}, {"_id": 0, "id": 1}
+        )
+    }
+    kinds = await fleet_api.migrate_team_kinds(company_ids)
+    if kinds["company"] or kinds["store"]:
+        logger.info(
+            "fleet_teams kind: company=%s, store=%s",
+            kinds["company"] or "—", kinds["store"] or "—",
+        )
     # Μία φορά: μετανάστευση πλάνων καταστημάτων στα τρία νέα (orderdeck / fleet /
     # orderdeck_fleet). Το add-on Fleet καταργήθηκε — όποιο μαγαζί το είχε περνά στο
     # πλάνο OrderDeck Fleet· το παλιό pro_deckpilot γίνεται OrderDeck + add-on DeckPilot.

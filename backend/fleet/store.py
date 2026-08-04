@@ -102,9 +102,12 @@ class StoreOrderIn(BaseModel):
 @router.get("/store/fleet/companies")
 async def store_fleet_companies(user: dict = Depends(require_fleet_store_owner)):
     """Εταιρείες διανομής που καλύπτουν την πόλη του καταστήματος + η κατάσταση
-    αιτήματος/συνεργασίας με την καθεμία. Χωρίς πόλη στο κατάστημα → όλες."""
+    αιτήματος/συνεργασίας με την καθεμία. Χωρίς πόλη στο κατάστημα → όλες.
+
+    ΑΥΣΤΗΡΟ φίλτρο kind="company": ομάδες που ανήκουν σε ΚΑΤΑΣΤΗΜΑ (πλάνο OrderDeck
+    Fleet, kind="store") δεν είναι εταιρείες διανομής και δεν εμφανίζονται ποτέ εδώ."""
     city = (user.get("store_city") or "").strip()
-    q = {"disabled": {"$ne": True}}
+    q = {"kind": "company", "disabled": {"$ne": True}}
     if city:
         q["city"] = {"$regex": f"^{re.escape(city)}$", "$options": "i"}
     teams = await db.fleet_teams.find(
@@ -134,7 +137,8 @@ async def store_fleet_request_partner(
     """Αίτημα συνεργασίας προς εταιρεία — ειδοποιείται η διαχείρισή της (push +
     ζωντανή ροή)· εγκρίνεται/απορρίπτεται από τον dispatcher της."""
     team = await db.fleet_teams.find_one(
-        {"id": team_id, "disabled": {"$ne": True}}, {"_id": 0, "id": 1, "name": 1, "city": 1}
+        {"id": team_id, "kind": "company", "disabled": {"$ne": True}},
+        {"_id": 0, "id": 1, "name": 1, "city": 1},
     )
     if not team:
         raise HTTPException(404, "Η εταιρεία δεν βρέθηκε")

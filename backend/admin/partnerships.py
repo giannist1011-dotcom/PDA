@@ -94,7 +94,8 @@ async def admin_shop_link_partner(
     require_product(ctx, "orderdeck")
     require_master(ctx)
     u = await _store_or_404(uid, ctx)
-    team = await fleet_api.team_by_id(body.team_id)
+    # kind="company": ποτέ σύνδεση μαγαζιού με την ομάδα ΑΛΛΟΥ μαγαζιού (OrderDeck Fleet)
+    team = await fleet_api.team_by_id(body.team_id, kind="company")
     if not team or team.get("disabled"):
         raise HTTPException(404, "Η εταιρεία δεν βρέθηκε")
     return await fleet_api.create_partnership_direct(u, team, by=ctx["name"])

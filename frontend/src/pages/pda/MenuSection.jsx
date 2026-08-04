@@ -6,9 +6,9 @@ import MenuViewToggle from "./MenuViewToggle";
 import ScheduledPanel from "./ScheduledPanel";
 
 // Αριστερή στήλη: περιοχή προγραμματισμένων + μενού (πλέγμα ή αριθμημένη λίστα).
-// ΧΩΡΙΣ padding στην κορυφή: η μπάρα αναζήτησης ακουμπά κατευθείαν στη σειρά των
-// καρτελών της σελίδας· ο διακόπτης «Λίστα/Πλέγμα» μπαίνει inline ΣΤΗΝ ΙΔΙΑ
-// γραμμή με την αναζήτηση, στο δεξί της άκρο (δεν παίρνει δική του σειρά).
+// Οι καρτέλες σελίδας ζουν πλέον στο header — εδώ ΠΡΩΤΗ γραμμή είναι η μπάρα
+// αναζήτησης (με τον διακόπτη «Λίστα/Πλέγμα» inline στο δεξί της άκρο), οπότε
+// χρειάζεται κανονικό padding και στην κορυφή.
 // memo: το μενού ΔΕΝ ξαναρεντάρεται όταν αλλάζει state της δεξιάς στήλης
 // (π.χ. πληκτρολόγηση διεύθυνσης) — όλα τα props εδώ μένουν σταθερά τότε
 // (οι handlers έρχονται useCallback-αρισμένοι από το PDA)
@@ -29,7 +29,7 @@ function MenuSection({
   const toolbar = <MenuViewToggle value={menuView} onChange={onMenuViewChange} />;
   return (
     <section
-      className={`relative px-3 pb-3 md:px-4 md:pb-4 xl:px-6 xl:pb-6 overflow-hidden flex-col min-h-0 flex-1 ${
+      className={`relative p-3 md:p-4 xl:p-6 overflow-hidden flex-col min-h-0 flex-1 ${
         mobileTab === "menu" ? "flex" : "hidden"
       } sm:flex`}
     >
