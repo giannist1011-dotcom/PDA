@@ -17,7 +17,6 @@ export default function PlatformTabs({
   platforms,
   pendingByPlatform,
   showDispatch,
-  right = null,
 }) {
   return (
     <div
@@ -80,9 +79,6 @@ export default function PlatformTabs({
         Αποστολή παραγγελίας
       </button>
       )}
-      {/* Δεξιά στην ΙΔΙΑ σειρά: ο διακόπτης «Λίστα/Πλέγμα» — δεν παίρνει δική
-          του γραμμή, ώστε τα tabs να ακουμπούν πάνω στην αναζήτηση προϊόντων */}
-      {right && <div className="ml-auto shrink-0 pl-2">{right}</div>}
     </div>
   );
 }

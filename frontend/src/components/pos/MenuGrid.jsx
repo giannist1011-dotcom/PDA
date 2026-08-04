@@ -10,6 +10,9 @@ export default function MenuGrid({
   activeCategory,
   onCategoryChange,
   onItemClick,
+  // Προαιρετικά χειριστήρια ΔΕΞΙΑ στην ΙΔΙΑ γραμμή με την αναζήτηση
+  // (στο POS: ο διακόπτης «Λίστα/Πλέγμα») — καμία ξεχωριστή σειρά από πάνω
+  toolbar = null,
 }) {
   const [pulsedId, setPulsedId] = useState(null);
   // Αναζήτηση προϊόντος: όνομα (χωρίς τόνους) ή κωδικός — σε ΟΛΕΣ τις κατηγορίες
@@ -54,26 +57,30 @@ export default function MenuGrid({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Αναζήτηση προϊόντος / κωδικός */}
-      <div className="relative mb-2 lg:mb-3 shrink-0">
-        <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-        <input
-          value={query}
-          onChange={(e) => handleQueryChange(e.target.value)}
-          onKeyDown={handleQueryKeyDown}
-          placeholder="Αναζήτηση προϊόντος ή κωδικός..."
-          data-testid="menu-search-input"
-          className="w-full h-10 pl-9 pr-9 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-flame"
-        />
-        {query && (
-          <button
-            onClick={() => setQuery("")}
-            data-testid="menu-search-clear"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded flex items-center justify-center text-neutral-400 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+      {/* Αναζήτηση προϊόντος / κωδικός — τα χειριστήρια (toolbar) μπαίνουν
+          inline στο ΔΕΞΙ άκρο της ίδιας γραμμής και η αναζήτηση κονταίνει */}
+      <div className="flex items-center gap-2 mb-2 lg:mb-3 shrink-0">
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            value={query}
+            onChange={(e) => handleQueryChange(e.target.value)}
+            onKeyDown={handleQueryKeyDown}
+            placeholder="Αναζήτηση προϊόντος ή κωδικός..."
+            data-testid="menu-search-input"
+            className="w-full h-10 pl-9 pr-9 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-flame"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              data-testid="menu-search-clear"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded flex items-center justify-center text-neutral-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        {toolbar}
       </div>
       <div
         className={`flex sm:flex-wrap gap-2 mb-3 lg:mb-4 overflow-x-auto sm:overflow-visible no-scrollbar ${

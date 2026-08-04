@@ -34,7 +34,6 @@ import { receiptStoreName } from "@/lib/receiptText";
 import { usePlatformOrders } from "@/context/platforms/PlatformOrdersContext";
 import MobileTabs from "./pda/MobileTabs";
 import MenuSection from "./pda/MenuSection";
-import MenuViewToggle from "./pda/MenuViewToggle";
 import PlatformTabs from "./pda/PlatformTabs";
 import PlatformTab from "./pda/platform/PlatformTab";
 import DispatchTab from "./pda/DispatchTab";
@@ -651,43 +650,58 @@ export default function PDA() {
       {/* Δίστηλο από sm (640px) και πάνω — tablet portrait/landscape & desktop.
           Το breakpoint βασίζεται σε CSS viewport width (Tailwind media queries),
           όχι σε user-agent/touch. Android tablets 1280x800 με DPR ~1.33 δίνουν
-          ~960 CSS px, γι' αυτό το παλιό lg: (1024px) τα έριχνε σε mobile layout. */}
-      {/* Καρτέλες σελίδας (πάνω από την αναζήτηση): «Παραγγελίες» = όλο το POS,
-          μία ανά ενεργή πλατφόρμα (δικό της dashboard) και «Αποστολή παραγγελίας». */}
-      <PlatformTabs
-        tab={topTab}
-        setTab={setTopTab}
-        platforms={platformTabs}
-        pendingByPlatform={pendingByPlatform}
-        showDispatch={canDispatch}
-        right={
-          topTab === "orders" ? (
-            <MenuViewToggle value={menuView} onChange={changeMenuView} />
-          ) : null
-        }
-      />
-
-      {topTab === "dispatch" && canDispatch ? (
-        <DispatchTab />
-      ) : topTab !== "orders" && platformTabs.includes(topTab) ? (
-        <PlatformTab platform={topTab} onPrint={setPrintOrder} />
-      ) : (
-      <main className="flex-1 flex flex-col sm:grid sm:grid-cols-[1fr_300px] md:grid-cols-[1fr_340px] lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-hidden">
-        <MobileTabs mobileTab={mobileTab} setMobileTab={setMobileTab} orderCount={orderCount} />
-        <MenuSection
-          mobileTab={mobileTab}
-          scheduledOrders={scheduledOrders}
-          setScheduledOpen={setScheduledOpen}
-          onPrintScheduled={handlePrintNow}
-          onCancelScheduled={handleCancelScheduled}
-          config={config}
-          activeCategory={activeCategory}
-          setActiveCategory={setActiveCategory}
-          handleItemClick={handleItemClick}
-          menuView={menuView}
-        />
+          ~960 CSS px, γι' αυτό το παλιό lg: (1024px) τα έριχνε σε mobile layout.
+          ΔΟΜΗ: οι δύο στήλες είναι αδέρφια ΟΛΟΥ του ύψους της περιοχής
+          περιεχομένου — οι καρτέλες σελίδας ζουν ΜΕΣΑ στην αριστερή στήλη, ώστε
+          το πλαίσιο παραγγελίας να ξεκινά ψηλά (κάτω από το header / τη μπάρα
+          ανακοίνωσης ή σταθμού εκτύπωσης), όχι στο ύψος των καρτελών. */}
+      <div className="flex-1 min-h-0 flex flex-col sm:flex-row overflow-hidden">
         <div
-          className={`min-h-0 overflow-hidden flex-1 sm:flex-none flex-col ${
+          className={`min-w-0 min-h-0 flex flex-col overflow-hidden sm:flex-1 ${
+            topTab === "orders" && mobileTab === "order" ? "flex-none" : "flex-1"
+          }`}
+        >
+          {/* Καρτέλες σελίδας (πάνω από την αναζήτηση): «Παραγγελίες» = όλο το POS,
+              μία ανά ενεργή πλατφόρμα (δικό της dashboard) και «Αποστολή παραγγελίας». */}
+          <PlatformTabs
+            tab={topTab}
+            setTab={setTopTab}
+            platforms={platformTabs}
+            pendingByPlatform={pendingByPlatform}
+            showDispatch={canDispatch}
+          />
+
+          {topTab === "dispatch" && canDispatch ? (
+            <DispatchTab />
+          ) : topTab !== "orders" && platformTabs.includes(topTab) ? (
+            <PlatformTab platform={topTab} onPrint={setPrintOrder} />
+          ) : (
+            <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <MobileTabs
+                mobileTab={mobileTab}
+                setMobileTab={setMobileTab}
+                orderCount={orderCount}
+              />
+              <MenuSection
+                mobileTab={mobileTab}
+                scheduledOrders={scheduledOrders}
+                setScheduledOpen={setScheduledOpen}
+                onPrintScheduled={handlePrintNow}
+                onCancelScheduled={handleCancelScheduled}
+                config={config}
+                activeCategory={activeCategory}
+                setActiveCategory={setActiveCategory}
+                handleItemClick={handleItemClick}
+                menuView={menuView}
+                onMenuViewChange={changeMenuView}
+              />
+            </main>
+          )}
+        </div>
+
+        {topTab === "orders" && (
+        <div
+          className={`min-h-0 overflow-hidden flex-1 sm:flex-none sm:w-[300px] md:w-[340px] lg:w-[400px] xl:w-[440px] flex-col ${
             mobileTab === "order" ? "flex" : "hidden"
           } sm:flex`}
         >
@@ -724,8 +738,8 @@ export default function PDA() {
           onCancelEdit={cancelEdit}
         />
         </div>
-      </main>
-      )}
+        )}
+      </div>
 
       <PDAModals
         modalItem={modalItem}

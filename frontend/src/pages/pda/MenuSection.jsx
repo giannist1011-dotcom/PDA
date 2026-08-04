@@ -2,11 +2,13 @@ import { memo } from "react";
 import MenuGrid from "@/components/pos/MenuGrid";
 import MenuList from "@/components/pos/MenuList";
 import CodeNumpad from "@/components/shared/CodeNumpad";
+import MenuViewToggle from "./MenuViewToggle";
 import ScheduledPanel from "./ScheduledPanel";
 
 // Αριστερή στήλη: περιοχή προγραμματισμένων + μενού (πλέγμα ή αριθμημένη λίστα).
 // ΧΩΡΙΣ padding στην κορυφή: η μπάρα αναζήτησης ακουμπά κατευθείαν στη σειρά των
-// καρτελών της σελίδας (ο διακόπτης «Λίστα/Πλέγμα» ζει εκεί, inline δεξιά).
+// καρτελών της σελίδας· ο διακόπτης «Λίστα/Πλέγμα» μπαίνει inline ΣΤΗΝ ΙΔΙΑ
+// γραμμή με την αναζήτηση, στο δεξί της άκρο (δεν παίρνει δική του σειρά).
 // memo: το μενού ΔΕΝ ξαναρεντάρεται όταν αλλάζει state της δεξιάς στήλης
 // (π.χ. πληκτρολόγηση διεύθυνσης) — όλα τα props εδώ μένουν σταθερά τότε
 // (οι handlers έρχονται useCallback-αρισμένοι από το PDA)
@@ -21,11 +23,13 @@ function MenuSection({
   setActiveCategory,
   handleItemClick,
   menuView,
+  onMenuViewChange,
 }) {
   const isList = menuView === "list";
+  const toolbar = <MenuViewToggle value={menuView} onChange={onMenuViewChange} />;
   return (
     <section
-      className={`relative px-3 pb-3 md:px-4 md:pb-4 xl:px-6 xl:pb-6 overflow-hidden flex-col min-h-0 flex-1 sm:flex-none ${
+      className={`relative px-3 pb-3 md:px-4 md:pb-4 xl:px-6 xl:pb-6 overflow-hidden flex-col min-h-0 flex-1 ${
         mobileTab === "menu" ? "flex" : "hidden"
       } sm:flex`}
     >
@@ -43,6 +47,7 @@ function MenuSection({
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
           onItemClick={handleItemClick}
+          toolbar={toolbar}
         />
       ) : (
         <MenuGrid
@@ -51,6 +56,7 @@ function MenuSection({
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
           onItemClick={handleItemClick}
+          toolbar={toolbar}
         />
       )}
 
