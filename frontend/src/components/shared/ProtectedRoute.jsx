@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/shared/AuthContext";
 import { can } from "@/lib/perms";
+import { hasFleetStore, hasPOS } from "@/lib/plans";
 
 /**
  * roles: optional array of allowed roles (e.g. ["owner", "manager"]).
@@ -24,10 +25,12 @@ export default function ProtectedRoute({
   // Εταιρείες διανομής (fleet_company) → ο δικός τους πίνακας FleetDeck
   if (user.account_type === "fleet_company") return <Navigate to="/fleet" replace />;
   if (!hasProfile) return <Navigate to="/app/select-profile" replace />;
-  // Καταστήματα με πλάνο «fleet» (FleetDeck καταστήματος): χωρίς POS — μόνο οι
-  // σελίδες /app/fleet/* (παραγγελίες, στατιστικά, συνεργασίες, ρυθμίσεις)
-  if (user.plan === "fleet" && !pathname.startsWith("/app/fleet"))
-    return <Navigate to="/app/fleet" replace />;
+  // GATING ΑΝΑ ΠΛΑΝΟ (lib/plans.js) — ίδιος κανόνας με το μενού/τις καρτέλες:
+  //   · πλάνο «fleet»: χωρίς POS, μόνο οι σελίδες /app/fleet/*
+  //   · πλάνο «orderdeck»: καθαρό POS — καμία σελίδα /app/fleet/*
+  const isFleetPath = pathname.startsWith("/app/fleet");
+  if (!hasPOS(user) && !isFleetPath) return <Navigate to="/app/fleet" replace />;
+  if (isFleetPath && !hasFleetStore(user)) return <Navigate to="/app" replace />;
   const allowed = requireOwner ? ["owner"] : roles;
   if (allowed && !allowed.includes(role)) {
     // waiters have no access to the cash PDA — their home is the tables page

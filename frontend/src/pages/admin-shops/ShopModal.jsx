@@ -14,6 +14,7 @@ import { formatGRDate, formatGRDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import DatePicker from "@/components/shared/DatePicker";
 import { useAdminInfo } from "@/components/shared/AdminShell";
+import AdminPartnerships from "@/components/shared/AdminPartnerships";
 import { StatusBadge } from "./Badges";
 import DemoCredentials from "./DemoCredentials";
 import PinResetSection from "./PinResetSection";
@@ -260,11 +261,25 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
                 </h3>
                 {isMaster && (
                   <>
+                    {/* Το πλάνο εφαρμόζεται ΑΜΕΣΩΣ (με επιβεβαίωση) — αλλάζει
+                        πρόσβαση σε σελίδες/καρτέλες, δεν περιμένει «Αποθήκευση» */}
                     <div>
                       <label className="text-xs text-neutral-400 font-semibold">Πλάνο</label>
                       <select
                         value={edit.plan}
-                        onChange={(e) => setEdit((f) => ({ ...f, plan: e.target.value }))}
+                        disabled={busy}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          if (next === edit.plan) return;
+                          if (
+                            !window.confirm(
+                              `Αλλαγή πλάνου σε «${PLAN_LABELS[next]}»; Εφαρμόζεται άμεσα στον λογαριασμό.`
+                            )
+                          )
+                            return;
+                          setEdit((f) => ({ ...f, plan: next }));
+                          patch({ plan: next }, `Το πλάνο άλλαξε σε «${PLAN_LABELS[next]}»`);
+                        }}
                         data-testid="shop-plan"
                         className={`${inputCls} mt-1`}
                       >
@@ -369,6 +384,9 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
               </div>
             </div>
             )}
+
+            {/* ΣΥΝΕΡΓΑΣΙΕΣ με εταιρείες διανομής — δημιουργία/τερματισμός μόνο master */}
+            <AdminPartnerships pw={pw} mode="shop" accountId={shopId} canEdit={isMaster} />
 
             {/* ΠΡΟΦΙΛ & PIN — reset επιτρέπεται και σε sub-admin με manage */}
             {canManage && (

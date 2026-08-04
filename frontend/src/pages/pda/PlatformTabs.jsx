@@ -11,10 +11,17 @@ const TAB_BASE =
   "shrink-0 h-10 px-4 rounded-md border text-sm font-bold flex items-center gap-2 transition-colors no-select";
 const TAB_OFF = "bg-[#4A1B27] text-neutral-300 border-[#723645] hover:border-flame";
 
-export default function PlatformTabs({ tab, setTab, platforms, pendingByPlatform, showDispatch }) {
+export default function PlatformTabs({
+  tab,
+  setTab,
+  platforms,
+  pendingByPlatform,
+  showDispatch,
+  right = null,
+}) {
   return (
     <div
-      className="shrink-0 flex gap-1.5 px-3 md:px-4 xl:px-6 pt-3 overflow-x-auto"
+      className="shrink-0 flex items-center gap-1.5 px-3 md:px-4 xl:px-6 pt-2 pb-1.5 overflow-x-auto"
       data-testid="platform-tabs"
     >
       <button
@@ -73,6 +80,9 @@ export default function PlatformTabs({ tab, setTab, platforms, pendingByPlatform
         Αποστολή παραγγελίας
       </button>
       )}
+      {/* Δεξιά στην ΙΔΙΑ σειρά: ο διακόπτης «Λίστα/Πλέγμα» — δεν παίρνει δική
+          του γραμμή, ώστε τα tabs να ακουμπούν πάνω στην αναζήτηση προϊόντων */}
+      {right && <div className="ml-auto shrink-0 pl-2">{right}</div>}
     </div>
   );
 }

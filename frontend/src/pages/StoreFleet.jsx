@@ -95,7 +95,7 @@ export default function StoreFleet() {
     );
 
   return (
-    <AppShell title="Παραγγελίες">
+    <AppShell title="FleetDeck">
       <main className="flex-1 overflow-y-auto p-4 space-y-4 max-w-6xl mx-auto w-full">
         {/* On-shift οδηγοί της επιλεγμένης εταιρείας — πράσινες κουκκίδες, live */}
         {teamId && (

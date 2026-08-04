@@ -218,10 +218,10 @@ function StationDownBanner() {
   if (!stale) return null;
   return (
     <div
-      className="print:hidden shrink-0 flex items-center gap-2 px-3 sm:px-4 h-10 bg-gold/15 border-b border-gold/40 text-gold text-xs sm:text-sm font-bold"
+      className="print:hidden shrink-0 flex items-center gap-1.5 px-3 sm:px-4 h-8 bg-gold/15 border-b border-gold/40 text-gold text-[11px] sm:text-xs font-bold leading-none"
       data-testid="relay-station-down-banner"
     >
-      <AlertTriangle className="w-4 h-4 shrink-0" />
+      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
       <span className="truncate">
         Ο σταθμός εκτύπωσης φαίνεται κλειστός — οι εκτυπώσεις δεν θα βγουν μέχρι να ανοίξει
       </span>

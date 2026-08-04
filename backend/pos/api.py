@@ -198,6 +198,50 @@ async def get_uploadable_delivery_order(user_id: str, order_id: str) -> Optional
     return o
 
 
+async def dispatchable_delivery_orders(user_id: str, since_iso: str, limit: int = 200) -> list:
+    """Οι ζωντανές ΤΥΠΩΜΕΝΕΣ παραγγελίες ΠΑΡΑΔΟΣΗΣ του καταστήματος (ταμείο/τηλέφωνο
+    + αποδεκτές delivery παραγγελίες πλατφορμών, που γίνονται κανονικές παραγγελίες
+    POS) — οι κάρτες της καρτέλας «Αποστολή παραγγελίας». Οι προγραμματισμένες που
+    δεν έχουν τυπωθεί ακόμα ΔΕΝ μπαίνουν."""
+    docs = await db.orders.find(
+        {
+            "user_id": user_id,
+            "created_at": {"$gte": since_iso},
+            "delivery.delivery_type": "delivery",
+            "status": {"$ne": "scheduled"},
+            **LIVE_ORDER_MATCH,
+        },
+        {
+            "_id": 0, "id": 1, "order_number": 1, "created_at": 1, "delivery": 1,
+            "items": 1, "platform": 1, "total": 1, "note": 1,
+            "fleet_order_id": 1, "fleet_team_id": 1, "fleet_team_name": 1,
+            "fleet_status": 1, "fleet_driver_name": 1, "fleet_status_at": 1,
+        },
+    ).sort("created_at", -1).to_list(limit)
+    out = []
+    for o in docs:
+        d = o.get("delivery") or {}
+        out.append({
+            "id": o["id"],
+            "order_number": o.get("order_number"),
+            "created_at": o.get("created_at"),
+            "address": (d.get("address") or "").strip(),
+            "floor": (d.get("floor") or "").strip(),
+            "phone": (d.get("phone") or "").strip(),
+            "customer_name": (d.get("name") or "").strip(),
+            "note": o.get("note") or "",
+            "items_count": sum(int(it.get("quantity") or 0) for it in (o.get("items") or [])),
+            "total": o.get("total"),
+            "platform": o.get("platform"),
+            "fleet_order_id": o.get("fleet_order_id"),
+            "fleet_team_id": o.get("fleet_team_id"),
+            "fleet_team_name": o.get("fleet_team_name"),
+            "fleet_status": o.get("fleet_status"),
+            "fleet_driver_name": o.get("fleet_driver_name"),
+        })
+    return out
+
+
 async def unlinked_delivery_orders(user_id: str, since_iso: str) -> list:
     """Ζωντανές παραγγελίες παράδοσης του καταστήματος που δεν έχουν ανέβει
     πουθενά — υποψήφιες για το migration της σύνδεσης."""

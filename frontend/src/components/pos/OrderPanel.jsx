@@ -244,13 +244,14 @@ export default function OrderPanel({
         )}
       </div>
 
-      {/* Zone 2β — χειριστήρια αγκυρωμένα ΚΑΤΩ, ακριβώς πάνω από τη μπάρα συνόλου:
-          τύπος παραγγελίας + προγραμματισμός + στοιχεία παράδοσης + σημείωση.
-          Μεγαλώνουν προς τα ΠΑΝΩ (τρώνε από τη ζώνη ειδών) και έχουν δικό τους
-          scroll σε χαμηλές οθόνες, ώστε το footer να μένει πάντα ορατό. */}
+      {/* Zone 3α — πρώτο μέρος της ΚΑΤΩ ζώνης, αγκυρωμένο ακριβώς πάνω από τη
+          μπάρα συνόλου: κουμπιά τύπου (Παράδοση/Takeaway/Προγραμματισμένη) →
+          πεδία παράδοσης → σημείωση. Μεγαλώνει προς τα ΠΑΝΩ (τρώει από τη ζώνη
+          ειδών, ποτέ από το footer) και έχει δικό του scroll σε χαμηλές οθόνες.
+          Χωρίς σταθερό κενό προς τη ζώνη 2 — μόνο η ελάχιστη οπτική ανάσα. */}
       {(isPhone || setNote) && (
       <div
-        className="shrink-0 max-h-[60%] overflow-y-auto px-4 lg:px-5 pt-2"
+        className="shrink-0 max-h-[60%] overflow-y-auto px-4 lg:px-5 pt-1.5"
         data-testid="order-controls"
       >
         {isPhone && (
@@ -383,7 +384,8 @@ export default function OrderPanel({
       </div>
       )}
 
-      {/* Zone 3 — fixed footer: total + actions (ΠΑΝΤΑ ορατό, δεν μεγαλώνει ποτέ) */}
+      {/* Zone 3β — σταθερό footer στη ΒΑΣΗ: ΣΥΝΟΛΟ / Έκπτωση / Καθαρισμός /
+          Εκτύπωση. Πάντα ορατό — δεν ανεβαίνει και δεν μεγαλώνει ποτέ. */}
       <div className="px-4 py-3 border-t border-[#723645] bg-[#33111A] shrink-0">
         {(discountAmount > 0 || deliveryFee > 0) && (
           <div className="flex items-baseline justify-between">

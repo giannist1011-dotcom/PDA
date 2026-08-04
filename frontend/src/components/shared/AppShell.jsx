@@ -31,18 +31,16 @@ import {
   Truck,
   Handshake,
 } from "lucide-react";
-import { toast } from "sonner";
 import DeckPilotChat from "@/components/pos/DeckPilotChat";
 import OfflineBanner from "@/components/shared/OfflineBanner";
 import AnnouncementBanner from "@/components/shared/AnnouncementBanner";
 import RelayAgent from "@/components/shared/printing/RelayAgent";
 import PlatformOrderPopup from "@/components/platforms/PlatformOrderPopup";
 import { useOfflineStatus } from "@/lib/offline";
-import { apiFleetExchange, formatApiError } from "@/lib/api";
-import { setFleetToken } from "@/lib/fleetApi";
 import { useAuth } from "@/context/shared/AuthContext";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
 import { can } from "@/lib/perms";
+import { hasDispatch, hasPOS } from "@/lib/plans";
 import { businessIcon } from "@/lib/business";
 
 // Full nav list. Each entry lists the roles that can see it.
@@ -86,6 +84,18 @@ const NAV_FLEET_STORE = [
   { to: "/app/fleet/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "drawer-link-fleet-settings", roles: ["owner"] },
 ];
 
+// Πλάνο «OrderDeck Fleet»: POS + FleetDeck καταστήματος στο ΙΔΙΟ session/login.
+// Η σελίδα «FleetDeck» είναι ΤΟ STORE dashboard (/app/fleet) — ποτέ ο πίνακας της
+// εταιρείας διανομής (/fleet), που είναι ξεχωριστός λογαριασμός.
+const NAV_OD_FLEET = [
+  { to: "/app/fleet", label: "FleetDeck", icon: Truck, testId: "drawer-link-fleet", roles: ["owner", "employee"] },
+];
+// Μέσα στην ομάδα «Κατάστημα» — διαχείριση της διανομής, μόνο Ιδιοκτήτης
+const NAV_OD_FLEET_STORE = [
+  { to: "/app/fleet/partners", label: "Συνεργασίες διανομής", icon: Handshake, testId: "drawer-link-fleet-partners", roles: ["owner"] },
+  { to: "/app/fleet/stats", label: "Στατιστικά διανομής", icon: BarChart3, testId: "drawer-link-fleet-stats", roles: ["owner"] },
+];
+
 const STORE_GROUP_KEY = "orderdeck-nav-store-open";
 
 // Σελίδες που ΔΕΝ δουλεύουν εκτός σύνδεσης (χρειάζονται live δεδομένα server)
@@ -100,6 +110,9 @@ const OFFLINE_BLOCKED = {
   "/app/expenses": "Έξοδα",
   "/app/deck": "Deck View & χάρτης",
   "/app/photos": "Βιβλιοθήκη φωτογραφιών",
+  "/app/fleet": "FleetDeck",
+  "/app/fleet/partners": "Συνεργασίες διανομής",
+  "/app/fleet/stats": "Στατιστικά διανομής",
 };
 
 // Μικρό badge "beta" για features υπό δοκιμή
@@ -185,19 +198,6 @@ export default function AppShell({ title, children }) {
     navigate("/app/login");
   };
 
-  // Πλάνο OrderDeck + Fleet: μετάβαση στον πίνακα διανομής με το unified token
-  // (exchange → fleet token) — η επιλογή μέλους με PIN γίνεται εκεί
-  const openFleet = async () => {
-    try {
-      const ex = await apiFleetExchange();
-      setFleetToken(ex.token);
-      setOpen(false);
-      navigate("/fleet");
-    } catch (e) {
-      toast.error(formatApiError(e));
-    }
-  };
-
   const handleSwitchProfile = async () => {
     try {
       await exitProfile();
@@ -260,15 +260,22 @@ export default function AppShell({ title, children }) {
     (!n.perm || can(user, n.perm)) &&
     (!n.requiresAI || user?.ai_features_enabled);
 
-  // FleetDeck καταστήματος: δικό του μενού, χωρίς την ομάδα «Κατάστημα» του POS
-  const isFleetStore = user && user !== false && user.plan === "fleet";
-  const nav = (isFleetStore ? NAV_FLEET_STORE : NAV_ALL).filter(navVisible).map((n) => {
+  // GATING ΑΝΑ ΠΛΑΝΟ (ίδιος κανόνας με routes/καρτέλες — lib/plans.js):
+  //   fleet           → μόνο το standalone store app (καθόλου POS)
+  //   orderdeck       → καθαρό POS, ΤΙΠΟΤΑ fleet
+  //   orderdeck_fleet → POS + FleetDeck καταστήματος στο ίδιο session
+  const isFleetStore = !hasPOS(user);
+  const isODFleet = hasDispatch(user);
+  const baseNav = isFleetStore ? NAV_FLEET_STORE : [...NAV_ALL, ...(isODFleet ? NAV_OD_FLEET : [])];
+  const nav = baseNav.filter(navVisible).map((n) => {
     // Non-managers see the schedule read-only
     if (!canManage && n.to === "/schedule") return { ...n, label: "Πρόγραμμα (προβολή)" };
     return n;
   });
 
-  const storeNav = isFleetStore ? [] : NAV_STORE.filter(navVisible);
+  const storeNav = isFleetStore
+    ? []
+    : [...NAV_STORE, ...(isODFleet ? NAV_OD_FLEET_STORE : [])].filter(navVisible);
   const storeActive = storeNav.some((n) => location.pathname === n.to);
 
   const renderNavLink = (n) => {
@@ -432,16 +439,6 @@ export default function AppShell({ title, children }) {
                     </div>
                   )}
                 </div>
-              )}
-              {user?.plan === "orderdeck_fleet" && canManage && (
-                <button
-                  onClick={openFleet}
-                  data-testid="drawer-link-fleet"
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-md mb-1 text-neutral-200 hover:bg-[#3D1620] border border-transparent"
-                >
-                  <Truck className="w-5 h-5" />
-                  <span className="font-semibold">FleetDeck</span>
-                </button>
               )}
               {role === "owner" && installPrompt && (
                 <button

@@ -13,7 +13,7 @@ export default function ScheduledPanel({ orders, onPrintNow, onCancel, onOpenAll
   return (
     <section
       data-testid="scheduled-panel"
-      className="mb-3 shrink-0 rounded-lg border border-[#00B0FF]/40 bg-[#00B0FF]/5 overflow-hidden"
+      className="mt-2 mb-3 shrink-0 rounded-lg border border-[#00B0FF]/40 bg-[#00B0FF]/5 overflow-hidden"
     >
       <header className="flex items-center gap-2 px-3 h-10 border-b border-[#00B0FF]/25">
         <Clock className="w-4 h-4 text-[#00B0FF] shrink-0" />

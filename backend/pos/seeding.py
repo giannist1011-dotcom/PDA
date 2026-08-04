@@ -124,6 +124,12 @@ async def ensure_demo_account():
             await db.users.update_one(
                 {"email": demo_email}, {"$set": {"ai_features_enabled": True}}
             )
+        # Το seeded demo τρέχει στο πλάνο «OrderDeck Fleet» (POS + FleetDeck
+        # καταστήματος στο ίδιο session) — εκεί δοκιμάζεται η πλήρης επιφάνεια
+        if existing.get("plan") != "orderdeck_fleet":
+            await db.users.update_one(
+                {"email": demo_email}, {"$set": {"plan": "orderdeck_fleet"}}
+            )
         # Backfill default PINs if missing
         if "owner_pin_hash" not in existing:
             await db.users.update_one(
@@ -148,6 +154,7 @@ async def ensure_demo_account():
         "owner_pin_set": False,
         "employee_pin_set": False,
         "ai_features_enabled": True,  # demo λογαριασμός: AI features πάντα ενεργά
+        "plan": "orderdeck_fleet",  # πλήρης επιφάνεια: POS + FleetDeck καταστήματος
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.users.insert_one(user_doc)

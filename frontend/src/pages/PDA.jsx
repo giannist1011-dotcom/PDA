@@ -14,6 +14,7 @@ import {
   apiCancelOrder,
   apiGetOrder,
   apiEditOrder,
+  apiStoreFleetDispatch,
   formatApiError,
 } from "@/lib/api";
 import {
@@ -26,15 +27,19 @@ import {
 } from "@/lib/offline";
 import { formatGRTime } from "@/lib/format";
 import { can } from "@/lib/perms";
+import { hasDispatch } from "@/lib/plans";
 import { getMenuView, setMenuView as persistMenuView } from "@/lib/menuView";
 import { printReceiptJob } from "@/lib/print";
 import { receiptStoreName } from "@/lib/receiptText";
 import { usePlatformOrders } from "@/context/platforms/PlatformOrdersContext";
 import MobileTabs from "./pda/MobileTabs";
 import MenuSection from "./pda/MenuSection";
+import MenuViewToggle from "./pda/MenuViewToggle";
 import PlatformTabs from "./pda/PlatformTabs";
 import PlatformTab from "./pda/platform/PlatformTab";
 import DispatchTab from "./pda/DispatchTab";
+import DispatchPromptModal from "./pda/DispatchPromptModal";
+import { toDispatchCard } from "./pda/dispatch/utils";
 import PDAModals from "./pda/PDAModals";
 import ReprintPromptModal from "./pda/ReprintPromptModal";
 import { schedDateTime, sortScheduled, FIRE_AHEAD_MS } from "./pda/utils";
@@ -115,7 +120,9 @@ export default function PDA() {
   const { enabled: platformTabs, pendingByPlatform } = usePlatformOrders();
   const [topTab, setTopTab] = useState("orders");
   // Η «Αποστολή παραγγελίας» υπάρχει μόνο στο πλάνο OrderDeck Fleet
-  const canDispatch = user?.plan === "orderdeck_fleet";
+  const canDispatch = hasDispatch(user);
+  // Popup «Ανέβασμα παραγγελίας;» μετά την εκτύπωση παράδοσης — {card, partnerships}
+  const [dispatchPrompt, setDispatchPrompt] = useState(null);
   // Απενεργοποίηση πλατφόρμας (ή πλάνου) ενώ είναι επιλεγμένη → πίσω στις Παραγγελίες
   useEffect(() => {
     if (topTab === "dispatch") {
@@ -336,6 +343,23 @@ export default function PDA() {
     [user]
   );
 
+  // Μετά την εκτύπωση παραγγελίας ΠΑΡΑΔΟΣΗΣ: πρόταση ανεβάσματος στους διανομείς.
+  // Εμφανίζεται ΜΟΝΟ σε πλάνο OrderDeck Fleet ΚΑΙ με ενεργή συνεργασία — σε κάθε
+  // άλλη περίπτωση (άλλο πλάνο, καμία συνεργασία, offline) δεν ανοίγει τίποτα.
+  const maybePromptDispatch = useCallback(
+    async (saved) => {
+      if (!canDispatch || (saved?.delivery || {}).delivery_type !== "delivery") return;
+      try {
+        const d = await apiStoreFleetDispatch();
+        if (!(d.partnerships || []).length) return;
+        setDispatchPrompt({ card: toDispatchCard(saved), partnerships: d.partnerships });
+      } catch {
+        // χωρίς πρόσβαση/σύνδεση — η κάρτα μένει στην «Αποστολή παραγγελίας»
+      }
+    },
+    [canDispatch]
+  );
+
   const checkScheduled = async () => {
     if (firingRef.current) return;
     firingRef.current = true;
@@ -391,11 +415,12 @@ export default function PDA() {
         setScheduledOrders((p) => p.map((o) => (o.id === order.id ? fresh : o)));
         await printReceipt(fresh);
         toast.success(`Η #${String(order.order_number).padStart(3, "0")} τυπώθηκε`);
+        maybePromptDispatch(fresh);
       } catch (e) {
         toast.error(formatApiError(e));
       }
     },
-    [printReceipt]
+    [printReceipt, maybePromptDispatch]
   );
 
   const handleCancelScheduled = useCallback(async (order) => {
@@ -560,6 +585,7 @@ export default function PDA() {
         setPrintOrder(merged);
         setTimeout(() => printReceiptJob(user, merged), 100);
         toast.success(`Παραγγελία #${saved.order_number} αποθηκεύτηκε`);
+        maybePromptDispatch(saved);
       }
       setItems([]);
       setDelivery(null);
@@ -634,6 +660,11 @@ export default function PDA() {
         platforms={platformTabs}
         pendingByPlatform={pendingByPlatform}
         showDispatch={canDispatch}
+        right={
+          topTab === "orders" ? (
+            <MenuViewToggle value={menuView} onChange={changeMenuView} />
+          ) : null
+        }
       />
 
       {topTab === "dispatch" && canDispatch ? (
@@ -654,7 +685,6 @@ export default function PDA() {
           setActiveCategory={setActiveCategory}
           handleItemClick={handleItemClick}
           menuView={menuView}
-          setMenuView={changeMenuView}
         />
         <div
           className={`min-h-0 overflow-hidden flex-1 sm:flex-none flex-col ${
@@ -734,6 +764,15 @@ export default function PDA() {
           saveEdit(pin);
         }}
       />
+      {/* «Ανέβασμα παραγγελίας;» — μόνο OrderDeck Fleet με ενεργή συνεργασία */}
+      {dispatchPrompt && (
+        <DispatchPromptModal
+          card={dispatchPrompt.card}
+          partnerships={dispatchPrompt.partnerships}
+          city={user?.store_city || ""}
+          onClose={() => setDispatchPrompt(null)}
+        />
+      )}
       <ReprintPromptModal
         open={!!reprint}
         orderNumber={editOrder?.order_number}

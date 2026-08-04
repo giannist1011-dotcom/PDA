@@ -591,6 +591,25 @@ export const apiAdminDeleteFleet = (pw, id, confirm) =>
     .delete(`/admin/fleet/${id}`, { ...adminHeaders(pw), params: { confirm } })
     .then((r) => r.data);
 
+// ΣΥΝΕΡΓΑΣΙΕΣ μαγαζιού ↔ εταιρείας από το admin (δημιουργία/τερματισμός χωρίς
+// αίτημα — μόνο master· τα sub-admins βλέπουν αλλά δεν αλλάζουν)
+export const apiAdminShopPartnerships = (pw, id) =>
+  api.get(`/admin/shops/${id}/partnerships`, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminShopLinkPartner = (pw, id, teamId) =>
+  api
+    .post(`/admin/shops/${id}/partnerships`, { team_id: teamId }, adminHeaders(pw))
+    .then((r) => r.data);
+export const apiAdminShopUnlinkPartner = (pw, id, pid) =>
+  api.delete(`/admin/shops/${id}/partnerships/${pid}`, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminCompanyPartnerships = (pw, id) =>
+  api.get(`/admin/fleet/${id}/partnerships`, adminHeaders(pw)).then((r) => r.data);
+export const apiAdminCompanyLinkStore = (pw, id, storeUserId) =>
+  api
+    .post(`/admin/fleet/${id}/partnerships`, { store_user_id: storeUserId }, adminHeaders(pw))
+    .then((r) => r.data);
+export const apiAdminCompanyUnlinkStore = (pw, id, pid) =>
+  api.delete(`/admin/fleet/${id}/partnerships/${pid}`, adminHeaders(pw)).then((r) => r.data);
+
 // DEMO ΛΟΓΑΡΙΑΣΜΟΙ — δημιουργία/επαναφορά/διαγραφή από τον admin (μαγαζί ή εταιρία)
 export const apiAdminCreateDemo = (pw, payload) =>
   api.post("/admin/demos", payload, adminHeaders(pw)).then((r) => r.data);
@@ -680,6 +699,11 @@ export const apiStoreFleetCancelOrder = (id) =>
   api.post(`/store/fleet/orders/${id}/cancel`).then((r) => r.data);
 export const apiStoreFleetAddressBook = () =>
   api.get("/store/fleet/address-book").then((r) => r.data);
+// Καρτέλα «Αποστολή παραγγελίας» (μόνο πλάνο OrderDeck Fleet)
+export const apiStoreFleetDispatch = () =>
+  api.get("/store/fleet/dispatch").then((r) => r.data);
+export const apiStoreFleetPublishNow = (id) =>
+  api.post(`/store/fleet/orders/${id}/publish-now`).then((r) => r.data);
 export const apiStoreFleetStats = (params) =>
   api.get("/store/fleet/stats", { params }).then((r) => r.data);
 

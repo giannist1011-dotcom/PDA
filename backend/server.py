@@ -20,6 +20,7 @@ from fleet import company as fleet_company, store as fleet_store
 from platforms import router as platforms_router
 from admin import (
     admins as admin_admins, announcements, fleet_accounts as admin_fleet,
+    partnerships as admin_partnerships,
     overview as admin_overview, promo, shops as admin_shops, stock_photos,
 )
 
@@ -58,6 +59,7 @@ api.include_router(admin_shops.router)
 api.include_router(admin_admins.router)
 api.include_router(admin_fleet.router)
 api.include_router(admin_overview.router)
+api.include_router(admin_partnerships.router)
 api.include_router(announcements.router)
 api.include_router(onboarding.router)
 api.include_router(billing.router)

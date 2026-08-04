@@ -13,6 +13,7 @@ import { formatGRDate, formatGRDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import DatePicker from "@/components/shared/DatePicker";
 import { useAdminInfo } from "@/components/shared/AdminShell";
+import AdminPartnerships from "@/components/shared/AdminPartnerships";
 import { StatusBadge } from "../admin-shops/Badges";
 import DemoCredentials from "../admin-shops/DemoCredentials";
 import { inputCls, PAYMENT_LABELS } from "../admin-shops/utils";
@@ -310,6 +311,11 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
                 </div>
               )}
             </div>
+
+            {/* ΣΥΝΕΡΓΑΣΙΕΣ με καταστήματα — δημιουργία/τερματισμός μόνο master */}
+            {company.team && (
+              <AdminPartnerships pw={pw} mode="company" accountId={companyId} canEdit={isMaster} />
+            )}
 
             {/* ΕΝΕΡΓΕΙΕΣ */}
             <div className="p-5 border-t border-[#723645] space-y-3">

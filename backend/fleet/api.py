@@ -166,6 +166,91 @@ async def pending_partnerships(limit: int = 500) -> list:
     ).to_list(limit)
 
 
+async def teams_for_admin(city: str = "", search: str = "", limit: int = 100) -> list:
+    """Εταιρείες διανομής για τη λίστα σύνδεσης του admin. Χωρίς φίλτρο πόλης
+    επιστρέφονται όλες — η προτεραιότητα «ίδια πόλη» γίνεται στο admin domain."""
+    import re as _re
+    q: dict = {"disabled": {"$ne": True}}
+    if city.strip():
+        q["city"] = {"$regex": f"^{_re.escape(city.strip())}$", "$options": "i"}
+    if search.strip():
+        q["name"] = {"$regex": _re.escape(search.strip()), "$options": "i"}
+    return await db.fleet_teams.find(
+        q, {"_id": 0, "id": 1, "name": 1, "city": 1}
+    ).sort("name", 1).to_list(limit)
+
+
+async def team_by_id(team_id: str) -> Optional[dict]:
+    return await db.fleet_teams.find_one(
+        {"id": team_id}, {"_id": 0, "id": 1, "name": 1, "city": 1, "disabled": 1}
+    )
+
+
+async def partnerships_for(*, store_user_id: str = "", team_id: str = "") -> list:
+    """Οι συνεργασίες ενός καταστήματος ή μιας εταιρείας (χωρίς τις τερματισμένες)
+    — ίδια οντότητα με τις κανονικές συνεργασίες (fleet_partnerships)."""
+    q: dict = {"status": {"$in": ["pending", "active"]}}
+    if store_user_id:
+        q["store_user_id"] = store_user_id
+    if team_id:
+        q["team_id"] = team_id
+    return await db.fleet_partnerships.find(q, {"_id": 0}).sort("requested_at", -1).to_list(200)
+
+
+async def create_partnership_direct(store: dict, team: dict, by: str = "") -> dict:
+    """Ο master admin συνδέει κατάστημα ↔ εταιρεία ΧΩΡΙΣ αίτημα: η συνεργασία
+    γεννιέται κατευθείαν «active». Ίδιο έγγραφο με τις κανονικές συνεργασίες."""
+    import uuid
+    existing = await db.fleet_partnerships.find_one(
+        {"store_user_id": store["id"], "team_id": team["id"],
+         "status": {"$in": ["pending", "active"]}},
+        {"_id": 0},
+    )
+    now = datetime.now(timezone.utc).isoformat()
+    if existing:
+        if existing["status"] == "active":
+            return existing
+        # Εκκρεμές αίτημα → εγκρίνεται άμεσα από τον admin
+        await db.fleet_partnerships.update_one(
+            {"id": existing["id"]},
+            {"$set": {"status": "active", "responded_at": now}},
+        )
+        existing.update({"status": "active", "responded_at": now})
+        await add_team_event(team["id"], f"🤝 Η συνεργασία με «{existing['store_name']}» ενεργοποιήθηκε")
+        return existing
+    doc = {
+        "id": str(uuid.uuid4()),
+        "store_user_id": store["id"],
+        "store_name": (store.get("restaurant_name") or "").strip() or "Κατάστημα",
+        "store_city": (store.get("store_city") or store.get("city") or "").strip(),
+        "team_id": team["id"],
+        "team_name": team.get("name") or "",
+        "team_city": team.get("city") or "",
+        "status": "active",
+        "created_by_admin": by or None,
+        "requested_at": now,
+        "responded_at": now,
+        "ended_at": None,
+    }
+    await db.fleet_partnerships.insert_one(dict(doc))
+    await add_team_event(team["id"], f"🤝 Νέα συνεργασία με «{doc['store_name']}»")
+    return doc
+
+
+async def end_partnership_direct(pid: str) -> Optional[dict]:
+    """Τερματισμός συνεργασίας από τον admin — ίδια κατάληξη με τον τερματισμό
+    από το κατάστημα (status=ended)."""
+    p = await db.fleet_partnerships.find_one({"id": pid}, {"_id": 0})
+    if not p:
+        return None
+    await db.fleet_partnerships.update_one(
+        {"id": pid},
+        {"$set": {"status": "ended", "ended_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    await add_team_event(p["team_id"], f"Η συνεργασία με «{p['store_name']}» τερματίστηκε")
+    return p
+
+
 async def recent_partnerships(limit: int = 30) -> list:
     return await db.fleet_partnerships.find(
         {}, {"_id": 0, "store_user_id": 1, "team_id": 1, "store_name": 1,

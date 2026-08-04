@@ -31,8 +31,9 @@ from fleet.company import (
 
 router = APIRouter()
 
-# Επιτρεπτές καθυστερήσεις δημοσίευσης (λεπτά) — pills «Άμεσα / 5' / 10' / 20' / 25'»
-PUBLISH_DELAYS = (0, 5, 10, 20, 25)
+# Καθυστέρηση δημοσίευσης (λεπτά): 0 = «Άμεσα». Το πάνω όριο καλύπτει και τα
+# pills της φόρμας (5'/10'/20'/25') και το popup εκτύπωσης (10/15/20/30 + free text).
+MAX_PUBLISH_DELAY = 180
 
 
 # ============ AUTH ============
@@ -46,6 +47,14 @@ async def get_fleet_store(user: dict = Depends(get_current_user)) -> dict:
         raise HTTPException(403, "Ο λογαριασμός σας δεν περιλαμβάνει το FleetDeck")
     if not user.get("role"):
         raise HTTPException(403, "Απαιτείται επιλογή προφίλ")
+    return user
+
+
+async def require_od_fleet(user: dict = Depends(get_fleet_store)) -> dict:
+    """Καρτέλα «Αποστολή παραγγελίας»: ΜΟΝΟ πλάνο OrderDeck Fleet (POS + διανομή
+    στο ίδιο session). Το σκέτο πλάνο «fleet» δεν έχει POS παραγγελίες."""
+    if (user.get("plan") or "orderdeck") != "orderdeck_fleet":
+        raise HTTPException(403, "Το πλάνο σας δεν περιλαμβάνει την αποστολή παραγγελιών POS")
     return user
 
 
@@ -79,7 +88,7 @@ class StoreOrderIn(BaseModel):
     phone: str = Field(default="", max_length=20)
     notes: str = Field(default="", max_length=300)
     urgent: bool = False
-    # 0 = Άμεσα · αλλιώς προγραμματισμένη δημοσίευση σε 5'/10'/20'/25'
+    # 0 = Άμεσα · αλλιώς προγραμματισμένη δημοσίευση σε τόσα λεπτά (≤ MAX_PUBLISH_DELAY)
     delay_minutes: int = 0
     lat: Optional[float] = None
     lng: Optional[float] = None
@@ -223,7 +232,7 @@ async def store_fleet_create_order(body: StoreOrderIn, user: dict = Depends(get_
     καταστήματος. «Άμεσα» δημοσιεύει τώρα στους on-shift οδηγούς («Ελεύθερες» +
     push)· με καθυστέρηση μένει «Προγραμματισμένη» και δημοσιεύεται στην ώρα της
     (lazy στο polling — επιβιώνει από refresh/κλείσιμο)."""
-    if body.delay_minutes not in PUBLISH_DELAYS:
+    if not 0 <= body.delay_minutes <= MAX_PUBLISH_DELAY:
         raise HTTPException(400, "Μη έγκυρος χρόνος δημοσίευσης")
     p = await active_partnership(user["id"], body.team_id)
     if not p:
@@ -279,6 +288,55 @@ async def store_fleet_create_order(body: StoreOrderIn, user: dict = Depends(get_
             p["team_id"], f"{prefix} #{doc['number']}", order_push_body(doc)
         )
     return public_order(doc)
+
+
+@router.get("/store/fleet/dispatch")
+async def store_fleet_dispatch(user: dict = Depends(require_od_fleet)):
+    """Καρτέλα «Αποστολή παραγγελίας» (πλάνο OrderDeck Fleet): οι τυπωμένες
+    παραγγελίες ΠΑΡΑΔΟΣΗΣ της ημέρας ως κάρτες + οι ενεργές συνεργασίες. Κάθε
+    κάρτα φέρνει και την κατάσταση του ανεβάσματος (status/οδηγός/ώρα δημοσίευσης
+    για τις προγραμματισμένες), ώστε ένα poll να αρκεί."""
+    await publish_due_scheduled({"store_user_id": user["id"]})
+    partnerships = await db.fleet_partnerships.find(
+        {"store_user_id": user["id"], "status": "active"}, {"_id": 0}
+    ).sort("requested_at", 1).to_list(50)
+    start, _ = local_day_range(athens_today())
+    orders = await pos_api.dispatchable_delivery_orders(user["id"], start)
+    fleet_ids = [o["fleet_order_id"] for o in orders if o.get("fleet_order_id")]
+    fleet_by_id = {}
+    if fleet_ids:
+        async for fo in db.fleet_orders.find(
+            {"id": {"$in": fleet_ids}, "store_user_id": user["id"]},
+            {"_id": 0, "id": 1, "number": 1, "status": 1, "publish_at": 1,
+             "driver_name": 1, "team_name": 1, "claimed_at": 1, "delivered_at": 1},
+        ):
+            fleet_by_id[fo["id"]] = fo
+    for o in orders:
+        # None = δεν έχει ανέβει (ή το προγραμματισμένο ανέβασμα ακυρώθηκε και
+        # διαγράφηκε) → η κάρτα ξαναδίνει «Αποστολή»
+        o["fleet"] = fleet_by_id.get(o.get("fleet_order_id"))
+    return {
+        "store_name": store_name(user),
+        "partnerships": [public_partnership(p) for p in partnerships],
+        "orders": orders,
+    }
+
+
+@router.post("/store/fleet/orders/{oid}/publish-now")
+async def store_fleet_publish_now(oid: str, user: dict = Depends(get_fleet_store)):
+    """«Αποστολή τώρα» σε προγραμματισμένο ανέβασμα — δημοσιεύεται αμέσως στους
+    οδηγούς αντί να περιμένει την ώρα του."""
+    o = await db.fleet_orders.find_one(
+        {"id": oid, "store_user_id": user["id"], "status": "scheduled"}, {"_id": 0}
+    )
+    if not o:
+        raise HTTPException(404, "Δεν βρέθηκε προγραμματισμένο ανέβασμα")
+    await db.fleet_orders.update_one(
+        {"id": oid, "status": "scheduled"},
+        {"$set": {"publish_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    await publish_due_scheduled({"id": oid})
+    return {"ok": True}
 
 
 @router.post("/store/fleet/orders/{oid}/cancel")
