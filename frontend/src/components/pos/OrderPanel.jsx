@@ -5,7 +5,7 @@ import LineEditModal from "@/components/pos/LineEditModal";
 import AddressAutocomplete from "@/components/shared/AddressAutocomplete";
 import TimePicker from "@/components/shared/TimePicker";
 import DatePicker from "@/components/shared/DatePicker";
-import { ORDER_SOURCES } from "@/data/menu";
+import { POS_ORDER_SOURCES } from "@/data/menu";
 import { eur, todayISO } from "@/lib/format";
 import { customizationLines } from "@/lib/customizationText";
 
@@ -64,6 +64,11 @@ export default function OrderPanel({
     minOrder > 0 && delivery?.delivery_type === "delivery" && subtotal > 0 && subtotal < minOrder;
   const isEmpty = items.length === 0;
   const isPhone = source === "Τηλέφωνο";
+  // Σε επεξεργασία παλιάς παραγγελίας από πλατφόρμα (efood/Box/Wolt) κρατάμε
+  // την πηγή της ορατή (τα κουμπιά είναι ούτως ή άλλως κλειδωμένα σε edit).
+  const sources = POS_ORDER_SOURCES.includes(source)
+    ? POS_ORDER_SOURCES
+    : [...POS_ORDER_SOURCES, source];
   const [editingLine, setEditingLine] = useState(null);
   // Η διεύθυνση εντοπίστηκε αλλά εκτός ζώνης διανομής — προειδοποίηση, όχι εμπόδιο
   const [outOfZone, setOutOfZone] = useState(false);
@@ -132,8 +137,16 @@ export default function OrderPanel({
           </div>
         </div>
 
-        <div className="grid grid-cols-5 gap-1 p-1 mt-3 lg:mt-4 bg-[#2A0E14] rounded-md" data-testid="source-toggle">
-          {ORDER_SOURCES.map((s) => {
+        {/* Πηγή παραγγελίας ταμείου: μόνο «Ταμείο»/«Τηλέφωνο». Οι πλατφόρμες
+            έχουν δικές τους καρτέλες στην κορυφή της σελίδας — δεν καταχωρούνται
+            με το χέρι από εδώ. */}
+        <div
+          className={`grid gap-1 p-1 mt-3 lg:mt-4 bg-[#2A0E14] rounded-md ${
+            sources.length > 2 ? "grid-cols-3" : "grid-cols-2"
+          }`}
+          data-testid="source-toggle"
+        >
+          {sources.map((s) => {
             const active = source === s;
             return (
               <button

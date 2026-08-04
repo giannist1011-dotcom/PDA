@@ -5,7 +5,7 @@ import AppShell from "@/components/shared/AppShell";
 import OrderPanel from "@/components/pos/OrderPanel";
 import PinGateModal from "@/components/shared/PinGateModal";
 import { useAuth } from "@/context/shared/AuthContext";
-import { ORDER_SOURCES } from "@/data/menu";
+import { POS_ORDER_SOURCES } from "@/data/menu";
 import {
   fetchNextOrderNumber,
   submitOrder,
@@ -33,8 +33,8 @@ import { usePlatformOrders } from "@/context/platforms/PlatformOrdersContext";
 import MobileTabs from "./pda/MobileTabs";
 import MenuSection from "./pda/MenuSection";
 import PlatformTabs from "./pda/PlatformTabs";
-import MenuViewToggle from "./pda/MenuViewToggle";
 import PlatformTab from "./pda/platform/PlatformTab";
+import DispatchTab from "./pda/DispatchTab";
 import PDAModals from "./pda/PDAModals";
 import ReprintPromptModal from "./pda/ReprintPromptModal";
 import { schedDateTime, sortScheduled, FIRE_AHEAD_MS } from "./pda/utils";
@@ -89,7 +89,7 @@ export default function PDA() {
   const [config, setConfig] = useState({ categories: [], items: [], customization: null });
   const [activeCategory, setActiveCategory] = useState(null);
   const [orderNumber, setOrderNumber] = useState(0);
-  const [source, setSource] = useState(ORDER_SOURCES[0]);
+  const [source, setSource] = useState(POS_ORDER_SOURCES[0]);
   const [items, setItems] = useState([]);
   const [modalItem, setModalItem] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -110,12 +110,15 @@ export default function PDA() {
   const [pinGateOpen, setPinGateOpen] = useState(false);
   // Tablet-portrait / mobile: switch between menu and order panel (two-column on lg+)
   const [mobileTab, setMobileTab] = useState("menu");
-  // Καρτέλες πλατφορμών: "orders" = η κανονική προβολή ταμείου (προεπιλογή)
+  // Καρτέλες σελίδας: "orders" = όλο το POS (προεπιλογή), "dispatch" =
+  // «Αποστολή παραγγελίας», αλλιώς το id της πλατφόρμας.
   const { enabled: platformTabs, pendingByPlatform } = usePlatformOrders();
   const [topTab, setTopTab] = useState("orders");
   // Απενεργοποίηση πλατφόρμας ενώ είναι επιλεγμένη → πίσω στις Παραγγελίες
   useEffect(() => {
-    if (topTab !== "orders" && !platformTabs.includes(topTab)) setTopTab("orders");
+    if (topTab !== "orders" && topTab !== "dispatch" && !platformTabs.includes(topTab)) {
+      setTopTab("orders");
+    }
   }, [platformTabs, topTab]);
   // Προβολή μενού: «Πλέγμα» ή αριθμημένη «Λίστα» — ανά συσκευή/προφίλ
   const [menuView, setMenuViewState] = useState(() => getMenuView(user?.profile_id));
@@ -217,7 +220,7 @@ export default function PDA() {
         setDelivery(null);
         setDiscount(null);
         setNote("");
-        setSource(ORDER_SOURCES[0]);
+        setSource(POS_ORDER_SOURCES[0]);
         loadNext();
       }
       return;
@@ -619,26 +622,18 @@ export default function PDA() {
           Το breakpoint βασίζεται σε CSS viewport width (Tailwind media queries),
           όχι σε user-agent/touch. Android tablets 1280x800 με DPR ~1.33 δίνουν
           ~960 CSS px, γι' αυτό το παλιό lg: (1024px) τα έριχνε σε mobile layout. */}
-      {/* Γραμμή εργαλείων της σελίδας: καρτέλες «Παραγγελίες» (ταμείο +
-          τηλεφωνικές) / efood / Box / Wolt αριστερά, «Λίστα/Πλέγμα» δεξιά.
-          Οι καρτέλες πλατφορμών ανοίγουν δικό τους dashboard, όχι το πλέγμα POS. */}
-      <div className="shrink-0 flex items-center gap-2 px-3 md:px-4 xl:px-6 pt-3">
-        <PlatformTabs
-          tab={topTab}
-          setTab={setTopTab}
-          platforms={platformTabs}
-          pendingByPlatform={pendingByPlatform}
-        />
-        {topTab === "orders" && (
-          <MenuViewToggle
-            value={menuView}
-            onChange={changeMenuView}
-            className={`ml-auto shrink-0 ${mobileTab === "menu" ? "flex" : "hidden"} sm:flex`}
-          />
-        )}
-      </div>
+      {/* Καρτέλες σελίδας (πάνω από την αναζήτηση): «Παραγγελίες» = όλο το POS,
+          μία ανά ενεργή πλατφόρμα (δικό της dashboard) και «Αποστολή παραγγελίας». */}
+      <PlatformTabs
+        tab={topTab}
+        setTab={setTopTab}
+        platforms={platformTabs}
+        pendingByPlatform={pendingByPlatform}
+      />
 
-      {topTab !== "orders" ? (
+      {topTab === "dispatch" ? (
+        <DispatchTab />
+      ) : topTab !== "orders" ? (
         <PlatformTab platform={topTab} onPrint={setPrintOrder} />
       ) : (
       <main className="flex-1 flex flex-col sm:grid sm:grid-cols-[1fr_300px] md:grid-cols-[1fr_340px] lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-hidden">
@@ -654,6 +649,7 @@ export default function PDA() {
           setActiveCategory={setActiveCategory}
           handleItemClick={handleItemClick}
           menuView={menuView}
+          setMenuView={changeMenuView}
         />
         <div
           className={`min-h-0 overflow-hidden flex-1 sm:flex-none flex-col ${
