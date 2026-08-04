@@ -114,12 +114,16 @@ export default function PDA() {
   // «Αποστολή παραγγελίας», αλλιώς το id της πλατφόρμας.
   const { enabled: platformTabs, pendingByPlatform } = usePlatformOrders();
   const [topTab, setTopTab] = useState("orders");
-  // Απενεργοποίηση πλατφόρμας ενώ είναι επιλεγμένη → πίσω στις Παραγγελίες
+  // Η «Αποστολή παραγγελίας» υπάρχει μόνο στο πλάνο OrderDeck Fleet
+  const canDispatch = user?.plan === "orderdeck_fleet";
+  // Απενεργοποίηση πλατφόρμας (ή πλάνου) ενώ είναι επιλεγμένη → πίσω στις Παραγγελίες
   useEffect(() => {
-    if (topTab !== "orders" && topTab !== "dispatch" && !platformTabs.includes(topTab)) {
+    if (topTab === "dispatch") {
+      if (!canDispatch) setTopTab("orders");
+    } else if (topTab !== "orders" && !platformTabs.includes(topTab)) {
       setTopTab("orders");
     }
-  }, [platformTabs, topTab]);
+  }, [platformTabs, topTab, canDispatch]);
   // Προβολή μενού: «Πλέγμα» ή αριθμημένη «Λίστα» — ανά συσκευή/προφίλ
   const [menuView, setMenuViewState] = useState(() => getMenuView(user?.profile_id));
   const changeMenuView = useCallback(
@@ -629,11 +633,12 @@ export default function PDA() {
         setTab={setTopTab}
         platforms={platformTabs}
         pendingByPlatform={pendingByPlatform}
+        showDispatch={canDispatch}
       />
 
-      {topTab === "dispatch" ? (
+      {topTab === "dispatch" && canDispatch ? (
         <DispatchTab />
-      ) : topTab !== "orders" ? (
+      ) : topTab !== "orders" && platformTabs.includes(topTab) ? (
         <PlatformTab platform={topTab} onPrint={setPrintOrder} />
       ) : (
       <main className="flex-1 flex flex-col sm:grid sm:grid-cols-[1fr_300px] md:grid-cols-[1fr_340px] lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_440px] overflow-hidden">

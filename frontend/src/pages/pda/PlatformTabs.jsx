@@ -5,12 +5,13 @@ import { platformById } from "@/lib/platforms";
 // «Παραγγελίες» = όλο το POS (ταμείο + τηλεφωνικές, η προεπιλογή) · μία καρτέλα
 // ανά ΕΝΕΡΓΗ πλατφόρμα (efood/Box/Wolt) με badge εκκρεμών, που ανοίγει ΔΙΚΟ της
 // dashboard — όχι panel μέσα στο POS · «Αποστολή παραγγελίας» = η μελλοντική
-// προβολή ανεβάσματος στο OrderDeck Fleet.
+// προβολή ανεβάσματος στο OrderDeck Fleet — εμφανίζεται ΜΟΝΟ σε καταστήματα
+// με πλάνο orderdeck_fleet (showDispatch), αλλιώς δεν υπάρχει καθόλου.
 const TAB_BASE =
   "shrink-0 h-10 px-4 rounded-md border text-sm font-bold flex items-center gap-2 transition-colors no-select";
 const TAB_OFF = "bg-[#4A1B27] text-neutral-300 border-[#723645] hover:border-flame";
 
-export default function PlatformTabs({ tab, setTab, platforms, pendingByPlatform }) {
+export default function PlatformTabs({ tab, setTab, platforms, pendingByPlatform, showDispatch }) {
   return (
     <div
       className="shrink-0 flex gap-1.5 px-3 md:px-4 xl:px-6 pt-3 overflow-x-auto"
@@ -59,6 +60,7 @@ export default function PlatformTabs({ tab, setTab, platforms, pendingByPlatform
           </button>
         );
       })}
+      {showDispatch && (
       <button
         onClick={() => setTab("dispatch")}
         data-testid="platform-tab-dispatch"
@@ -70,6 +72,7 @@ export default function PlatformTabs({ tab, setTab, platforms, pendingByPlatform
         <Send className="w-4 h-4" />
         Αποστολή παραγγελίας
       </button>
+      )}
     </div>
   );
 }

@@ -168,10 +168,11 @@ export default function OrderPanel({
         </div>
       </div>
 
-      {/* Zone 2 — scrollable: order lines + στοιχεία παράδοσης (ό,τι μπορεί να μεγαλώσει) */}
+      {/* Zone 2 — scrollable: ΜΟΝΟ οι γραμμές της παραγγελίας. Πιάνει όλο τον
+          ελεύθερο χώρο από το header μέχρι τα κουμπιά — κανένα νεκρό κενό. */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 lg:px-5" data-testid="order-items">
         {isEmpty ? (
-          <div className={`flex flex-col items-center justify-center text-neutral-500 py-16 text-center ${isPhone ? "" : "h-full"}`}>
+          <div className="flex flex-col items-center justify-center text-neutral-500 py-16 text-center h-full">
             <div className="text-lg font-heading">Άδεια παραγγελία</div>
             <div className="text-sm mt-1">Επιλέξτε προϊόντα από το μενού</div>
           </div>
@@ -241,11 +242,19 @@ export default function OrderPanel({
             );
           })
         )}
+      </div>
 
-        {/* Στοιχεία παράδοσης (Τηλέφωνο) — ΜΕΣΑ στη scrollable ζώνη ώστε να ΜΗΝ σπρώχνουν
-            το footer (Σύνολο/Εκτύπωση) εκτός οθόνης σε tablet */}
+      {/* Zone 2β — χειριστήρια αγκυρωμένα ΚΑΤΩ, ακριβώς πάνω από τη μπάρα συνόλου:
+          τύπος παραγγελίας + προγραμματισμός + στοιχεία παράδοσης + σημείωση.
+          Μεγαλώνουν προς τα ΠΑΝΩ (τρώνε από τη ζώνη ειδών) και έχουν δικό τους
+          scroll σε χαμηλές οθόνες, ώστε το footer να μένει πάντα ορατό. */}
+      {(isPhone || setNote) && (
+      <div
+        className="shrink-0 max-h-[60%] overflow-y-auto px-4 lg:px-5 pt-2"
+        data-testid="order-controls"
+      >
         {isPhone && (
-          <div className="mt-3 mb-1 p-2 rounded-md border border-flame/40 bg-flame/5" data-testid="delivery-section">
+          <div className="mb-1 p-2 rounded-md border border-flame/40 bg-flame/5" data-testid="delivery-section">
             <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={() => toggleDeliveryType("delivery")}
@@ -359,7 +368,7 @@ export default function OrderPanel({
 
         {/* Σημείωση παραγγελίας — ελεύθερο κείμενο, τυπώνεται στην απόδειξη */}
         {setNote && (
-          <div className="mt-3 mb-2 relative">
+          <div className="mb-2 relative">
             <StickyNote className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               value={note}
@@ -371,8 +380,8 @@ export default function OrderPanel({
             />
           </div>
         )}
-
       </div>
+      )}
 
       {/* Zone 3 — fixed footer: total + actions (ΠΑΝΤΑ ορατό, δεν μεγαλώνει ποτέ) */}
       <div className="px-4 py-3 border-t border-[#723645] bg-[#33111A] shrink-0">
