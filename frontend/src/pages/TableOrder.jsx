@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import AppShell from "@/components/shared/AppShell";
 import MenuGrid from "@/components/pos/MenuGrid";
 import CustomizationModal from "@/components/pos/CustomizationModal";
+import QuantitySheet from "@/components/pos/QuantityPicker";
 import Receipt from "@/components/pos/Receipt";
 import { useAuth } from "@/context/shared/AuthContext";
 import {
@@ -39,6 +40,7 @@ export default function TableOrder() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [modalItem, setModalItem] = useState(null);
+  const [qtyItem, setQtyItem] = useState(null); // προϊόν χωρίς επιλογές → popup ποσότητας
   const [modalOpen, setModalOpen] = useState(false);
   const [printSlip, setPrintSlip] = useState(null);
   const [printOrder, setPrintOrder] = useState(null);
@@ -68,8 +70,9 @@ export default function TableOrder() {
   }, [tableId]);
 
   // ---- current round lines ----
-  const addLine = (item, customization = null, unitPriceOverride = null) => {
+  const addLine = (item, customization = null, unitPriceOverride = null, quantity = 1) => {
     const unit_price = unitPriceOverride ?? item.price;
+    const qty = Math.max(1, Number(quantity) || 1);
     setNewItems((prev) => [
       ...prev,
       {
@@ -78,13 +81,14 @@ export default function TableOrder() {
         name: item.name,
         category: item.category,
         unit_price,
-        quantity: 1,
-        line_total: unit_price,
+        quantity: qty,
+        line_total: unit_price * qty,
         customization,
       },
     ]);
   };
 
+  // Ίδια ροή με το POS: η ποσότητα ρωτιέται ΠΑΝΤΑ πριν μπει το προϊόν στον γύρο
   const handleItemClick = (item) => {
     if (item.available === false) return;
     const hasGroups = Array.isArray(item.option_groups) && item.option_groups.length > 0;
@@ -92,7 +96,7 @@ export default function TableOrder() {
       setModalItem(item);
       setModalOpen(true);
     } else {
-      addLine(item);
+      setQtyItem(item);
     }
   };
 
@@ -309,6 +313,16 @@ export default function TableOrder() {
         />
       </main>
 
+      <QuantitySheet
+        item={qtyItem}
+        open={!!qtyItem}
+        onClose={() => setQtyItem(null)}
+        onAdd={(quantity) => {
+          addLine(qtyItem, null, null, quantity);
+          setQtyItem(null);
+        }}
+      />
+
       <CustomizationModal
         item={modalItem}
         config={config.customization}
@@ -317,8 +331,8 @@ export default function TableOrder() {
           setModalOpen(false);
           setModalItem(null);
         }}
-        onConfirm={({ customization, unit_price }) => {
-          addLine(modalItem, customization, unit_price);
+        onConfirm={({ customization, unit_price, quantity = 1 }) => {
+          addLine(modalItem, customization, unit_price, quantity);
           setModalOpen(false);
           setModalItem(null);
         }}

@@ -428,7 +428,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
 - MenuManagement.jsx (394 γρ): MenuManagement@32
-- PDA.jsx (824 γρ): PDA@92
+- PDA.jsx (841 γρ): PDA@92
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
 - PublicMenu.jsx (209 γρ): PublicMenu@19
@@ -440,7 +440,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - StoreFleetPartners.jsx (159 γρ): StoreFleetPartners@22
 - StoreFleetSettings.jsx (47 γρ): StoreFleetSettings@9
 - StoreFleetStats.jsx (125 γρ): StoreFleetStats@19
-- TableOrder.jsx (340 γρ): TableOrder@29
+- TableOrder.jsx (354 γρ): TableOrder@30
 - Tables.jsx (159 γρ): Tables@12
 - Waiters.jsx (27 γρ): Waiters@6
 - admin-admins/AdminModal.jsx (207 γρ): AdminModal@12
@@ -525,7 +525,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - pda/DispatchTab.jsx (112 γρ): DispatchTab@16
 - pda/MenuSection.jsx (66 γρ): MenuSection@17
 - pda/MenuViewToggle.jsx (39 γρ): MenuViewToggle@12
-- pda/PDAModals.jsx (85 γρ): PDAModals@8
+- pda/PDAModals.jsx (96 γρ): PDAModals@9
 - pda/PlatformTabs.jsx (84 γρ): PlatformTabs@15
 - pda/ReprintPromptModal.jsx (70 γρ): ReprintPromptModal@6
 - pda/ScheduledOrdersModal.jsx (98 γρ): ScheduledOrdersModal@5
@@ -586,7 +586,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - platforms/order/ReadyTimePicker.jsx (37 γρ): ReadyTimePicker@6
 - pos/BulkActionsBar.jsx (478 γρ): PriceChangeDialog@32, CategoryDialog@126, OptionGroupDialog@186, BulkActionsBar@362
 - pos/BusinessDetailsForm.jsx (244 γρ): BusinessDetailsForm@27
-- pos/CustomizationModal.jsx (398 γρ): OptionTile@14, LegacyOptions@48, GroupsOptions@143, CustomizationModal@226
+- pos/CustomizationModal.jsx (412 γρ): OptionTile@15, LegacyOptions@49, GroupsOptions@144, CustomizationModal@227
 - pos/DeckPilotChat.jsx (148 γρ): DeckPilotChat@31
 - pos/LineEditModal.jsx (133 γρ): LineEditModal@14
 - pos/LiveOrdersMap.jsx (256 γρ): LiveOrdersMap@44
@@ -596,6 +596,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - pos/OrderPanel.jsx (645 γρ): OrderPanel@35
 - pos/ProfilesManager.jsx (322 γρ): ProfileModal@20, ProfilesManager@176
 - pos/PublicMenuSettings.jsx (410 γρ): PublicMenuSettings@29
+- pos/QuantityPicker.jsx (182 γρ): Stepper@18, QuantityRow@52, QuantitySheet@88
 - pos/Receipt.jsx (171 γρ): ReceiptCopy@15, Receipt@156
 - pos/SourceFilter.jsx (39 γρ): SourceFilter@5
 - pos/SourceMix.jsx (57 γρ): SourceMix@7

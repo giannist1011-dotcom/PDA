@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { eur } from "@/lib/format";
 import { ALL_LABEL, ALL_MIN_POOL, isAllSelected, modifierCategory } from "@/lib/customizationText";
+import { QuantityRow } from "./QuantityPicker";
 
 const OptionTile = ({ selected, label, badge, onClick, testId }) => (
   <button
@@ -247,9 +248,14 @@ export default function CustomizationModal({
     double_meat: false,
   });
   const [selections, setSelections] = useState({});
+  // Ποσότητα — ορίζεται στην ΙΔΙΑ κίνηση με τις επιλογές (default ×1). Στην
+  // επεξεργασία γραμμής δεν εμφανίζεται: εκεί η ποσότητα αλλάζει με τους +/-
+  // steppers του δελτίου.
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     if (!open || !item) return;
+    setQuantity(1);
     if (legacyMode) {
       const firstBread = (config?.bread_options || []).map(normalizeOption)[0]?.name || "";
       setState({
@@ -299,6 +305,9 @@ export default function CustomizationModal({
     ? groups.some((g) => g.required && (selections[g.id] || []).length === 0)
     : false;
 
+  const isEdit = mode === "edit";
+  const qty = isEdit ? 1 : quantity;
+
   const handleConfirm = () => {
     if (missingRequired) return;
     let customization;
@@ -329,10 +338,8 @@ export default function CustomizationModal({
           .filter((s) => s.choices.length > 0),
       };
     }
-    onConfirm({ customization, unit_price: finalPrice });
+    onConfirm({ customization, unit_price: finalPrice, quantity: qty });
   };
-
-  const isEdit = mode === "edit";
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -350,6 +357,8 @@ export default function CustomizationModal({
         </div>
 
         <div className="px-6 pb-2 max-h-[65vh] overflow-y-auto space-y-6">
+          {/* Ποσότητα ΠΡΩΤΑ — πάνω από ψωμί/υλικά/ομάδες επιλογών */}
+          {!isEdit && <QuantityRow value={quantity} onChange={setQuantity} />}
           {legacyMode ? (
             <LegacyOptions
               item={item}
@@ -370,7 +379,12 @@ export default function CustomizationModal({
             <div className="text-xs text-neutral-400 uppercase tracking-widest">
               {isEdit ? "Νέα τιμή" : "Σύνολο"}
             </div>
-            <div className="text-2xl font-bold font-mono">{eur(finalPrice)}</div>
+            <div className="text-2xl font-bold font-mono">{eur(finalPrice * qty)}</div>
+            {qty > 1 && (
+              <div className="text-xs text-neutral-400 font-mono">
+                {qty} × {eur(finalPrice)}
+              </div>
+            )}
           </div>
           <div className="flex gap-3">
             <Button
@@ -387,7 +401,7 @@ export default function CustomizationModal({
               data-testid="customization-confirm"
               className="h-14 px-8 text-base font-bold bg-brand hover:bg-brand-hover text-white disabled:opacity-50"
             >
-              {isEdit ? "Ενημέρωση" : "Προσθήκη"}
+              {isEdit ? "Ενημέρωση" : qty > 1 ? `Προσθήκη ×${qty}` : "Προσθήκη"}
             </Button>
           </div>
         </DialogFooter>

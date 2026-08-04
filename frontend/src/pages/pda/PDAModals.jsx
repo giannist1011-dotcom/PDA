@@ -1,5 +1,6 @@
 import PinGateModal from "@/components/shared/PinGateModal";
 import CustomizationModal from "@/components/pos/CustomizationModal";
+import QuantitySheet from "@/components/pos/QuantityPicker";
 import Receipt from "@/components/pos/Receipt";
 import DiscountModal from "./DiscountModal";
 import ScheduledOrdersModal from "./ScheduledOrdersModal";
@@ -7,6 +8,9 @@ import ScheduledOrdersModal from "./ScheduledOrdersModal";
 // Όλα τα modals της σελίδας PDA + κρυφή περιοχή εκτύπωσης απόδειξης
 export default function PDAModals({
   modalItem,
+  qtyItem,
+  onQtyClose,
+  onQtyAdd,
   config,
   modalOpen,
   modalMode,
@@ -33,6 +37,13 @@ export default function PDAModals({
 }) {
   return (
     <>
+      {/* Γρήγορο popup ποσότητας — προϊόντα ΧΩΡΙΣ επιλογές (πλέγμα, λίστα, numpad) */}
+      <QuantitySheet
+        item={qtyItem}
+        open={!!qtyItem}
+        onClose={onQtyClose}
+        onAdd={onQtyAdd}
+      />
       <CustomizationModal
         item={modalItem}
         config={config.customization}

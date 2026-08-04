@@ -97,6 +97,7 @@ export default function PDA() {
   const [source, setSource] = useState(POS_ORDER_SOURCES[0]);
   const [items, setItems] = useState([]);
   const [modalItem, setModalItem] = useState(null);
+  const [qtyItem, setQtyItem] = useState(null); // προϊόν χωρίς επιλογές → popup ποσότητας
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add"); // "add" | "edit"
   const [editingLineId, setEditingLineId] = useState(null);
@@ -441,23 +442,30 @@ export default function PDA() {
 
   // useCallback: σταθερή αναφορά ώστε το memo(MenuSection) να μην ξαναρεντάρει το
   // πλέγμα μενού όταν αλλάζει άσχετο state (π.χ. πληκτρολόγηση στη φόρμα παράδοσης)
-  const addLine = useCallback((item, customization = null, unitPriceOverride = null) => {
-    const unit_price = unitPriceOverride ?? item.price;
-    setItems((prev) => [
-      ...prev,
-      {
-        line_id: newLineId(),
-        item_id: item.id,
-        name: item.name,
-        category: item.category,
-        unit_price,
-        quantity: 1,
-        line_total: unit_price,
-        customization,
-      },
-    ]);
-  }, []);
+  const addLine = useCallback(
+    (item, customization = null, unitPriceOverride = null, quantity = 1) => {
+      const unit_price = unitPriceOverride ?? item.price;
+      const qty = Math.max(1, Number(quantity) || 1);
+      setItems((prev) => [
+        ...prev,
+        {
+          line_id: newLineId(),
+          item_id: item.id,
+          name: item.name,
+          category: item.category,
+          unit_price,
+          quantity: qty,
+          line_total: unit_price * qty,
+          customization,
+        },
+      ]);
+    },
+    []
+  );
 
+  // Η ποσότητα ρωτιέται ΠΑΝΤΑ πριν μπει το προϊόν στο δελτίο: χωρίς
+  // παραμετροποίηση → γρήγορο popup ποσότητας, με παραμετροποίηση → το sheet
+  // επιλογών (έχει τη γραμμή ποσότητας στην κορυφή του).
   const handleItemClick = useCallback((item) => {
     if (item.available === false) return;
     const hasGroups = Array.isArray(item.option_groups) && item.option_groups.length > 0;
@@ -468,9 +476,15 @@ export default function PDA() {
       setInitialCustomization(null);
       setModalOpen(true);
     } else {
-      addLine(item);
+      setQtyItem(item);
     }
-  }, [addLine]);
+  }, []);
+
+  const handleQtyAdd = (quantity) => {
+    if (!qtyItem) return;
+    addLine(qtyItem, null, null, quantity);
+    setQtyItem(null);
+  };
 
   const handleEditLineOptions = (line) => {
     const menuItem = config.items.find((i) => i.id === line.item_id);
@@ -482,7 +496,7 @@ export default function PDA() {
     setModalOpen(true);
   };
 
-  const handleConfirmCustomization = ({ customization, unit_price }) => {
+  const handleConfirmCustomization = ({ customization, unit_price, quantity = 1 }) => {
     if (modalMode === "edit" && editingLineId) {
       setItems((prev) =>
         prev.map((it) =>
@@ -497,7 +511,7 @@ export default function PDA() {
         )
       );
     } else {
-      addLine(modalItem, customization, unit_price);
+      addLine(modalItem, customization, unit_price, quantity);
     }
     setModalOpen(false);
     setModalItem(null);
@@ -763,6 +777,9 @@ export default function PDA() {
 
       <PDAModals
         modalItem={modalItem}
+        qtyItem={qtyItem}
+        onQtyClose={() => setQtyItem(null)}
+        onQtyAdd={handleQtyAdd}
         config={config}
         modalOpen={modalOpen}
         modalMode={modalMode}
