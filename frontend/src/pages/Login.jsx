@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Mail, Lock } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/shared/AuthContext";
 import { formatApiError, apiFleetExchange } from "@/lib/api";
 import { setFleetToken } from "@/lib/fleetApi";
 import { Button } from "@/components/ui/button";

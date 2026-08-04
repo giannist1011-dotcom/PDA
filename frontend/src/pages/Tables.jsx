@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { LayoutGrid, RefreshCcw, Settings2, X } from "lucide-react";
-import AppShell from "@/components/AppShell";
-import TablesEditor from "@/components/TablesEditor";
+import AppShell from "@/components/shared/AppShell";
+import TablesEditor from "@/components/pos/TablesEditor";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/shared/AuthContext";
 import { apiTablesState, formatApiError } from "@/lib/api";
 import { eur } from "@/lib/format";
 

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Users, Globe, Store, CreditCard, SlidersHorizontal, LayoutGrid, Printer, Bike } from "lucide-react";
-import AppShell from "@/components/AppShell";
-import StoreDetailsSettings from "@/components/StoreDetailsSettings";
-import ProfilesManager from "@/components/ProfilesManager";
-import PublicMenuSettings from "@/components/PublicMenuSettings";
-import PrintingSettings from "@/components/PrintingSettings";
-import PlatformSettings from "@/components/PlatformSettings";
+import AppShell from "@/components/shared/AppShell";
+import StoreDetailsSettings from "@/components/pos/StoreDetailsSettings";
+import ProfilesManager from "@/components/pos/ProfilesManager";
+import PublicMenuSettings from "@/components/pos/PublicMenuSettings";
+import PrintingSettings from "@/components/shared/PrintingSettings";
+import PlatformSettings from "@/components/platforms/PlatformSettings";
 import TablesSettings from "./settings/TablesSettings";
 import SubscriptionSettings from "./settings/SubscriptionSettings";
 

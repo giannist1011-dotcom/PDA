@@ -7,7 +7,7 @@ import {
   Calendar as CalendarIcon,
   Share2,
 } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell from "@/components/shared/AppShell";
 import { Button } from "@/components/ui/button";
 import {
   apiListEmployees,
@@ -21,7 +21,7 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { DAY_LABELS, DAY_SHORT, isoDate, mondayOf, addDays, formatWeekRange } from "@/lib/dates";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/shared/AuthContext";
 import ShiftModal from "./schedule/ShiftModal";
 import ScheduleGrid from "./schedule/ScheduleGrid";
 import ShareDialog from "./schedule/ShareDialog";

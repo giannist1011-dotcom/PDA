@@ -3,7 +3,7 @@ import { X, Printer, ChevronDown, ChevronUp, History as HistoryIcon, Check } fro
 import { toast } from "sonner";
 import { apiListShoppingPrints, formatApiError } from "@/lib/api";
 import { formatGRTime } from "@/lib/format";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/shared/AuthContext";
 import { printShoppingList, groupShoppingByCategory } from "./utils";
 
 const PAGE_SIZE = 20;

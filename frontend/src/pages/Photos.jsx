@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Upload, Trash2, ImagePlus, Image as ImageIcon } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell from "@/components/shared/AppShell";
 import { Button } from "@/components/ui/button";
 import { apiListPhotos, apiCreatePhoto, apiDeletePhoto, formatApiError } from "@/lib/api";
 

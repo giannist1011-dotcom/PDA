@@ -11,7 +11,7 @@ import {
 } from "@/lib/api";
 import { formatGRDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { useAdminPw } from "@/components/AdminShell";
+import { useAdminPw } from "@/components/shared/AdminShell";
 import AdminModal from "./AdminModal";
 import AuditSection from "./AuditSection";
 import { RIGHTS_LABELS, productsLabel } from "./utils";

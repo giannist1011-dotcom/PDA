@@ -9,7 +9,7 @@ import {
   RefreshCcw,
   Euro,
 } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell from "@/components/shared/AppShell";
 import { Button } from "@/components/ui/button";
 import {
   apiListExpenseCategories,
@@ -23,7 +23,7 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { eur, formatGRDate } from "@/lib/format";
-import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
+import PeriodFilter, { periodLabel } from "@/components/shared/PeriodFilter";
 import { presetRange } from "@/lib/dates";
 import { useBusinessDay } from "@/lib/businessDay";
 import ExpenseModal from "./expenses/ExpenseModal";

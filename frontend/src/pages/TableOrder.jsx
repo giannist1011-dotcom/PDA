@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
-import AppShell from "@/components/AppShell";
-import MenuGrid from "@/components/MenuGrid";
-import CustomizationModal from "@/components/CustomizationModal";
-import Receipt from "@/components/Receipt";
-import { useAuth } from "@/context/AuthContext";
+import AppShell from "@/components/shared/AppShell";
+import MenuGrid from "@/components/pos/MenuGrid";
+import CustomizationModal from "@/components/pos/CustomizationModal";
+import Receipt from "@/components/pos/Receipt";
+import { useAuth } from "@/context/shared/AuthContext";
 import {
   apiGetMenuConfig,
   apiGetTableTab,

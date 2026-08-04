@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Store, CalendarDays, Clock3 } from "lucide-react";
-import PeriodFilter from "@/components/PeriodFilter";
-import CountBarChart from "@/components/CountBarChart";
+import PeriodFilter from "@/components/shared/PeriodFilter";
+import CountBarChart from "@/components/shared/CountBarChart";
 import { apiFleetDriverStats } from "@/lib/fleetApi";
 import { presetRange } from "@/lib/dates";
 import { formatGRDayMonth } from "@/lib/format";

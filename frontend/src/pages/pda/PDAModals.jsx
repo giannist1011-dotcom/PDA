@@ -1,6 +1,6 @@
-import PinGateModal from "@/components/PinGateModal";
-import CustomizationModal from "@/components/CustomizationModal";
-import Receipt from "@/components/Receipt";
+import PinGateModal from "@/components/shared/PinGateModal";
+import CustomizationModal from "@/components/pos/CustomizationModal";
+import Receipt from "@/components/pos/Receipt";
 import DiscountModal from "./DiscountModal";
 import ScheduledOrdersModal from "./ScheduledOrdersModal";
 

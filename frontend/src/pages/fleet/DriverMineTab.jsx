@@ -2,9 +2,9 @@ import { useState } from "react";
 import { ChevronDown, AlertTriangle } from "lucide-react";
 import FleetOrdersMap from "./FleetOrdersMap";
 import { DriverCard } from "./DriverCard";
-import EmptyState from "@/components/EmptyState";
+import EmptyState from "@/components/shared/EmptyState";
 import DriverHistory from "./DriverHistory";
-import { NEXT_ACTION } from "./utils";
+import { NEXT_ACTION } from "@/components/fleet/utils";
 
 // Το tab «Δικές μου» του οδηγού: συμπαγής χάρτης με pins ΜΟΝΟ στις ενεργές του
 // παραγγελίες (tap σε pin → φωτίζεται η κάρτα), κάρτες με κουμπί προόδου +

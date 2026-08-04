@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import TablesEditor from "@/components/TablesEditor";
+import TablesEditor from "@/components/pos/TablesEditor";
 import { Switch } from "@/components/ui/switch";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/shared/AuthContext";
 import { apiTablesState, apiToggleTables, formatApiError } from "@/lib/api";
 
 export default function TablesSettings() {

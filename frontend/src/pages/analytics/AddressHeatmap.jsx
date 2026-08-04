@@ -4,11 +4,11 @@ import { Flame, MapPin, RefreshCcw } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/shared/AuthContext";
 import { apiOrdersHeatmap } from "@/lib/api";
 import { presetRange } from "@/lib/dates";
 import { businessToday } from "@/lib/businessDay";
-import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
+import PeriodFilter, { periodLabel } from "@/components/shared/PeriodFilter";
 import { Button } from "@/components/ui/button";
 
 // ---------- Heatmap διευθύνσεων παράδοσης (Στατιστικά) ----------

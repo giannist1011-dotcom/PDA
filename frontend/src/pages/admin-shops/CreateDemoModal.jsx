@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { X, Sparkles } from "lucide-react";
 import { apiAdminCreateDemo, formatApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { useAdminPw } from "@/components/AdminShell";
+import { useAdminPw } from "@/components/shared/AdminShell";
 import { CredRow } from "./DemoCredentials";
 import { inputCls } from "./utils";
 

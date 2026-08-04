@@ -1,8 +1,8 @@
 import { memo } from "react";
 import { LayoutGrid, List } from "lucide-react";
-import MenuGrid from "@/components/MenuGrid";
-import MenuList from "@/components/MenuList";
-import CodeNumpad from "@/components/CodeNumpad";
+import MenuGrid from "@/components/pos/MenuGrid";
+import MenuList from "@/components/pos/MenuList";
+import CodeNumpad from "@/components/shared/CodeNumpad";
 import ScheduledPanel from "./ScheduledPanel";
 
 const VIEWS = [

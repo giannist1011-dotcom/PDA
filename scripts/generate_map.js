@@ -178,16 +178,55 @@ out.push("Backend: όλα τα endpoints σερβίρονται με prefix `/ap
 out.push("Frontend: Name@γραμμή = component/hook ορισμένο στο αρχείο. Εκτός χάρτη: components/ui, components/icons (shadcn/boilerplate).");
 out.push("");
 
-out.push("## BACKEND — endpoints (backend/routers/*.py)");
-const routersDir = path.join(ROOT, "backend", "routers");
+out.push("## ΧΑΡΤΗΣ DOMAIN — ο ΚΑΝΟΝΑΣ πριν από κάθε αλλαγή");
+out.push("");
+out.push("**Κάθε domain μιλάει σε άλλο ΜΟΝΟ μέσω του interface του (`<domain>/api.py`).**");
+out.push("Κανένα domain δεν διαβάζει/γράφει collections άλλου domain και δεν κάνει import");
+out.push("εσωτερικά του modules. Ο έλεγχος είναι αυτόματος: `node scripts/check_backend_imports.js`.");
+out.push("");
+out.push("| domain | φάκελος | collections | interface |");
+out.push("| --- | --- | --- | --- |");
+out.push("| POS | `backend/pos/` | orders, items, categories, photos, stock_*, shopping, employees, shifts, expenses*, day_reports, tables, table_tabs, checklist_*, ai_* | `pos/api.py` |");
+out.push("| FleetDeck | `backend/fleet/` | fleet_teams, fleet_members, fleet_orders, fleet_events, fleet_accounts, fleet_shifts, fleet_counters, fleet_partnerships | `fleet/api.py` |");
+out.push("| Πλατφόρμες | `backend/platforms/` | platform_orders | `platforms/api.py` |");
+out.push("| Admin (back-office) | `backend/admin/` | admin_*, announcements, promo_codes, demo_leads, stock_photos | `admin/api.py` |");
+out.push("| Shared | `backend/shared/` | users, profiles, print_jobs, geocode_cache, push_subscriptions | core / auth / printing / notifications / geocoding |");
+out.push("");
+out.push("Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|shared`, `context/shared|fleet|platforms`.");
+out.push("Το `components/ui` + `components/icons` (shadcn) και το `lib/api.js` μένουν κοινά.");
+out.push("");
+out.push("**Σύνδεση POS ↔ FleetDeck** — αμφίδρομη και ρητή, καμία ταύτιση με τηλέφωνο/διεύθυνση:");
+out.push("`orders.fleet_order_id` ↔ `fleet_orders.source_pos_order_id`. Το ανέβασμα δέχεται");
+out.push("`pos_order_id` στο `POST /store/fleet/orders`· από εκεί περνούν «καθ' οδόν»,");
+out.push("ενημερώσεις προς οδηγό, ακυρώσεις και ο συγχρονισμός κατάστασης πίσω στην κάρτα POS.");
+out.push("");
+
+out.push("## BACKEND — endpoints (backend/<domain>/*.py)");
+const DOMAIN_DIRS = ["shared", "pos", "fleet", "platforms", "admin"];
 let epCount = 0;
-for (const f of fs.readdirSync(routersDir).sort()) {
-  if (!f.endsWith(".py") || f === "__init__.py") continue;
-  const eps = parseRouter(path.join(routersDir, f));
-  if (!eps.length) continue;
-  epCount += eps.length;
-  out.push(`### ${f}`);
-  for (const e of eps) out.push(`- ${e.method} ${e.path} → ${e.fn} @${e.line}${e.doc ? " — " + e.doc : ""}`);
+for (const d of DOMAIN_DIRS) {
+  const dir = path.join(ROOT, "backend", d);
+  if (!fs.existsSync(dir)) continue;
+  for (const f of fs.readdirSync(dir).sort()) {
+    if (!f.endsWith(".py") || f === "__init__.py") continue;
+    const eps = parseRouter(path.join(dir, f));
+    if (!eps.length) continue;
+    epCount += eps.length;
+    out.push(`### ${d}/${f}`);
+    for (const e of eps) out.push(`- ${e.method} ${e.path} → ${e.fn} @${e.line}${e.doc ? " — " + e.doc : ""}`);
+  }
+}
+out.push("");
+
+out.push("## BACKEND — interfaces domain (η ΜΟΝΗ επιτρεπτή διέλευση)");
+for (const d of DOMAIN_DIRS) {
+  const f = path.join(ROOT, "backend", d, "api.py");
+  if (!fs.existsSync(f)) continue;
+  const fns = toLines(read(f))
+    .map((l, i) => [l.match(/^(?:async\s+)?def\s+([a-z]\w*)\s*\(/), i])
+    .filter(([m]) => m && !m[1].startsWith("_"))
+    .map(([m, i]) => `${m[1]}@${i + 1}`);
+  if (fns.length) out.push(`- ${d}/api.py: ${fns.join(", ")}`);
 }
 out.push("");
 

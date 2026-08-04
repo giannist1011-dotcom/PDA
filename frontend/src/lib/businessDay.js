@@ -4,7 +4,7 @@
 // user.business_day_cutoff. Μαγαζί που κλείνει 02:00 → οι παραγγελίες της 01:30
 // ανήκουν στην ΠΡΟΗΓΟΥΜΕΝΗ ημέρα, όπως ακριβώς μετράει και το Z.
 
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/shared/AuthContext";
 import { DAY_LABELS, DAY_SHORT } from "@/lib/dates";
 
 export const BUSINESS_DAY_FALLBACK_MIN = 6 * 60; // 06:00 όταν δεν έχει οριστεί ωράριο

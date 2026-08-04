@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
-import { useFleet } from "@/context/FleetAuthContext";
+import { useFleet } from "@/context/fleet/FleetAuthContext";
 import { apiFleetBoard } from "@/lib/fleetApi";
-import EmptyState from "@/components/EmptyState";
+import EmptyState from "@/components/shared/EmptyState";
 import FleetShell from "@/pages/fleet/FleetShell";
 import NewOrderForm from "@/pages/fleet/NewOrderForm";
-import OrderCard from "@/pages/fleet/OrderCard";
+import OrderCard from "@/components/fleet/OrderCard";
 import PartnershipRequests from "@/pages/fleet/PartnershipRequests";
 import FleetOrdersMap from "@/pages/fleet/FleetOrdersMap";
 import DayTotals from "@/pages/fleet/DayTotals";
-import { fmtTime, useAccountCenter } from "@/pages/fleet/utils";
+import { fmtTime, useAccountCenter } from "@/components/fleet/utils";
 
 const POLL_MS = 6000;
 const ACTIVE_STATUSES = ["waiting", "pickup", "enroute"];

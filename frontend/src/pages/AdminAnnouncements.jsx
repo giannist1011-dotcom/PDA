@@ -9,9 +9,9 @@ import {
   formatApiError,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import DatePicker from "@/components/DatePicker";
+import DatePicker from "@/components/shared/DatePicker";
 import { formatGRDate } from "@/lib/format";
-import AdminShell, { useAdminPw } from "@/components/AdminShell";
+import AdminShell, { useAdminPw } from "@/components/shared/AdminShell";
 
 const TYPE_LABELS = { info: "Ενημέρωση", warning: "Προειδοποίηση", success: "Καλά νέα" };
 const TYPE_ICONS = { info: Info, warning: AlertTriangle, success: CheckCircle2 };

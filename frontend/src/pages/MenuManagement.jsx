@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import AppShell from "@/components/AppShell";
-import BulkActionsBar from "@/components/BulkActionsBar";
+import AppShell from "@/components/shared/AppShell";
+import BulkActionsBar from "@/components/pos/BulkActionsBar";
 import {
   apiGetMenuConfig,
   apiCreateCategory,

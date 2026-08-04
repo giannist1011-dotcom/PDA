@@ -5,7 +5,7 @@ import { apiAdminLeads, formatApiError } from "@/lib/api";
 import { businessLabel } from "@/lib/business";
 import { formatGRDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import AdminShell, { useAdminPw } from "@/components/AdminShell";
+import AdminShell, { useAdminPw } from "@/components/shared/AdminShell";
 
 const PAGE_SIZE = 50;
 

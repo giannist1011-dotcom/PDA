@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Zap } from "lucide-react";
-import AddressAutocomplete from "@/components/AddressAutocomplete";
+import AddressAutocomplete from "@/components/shared/AddressAutocomplete";
 import { apiFleetCreateOrder, apiFleetPickupNames, apiFleetAddressBook } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
-import { geocodeFleetAddress } from "./utils";
+import { geocodeFleetAddress } from "@/components/fleet/utils";
 import { Button } from "@/components/ui/button";
 
 const inputCls =

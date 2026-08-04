@@ -1,0 +1,321 @@
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, Crown, User as UserIcon, KeyRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/shared/AuthContext";
+import {
+  apiListProfiles,
+  apiCreateProfile,
+  apiUpdateProfile,
+  apiDeleteProfile,
+  formatApiError,
+} from "@/lib/api";
+import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole } from "@/lib/roles";
+import { FEATURES } from "@/lib/perms";
+import { Switch } from "@/components/ui/switch";
+
+// waiterOnly: manager view — only Σερβιτόρος profiles, role locked.
+// allowedRoles: περιορισμός διαθέσιμων ρόλων (π.χ. FleetDeck καταστήματος:
+// μόνο Ιδιοκτήτης/Υπάλληλος) — null = όλοι οι ρόλοι.
+function ProfileModal({ open, initial, waiterOnly, allowedRoles, onClose, onSave }) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState(waiterOnly ? "waiter" : "employee");
+  const [pin, setPin] = useState("");
+  const [perms, setPerms] = useState({});
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(initial?.name || "");
+      setRole(waiterOnly ? "waiter" : initial?.role || "employee");
+      setPin("");
+      setPerms(initial?.perms || {});
+    }
+  }, [open, initial, waiterOnly]);
+
+  if (!open) return null;
+
+  // Δικαιώματα ανά προφίλ: μόνο για Υπεύθυνο/Υπάλληλο (restrict-only μέσα στον ρόλο).
+  // Ο Ιδιοκτήτης έχει πάντα τα πάντα, ο Σερβιτόρος έχει μόνο Τραπέζια.
+  const showPerms = role === "manager" || role === "employee";
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    if (!initial && !/^\d{4}$/.test(pin)) {
+      toast.error("Απαιτείται 4-ψήφιο PIN");
+      return;
+    }
+    if (pin && !/^\d{4}$/.test(pin)) {
+      toast.error("Ο κωδικός πρέπει να είναι 4 ψηφία");
+      return;
+    }
+    setBusy(true);
+    try {
+      await onSave({ name: name.trim(), role, pin: pin || null, perms });
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+      data-testid="profile-modal"
+    >
+      <form
+        onSubmit={submit}
+        className="bg-[#3D1620] border border-[#723645] rounded-lg p-6 w-full max-w-md"
+      >
+        <h3 className="font-heading text-xl font-bold mb-4">
+          {initial ? "Επεξεργασία προφίλ" : "Νέο προφίλ"}
+        </h3>
+
+        <label className="text-xs uppercase tracking-wider text-neutral-400">Όνομα</label>
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="π.χ. Μαρία"
+          data-testid="profile-name-input"
+          className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+        />
+
+        <label className="text-xs uppercase tracking-wider text-neutral-400">Ρόλος</label>
+        {waiterOnly ? (
+          <div className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm flex items-center text-[#00E676] font-bold">
+            Σερβιτόρος
+          </div>
+        ) : (
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            data-testid="profile-role-select"
+            className="w-full h-11 mt-1 mb-4 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white text-sm focus:outline-none focus:border-flame"
+          >
+            {Object.entries(ROLE_LABELS)
+              .filter(([r]) => !allowedRoles || allowedRoles.includes(r))
+              .map(([r, label]) => (
+              <option key={r} value={r}>
+                {label}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {showPerms && (
+          <div className="mb-4">
+            <label className="text-xs uppercase tracking-wider text-neutral-400">
+              Δικαιώματα λειτουργιών
+            </label>
+            <p className="text-[11px] text-neutral-500 mt-0.5 mb-2">
+              Ισχύουν μέσα στα όρια του ρόλου — ό,τι δεν επιτρέπει ο ρόλος μένει κλειστό
+            </p>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {FEATURES.map((f) => (
+                <div
+                  key={f.key}
+                  className="flex items-center justify-between gap-3 px-3 py-2 bg-[#2A0E14] border border-[#723645] rounded-md"
+                >
+                  <span className="text-sm text-neutral-200">{f.label}</span>
+                  <Switch
+                    checked={perms[f.key] !== false}
+                    onCheckedChange={(v) =>
+                      setPerms((p) => ({ ...p, [f.key]: !!v }))
+                    }
+                    data-testid={`profile-perm-${f.key}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {role === "owner" && (
+          <p className="text-[11px] text-neutral-500 mb-4">
+            Ο Ιδιοκτήτης έχει πάντα πλήρη πρόσβαση σε όλες τις λειτουργίες
+          </p>
+        )}
+
+        <label className="text-xs uppercase tracking-wider text-neutral-400">
+          {initial ? "Νέο PIN (κενό = χωρίς αλλαγή)" : "PIN (4 ψηφία)"}
+        </label>
+        <input
+          inputMode="numeric"
+          maxLength={4}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          placeholder="••••"
+          data-testid="profile-pin-input"
+          className="w-full h-11 mt-1 mb-6 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-white font-mono text-lg tracking-widest text-center focus:outline-none focus:border-flame"
+        />
+
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            data-testid="profile-cancel-btn"
+            className="h-10 px-4 rounded-md bg-[#4F202D] text-neutral-300 text-sm font-bold hover:bg-[#723645]"
+          >
+            Άκυρο
+          </button>
+          <Button
+            type="submit"
+            disabled={busy}
+            data-testid="profile-save-btn"
+            className="h-10 bg-brand hover:bg-brand-hover px-4"
+          >
+            Αποθήκευση
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export default function ProfilesManager({ waiterOnly = false, allowedRoles = null }) {
+  const { user } = useAuth();
+  const [profiles, setProfiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState({ open: false, editing: null });
+
+  const load = async () => {
+    try {
+      const all = await apiListProfiles();
+      setProfiles(waiterOnly ? all.filter((p) => p.role === "waiter") : all);
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSave = async (payload) => {
+    try {
+      if (modal.editing) {
+        await apiUpdateProfile(modal.editing.id, payload);
+        toast.success("Το προφίλ ενημερώθηκε");
+      } else {
+        await apiCreateProfile(payload);
+        toast.success("Το προφίλ δημιουργήθηκε");
+      }
+      await load();
+    } catch (e) {
+      toast.error(formatApiError(e));
+      throw e;
+    }
+  };
+
+  const handleDelete = async (p) => {
+    if (!window.confirm(`Διαγραφή προφίλ "${p.name}";`)) return;
+    try {
+      await apiDeleteProfile(p.id);
+      setProfiles((prev) => prev.filter((x) => x.id !== p.id));
+      toast.success("Διαγράφηκε");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  };
+
+  const activeProfileId = user && user !== false ? user.profile_id : null;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-sm text-neutral-400">
+          {waiterOnly
+            ? "Διαχειριστείτε τα προφίλ σερβιτόρων του καταστήματος"
+            : "Κάθε μέλος του προσωπικού έχει δικό του προφίλ και 4-ψήφιο PIN"}
+        </div>
+        <Button
+          onClick={() => setModal({ open: true, editing: null })}
+          data-testid="profiles-add-btn"
+          className="h-10 bg-brand hover:bg-brand-hover font-bold"
+        >
+          <Plus className="w-4 h-4 mr-2" /> Νέο προφίλ
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="text-neutral-500 py-8 text-center">Φόρτωση...</div>
+      ) : profiles.length === 0 ? (
+        <div className="text-neutral-500 py-10 text-center border border-dashed border-[#723645] rounded-lg">
+          Δεν υπάρχουν προφίλ{waiterOnly ? " σερβιτόρων" : ""} ακόμα
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {profiles.map((p) => {
+            const color = ROLE_COLORS[p.role] || "#888";
+            const Icon = p.role === "owner" ? Crown : UserIcon;
+            const isActive = p.id === activeProfileId;
+            return (
+              <div
+                key={p.id}
+                data-testid={`profile-row-${p.id}`}
+                className="flex items-center gap-3 p-3 bg-[#2A0E14] border border-[#723645] rounded-lg"
+              >
+                <div
+                  className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: color }}
+                >
+                  <Icon className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-heading font-bold text-white truncate">{p.name}</span>
+                    {isActive && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#00E676]/15 text-[#00E676]">
+                        Ενεργό
+                      </span>
+                    )}
+                  </div>
+                  {!nameMatchesRole(p.name, p.role) && (
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-widest"
+                      style={{ color }}
+                    >
+                      {ROLE_LABELS[p.role] || p.role}
+                    </span>
+                  )}
+                </div>
+                <span className="hidden sm:flex items-center gap-1 text-[10px] text-neutral-600 uppercase tracking-widest">
+                  <KeyRound className="w-3 h-3" /> PIN
+                </span>
+                <button
+                  onClick={() => setModal({ open: true, editing: p })}
+                  data-testid={`profile-edit-${p.id}`}
+                  className="p-2 text-neutral-400 hover:text-white"
+                  title="Επεξεργασία / αλλαγή PIN"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(p)}
+                  data-testid={`profile-delete-${p.id}`}
+                  className="p-2 text-neutral-400 hover:text-[#FF3B30]"
+                  title="Διαγραφή"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <ProfileModal
+        open={modal.open}
+        initial={modal.editing}
+        waiterOnly={waiterOnly}
+        allowedRoles={allowedRoles}
+        onClose={() => setModal({ open: false, editing: null })}
+        onSave={handleSave}
+      />
+    </div>
+  );
+}

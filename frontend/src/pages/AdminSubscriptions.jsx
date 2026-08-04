@@ -5,7 +5,7 @@ import { apiAdminExpiringSubs, formatApiError } from "@/lib/api";
 import { businessLabel } from "@/lib/business";
 import { formatGRDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import AdminShell, { useAdminPw } from "@/components/AdminShell";
+import AdminShell, { useAdminPw } from "@/components/shared/AdminShell";
 import { PLAN_LABELS, PAYMENT_LABELS, StatusBadge } from "@/pages/AdminShops";
 
 const PAYMENT_BADGE = {

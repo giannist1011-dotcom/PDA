@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
-import AppShell from "@/components/AppShell";
-import { useAuth } from "@/context/AuthContext";
+import AppShell from "@/components/shared/AppShell";
+import { useAuth } from "@/context/shared/AuthContext";
 import {
   apiGetStockConfig,
   apiCreateStockCategory,

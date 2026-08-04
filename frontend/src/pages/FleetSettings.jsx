@@ -1,8 +1,8 @@
 import { toast } from "sonner";
 import { Bell, Building2 } from "lucide-react";
-import { useFleet } from "@/context/FleetAuthContext";
+import { useFleet } from "@/context/fleet/FleetAuthContext";
 import { apiFleetUpdateCompany } from "@/lib/fleetApi";
-import BusinessDetailsForm from "@/components/BusinessDetailsForm";
+import BusinessDetailsForm from "@/components/pos/BusinessDetailsForm";
 import FleetShell from "@/pages/fleet/FleetShell";
 import PushToggle from "@/pages/fleet/PushToggle";
 

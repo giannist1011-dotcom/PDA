@@ -1,4 +1,4 @@
-import AdminShell from "@/components/AdminShell";
+import AdminShell from "@/components/shared/AdminShell";
 import AdminsContent from "./admin-admins/AdminsContent";
 
 // Master-only σελίδα: sub-admin λογαριασμοί + audit log ενεργειών τους

@@ -12,8 +12,8 @@ import {
 import { businessLabel } from "@/lib/business";
 import { formatGRDate, formatGRDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import DatePicker from "@/components/DatePicker";
-import { useAdminInfo } from "@/components/AdminShell";
+import DatePicker from "@/components/shared/DatePicker";
+import { useAdminInfo } from "@/components/shared/AdminShell";
 import { StatusBadge } from "./Badges";
 import DemoCredentials from "./DemoCredentials";
 import PinResetSection from "./PinResetSection";

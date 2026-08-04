@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useBusinessDay } from "@/lib/businessDay";
-import DatePicker from "@/components/DatePicker";
+import DatePicker from "@/components/shared/DatePicker";
 
 // ---------- Expense create/edit modal ----------
 export default function ExpenseModal({ open, onClose, categories, initial, onSubmit }) {

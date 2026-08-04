@@ -1,6 +1,6 @@
 import { ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import DatePicker from "@/components/DatePicker";
+import DatePicker from "@/components/shared/DatePicker";
 import { eur } from "@/lib/format";
 import CompareCard from "./CompareCard";
 import ChangeBadge from "./ChangeBadge";

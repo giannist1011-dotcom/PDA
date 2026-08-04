@@ -1,5 +1,5 @@
-import AppShell from "@/components/AppShell";
-import DeckPilotChat from "@/components/DeckPilotChat";
+import AppShell from "@/components/shared/AppShell";
+import DeckPilotChat from "@/components/pos/DeckPilotChat";
 
 export default function DeckPilot() {
   return (

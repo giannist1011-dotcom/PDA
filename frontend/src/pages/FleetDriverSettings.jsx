@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Bell, Volume2, VolumeX, BellOff, UserCircle2, Truck } from "lucide-react";
-import { useFleet } from "@/context/FleetAuthContext";
+import { useFleet } from "@/context/fleet/FleetAuthContext";
 import FleetShell from "@/pages/fleet/FleetShell";
 import PushToggle from "@/pages/fleet/PushToggle";
 import { isMuted, setMuted } from "@/pages/fleet/alerts";

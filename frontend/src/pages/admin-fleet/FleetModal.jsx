@@ -11,8 +11,8 @@ import {
 } from "@/lib/api";
 import { formatGRDate, formatGRDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import DatePicker from "@/components/DatePicker";
-import { useAdminInfo } from "@/components/AdminShell";
+import DatePicker from "@/components/shared/DatePicker";
+import { useAdminInfo } from "@/components/shared/AdminShell";
 import { StatusBadge } from "../admin-shops/Badges";
 import DemoCredentials from "../admin-shops/DemoCredentials";
 import { inputCls, PAYMENT_LABELS } from "../admin-shops/utils";

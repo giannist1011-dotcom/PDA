@@ -3,9 +3,9 @@ import { toast } from "sonner";
 import { Bike, CheckCheck, Printer } from "lucide-react";
 import { formatApiError } from "@/lib/api";
 import { platformById } from "@/lib/platforms";
-import Countdown from "@/components/platform/Countdown";
-import ReadyTimePicker from "@/components/platform/ReadyTimePicker";
-import PlatformOrderBody from "@/components/platform/PlatformOrderBody";
+import Countdown from "@/components/platforms/order/Countdown";
+import ReadyTimePicker from "@/components/platforms/order/ReadyTimePicker";
+import PlatformOrderBody from "@/components/platforms/order/PlatformOrderBody";
 
 // Αποδεκτή παραγγελία: countdown πάνω δεξιά, μεγάλο «ΚΑΘ' ΟΔΟΝ», και μετά
 // ολοκλήρωση. Ο χρόνος παράδοσης μπορεί να διορθωθεί όσο είναι σε εξέλιξη.

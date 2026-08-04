@@ -10,7 +10,7 @@ import {
   apiFleetSetAdminName,
 } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
-import { useFleet } from "@/context/FleetAuthContext";
+import { useFleet } from "@/context/fleet/FleetAuthContext";
 import FleetShell from "@/pages/fleet/FleetShell";
 import { Button } from "@/components/ui/button";
 

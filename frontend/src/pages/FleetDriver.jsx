@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CloudOff } from "lucide-react";
-import { useFleet } from "@/context/FleetAuthContext";
+import { useFleet } from "@/context/fleet/FleetAuthContext";
 import {
   apiFleetDriverBoard,
   apiFleetClaimOrder,
@@ -12,12 +12,12 @@ import {
 import { formatApiError } from "@/lib/api";
 import FleetShell from "@/pages/fleet/FleetShell";
 import { DriverCard } from "@/pages/fleet/DriverCard";
-import EmptyState from "@/components/EmptyState";
+import EmptyState from "@/components/shared/EmptyState";
 import DriverStats from "@/pages/fleet/DriverStats";
 import DriverMineTab from "@/pages/fleet/DriverMineTab";
 import ProblemModal from "@/pages/fleet/ProblemModal";
 import { notify } from "@/pages/fleet/alerts";
-import { NEXT_ACTION, useAccountCenter } from "@/pages/fleet/utils";
+import { NEXT_ACTION, useAccountCenter } from "@/components/fleet/utils";
 import { ensurePushOnShiftStart, pushSupport } from "@/lib/push";
 
 const POLL_MS = 5000;

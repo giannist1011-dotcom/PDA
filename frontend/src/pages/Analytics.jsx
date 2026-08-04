@@ -9,16 +9,16 @@ import {
   Wallet,
   Scale,
 } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell from "@/components/shared/AppShell";
 import { fetchAnalytics, fetchAnalyticsYoY } from "@/lib/api";
 import { eur } from "@/lib/format";
 import { useBusinessDay } from "@/lib/businessDay";
 import { Button } from "@/components/ui/button";
-import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
-import StatCard from "@/components/StatCard";
-import SourceFilter from "@/components/SourceFilter";
-import SourceMix from "@/components/SourceMix";
-import { usePlatformOrders } from "@/context/PlatformOrdersContext";
+import PeriodFilter, { periodLabel } from "@/components/shared/PeriodFilter";
+import StatCard from "@/components/shared/StatCard";
+import SourceFilter from "@/components/pos/SourceFilter";
+import SourceMix from "@/components/pos/SourceMix";
+import { usePlatformOrders } from "@/context/platforms/PlatformOrdersContext";
 import ChartsRow from "./analytics/ChartsRow";
 import PopularItems from "./analytics/PopularItems";
 import CompareSection from "./analytics/CompareSection";

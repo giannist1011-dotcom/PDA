@@ -7,11 +7,11 @@ import {
   Receipt as ReceiptIcon,
   Map as MapIcon,
 } from "lucide-react";
-import AppShell from "@/components/AppShell";
-import LiveOrdersMap from "@/components/LiveOrdersMap";
-import Receipt from "@/components/Receipt";
-import PinGateModal from "@/components/PinGateModal";
-import { useAuth } from "@/context/AuthContext";
+import AppShell from "@/components/shared/AppShell";
+import LiveOrdersMap from "@/components/pos/LiveOrdersMap";
+import Receipt from "@/components/pos/Receipt";
+import PinGateModal from "@/components/shared/PinGateModal";
+import { useAuth } from "@/context/shared/AuthContext";
 import { fetchOrders, fetchOrdersCount, apiGetOrder, apiCancelOrder, apiDeleteOrder, apiListCustomers, formatApiError } from "@/lib/api";
 import { can } from "@/lib/perms";
 import { useBusinessDay } from "@/lib/businessDay";

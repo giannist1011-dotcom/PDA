@@ -1,7 +1,7 @@
 import { Store, Users } from "lucide-react";
-import AppShell from "@/components/AppShell";
-import ProfilesManager from "@/components/ProfilesManager";
-import StoreDetailsSettings from "@/components/StoreDetailsSettings";
+import AppShell from "@/components/shared/AppShell";
+import ProfilesManager from "@/components/pos/ProfilesManager";
+import StoreDetailsSettings from "@/components/pos/StoreDetailsSettings";
 
 // «Ρυθμίσεις» (FleetDeck καταστήματος, μόνο Ιδιοκτήτης): στοιχεία επιχείρησης
 // (όνομα, πόλη, διεύθυνση + pin, τηλέφωνα — χωρίς τα extras δημόσιου καταλόγου)

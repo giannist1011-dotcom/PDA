@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { BarChart3, Bell, FlaskConical, History as HistoryIcon, Menu, Power, X } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import { usePlatformOrders } from "@/context/PlatformOrdersContext";
+import { useAuth } from "@/context/shared/AuthContext";
+import { usePlatformOrders } from "@/context/platforms/PlatformOrdersContext";
 import {
   apiSetPlatformStoreOpen,
   apiCreateTestPlatformOrder,

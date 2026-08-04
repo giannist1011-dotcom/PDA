@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import { BUSINESS_TYPES } from "@/lib/business";
 import { Button } from "@/components/ui/button";
-import AdminShell, { useAdminPw } from "@/components/AdminShell";
+import AdminShell, { useAdminPw } from "@/components/shared/AdminShell";
 
 const MAX_BYTES = 4 * 1024 * 1024; // 4MB raw file
 const MAX_DIMENSION = 1200; // px

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Crown, User as UserIcon, Delete, LogOut } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/shared/AuthContext";
 import { apiListProfiles, formatApiError } from "@/lib/api";
 import { cacheProfilesForOffline, getCachedProfiles, isNetworkError } from "@/lib/offline";
 import { ROLE_LABELS, ROLE_COLORS, nameMatchesRole, homePathFor } from "@/lib/roles";

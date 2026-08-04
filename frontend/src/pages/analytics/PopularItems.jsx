@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import DatePicker from "@/components/DatePicker";
+import DatePicker from "@/components/shared/DatePicker";
 import { eur } from "@/lib/format";
 
 export default function PopularItems({

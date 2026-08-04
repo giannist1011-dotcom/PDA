@@ -2,8 +2,8 @@ import { Search, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ORDER_SOURCES } from "@/data/menu";
 import { eur, formatGRDateTime, formatGRTime } from "@/lib/format";
-import PeriodFilter, { periodLabel } from "@/components/PeriodFilter";
-import Countdown from "@/components/platform/Countdown";
+import PeriodFilter, { periodLabel } from "@/components/shared/PeriodFilter";
+import Countdown from "@/components/platforms/order/Countdown";
 import ScheduledBadge from "./ScheduledBadge";
 import { typeLabel, sourceBadgeCls } from "./utils";
 

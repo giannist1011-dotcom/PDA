@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CalendarCheck, Printer, RefreshCcw } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell from "@/components/shared/AppShell";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/shared/AuthContext";
 import {
   apiDaySummary,
   apiCloseDay,

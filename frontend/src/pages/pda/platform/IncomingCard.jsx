@@ -4,8 +4,8 @@ import { Check, X } from "lucide-react";
 import { formatGRTime } from "@/lib/format";
 import { formatApiError } from "@/lib/api";
 import { DEFAULT_READY_MINUTES, platformById } from "@/lib/platforms";
-import ReadyTimePicker from "@/components/platform/ReadyTimePicker";
-import PlatformOrderBody from "@/components/platform/PlatformOrderBody";
+import ReadyTimePicker from "@/components/platforms/order/ReadyTimePicker";
+import PlatformOrderBody from "@/components/platforms/order/PlatformOrderBody";
 
 // Εισερχόμενη παραγγελία σε αναμονή απάντησης — η πιο έντονη κάρτα της οθόνης.
 export default function IncomingCard({ order, onAccept, onReject }) {

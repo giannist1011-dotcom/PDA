@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { DAY_LABELS, formatWeekRange } from "@/lib/dates";
-import TimePicker from "@/components/TimePicker";
+import TimePicker from "@/components/shared/TimePicker";
 
 // Shift editor modal
 export default function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, onDelete }) {

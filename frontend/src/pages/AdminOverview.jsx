@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
 import { apiAdminOverview, formatApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import AdminShell, { useAdminPw, useAdminInfo } from "@/components/AdminShell";
+import AdminShell, { useAdminPw, useAdminInfo } from "@/components/shared/AdminShell";
 import KpiCards from "./admin-overview/KpiCards";
 import AttentionStrip from "./admin-overview/AttentionStrip";
 import ExpansionMap from "./admin-overview/ExpansionMap";

@@ -17,7 +17,7 @@ import {
   apiChecklistDeleteTemplate,
   apiChecklistReorder,
 } from "@/lib/api";
-import DatePicker from "@/components/DatePicker";
+import DatePicker from "@/components/shared/DatePicker";
 import { athensToday } from "@/lib/dates";
 import { LIST_META, fmtShortDateGR } from "./utils";
 

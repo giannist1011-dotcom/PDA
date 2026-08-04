@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Handshake, Send, Truck, XCircle } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell from "@/components/shared/AppShell";
 import {
   apiStoreFleetCompanies,
   apiStoreFleetEndPartnership,

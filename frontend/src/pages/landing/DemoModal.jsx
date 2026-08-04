@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Clapperboard, X } from "lucide-react";
 import { BUSINESS_TYPES } from "@/lib/business";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/shared/AuthContext";
 import { formatApiError } from "@/lib/api";
 
 export default function DemoModal({ open, onClose }) {

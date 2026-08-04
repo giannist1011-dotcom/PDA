@@ -6,7 +6,7 @@ import {
   fmtTime,
   mapsUrl,
   minutesSince,
-} from "./utils";
+} from "@/components/fleet/utils";
 
 // Κάρτα παραγγελίας οδηγού — module-level ώστε να μην γίνεται remount σε κάθε poll.
 // Χρονόμετρο ηλικίας: σε αναμονή → από την καταχώρηση (με χρώμα όσο περιμένει),

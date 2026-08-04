@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, CheckCircle2, Package, Truck } from "lucide-react";
-import AppShell from "@/components/AppShell";
-import PeriodFilter from "@/components/PeriodFilter";
-import StatCard from "@/components/StatCard";
-import CountBarChart from "@/components/CountBarChart";
-import EmptyState from "@/components/EmptyState";
+import AppShell from "@/components/shared/AppShell";
+import PeriodFilter from "@/components/shared/PeriodFilter";
+import StatCard from "@/components/shared/StatCard";
+import CountBarChart from "@/components/shared/CountBarChart";
+import EmptyState from "@/components/shared/EmptyState";
 import { apiStoreFleetStats } from "@/lib/api";
 import { presetRange } from "@/lib/dates";
 import { daySeries } from "@/lib/series";
-import { STATUS_META } from "@/pages/fleet/utils";
+import { STATUS_META } from "@/components/fleet/utils";
 
 // Σειρά εμφάνισης καταστάσεων στην ανάλυση (ίδια σημειολογία με τις κάρτες)
 const STATUS_ORDER = ["waiting", "pickup", "enroute", "delivered", "cancelled", "scheduled"];

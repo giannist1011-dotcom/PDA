@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import AppShell from "@/components/AppShell";
-import { useAuth } from "@/context/AuthContext";
+import AppShell from "@/components/shared/AppShell";
+import { useAuth } from "@/context/shared/AuthContext";
 import { apiStoreFleetBoard, apiStoreFleetCancelOrder } from "@/lib/api";
-import OrderCard from "@/pages/fleet/OrderCard";
+import OrderCard from "@/components/fleet/OrderCard";
 import StoreOrderForm from "@/pages/store-fleet/StoreOrderForm";
 
 const POLL_MS = 6000;

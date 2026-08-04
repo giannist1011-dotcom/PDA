@@ -4,7 +4,7 @@ import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiAdminListFleet, formatApiError } from "@/lib/api";
 import { formatGRDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { useAdminPw } from "@/components/AdminShell";
+import { useAdminPw } from "@/components/shared/AdminShell";
 import { StatusBadge } from "../admin-shops/Badges";
 import { inputCls } from "../admin-shops/utils";
 import FleetModal from "./FleetModal";

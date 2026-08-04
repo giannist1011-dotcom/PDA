@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import AppShell from "@/components/AppShell";
-import OrderPanel from "@/components/OrderPanel";
-import PinGateModal from "@/components/PinGateModal";
-import { useAuth } from "@/context/AuthContext";
+import AppShell from "@/components/shared/AppShell";
+import OrderPanel from "@/components/pos/OrderPanel";
+import PinGateModal from "@/components/shared/PinGateModal";
+import { useAuth } from "@/context/shared/AuthContext";
 import { ORDER_SOURCES } from "@/data/menu";
 import {
   fetchNextOrderNumber,
@@ -29,7 +29,7 @@ import { can } from "@/lib/perms";
 import { getMenuView, setMenuView as persistMenuView } from "@/lib/menuView";
 import { printReceiptJob } from "@/lib/print";
 import { receiptStoreName } from "@/lib/receiptText";
-import { usePlatformOrders } from "@/context/PlatformOrdersContext";
+import { usePlatformOrders } from "@/context/platforms/PlatformOrdersContext";
 import MobileTabs from "./pda/MobileTabs";
 import MenuSection from "./pda/MenuSection";
 import PlatformTabs from "./pda/PlatformTabs";

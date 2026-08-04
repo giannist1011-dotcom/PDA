@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FileText, Loader2, RefreshCw, Sparkles } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell from "@/components/shared/AppShell";
 import { apiGetBrief, apiCreateBrief, formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import AdminShell, { MasterOnly } from "@/components/AdminShell";
+import AdminShell, { MasterOnly } from "@/components/shared/AdminShell";
 import ShopsContent from "./admin-shops/ShopsContent";
 import CreateDemoModal from "./admin-shops/CreateDemoModal";
 

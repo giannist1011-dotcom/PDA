@@ -1,6 +1,6 @@
 import { User as UserIcon } from "lucide-react";
-import AppShell from "@/components/AppShell";
-import ProfilesManager from "@/components/ProfilesManager";
+import AppShell from "@/components/shared/AppShell";
+import ProfilesManager from "@/components/pos/ProfilesManager";
 
 // Manager view: manage waiter profiles only.
 export default function Waiters() {

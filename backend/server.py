@@ -8,8 +8,20 @@ import os
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
-from core import client, db, ensure_demo_account, migrate_items_sort_order
-from routers import auth, menu, orders, tables, stock, schedule, stats, expenses, promo, public_menu, stock_photos, ai, checklist, admin, admin_admins, admin_fleet, admin_overview, announcements, onboarding, billing, fleet, store_fleet, print_jobs, platforms
+from shared.core import client, db
+from pos.seeding import ensure_demo_account, migrate_items_sort_order
+from fleet import api as fleet_api
+from shared import auth, printing
+from pos import (
+    ai, billing, checklist, expenses, menu, onboarding, orders,
+    public_menu, schedule, stats, stock, tables,
+)
+from fleet import company as fleet_company, store as fleet_store
+from platforms import router as platforms_router
+from admin import (
+    admins as admin_admins, announcements, fleet_accounts as admin_fleet,
+    overview as admin_overview, promo, shops as admin_shops, stock_photos,
+)
 
 app = FastAPI(title="OrderDeck")
 
@@ -42,17 +54,17 @@ api.include_router(public_menu.router)
 api.include_router(stock_photos.router)
 api.include_router(ai.router)
 api.include_router(checklist.router)
-api.include_router(admin.router)
+api.include_router(admin_shops.router)
 api.include_router(admin_admins.router)
 api.include_router(admin_fleet.router)
 api.include_router(admin_overview.router)
 api.include_router(announcements.router)
 api.include_router(onboarding.router)
 api.include_router(billing.router)
-api.include_router(fleet.router)
-api.include_router(store_fleet.router)
-api.include_router(print_jobs.router)
-api.include_router(platforms.router)
+api.include_router(fleet_company.router)
+api.include_router(fleet_store.router)
+api.include_router(printing.router)
+api.include_router(platforms_router.router)
 
 app.include_router(api)
 
@@ -152,6 +164,11 @@ async def on_startup():
     await db.fleet_partnerships.create_index([("store_user_id", 1), ("status", 1)])
     await db.fleet_partnerships.create_index([("team_id", 1), ("status", 1)])
     await db.fleet_orders.create_index([("store_user_id", 1), ("created_at", -1)], sparse=True)
+    # Σύνδεση POS ↔ FleetDeck: εύρεση της fleet παραγγελίας από την POS παραγγελία
+    await db.fleet_orders.create_index(
+        [("store_user_id", 1), ("source_pos_order_id", 1)], sparse=True
+    )
+    await db.orders.create_index([("user_id", 1), ("fleet_order_id", 1)], sparse=True)
     # Lazy δημοσίευση προγραμματισμένων παραγγελιών καταστημάτων (status=scheduled)
     await db.fleet_orders.create_index([("status", 1), ("publish_at", 1)], sparse=True)
     # Web Push συνδρομές (FleetDeck): εύρεση ανά ομάδα/επιφάνεια + μοναδικό endpoint
@@ -209,6 +226,11 @@ async def on_startup():
     await db.users.update_many(
         {"billing_request.addon": "fleet"}, {"$set": {"billing_request": None}}
     )
+    # Σύνδεση παλιών ανεβασμένων παραγγελιών με τις POS τους — μόνο όπου είναι
+    # ασφαλές. Όσες μείνουν ασύνδετες απλώς δεν έχουν ζωντανό συγχρονισμό.
+    linked = await fleet_api.migrate_link_existing_orders()
+    if linked:
+        logging.getLogger("orderdeck").info("Linked %d uploaded order(s) to POS orders", linked)
     await migrate_items_sort_order()
     await ensure_demo_account()
 

@@ -11,11 +11,11 @@ import {
   ListChecks,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import AppShell from "@/components/AppShell";
-import OnboardingChecklist from "@/components/OnboardingChecklist";
-import SourceFilter from "@/components/SourceFilter";
-import SourceMix from "@/components/SourceMix";
-import { usePlatformOrders } from "@/context/PlatformOrdersContext";
+import AppShell from "@/components/shared/AppShell";
+import OnboardingChecklist from "@/components/pos/OnboardingChecklist";
+import SourceFilter from "@/components/pos/SourceFilter";
+import SourceMix from "@/components/pos/SourceMix";
+import { usePlatformOrders } from "@/context/platforms/PlatformOrdersContext";
 import { fetchDeckOverview } from "@/lib/api";
 import { eur, formatGRTime } from "@/lib/format";
 

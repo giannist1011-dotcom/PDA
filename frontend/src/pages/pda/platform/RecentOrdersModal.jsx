@@ -4,7 +4,7 @@ import { ChevronDown, Printer, X } from "lucide-react";
 import { apiPlatformRecent, apiGetOrder, formatApiError } from "@/lib/api";
 import { formatGRDateTime } from "@/lib/format";
 import { platformLabel, STATUS_LABELS } from "@/lib/platforms";
-import PlatformOrderBody from "@/components/platform/PlatformOrderBody";
+import PlatformOrderBody from "@/components/platforms/order/PlatformOrderBody";
 
 const PAGE = 15;
 

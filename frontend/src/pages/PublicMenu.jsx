@@ -4,7 +4,7 @@ import { UtensilsCrossed, Info, Star } from "lucide-react";
 import { apiGetPublicMenu, formatApiError } from "@/lib/api";
 import { eur } from "@/lib/format";
 import { setFavicon, resetFavicon } from "@/lib/favicon";
-import LoadingScreen from "@/components/LoadingScreen";
+import LoadingScreen from "@/components/shared/LoadingScreen";
 import HoursBadge from "./public-menu/HoursBadge";
 import HeaderContact from "./public-menu/HeaderContact";
 import CategoryBar from "./public-menu/CategoryBar";

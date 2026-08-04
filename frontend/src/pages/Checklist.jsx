@@ -5,8 +5,8 @@ import {
   ListChecks,
 } from "lucide-react";
 import { toast } from "sonner";
-import AppShell from "@/components/AppShell";
-import { useAuth } from "@/context/AuthContext";
+import AppShell from "@/components/shared/AppShell";
+import { useAuth } from "@/context/shared/AuthContext";
 import { apiChecklistToday, apiChecklistTick, apiChecklistTemplates } from "@/lib/api";
 import TickList from "./checklist/TickList";
 import ManageList from "./checklist/ManageList";
