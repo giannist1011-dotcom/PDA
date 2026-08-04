@@ -428,7 +428,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
 - MenuManagement.jsx (394 γρ): MenuManagement@32
-- PDA.jsx (805 γρ): PDA@91
+- PDA.jsx (824 γρ): PDA@92
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
 - PublicMenu.jsx (209 γρ): PublicMenu@19
@@ -519,12 +519,12 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - menu/PricedOptionList.jsx (62 γρ): PricedOptionList@4
 - menu/RenumberDialog.jsx (147 γρ): RenumberDialog@22
 - menu/utils.js (13 γρ)
+- pda/CartBar.jsx (44 γρ): CartBar@8
 - pda/DiscountModal.jsx (106 γρ): DiscountModal@7
 - pda/DispatchPromptModal.jsx (146 γρ): DispatchPromptModal@14
 - pda/DispatchTab.jsx (112 γρ): DispatchTab@16
-- pda/MenuSection.jsx (69 γρ): MenuSection@15
+- pda/MenuSection.jsx (66 γρ): MenuSection@17
 - pda/MenuViewToggle.jsx (39 γρ): MenuViewToggle@12
-- pda/MobileTabs.jsx (40 γρ): MobileTabs@2
 - pda/PDAModals.jsx (85 γρ): PDAModals@8
 - pda/PlatformTabs.jsx (84 γρ): PlatformTabs@15
 - pda/ReprintPromptModal.jsx (70 γρ): ReprintPromptModal@6
@@ -593,7 +593,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - pos/MenuGrid.jsx (233 γρ): MenuGrid@7
 - pos/MenuList.jsx (206 γρ): MenuList@10
 - pos/OnboardingChecklist.jsx (100 γρ): OnboardingChecklist@18
-- pos/OrderPanel.jsx (607 γρ): OrderPanel@35
+- pos/OrderPanel.jsx (645 γρ): OrderPanel@35
 - pos/ProfilesManager.jsx (322 γρ): ProfileModal@20, ProfilesManager@176
 - pos/PublicMenuSettings.jsx (410 γρ): PublicMenuSettings@29
 - pos/Receipt.jsx (171 γρ): ReceiptCopy@15, Receipt@156

@@ -32,7 +32,8 @@ import { getMenuView, setMenuView as persistMenuView } from "@/lib/menuView";
 import { printReceiptJob } from "@/lib/print";
 import { receiptStoreName } from "@/lib/receiptText";
 import { usePlatformOrders } from "@/context/platforms/PlatformOrdersContext";
-import MobileTabs from "./pda/MobileTabs";
+import useSplitLayout from "@/hooks/useSplitLayout";
+import CartBar from "./pda/CartBar";
 import MenuSection from "./pda/MenuSection";
 import PlatformTabs from "./pda/PlatformTabs";
 import PlatformTab from "./pda/platform/PlatformTab";
@@ -112,8 +113,11 @@ export default function PDA() {
   const [note, setNote] = useState(""); // ελεύθερη σημείωση παραγγελίας — τυπώνεται στην απόδειξη
   const [discountOpen, setDiscountOpen] = useState(false);
   const [pinGateOpen, setPinGateOpen] = useState(false);
-  // Tablet-portrait / mobile: switch between menu and order panel (two-column on lg+)
-  const [mobileTab, setMobileTab] = useState("menu");
+  // Side-by-side ΜΟΝΟ σε laptop/desktop (≥1100px πλάτος ΚΑΙ ≥600px ύψος).
+  // Παντού αλλού (tablet κάθε προσανατολισμού, κινητό κάθετο & οριζόντιο) οι
+  // ίδιες δύο όψεις εναλλάσσονται σε πλήρες πλάτος — μία υλοποίηση, όχι δύο.
+  const split = useSplitLayout();
+  const [posView, setPosView] = useState("menu"); // "menu" | "order" (μόνο όταν !split)
   // Καρτέλες σελίδας: "orders" = όλο το POS (προεπιλογή), "dispatch" =
   // «Αποστολή παραγγελίας», αλλιώς το id της πλατφόρμας.
   const { enabled: platformTabs, pendingByPlatform } = usePlatformOrders();
@@ -177,6 +181,8 @@ export default function PDA() {
       ? baseDeliveryFee
       : 0;
   const minOrder = Number(user?.min_order) > 0 ? Number(user.min_order) : 0;
+  // Ίδιο σύνολο με τη μπάρα του δελτίου — το δείχνει και η μπάρα «🛒» της όψης «Μενού»
+  const orderTotal = Math.max(0, Math.round((subtotal - discountAmount + deliveryFee) * 100) / 100);
 
   // Per-profile δικαίωμα έκπτωσης — όταν λείπει, το κουμπί «Έκπτωση» δεν εμφανίζεται καν
   const canDiscount = can(user, "discounts");
@@ -263,7 +269,7 @@ export default function PDA() {
         setNote(o.note || "");
         setDiscount(o.discount ? { type: o.discount.type, value: o.discount.value } : null);
         setScheduled({ enabled: false, date: "", time: "" });
-        setMobileTab("order");
+        setPosView("order");
       } catch (e) {
         toast.error(formatApiError(e));
         navigate("/app/history");
@@ -279,7 +285,7 @@ export default function PDA() {
     try {
       const res = await apiEditOrder(editOrder.id, {
         subtotal,
-        total: Math.max(0, Math.round((subtotal - discountAmount + deliveryFee) * 100) / 100),
+        total: orderTotal,
         note: note.trim() || null,
         delivery_fee: deliveryFee > 0 ? deliveryFee : null,
         discount:
@@ -550,7 +556,7 @@ export default function PDA() {
       order_number: orderNumber,
       source,
       subtotal,
-      total: Math.max(0, Math.round((subtotal - discountAmount + deliveryFee) * 100) / 100),
+      total: orderTotal,
       note: note.trim() || null,
       delivery_fee: deliveryFee > 0 ? deliveryFee : null,
       discount:
@@ -591,6 +597,7 @@ export default function PDA() {
       setDiscount(null);
       setNote("");
       setScheduled({ enabled: false, date: "", time: "" });
+      setPosView("menu"); // η επόμενη παραγγελία ξεκινά από το μενού (εναλλαγή όψεων)
       await loadNext();
     } catch (e) {
       // Offline path: χωρίς σύνδεση, η παραγγελία γράφεται σε τοπική ουρά,
@@ -616,6 +623,7 @@ export default function PDA() {
           setNote("");
           setScheduled({ enabled: false, date: "", time: "" });
           setOrderNumber(payload.order_number + 1);
+          setPosView("menu");
         } catch {
           toast.error("Αποτυχία τοπικής αποθήκευσης — δοκιμάστε ξανά");
         }
@@ -628,6 +636,12 @@ export default function PDA() {
       setSubmitting(false);
     }
   };
+
+  // Ποια όψη είναι ορατή: σε split και οι δύο· αλλιώς μία τη φορά. Στις καρτέλες
+  // «Αποστολή»/πλατφορμών δεν υπάρχει δελτίο — η στήλη του μενού πιάνει τα πάντα.
+  const ordersTab = topTab === "orders";
+  const menuVisible = !ordersTab || split || posView === "menu";
+  const orderVisible = ordersTab && (split || posView === "order");
 
   if (loading) {
     return (
@@ -658,18 +672,17 @@ export default function PDA() {
         />
       }
     >
-      {/* Δίστηλο από sm (640px) και πάνω — tablet portrait/landscape & desktop.
-          Το breakpoint βασίζεται σε CSS viewport width (Tailwind media queries),
-          όχι σε user-agent/touch. Android tablets 1280x800 με DPR ~1.33 δίνουν
-          ~960 CSS px, γι' αυτό το παλιό lg: (1024px) τα έριχνε σε mobile layout.
-          ΔΟΜΗ: οι δύο στήλες είναι αδέρφια ΟΛΟΥ του ύψους της περιοχής
-          περιεχομένου. Οι καρτέλες σελίδας έχουν μετακομίσει ΜΕΣΑ στο header
-          (AppShell headerTabs) — εδώ κάτω δεν υπάρχει καμία σειρά καρτελών, η
-          πρώτη γραμμή του περιεχομένου είναι η αναζήτηση + ο διακόπτης προβολής. */}
-      <div className="flex-1 min-h-0 flex flex-col sm:flex-row overflow-hidden">
+      {/* ΔΟΜΗ: οι δύο όψεις (μενού / δελτίο) είναι αδέρφια ΟΛΟΥ του ύψους της
+          περιοχής περιεχομένου. Δίπλα-δίπλα ΜΟΝΟ όταν split === true
+          (≥1100px πλάτος ΚΑΙ ≥600px ύψος — laptop/desktop)· σε tablet κάθε
+          προσανατολισμού και σε κινητό (κάθετο ΚΑΙ οριζόντιο) εναλλάσσονται σε
+          πλήρες πλάτος και η ανενεργή κρύβεται με `hidden` — μένει mount-αρισμένη
+          ώστε να μη χάνεται τίποτα (καλάθι, τύπος, πεδία, αναζήτηση, scroll).
+          Οι καρτέλες σελίδας ζουν ΜΕΣΑ στο header (AppShell headerTabs). */}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         <div
-          className={`min-w-0 min-h-0 flex flex-col overflow-hidden sm:flex-1 ${
-            topTab === "orders" && mobileTab === "order" ? "flex-none" : "flex-1"
+          className={`min-w-0 min-h-0 flex-1 flex-col overflow-hidden ${
+            menuVisible ? "flex" : "hidden"
           }`}
         >
           {topTab === "dispatch" && canDispatch ? (
@@ -678,13 +691,7 @@ export default function PDA() {
             <PlatformTab platform={topTab} onPrint={setPrintOrder} />
           ) : (
             <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <MobileTabs
-                mobileTab={mobileTab}
-                setMobileTab={setMobileTab}
-                orderCount={orderCount}
-              />
               <MenuSection
-                mobileTab={mobileTab}
                 scheduledOrders={scheduledOrders}
                 setScheduledOpen={setScheduledOpen}
                 onPrintScheduled={handlePrintNow}
@@ -696,15 +703,23 @@ export default function PDA() {
                 menuView={menuView}
                 onMenuViewChange={changeMenuView}
               />
+              {/* Λεπτή μπάρα «🛒 ... → Παραγγελία» στη βάση — μόνο στην εναλλαγή όψεων */}
+              {!split && (
+                <CartBar
+                  count={orderCount}
+                  total={orderTotal}
+                  onOpen={() => setPosView("order")}
+                />
+              )}
             </main>
           )}
         </div>
 
         {topTab === "orders" && (
         <div
-          className={`min-h-0 overflow-hidden flex-1 sm:flex-none sm:w-[300px] md:w-[340px] lg:w-[400px] xl:w-[440px] flex-col ${
-            mobileTab === "order" ? "flex" : "hidden"
-          } sm:flex`}
+          className={`min-h-0 overflow-hidden flex-col ${
+            split ? "shrink-0 w-[400px] xl:w-[440px]" : "flex-1"
+          } ${orderVisible ? "flex" : "hidden"}`}
         >
         <OrderPanel
           orderNumber={orderNumber}
@@ -737,6 +752,10 @@ export default function PDA() {
           deliveryRadiusKm={user?.delivery_radius_km || 6}
           editMode={!!editOrder}
           onCancelEdit={cancelEdit}
+          /* Εναλλαγή όψεων: «← Μενού» + μία ενιαία περιοχή κύλισης (τα προϊόντα
+             και τα πεδία δεν παλεύουν για ύψος σε κοντές οθόνες) */
+          compact={!split}
+          onBack={split ? null : () => setPosView("menu")}
         />
         </div>
         )}

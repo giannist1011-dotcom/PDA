@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent, StickyNote, Pencil } from "lucide-react";
+import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent, StickyNote, Pencil, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LineEditModal from "@/components/pos/LineEditModal";
 import AddressAutocomplete from "@/components/shared/AddressAutocomplete";
@@ -64,6 +64,12 @@ export default function OrderPanel({
   // Επεξεργασία υπάρχουσας παραγγελίας: κλειδωμένη πηγή, χωρίς προγραμματισμό
   editMode = false,
   onCancelEdit = null,
+  // Όψη «Παραγγελία» σε πλήρες πλάτος (tablet/κινητό): ΜΙΑ ενιαία περιοχή
+  // κύλισης για προϊόντα + πεδία, ώστε σε κοντές οθόνες να μη συνθλίβεται
+  // καμία ζώνη. Η μπάρα ΣΥΝΟΛΟ/Εκτύπωση μένει πάντα κολλημένη στη βάση.
+  compact = false,
+  // Επιστροφή στην όψη «Μενού» — null σε side-by-side (δεν υπάρχει εναλλαγή)
+  onBack = null,
 }) {
   const subtotal = items.reduce((s, it) => s + it.line_total, 0);
   const total = Math.max(0, subtotal - discountAmount + deliveryFee);
@@ -140,7 +146,9 @@ export default function OrderPanel({
 
   return (
     <aside
-      className="flex flex-col h-full bg-[#3D1620] border-l border-[#723645] overflow-hidden"
+      className={`flex flex-col h-full bg-[#3D1620] overflow-hidden ${
+        compact ? "" : "border-l border-[#723645]"
+      }`}
       data-testid="order-panel"
     >
       {/* Zone 1 — σταθερός header: ΜΙΑ compact γραμμή («Παραγγελία #001» σε
@@ -148,6 +156,18 @@ export default function OrderPanel({
           κερδίζεται πάει στα προϊόντα. */}
       <div className="px-3 py-2 lg:px-4 border-b border-[#723645] shrink-0">
         <div className="flex items-center gap-2 min-w-0">
+          {/* «← Μενού»: επιστροφή στην όψη μενού χωρίς καμία απώλεια (το state
+              ζει στη σελίδα) — υπάρχει μόνο στην εναλλαγή όψεων */}
+          {onBack && (
+            <button
+              onClick={onBack}
+              data-testid="order-back-btn"
+              className="h-9 px-2.5 -ml-1 rounded-md border border-[#723645] bg-[#2A0E14] text-neutral-200 text-xs font-bold flex items-center gap-1 shrink-0 hover:border-flame hover:text-white active:scale-[0.97] no-select"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Μενού
+            </button>
+          )}
           <ReceiptText
             className={`w-4 h-4 shrink-0 ${editMode ? "text-gold" : "text-neutral-500"}`}
           />
@@ -198,19 +218,33 @@ export default function OrderPanel({
       </div>
 
       {/* ΜΕΣΑΙΑ ΠΕΡΙΟΧΗ (ζώνη 2 + ζώνη 3α): μοιράζεται ό,τι απομένει ανάμεσα στο
-          header και το σταθερό footer. Τα ΠΡΟΪΟΝΤΑ κρατούν ΠΑΝΤΑ ≥35% αυτού του
-          ύψους (και ποτέ λιγότερο από 132px σε πολύ κοντές οθόνες) με δικό τους
-          scroll — δεν μηδενίζονται ποτέ όταν ανοίγουν τα πεδία παράδοσης· η κάτω
-          ζώνη κόβεται στο 60% και συρρικνώνεται πριν από τα προϊόντα, με
-          ΕΣΩΤΕΡΙΚΟ scroll στα πεδία της. */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-      {/* Zone 2 — scrollable: ΜΟΝΟ οι γραμμές της παραγγελίας. */}
+          header και το σταθερό footer.
+          • side-by-side (στενή στήλη, ψηλή οθόνη): δύο ξεχωριστά scroll — τα
+            ΠΡΟΪΟΝΤΑ κρατούν ΠΑΝΤΑ ≥35% (και ≥132px), η κάτω ζώνη κόβεται στο 60%.
+          • compact (πλήρες πλάτος σε tablet/κινητό, συχνά κοντή οθόνη): ΜΙΑ
+            ενιαία κύλιση — προϊόντα και πεδία ρέουν μαζί και καμία ζώνη δεν
+            συνθλίβεται στο μηδέν. */}
       <div
-        className="flex-1 min-h-[max(132px,35%)] overflow-y-auto px-4 lg:px-5"
+        className={`flex-1 min-h-0 flex flex-col ${
+          compact ? "overflow-y-auto" : "overflow-hidden"
+        }`}
+      >
+      {/* Zone 2 — scrollable: ΜΟΝΟ οι γραμμές της παραγγελίας. Σε compact κυλάει
+          μαζί με τα πεδία στην ενιαία περιοχή από πάνω. */}
+      <div
+        className={
+          compact
+            ? "shrink-0 px-4"
+            : "flex-1 min-h-[max(132px,35%)] overflow-y-auto px-4 lg:px-5"
+        }
         data-testid="order-items"
       >
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center text-neutral-500 py-16 text-center h-full">
+          <div
+            className={`flex flex-col items-center justify-center text-neutral-500 text-center ${
+              compact ? "py-10" : "py-16 h-full"
+            }`}
+          >
             <div className="text-lg font-heading">Άδεια παραγγελία</div>
             <div className="text-sm mt-1">Επιλέξτε προϊόντα από το μενού</div>
           </div>
@@ -288,7 +322,11 @@ export default function OrderPanel({
           ΕΣΩΤΕΡΙΚΟ scroll — τα προϊόντα από πάνω μένουν πάντα ορατά. */}
       {(isPhone || setNote) && (
       <div
-        className="min-h-0 max-h-[60%] overflow-y-auto px-4 lg:px-5 pt-1.5"
+        className={
+          compact
+            ? "shrink-0 px-4 pt-1.5 pb-1"
+            : "min-h-0 max-h-[60%] overflow-y-auto px-4 lg:px-5 pt-1.5"
+        }
         data-testid="order-controls"
       >
         {isPhone && (
