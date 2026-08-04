@@ -156,6 +156,10 @@ export function receiptText(order, label = null) {
   if (schedTotal) L.push(center(schedTotal));
   L.push(hr);
   L.push(center("Ευχαριστούμε! Καλή όρεξη"));
+  // Νομική διευκρίνιση — σε ΚΑΘΕ απόδειξη παραγγελίας (όλα τα καταστήματα,
+  // χωρίς ρύθμιση). Δεν μπαίνει σε Z / ελλείψεις / πρόγραμμα.
+  L.push(hr);
+  L.push(center("Δεν είναι απόδειξη"));
   return L.join("\n");
 }
 

@@ -127,6 +127,7 @@ h1, h2, h3, h4, h5, .font-heading {
   #print-area .rc-note { font-size: 17px; font-weight: 800; border: 2px solid #000; padding: 4px 6px; }
   #print-area .rc-total { font-size: 20px; font-weight: 800; }
   #print-area .rc-foot { font-size: 12px; text-align: center; }
+  #print-area .rc-legal { font-size: 14px; font-weight: 400; text-align: center; }
   /* Μηδενικά περιθώρια σελίδας για silent/kiosk printing σε θερμικό 80mm —
      72mm = ωφέλιμο πλάτος του χαρτιού, χωρίς πλαϊνά περιθώρια ώστε το κείμενο
      να πιάνει όλο το εκτυπώσιμο πλάτος */

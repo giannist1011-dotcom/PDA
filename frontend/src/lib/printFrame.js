@@ -36,6 +36,7 @@ const FRAME_CSS = `
   #print-area .rc-note { font-size: 17px; font-weight: 800; border: 2px solid #000; padding: 4px 6px; }
   #print-area .rc-total { font-size: 20px; font-weight: 800; }
   #print-area .rc-foot { font-size: 12px; text-align: center; }
+  #print-area .rc-legal { font-size: 14px; font-weight: 400; text-align: center; }
   #print-area .text-center { text-align: center; }
   /* Fallback για jobs που έχουν μόνο plain text (42 στήλες) */
   #print-area pre { margin: 0; font: inherit; font-size: 11px; white-space: pre-wrap; }
