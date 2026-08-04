@@ -143,34 +143,34 @@ export default function OrderPanel({
       className="flex flex-col h-full bg-[#3D1620] border-l border-[#723645] overflow-hidden"
       data-testid="order-panel"
     >
-      {/* Zone 1 — fixed header: order number + source buttons */}
-      <div className="p-4 lg:p-5 border-b border-[#723645] shrink-0">
-        <div className="flex items-baseline justify-between">
-          <div>
-            <div
-              className={`text-xs font-bold uppercase tracking-widest ${
-                editMode ? "text-gold" : "text-neutral-400"
-              }`}
-            >
-              {editMode ? "Επεξεργασία παραγγελίας" : "Παραγγελία"}
-            </div>
-            <div
-              className="font-mono text-2xl lg:text-3xl font-bold text-white mt-1"
-              data-testid="order-number"
-            >
-              #{String(orderNumber || 0).padStart(3, "0")}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-neutral-500">
-            <ReceiptText className="w-5 h-5" />
-          </div>
+      {/* Zone 1 — σταθερός header: ΜΙΑ compact γραμμή («Παραγγελία #001» σε
+          κανονικό μέγεθος κειμένου) + οι πηγές. Ελάχιστο padding — το ύψος που
+          κερδίζεται πάει στα προϊόντα. */}
+      <div className="px-3 py-2 lg:px-4 border-b border-[#723645] shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <ReceiptText
+            className={`w-4 h-4 shrink-0 ${editMode ? "text-gold" : "text-neutral-500"}`}
+          />
+          <span
+            className={`text-sm font-bold truncate ${
+              editMode ? "text-gold" : "text-neutral-300"
+            }`}
+          >
+            {editMode ? "Επεξεργασία" : "Παραγγελία"}
+          </span>
+          <span
+            className="font-mono text-sm font-bold text-white"
+            data-testid="order-number"
+          >
+            #{String(orderNumber || 0).padStart(3, "0")}
+          </span>
         </div>
 
         {/* Πηγή παραγγελίας ταμείου: μόνο «Ταμείο»/«Τηλέφωνο». Οι πλατφόρμες
             έχουν δικές τους καρτέλες στην κορυφή της σελίδας — δεν καταχωρούνται
             με το χέρι από εδώ. */}
         <div
-          className={`grid gap-1 p-1 mt-3 lg:mt-4 bg-[#2A0E14] rounded-md ${
+          className={`grid gap-1 p-1 mt-2 bg-[#2A0E14] rounded-md ${
             sources.length > 2 ? "grid-cols-3" : "grid-cols-2"
           }`}
           data-testid="source-toggle"
@@ -184,7 +184,7 @@ export default function OrderPanel({
                 disabled={editMode}
                 data-testid={`source-btn-${s}`}
                 data-state={active ? "on" : "off"}
-                className={`h-10 rounded-md text-xs lg:text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`h-9 rounded-md text-xs lg:text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   active
                     ? "bg-brand text-white"
                     : "text-neutral-400 hover:text-white hover:bg-[#451924]"
@@ -199,13 +199,14 @@ export default function OrderPanel({
 
       {/* ΜΕΣΑΙΑ ΠΕΡΙΟΧΗ (ζώνη 2 + ζώνη 3α): μοιράζεται ό,τι απομένει ανάμεσα στο
           header και το σταθερό footer. Τα ΠΡΟΪΟΝΤΑ κρατούν ΠΑΝΤΑ ≥35% αυτού του
-          ύψους (min-h-[35%]) με δικό τους scroll — δεν μηδενίζονται ποτέ όταν
-          ανοίγουν τα πεδία παράδοσης· η κάτω ζώνη κόβεται στο 60% με εσωτερικό
-          scroll στα πεδία της. */}
+          ύψους (και ποτέ λιγότερο από 132px σε πολύ κοντές οθόνες) με δικό τους
+          scroll — δεν μηδενίζονται ποτέ όταν ανοίγουν τα πεδία παράδοσης· η κάτω
+          ζώνη κόβεται στο 60% και συρρικνώνεται πριν από τα προϊόντα, με
+          ΕΣΩΤΕΡΙΚΟ scroll στα πεδία της. */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       {/* Zone 2 — scrollable: ΜΟΝΟ οι γραμμές της παραγγελίας. */}
       <div
-        className="flex-1 min-h-[35%] overflow-y-auto px-4 lg:px-5"
+        className="flex-1 min-h-[max(132px,35%)] overflow-y-auto px-4 lg:px-5"
         data-testid="order-items"
       >
         {isEmpty ? (
@@ -220,7 +221,7 @@ export default function OrderPanel({
             return (
             <div
               key={it.line_id}
-              className="py-4 border-b border-[#723645] last:border-0"
+              className="py-3 border-b border-[#723645] last:border-0"
               data-testid={`order-line-${it.line_id}`}
             >
               <button
@@ -287,7 +288,7 @@ export default function OrderPanel({
           ΕΣΩΤΕΡΙΚΟ scroll — τα προϊόντα από πάνω μένουν πάντα ορατά. */}
       {(isPhone || setNote) && (
       <div
-        className="shrink-0 max-h-[60%] overflow-y-auto px-4 lg:px-5 pt-1.5"
+        className="min-h-0 max-h-[60%] overflow-y-auto px-4 lg:px-5 pt-1.5"
         data-testid="order-controls"
       >
         {isPhone && (
@@ -476,7 +477,7 @@ export default function OrderPanel({
 
       {/* Zone 3β — σταθερό footer στη ΒΑΣΗ: ΣΥΝΟΛΟ / Έκπτωση / Καθαρισμός /
           Εκτύπωση. Πάντα ορατό — δεν ανεβαίνει και δεν μεγαλώνει ποτέ. */}
-      <div className="px-4 py-3 border-t border-[#723645] bg-[#33111A] shrink-0">
+      <div className="px-4 py-2.5 border-t border-[#723645] bg-[#33111A] shrink-0">
         {(discountAmount > 0 || deliveryFee > 0) && (
           <div className="flex items-baseline justify-between">
             <span className="text-[11px] text-neutral-500 uppercase tracking-widest font-bold">
@@ -529,7 +530,7 @@ export default function OrderPanel({
             )}
           </span>
           <span
-            className="font-mono text-2xl font-bold text-white"
+            className="font-mono text-xl font-bold text-white"
             data-testid="order-total"
           >
             {eur(total)}
@@ -541,7 +542,7 @@ export default function OrderPanel({
             disabled={!editMode && isEmpty}
             data-testid="order-clear-btn"
             variant="ghost"
-            className="col-span-1 h-12 text-xs font-bold text-neutral-100 bg-[#4A1B27] border border-[#7E3B50] hover:bg-[#582233] hover:text-white disabled:opacity-40"
+            className="col-span-1 h-11 text-[11px] lg:text-xs font-bold text-neutral-100 bg-[#4A1B27] border border-[#7E3B50] hover:bg-[#582233] hover:text-white disabled:opacity-40"
           >
             {editMode ? "Άκυρο" : "Καθαρισμός"}
           </Button>
@@ -549,7 +550,7 @@ export default function OrderPanel({
             onClick={onSubmit}
             disabled={!canSubmit || submitting}
             data-testid="order-submit-btn"
-            className="col-span-3 h-12 text-base font-bold bg-brand hover:bg-brand-hover text-white flex items-center justify-center gap-2 disabled:opacity-40"
+            className="col-span-3 h-11 text-sm lg:text-base font-bold bg-brand hover:bg-brand-hover text-white flex items-center justify-center gap-2 disabled:opacity-40"
           >
             {editMode ? (
               <Pencil className="w-4 h-4" />

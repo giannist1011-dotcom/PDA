@@ -593,7 +593,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - pos/MenuGrid.jsx (233 γρ): MenuGrid@7
 - pos/MenuList.jsx (206 γρ): MenuList@10
 - pos/OnboardingChecklist.jsx (100 γρ): OnboardingChecklist@18
-- pos/OrderPanel.jsx (606 γρ): OrderPanel@35
+- pos/OrderPanel.jsx (607 γρ): OrderPanel@35
 - pos/ProfilesManager.jsx (322 γρ): ProfileModal@20, ProfilesManager@176
 - pos/PublicMenuSettings.jsx (410 γρ): PublicMenuSettings@29
 - pos/Receipt.jsx (171 γρ): ReceiptCopy@15, Receipt@156
