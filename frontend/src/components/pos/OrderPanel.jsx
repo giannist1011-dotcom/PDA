@@ -9,20 +9,28 @@ import { POS_ORDER_SOURCES } from "@/data/menu";
 import { eur, todayISO } from "@/lib/format";
 import { customizationLines } from "@/lib/customizationText";
 
-// Σειρά όπως τυπώνεται: διεύθυνση → όροφος → όνομα → τηλέφωνο
-// (η πόλη είναι βοηθητική για το autocomplete και ενώνεται με τη διεύθυνση)
-const DELIVERY_FIELDS = [
-  { key: "address", label: "Διεύθυνση", placeholder: "π.χ. Ερμού 12" },
+// Πεδία δίπλα-δίπλα (2 στήλες): η διεύθυνση πιάνει πλήρες πλάτος, μετά
+// όροφος+τηλέφωνο, μετά όνομα (+ σημείωση στο διπλανό κελί). Η πόλη είναι
+// βοηθητική για το autocomplete — προσυμπληρώνεται από τα Στοιχεία καταστήματος
+// και ανοίγει μόνο on demand, δεν καταλαμβάνει μόνιμο χώρο.
+const DELIVERY_PAIRS = [
   { key: "floor", label: "Όροφος", placeholder: "π.χ. 3ος, ισόγειο" },
-  { key: "city", label: "Πόλη", placeholder: "π.χ. Χαλκίδα" },
+  { key: "phone", label: "Τηλέφωνο", placeholder: "6912345678", inputMode: "tel" },
+  { key: "name", label: "Όνομα", placeholder: "π.χ. Νίκος" },
+];
+
+const TAKEAWAY_PAIRS = [
   { key: "name", label: "Όνομα", placeholder: "π.χ. Νίκος" },
   { key: "phone", label: "Τηλέφωνο", placeholder: "6912345678", inputMode: "tel" },
 ];
 
-const TAKEAWAY_FIELDS = [
-  { key: "name", label: "Όνομα", placeholder: "π.χ. Νίκος" },
-  { key: "phone", label: "Τηλέφωνο", placeholder: "6912345678", inputMode: "tel" },
-];
+const FIELD_SKIN =
+  "w-full h-9 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-flame";
+const FIELD_CLS = `${FIELD_SKIN} px-3`;
+// Compact chip της γραμμής τύπου (μετά την επιλογή) — το ενεργό highlighted
+const CHIP_BASE =
+  "h-8 px-2.5 rounded-full border text-[12px] font-bold flex items-center justify-center gap-1 shrink-0 transition-colors";
+const CHIP_OFF = "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame";
 
 export default function OrderPanel({
   orderNumber,
@@ -72,6 +80,8 @@ export default function OrderPanel({
   const [editingLine, setEditingLine] = useState(null);
   // Η διεύθυνση εντοπίστηκε αλλά εκτός ζώνης διανομής — προειδοποίηση, όχι εμπόδιο
   const [outOfZone, setOutOfZone] = useState(false);
+  // Πόλη: κρυφή όσο ισχύει η προσυμπληρωμένη — ανοίγει μόνο όταν χρειάζεται αλλαγή
+  const [cityOpen, setCityOpen] = useState(false);
 
   // Reset delivery & scheduling when source changes away from phone
   useEffect(() => {
@@ -103,11 +113,30 @@ export default function OrderPanel({
     (!isPhone || !!delivery?.delivery_type) &&
     (!scheduled?.enabled || !!scheduled?.time);
 
-  const activeFields = delivery?.delivery_type === "delivery"
-    ? DELIVERY_FIELDS
+  const isDelivery = delivery?.delivery_type === "delivery";
+  const typeChosen = !!delivery?.delivery_type;
+  const activeFields = isDelivery
+    ? DELIVERY_PAIRS
     : delivery?.delivery_type === "takeaway"
-      ? TAKEAWAY_FIELDS
+      ? TAKEAWAY_PAIRS
       : [];
+  // Με επιλεγμένο τύπο η σημείωση μπαίνει ΜΕΣΑ στο πλέγμα (δίπλα στο όνομα σε
+  // παράδοση, πλήρες πλάτος σε takeaway) — δεν παίρνει δική της σειρά
+  const noteInGrid = isPhone && typeChosen && !!setNote;
+
+  const renderNote = (cls) => (
+    <div className={`relative ${cls}`}>
+      <StickyNote className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+      <input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        maxLength={300}
+        placeholder="Σημείωση"
+        data-testid="order-note-input"
+        className={`${FIELD_SKIN} pl-9 pr-3`}
+      />
+    </div>
+  );
 
   return (
     <aside
@@ -168,9 +197,17 @@ export default function OrderPanel({
         </div>
       </div>
 
-      {/* Zone 2 — scrollable: ΜΟΝΟ οι γραμμές της παραγγελίας. Πιάνει όλο τον
-          ελεύθερο χώρο από το header μέχρι τα κουμπιά — κανένα νεκρό κενό. */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 lg:px-5" data-testid="order-items">
+      {/* ΜΕΣΑΙΑ ΠΕΡΙΟΧΗ (ζώνη 2 + ζώνη 3α): μοιράζεται ό,τι απομένει ανάμεσα στο
+          header και το σταθερό footer. Τα ΠΡΟΪΟΝΤΑ κρατούν ΠΑΝΤΑ ≥35% αυτού του
+          ύψους (min-h-[35%]) με δικό τους scroll — δεν μηδενίζονται ποτέ όταν
+          ανοίγουν τα πεδία παράδοσης· η κάτω ζώνη κόβεται στο 60% με εσωτερικό
+          scroll στα πεδία της. */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      {/* Zone 2 — scrollable: ΜΟΝΟ οι γραμμές της παραγγελίας. */}
+      <div
+        className="flex-1 min-h-[35%] overflow-y-auto px-4 lg:px-5"
+        data-testid="order-items"
+      >
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center text-neutral-500 py-16 text-center h-full">
             <div className="text-lg font-heading">Άδεια παραγγελία</div>
@@ -244,11 +281,10 @@ export default function OrderPanel({
         )}
       </div>
 
-      {/* Zone 3α — πρώτο μέρος της ΚΑΤΩ ζώνης, αγκυρωμένο ακριβώς πάνω από τη
-          μπάρα συνόλου: κουμπιά τύπου (Παράδοση/Takeaway/Προγραμματισμένη) →
-          πεδία παράδοσης → σημείωση. Μεγαλώνει προς τα ΠΑΝΩ (τρώει από τη ζώνη
-          ειδών, ποτέ από το footer) και έχει δικό του scroll σε χαμηλές οθόνες.
-          Χωρίς σταθερό κενό προς τη ζώνη 2 — μόνο η ελάχιστη οπτική ανάσα. */}
+      {/* Zone 3α — κάτω ζώνη, ακριβώς πάνω από τη μπάρα συνόλου: γραμμή τύπου
+          (Παράδοση/Takeaway/Προγραμματισμένη) → πεδία σε 2 στήλες → σημείωση.
+          ΠΟΤΕ πάνω από το 60% της μεσαίας περιοχής: ό,τι δεν χωράει κυλάει με
+          ΕΣΩΤΕΡΙΚΟ scroll — τα προϊόντα από πάνω μένουν πάντα ορατά. */}
       {(isPhone || setNote) && (
       <div
         className="shrink-0 max-h-[60%] overflow-y-auto px-4 lg:px-5 pt-1.5"
@@ -256,133 +292,187 @@ export default function OrderPanel({
       >
         {isPhone && (
           <div className="mb-1 p-2 rounded-md border border-flame/40 bg-flame/5" data-testid="delivery-section">
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={() => toggleDeliveryType("delivery")}
-                data-testid="delivery-btn-delivery"
-                data-state={delivery?.delivery_type === "delivery" ? "on" : "off"}
-                className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
-                  delivery?.delivery_type === "delivery"
-                    ? "bg-brand border-brand text-white"
-                    : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
-                }`}
-              >
-                <Truck className="w-4 h-4" /> Παράδοση
-              </button>
-              <button
-                onClick={() => toggleDeliveryType("takeaway")}
-                data-testid="delivery-btn-takeaway"
-                data-state={delivery?.delivery_type === "takeaway" ? "on" : "off"}
-                className={`h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
-                  delivery?.delivery_type === "takeaway"
-                    ? "bg-brand border-brand text-white"
-                    : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
-                }`}
-              >
-                <ShoppingBag className="w-4 h-4" /> Takeaway
-              </button>
-            </div>
-
-            {/* Scheduled order toggle — όχι σε επεξεργασία (ο προγραμματισμός δεν αλλάζει) */}
-            {!editMode && (
-            <div className="mt-1.5">
-              <button
-                onClick={() =>
-                  setScheduled((s) =>
-                    s?.enabled
-                      ? { enabled: false, date: "", time: "" }
-                      : { enabled: true, date: todayISO(), time: "" }
-                  )
-                }
-                data-testid="scheduled-toggle-btn"
-                data-state={scheduled?.enabled ? "on" : "off"}
-                className={`w-full h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
-                  scheduled?.enabled
-                    ? "bg-[#00B0FF] border-[#00B0FF] text-white"
-                    : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-[#00B0FF]"
-                }`}
-              >
-                <Clock className="w-4 h-4" /> Προγραμματισμένη
-              </button>
-              {scheduled?.enabled && (
-                <div className="grid grid-cols-2 gap-1.5 mt-1.5">
-                  <TimePicker
-                    value={scheduled.time}
-                    onChange={(time) => setScheduled((s) => ({ ...s, time }))}
-                    testId="scheduled-time-input"
-                    className="w-full focus:border-[#00B0FF]"
-                  />
-                  <DatePicker
-                    value={scheduled.date}
-                    min={todayISO()}
-                    onChange={(date) => setScheduled((s) => ({ ...s, date }))}
-                    testId="scheduled-date-input"
-                    className="w-full focus:border-[#00B0FF]"
-                  />
+            {/* Πριν την επιλογή: μεγάλα κουμπιά (η βασική ενέργεια). Μετά: μία
+                compact γραμμή chips — tap για αλλαγή, το ενεργό highlighted. */}
+            {typeChosen ? (
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar" data-testid="delivery-type-chips">
+                <button
+                  onClick={() => toggleDeliveryType("delivery")}
+                  data-testid="delivery-btn-delivery"
+                  data-state={isDelivery ? "on" : "off"}
+                  className={`${CHIP_BASE} ${
+                    isDelivery ? "bg-brand border-brand text-white" : CHIP_OFF
+                  }`}
+                >
+                  <Truck className="w-3.5 h-3.5" /> Παράδοση
+                </button>
+                <button
+                  onClick={() => toggleDeliveryType("takeaway")}
+                  data-testid="delivery-btn-takeaway"
+                  data-state={delivery?.delivery_type === "takeaway" ? "on" : "off"}
+                  className={`${CHIP_BASE} ${
+                    delivery?.delivery_type === "takeaway"
+                      ? "bg-brand border-brand text-white"
+                      : CHIP_OFF
+                  }`}
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" /> Takeaway
+                </button>
+                {!editMode && (
+                  <button
+                    onClick={() =>
+                      setScheduled((s) =>
+                        s?.enabled
+                          ? { enabled: false, date: "", time: "" }
+                          : { enabled: true, date: todayISO(), time: "" }
+                      )
+                    }
+                    data-testid="scheduled-toggle-btn"
+                    data-state={scheduled?.enabled ? "on" : "off"}
+                    className={`${CHIP_BASE} ${
+                      scheduled?.enabled
+                        ? "bg-[#00B0FF] border-[#00B0FF] text-white"
+                        : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-[#00B0FF]"
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" /> Προγραμματισμένη
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => toggleDeliveryType("delivery")}
+                    data-testid="delivery-btn-delivery"
+                    data-state="off"
+                    className="h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
+                  >
+                    <Truck className="w-4 h-4" /> Παράδοση
+                  </button>
+                  <button
+                    onClick={() => toggleDeliveryType("takeaway")}
+                    data-testid="delivery-btn-takeaway"
+                    data-state="off"
+                    className="h-10 rounded-md text-sm font-bold flex items-center justify-center gap-2 border bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-flame"
+                  >
+                    <ShoppingBag className="w-4 h-4" /> Takeaway
+                  </button>
                 </div>
-              )}
-            </div>
+                {!editMode && (
+                  <button
+                    onClick={() =>
+                      setScheduled((s) =>
+                        s?.enabled
+                          ? { enabled: false, date: "", time: "" }
+                          : { enabled: true, date: todayISO(), time: "" }
+                      )
+                    }
+                    data-testid="scheduled-toggle-btn"
+                    data-state={scheduled?.enabled ? "on" : "off"}
+                    className={`w-full h-10 mt-1.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 border ${
+                      scheduled?.enabled
+                        ? "bg-[#00B0FF] border-[#00B0FF] text-white"
+                        : "bg-[#2A0E14] border-[#723645] text-neutral-300 hover:border-[#00B0FF]"
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" /> Προγραμματισμένη
+                  </button>
+                )}
+              </>
             )}
 
-            {activeFields.length > 0 && (
+            {/* Ώρα/ημερομηνία μόνο όταν είναι όντως προγραμματισμένη */}
+            {scheduled?.enabled && !editMode && (
               <div className="grid grid-cols-2 gap-1.5 mt-1.5">
-                {activeFields.map((f) =>
-                  f.key === "address" ? (
-                    // Διεύθυνση σε πλήρες πλάτος με autocomplete (γνωστοί πελάτες + Photon)
-                    <div key={f.key} className="col-span-2">
-                      <AddressAutocomplete
-                        value={delivery?.address || ""}
-                        onChange={(v) => setField("address", v)}
-                        city={delivery?.city || storeCity}
-                        storeLat={storeLat}
-                        storeLng={storeLng}
-                        radiusKm={deliveryRadiusKm}
-                        onZoneStatus={setOutOfZone}
-                        placeholder={f.label + " — " + f.placeholder}
-                        testId="delivery-input-address"
-                      />
-                      {outOfZone && delivery?.delivery_type === "delivery" && (
-                        <div
-                          data-testid="delivery-out-of-zone"
-                          className="mt-1 text-[11px] text-[#FFB300] flex items-center gap-1"
-                        >
-                          ⚠ Η διεύθυνση φαίνεται εκτός ζώνης διανομής ({deliveryRadiusKm} km)
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <input
-                      key={f.key}
-                      value={delivery?.[f.key] || ""}
-                      onChange={(e) => setField(f.key, e.target.value)}
-                      inputMode={f.inputMode || "text"}
-                      placeholder={f.label + " — " + f.placeholder}
-                      data-testid={`delivery-input-${f.key}`}
-                      className="w-full h-9 px-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white focus:outline-none focus:border-flame"
+                <TimePicker
+                  value={scheduled.time}
+                  onChange={(time) => setScheduled((s) => ({ ...s, time }))}
+                  testId="scheduled-time-input"
+                  className="w-full focus:border-[#00B0FF]"
+                />
+                <DatePicker
+                  value={scheduled.date}
+                  min={todayISO()}
+                  onChange={(date) => setScheduled((s) => ({ ...s, date }))}
+                  testId="scheduled-date-input"
+                  className="w-full focus:border-[#00B0FF]"
+                />
+              </div>
+            )}
+
+            {typeChosen && (
+              <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+                {isDelivery && (
+                  // Διεύθυνση σε πλήρες πλάτος με autocomplete (γνωστοί πελάτες + Photon)
+                  <div className="col-span-2">
+                    <AddressAutocomplete
+                      value={delivery?.address || ""}
+                      onChange={(v) => setField("address", v)}
+                      city={delivery?.city || storeCity}
+                      storeLat={storeLat}
+                      storeLng={storeLng}
+                      radiusKm={deliveryRadiusKm}
+                      onZoneStatus={setOutOfZone}
+                      placeholder="Διεύθυνση — π.χ. Ερμού 12"
+                      testId="delivery-input-address"
                     />
-                  )
+                    {outOfZone && (
+                      <div
+                        data-testid="delivery-out-of-zone"
+                        className="mt-1 text-[11px] text-[#FFB300] flex items-center gap-1"
+                      >
+                        ⚠ Η διεύθυνση φαίνεται εκτός ζώνης διανομής ({deliveryRadiusKm} km)
+                      </div>
+                    )}
+                  </div>
+                )}
+                {activeFields.map((f) => (
+                  <input
+                    key={f.key}
+                    value={delivery?.[f.key] || ""}
+                    onChange={(e) => setField(f.key, e.target.value)}
+                    inputMode={f.inputMode || "text"}
+                    placeholder={f.label}
+                    data-testid={`delivery-input-${f.key}`}
+                    className={FIELD_CLS}
+                  />
+                ))}
+                {noteInGrid && renderNote(isDelivery ? "" : "col-span-2")}
+                {/* Πόλη (autocomplete): προσυμπληρωμένη — ανοίγει μόνο on demand */}
+                {isDelivery && (
+                  <div className="col-span-2">
+                    {cityOpen ? (
+                      <input
+                        value={delivery?.city || ""}
+                        onChange={(e) => setField("city", e.target.value)}
+                        placeholder="Πόλη — π.χ. Χαλκίδα"
+                        data-testid="delivery-input-city"
+                        className={FIELD_CLS}
+                        autoFocus
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setCityOpen(true)}
+                        data-testid="delivery-city-toggle"
+                        className="text-[11px] text-neutral-400 hover:text-flame underline underline-offset-2"
+                      >
+                        Πόλη: {delivery?.city || storeCity || "—"} · αλλαγή
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
           </div>
         )}
 
-        {/* Σημείωση παραγγελίας — ελεύθερο κείμενο, τυπώνεται στην απόδειξη */}
-        {setNote && (
-          <div className="mb-2 relative">
-            <StickyNote className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={300}
-              placeholder="Σημείωση (π.χ. χωρίς κρεμμύδι στο 2ο)"
-              data-testid="order-note-input"
-              className="w-full h-9 pl-9 pr-3 bg-[#2A0E14] border border-[#723645] rounded-md text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-flame"
-            />
-          </div>
-        )}
+        {/* Σημείωση παραγγελίας (όταν δεν έχει μπει στο πλέγμα των πεδίων) */}
+        {setNote && !noteInGrid && <div className="mb-2">{renderNote("")}</div>}
       </div>
       )}
+      </div>
 
       {/* Zone 3β — σταθερό footer στη ΒΑΣΗ: ΣΥΝΟΛΟ / Έκπτωση / Καθαρισμός /
           Εκτύπωση. Πάντα ορατό — δεν ανεβαίνει και δεν μεγαλώνει ποτέ. */}

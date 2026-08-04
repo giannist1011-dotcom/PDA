@@ -168,9 +168,11 @@ async def pending_partnerships(limit: int = 500) -> list:
 
 async def teams_for_admin(city: str = "", search: str = "", limit: int = 100) -> list:
     """Εταιρείες διανομής για τη λίστα σύνδεσης του admin. Χωρίς φίλτρο πόλης
-    επιστρέφονται όλες — η προτεραιότητα «ίδια πόλη» γίνεται στο admin domain."""
+    επιστρέφονται όλες — η προτεραιότητα «ίδια πόλη» γίνεται στο admin domain.
+
+    ΜΟΝΟ kind="company": οι ομάδες καταστημάτων (OrderDeck Fleet) δεν είναι εταιρείες."""
     import re as _re
-    q: dict = {"disabled": {"$ne": True}}
+    q: dict = {"kind": "company", "disabled": {"$ne": True}}
     if city.strip():
         q["city"] = {"$regex": f"^{_re.escape(city.strip())}$", "$options": "i"}
     if search.strip():
@@ -180,9 +182,14 @@ async def teams_for_admin(city: str = "", search: str = "", limit: int = 100) ->
     ).sort("name", 1).to_list(limit)
 
 
-async def team_by_id(team_id: str) -> Optional[dict]:
+async def team_by_id(team_id: str, kind: str = "") -> Optional[dict]:
+    """Μία ομάδα. Με kind="company" επιστρέφεται ΜΟΝΟ αν είναι εταιρεία διανομής
+    (ο καλών θέλει εταιρεία — ποτέ ομάδα καταστήματος)."""
+    q: dict = {"id": team_id}
+    if kind:
+        q["kind"] = kind
     return await db.fleet_teams.find_one(
-        {"id": team_id}, {"_id": 0, "id": 1, "name": 1, "city": 1, "disabled": 1}
+        q, {"_id": 0, "id": 1, "name": 1, "city": 1, "kind": 1, "disabled": 1}
     )
 
 
@@ -256,6 +263,28 @@ async def recent_partnerships(limit: int = 30) -> list:
         {}, {"_id": 0, "store_user_id": 1, "team_id": 1, "store_name": 1,
              "team_name": 1, "store_city": 1, "requested_at": 1}
     ).sort("requested_at", -1).to_list(limit)
+
+
+async def migrate_team_kinds(company_user_ids: set) -> dict:
+    """Στάμπα «kind» σε ΚΑΘΕ ομάδα, ώστε οι λίστες εταιρειών να φιλτράρουν αυστηρά:
+
+    · χωρίς owner_user_id → αυτόνομη (legacy) εγγραφή εταιρείας → «company»
+    · owner με account_type=fleet_company → «company»
+    · οτιδήποτε άλλο (ομάδα ΚΑΤΑΣΤΗΜΑΤΟΣ, π.χ. demo «Πεινώκιο» με OrderDeck Fleet)
+      → «store» — φεύγει από συνεργασίες/admin/χάρτη
+
+    Idempotent. Επιστρέφει τα ονόματα όσων ομάδων άλλαξαν ταυτότητα."""
+    fixed: dict = {"company": [], "store": []}
+    async for t in db.fleet_teams.find(
+        {}, {"_id": 0, "id": 1, "name": 1, "kind": 1, "owner_user_id": 1}
+    ):
+        owner = t.get("owner_user_id")
+        kind = "company" if (not owner or owner in company_user_ids) else "store"
+        if t.get("kind") == kind:
+            continue
+        await db.fleet_teams.update_one({"id": t["id"]}, {"$set": {"kind": kind}})
+        fixed[kind].append(t.get("name") or t["id"])
+    return fixed
 
 
 # ============ DEMO (back-office) ============

@@ -154,6 +154,9 @@ async def ensure_demo_account():
         "owner_pin_set": False,
         "employee_pin_set": False,
         "ai_features_enabled": True,  # demo λογαριασμός: AI features πάντα ενεργά
+        # ΚΑΤΑΣΤΗΜΑ — ποτέ εταιρεία διανομής: το πλάνο δίνει πρόσβαση στο FleetDeck,
+        # δεν αλλάζει την ταυτότητα του λογαριασμού
+        "account_type": "store",
         "plan": "orderdeck_fleet",  # πλήρης επιφάνεια: POS + FleetDeck καταστήματος
         "created_at": datetime.now(timezone.utc).isoformat(),
     }

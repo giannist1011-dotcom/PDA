@@ -183,7 +183,7 @@ function DemoBanner({ expiresAt }) {
   );
 }
 
-export default function AppShell({ title, children }) {
+export default function AppShell({ title, headerTabs, children }) {
   const { user, logout, exitProfile, role, canManage, profileName, storeLogo } = useAuth();
   const BizIcon = businessIcon(user && user !== false ? user.business_type : null);
   const [open, setOpen] = useState(false);
@@ -314,8 +314,12 @@ export default function AppShell({ title, children }) {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-[#2A0E14] text-white">
-      <header className="flex items-center justify-between gap-2 px-4 md:px-6 h-14 lg:h-16 border-b border-[#723645] bg-[#2A0E14] shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+      {/* HEADER: μία γραμμή (burger + όνομα/τίτλος + καρτέλες σελίδας + ρόλος).
+          Οι καρτέλες (headerTabs) ζουν ΜΕΣΑ στο header για να μη χάνεται κάθετος
+          χώρος: από lg δίπλα στον τίτλο, σε στενότερα πλάτη (flex-wrap + w-full)
+          πέφτουν σε μία ΛΕΠΤΗ δεύτερη γραμμή του ίδιου header με scrollable pills. */}
+      <header className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 px-4 md:px-6 border-b border-[#723645] bg-[#2A0E14] shrink-0">
+        <div className="order-1 flex items-center gap-2 sm:gap-3 min-w-0 h-14 lg:h-16">
           <button
             onClick={() => setOpen(true)}
             data-testid="burger-btn"
@@ -355,7 +359,18 @@ export default function AppShell({ title, children }) {
             </div>
           </div>
         </div>
-        <div className="hidden sm:block shrink-0" data-testid="profile-badge">
+        {headerTabs && (
+          <div
+            className="order-3 lg:order-2 w-full lg:w-auto lg:flex-1 min-w-0 pb-1.5 lg:pb-0 lg:h-16 flex items-center overflow-x-auto no-scrollbar"
+            data-testid="header-tabs"
+          >
+            {headerTabs}
+          </div>
+        )}
+        <div
+          className="order-2 lg:order-3 ml-auto hidden sm:flex items-center shrink-0 h-14 lg:h-16"
+          data-testid="profile-badge"
+        >
           {profileBadge}
         </div>
       </header>
