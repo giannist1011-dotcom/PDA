@@ -83,7 +83,6 @@ function FleetContent() {
                 <th className="px-3 py-2.5 font-bold">Πόλη</th>
                 <th className="px-3 py-2.5 font-bold">Πλάνο</th>
                 <th className="px-3 py-2.5 font-bold text-right">Διανομείς</th>
-                <th className="px-3 py-2.5 font-bold text-right">Παραγγελίες (30ημ)</th>
                 <th className="px-3 py-2.5 font-bold">Εγγραφή</th>
                 <th className="px-3 py-2.5 font-bold">Κατάσταση</th>
               </tr>
@@ -105,7 +104,6 @@ function FleetContent() {
                     {FLEET_PLAN_LABELS[c.plan] || "—"}
                   </td>
                   <td className="px-3 py-2.5 text-right font-semibold">{c.drivers_count}</td>
-                  <td className="px-3 py-2.5 text-right font-semibold">{c.orders_30d}</td>
                   <td className="px-3 py-2.5 text-neutral-300">{formatGRDate(c.created_at)}</td>
                   <td className="px-3 py-2.5"><StatusBadge status={c.status} /></td>
                 </tr>

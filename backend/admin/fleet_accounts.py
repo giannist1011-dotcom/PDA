@@ -78,10 +78,14 @@ async def admin_list_fleet(
     companies = await db.users.find(match, FLEET_FIELDS).sort("created_at", -1) \
         .skip((page - 1) * limit).to_list(limit)
 
-    # Μετρητές ανά ομάδα — το fleet domain τους δίνει μαζεμένους (όχι N+1)
-    counters = await fleet_api.team_counters_for_users([c["id"] for c in companies])
+    # Μετρητές ανά ομάδα — το fleet domain τους δίνει μαζεμένους (όχι N+1).
+    # Ο όγκος παραγγελιών μόνο για demo (δικοί μας λογαριασμοί) — οι επιδόσεις
+    # των εταιρειών-πελατών δεν εμφανίζονται στο admin panel.
+    counters = await fleet_api.team_counters_for_users(
+        [c["id"] for c in companies], {c["id"] for c in companies if c.get("is_demo")}
+    )
     for c in companies:
-        c.update(counters.get(c["id"], {"drivers_count": 0, "orders_30d": 0}))
+        c.update(counters.get(c["id"], {"drivers_count": 0}))
         c["status"] = shop_status(c)
         fill_city(c)
     return {"total": total, "page": page, "limit": limit, "companies": companies}
@@ -96,7 +100,8 @@ async def admin_fleet_detail(uid: str, ctx: dict = Depends(get_admin_ctx)):
     check_city(ctx, u)
     u["status"] = shop_status(u)
     fill_city(u)
-    u.update(await fleet_api.team_detail_for_user(uid))
+    # Όγκος παραγγελιών ΜΟΝΟ σε demo λογαριασμούς (δικοί μας)
+    u.update(await fleet_api.team_detail_for_user(uid, with_totals=bool(u.get("is_demo"))))
     u["drivers_count"] = sum(1 for m in u["members"] if m["role"] == "driver")
     # Στοιχεία σύνδεσης demo — ΜΟΝΟ demo λογαριασμοί και ΜΟΝΟ master/manage
     # (τα view-only sub-admins δεν βλέπουν ποτέ κωδικούς)

@@ -261,15 +261,15 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - GET /announcements/active → active_announcement @108 — Η πιο πρόσφατη ενεργή ανακοίνωση που αφορά αυτό…
 ### admin/fleet_accounts.py
 - GET /admin/fleet → admin_list_fleet @50
-- GET /admin/fleet/{uid} → admin_fleet_detail @91
-- PATCH /admin/fleet/{uid} → admin_update_fleet @125
-- DELETE /admin/fleet/{uid} → admin_delete_fleet @170
-- POST /admin/demos → admin_create_demo @288 — Demo λογαριασμός από τον admin — μαγαζί (με…
-- POST /admin/demos/{uid}/reset → admin_reset_demo @352 — Επαναφορά demo στην αρχική seeded κατάσταση — τα…
-- POST /admin/demos/{uid}/reset-password → admin_reset_demo_password @392 — Νέος κωδικός demo λογαριασμού: ενημερώνει το hash ΚΑΙ…
-- DELETE /admin/demos/{uid} → admin_delete_demo @417 — Οριστική διαγραφή demo λογαριασμού (χωρίς επιβεβαίωση ονόματος —…
+- GET /admin/fleet/{uid} → admin_fleet_detail @95
+- PATCH /admin/fleet/{uid} → admin_update_fleet @130
+- DELETE /admin/fleet/{uid} → admin_delete_fleet @175
+- POST /admin/demos → admin_create_demo @293 — Demo λογαριασμός από τον admin — μαγαζί (με…
+- POST /admin/demos/{uid}/reset → admin_reset_demo @357 — Επαναφορά demo στην αρχική seeded κατάσταση — τα…
+- POST /admin/demos/{uid}/reset-password → admin_reset_demo_password @397 — Νέος κωδικός demo λογαριασμού: ενημερώνει το hash ΚΑΙ…
+- DELETE /admin/demos/{uid} → admin_delete_demo @422 — Οριστική διαγραφή demo λογαριασμού (χωρίς επιβεβαίωση ονόματος —…
 ### admin/overview.py
-- GET /admin/overview → admin_overview @98
+- GET /admin/overview → admin_overview @101
 ### admin/promo.py
 - GET /admin/promo → admin_list_promos @106
 - POST /admin/promo → admin_create_promo @122
@@ -281,12 +281,12 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - POST /admin/demo/cleanup → admin_demo_cleanup @30 — Καθαρισμός ληγμένων demo λογαριασμών — καλείται από cron…
 - GET /admin/ping → admin_ping @68 — Έλεγχος admin auth (master password ή sub-admin token)…
 - GET /admin/shops → admin_list_shops @85
-- GET /admin/shops/{uid} → admin_shop_detail @169
-- POST /admin/shops/{uid}/profiles/{pid}/reset-pin → admin_reset_profile_pin @200 — Επαναφορά PIN προφίλ από τον διαχειριστή πλατφόρμας: προσωρινό…
-- PATCH /admin/shops/{uid} → admin_update_shop @264
-- DELETE /admin/shops/{uid} → admin_delete_shop @301
-- GET /admin/subscriptions/expiring → admin_expiring_subscriptions @316 — Συνδρομές/δοκιμές που λήγουν στις επόμενες 7 ημέρες (για…
-- GET /admin/leads → admin_leads @338
+- GET /admin/shops/{uid} → admin_shop_detail @156
+- POST /admin/shops/{uid}/profiles/{pid}/reset-pin → admin_reset_profile_pin @189 — Επαναφορά PIN προφίλ από τον διαχειριστή πλατφόρμας: προσωρινό…
+- PATCH /admin/shops/{uid} → admin_update_shop @253
+- DELETE /admin/shops/{uid} → admin_delete_shop @290
+- GET /admin/subscriptions/expiring → admin_expiring_subscriptions @305 — Συνδρομές/δοκιμές που λήγουν στις επόμενες 7 ημέρες (για…
+- GET /admin/leads → admin_leads @327
 ### admin/stock_photos.py
 - GET /admin/stock-photos → admin_list_stock_photos @44
 - POST /admin/stock-photos → admin_create_stock_photo @61
@@ -294,8 +294,8 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - GET /stock-photos → list_stock_photos_for_shop @92
 
 ## BACKEND — interfaces domain (η ΜΟΝΗ επιτρεπτή διέλευση)
-- pos/api.py: preset_for@18, seed_account@24, next_order_number@31, create_external_order@38, set_platform_due_at@92, available_menu_items@99, count_orders@109, shop_order_stats@115, shop_usage@133, onboarding_projection@141, onboarding_progress@147, onboarding_state@153, get_uploadable_delivery_order@160, unlinked_delivery_orders@173, link_fleet_order@188, set_fleet_status@204, unlink_fleet_order@218, purge_store_data@240
-- fleet/api.py: ensure_team_for_user@37, add_team_event@43, next_team_order_number@49, team_for_user@54, set_team_disabled@61, team_counters_for_users@69, team_detail_for_user@96, teams_by_owner@126, drivers_per_team@138, count_orders@151, pending_partnerships@157, recent_partnerships@163, seed_company_demo@171, seed_store_demo@177, purge_team@183, delete_team_for_user@189, add_demo_admin_member@198, get_order_status@224, mark_out_for_delivery@236, apply_pos_order_edit@253, cancel_for_pos_order@290, migrate_link_existing_orders@333, purge_store_data@403, purge_store_orders@409
+- pos/api.py: preset_for@18, seed_account@24, next_order_number@31, create_external_order@38, set_platform_due_at@92, available_menu_items@99, shop_order_stats@112, shops_activity@133, shop_usage@161, onboarding_projection@169, onboarding_progress@175, onboarding_state@181, get_uploadable_delivery_order@188, unlinked_delivery_orders@201, link_fleet_order@216, set_fleet_status@232, unlink_fleet_order@246, purge_store_data@268
+- fleet/api.py: ensure_team_for_user@37, add_team_event@43, next_team_order_number@49, team_for_user@54, set_team_disabled@61, team_counters_for_users@69, team_detail_for_user@106, teams_by_owner@138, drivers_per_team@150, pending_partnerships@163, recent_partnerships@169, seed_company_demo@177, seed_store_demo@183, purge_team@189, delete_team_for_user@195, add_demo_admin_member@204, get_order_status@230, mark_out_for_delivery@242, apply_pos_order_edit@259, cancel_for_pos_order@296, migrate_link_existing_orders@339, purge_store_data@409, purge_store_orders@415
 - platforms/api.py: purge_store_data@10
 - admin/api.py: redeem_promo@15, promo_description@21, record_demo_lead@27, get_stock_photo@41
 
@@ -419,7 +419,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
 - MenuManagement.jsx (394 γρ): MenuManagement@32
-- PDA.jsx (739 γρ): PDA@86
+- PDA.jsx (750 γρ): PDA@87
 - Photos.jsx (182 γρ): Photos@41
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
 - PublicMenu.jsx (209 γρ): PublicMenu@19
@@ -438,22 +438,22 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - admin-admins/AdminsContent.jsx (242 γρ): AdminsContent@20
 - admin-admins/AuditSection.jsx (107 γρ): AuditSection@12
 - admin-admins/utils.js (11 γρ)
-- admin-fleet/FleetContent.jsx (158 γρ): FleetContent@16
-- admin-fleet/FleetModal.jsx (421 γρ): FleetModal@24
+- admin-fleet/FleetContent.jsx (156 γρ): FleetContent@16
+- admin-fleet/FleetModal.jsx (427 γρ): FleetModal@24
 - admin-fleet/utils.js (5 γρ)
 - admin-overview/ActivityFeed.jsx (49 γρ): ActivityFeed@14
 - admin-overview/AttentionStrip.jsx (62 γρ): Chip@4, AttentionStrip@17
 - admin-overview/CityTable.jsx (91 γρ): CityTable@25
 - admin-overview/ExpansionMap.jsx (123 γρ): ExpansionMap@49
 - admin-overview/GrowthChart.jsx (56 γρ): GrowthChart@15
-- admin-overview/KpiCards.jsx (92 γρ): Trend@5, Card@19, Mini@35, KpiCards@42
+- admin-overview/KpiCards.jsx (82 γρ): Trend@5, Card@19, Mini@35, KpiCards@44
 - admin-overview/utils.js (27 γρ)
 - admin-shops/Badges.jsx (30 γρ): OnboardingCell@8, StatusBadge@22
 - admin-shops/CreateDemoModal.jsx (237 γρ): CreateDemoModal@42
 - admin-shops/DemoCredentials.jsx (112 γρ): CredRow@8, DemoCredentials@33
 - admin-shops/PinResetSection.jsx (112 γρ): PinResetSection@12
-- admin-shops/ShopModal.jsx (466 γρ): ShopModal@26
-- admin-shops/ShopsContent.jsx (231 γρ): ShopsContent@17
+- admin-shops/ShopModal.jsx (472 γρ): ShopModal@26
+- admin-shops/ShopsContent.jsx (229 γρ): ShopsContent@17
 - admin-shops/utils.js (15 γρ)
 - analytics/AddressHeatmap.jsx (180 γρ): AddressHeatmap@17
 - analytics/ChangeBadge.jsx (26 γρ): ChangeBadge@3
@@ -511,10 +511,11 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - menu/RenumberDialog.jsx (147 γρ): RenumberDialog@22
 - menu/utils.js (13 γρ)
 - pda/DiscountModal.jsx (106 γρ): DiscountModal@7
-- pda/MenuSection.jsx (91 γρ): MenuSection@17
+- pda/MenuSection.jsx (63 γρ): MenuSection@13
+- pda/MenuViewToggle.jsx (35 γρ): MenuViewToggle@10
 - pda/MobileTabs.jsx (40 γρ): MobileTabs@2
 - pda/PDAModals.jsx (85 γρ): PDAModals@8
-- pda/PlatformTabs.jsx (61 γρ): PlatformTabs@6
+- pda/PlatformTabs.jsx (60 γρ): PlatformTabs@8
 - pda/ReprintPromptModal.jsx (70 γρ): ReprintPromptModal@6
 - pda/ScheduledOrdersModal.jsx (98 γρ): ScheduledOrdersModal@5
 - pda/ScheduledPanel.jsx (90 γρ): ScheduledPanel@8
@@ -582,7 +583,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - pos/OrderPanel.jsx (492 γρ): OrderPanel@27
 - pos/ProfilesManager.jsx (322 γρ): ProfileModal@20, ProfilesManager@176
 - pos/PublicMenuSettings.jsx (410 γρ): PublicMenuSettings@29
-- pos/Receipt.jsx (167 γρ): ReceiptCopy@15, Receipt@152
+- pos/Receipt.jsx (171 γρ): ReceiptCopy@15, Receipt@156
 - pos/SourceFilter.jsx (39 γρ): SourceFilter@5
 - pos/SourceMix.jsx (57 γρ): SourceMix@7
 - pos/StoreDetailsSettings.jsx (165 γρ): StoreDetailsSettings@16
@@ -591,7 +592,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - shared/AddressAutocomplete.jsx (431 γρ): AddressAutocomplete@104
 - shared/AdminShell.jsx (355 γρ): useAdminPw@31, useAdminInfo@35, MasterOnly@38, LoginForm@67, ForcePasswordChange@146, AdminShell@210
 - shared/AnnouncementBanner.jsx (88 γρ): AnnouncementBanner@32
-- shared/AppShell.jsx (553 γρ): BetaBadge@104, DemoBanner@128, AppShell@171
+- shared/AppShell.jsx (555 γρ): BetaBadge@106, DemoBanner@130, AppShell@173
 - shared/CodeNumpad.jsx (110 γρ): CodeNumpad@11
 - shared/CountBarChart.jsx (64 γρ): CountBarChart@14
 - shared/DatePicker.jsx (168 γρ): DatePicker@20

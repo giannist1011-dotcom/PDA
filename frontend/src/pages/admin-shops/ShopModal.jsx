@@ -235,8 +235,14 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
                 <Row label="Τελ. δραστηριότητα">
                   {shop.last_activity ? formatGRDateTime(shop.last_activity) : "—"}
                 </Row>
-                <Row label="Παραγγελίες">{shop.orders_count}</Row>
-                <Row label="Τζίρος">{fmtEur(shop.orders_revenue)}</Row>
+                {/* Παραγγελίες/τζίρος ΜΟΝΟ σε demo (δικά μας) — το backend δεν
+                    στέλνει καν αυτά τα πεδία για λογαριασμούς πελατών */}
+                {shop.orders_count !== undefined && (
+                  <>
+                    <Row label="Παραγγελίες (demo)">{shop.orders_count}</Row>
+                    <Row label="Τζίρος (demo)">{fmtEur(shop.orders_revenue)}</Row>
+                  </>
+                )}
                 <Row label="Προφίλ / Είδη">{`${shop.profiles_count} / ${shop.items_count}`}</Row>
                 <Row label="DeckPilot">{shop.uses_deckpilot ? "Ναι" : "Όχι"}</Row>
                 <Row label="Onboarding">

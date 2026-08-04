@@ -150,7 +150,6 @@ function ShopsContent() {
                 <th className="px-3 py-2.5 font-bold">Τύπος</th>
                 <th className="px-3 py-2.5 font-bold">Εγγραφή</th>
                 <th className="px-3 py-2.5 font-bold">Τελ. δραστ.</th>
-                <th className="px-3 py-2.5 font-bold text-right">Παραγγελίες</th>
                 <th className="px-3 py-2.5 font-bold">Κατάσταση</th>
                 <th className="px-3 py-2.5 font-bold">Onboarding</th>
                 <th className="px-3 py-2.5 font-bold">Promo</th>
@@ -174,7 +173,6 @@ function ShopsContent() {
                   <td className="px-3 py-2.5 text-neutral-300">
                     {s.last_activity ? formatGRDate(s.last_activity) : "—"}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-semibold">{s.orders_count}</td>
                   <td className="px-3 py-2.5"><StatusBadge status={s.status} /></td>
                   <td className="px-3 py-2.5" data-testid={`shop-onboarding-${s.id}`}>
                     <OnboardingCell onboarding={s.onboarding} />

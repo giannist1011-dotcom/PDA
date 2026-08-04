@@ -134,34 +134,21 @@ async def admin_list_shops(
         {"$limit": limit},
         # SHOP_FIELDS + υπολογιζόμενα πεδία onboarding (χωρίς να κατέβει το logo blob)
         {"$project": {**SHOP_FIELDS, **{k: v for k, v in pos_api.onboarding_projection().items() if k != "_id"}}},
-        {"$lookup": {
-            "from": "orders",
-            "let": {"uid": "$id"},
-            "pipeline": [
-                {"$match": {"$expr": {"$eq": ["$user_id", "$$uid"]}}},
-                {"$group": {
-                    "_id": None,
-                    "n": {"$sum": 1},
-                    "last": {"$max": "$created_at"},
-                    "revenue": {"$sum": {"$ifNull": ["$total", 0]}},
-                }},
-            ],
-            "as": "ostats",
-        }},
     ]
     shops = []
     async for u in db.users.aggregate(pipeline):
-        st = (u.pop("ostats") or [{}])[0] if u.get("ostats") else {}
-        u.pop("ostats", None)
-        u["orders_count"] = st.get("n", 0)
-        u["orders_revenue"] = round(st.get("revenue", 0) or 0, 2)
-        u["last_activity"] = st.get("last")
         u["status"] = shop_status(u)
         fill_city(u)
         u["onboarding"] = pos_api.onboarding_progress(u)
         for k in pos_api.onboarding_projection():
             u.pop(k, None)
         shops.append(u)
+    # Δραστηριότητα από το POS domain — τζίρος/πλήθος ΜΟΝΟ για demo (δικά μας)
+    activity = await pos_api.shops_activity(
+        [u["id"] for u in shops], {u["id"] for u in shops if u.get("is_demo")}
+    )
+    for u in shops:
+        u.update(activity.get(u["id"], {"last_activity": None}))
     return {"total": total, "page": page, "limit": limit, "shops": shops}
 
 
@@ -174,7 +161,9 @@ async def admin_shop_detail(uid: str, ctx: dict = Depends(get_admin_ctx)):
     check_city(ctx, u)
     u["status"] = shop_status(u)
     fill_city(u)
-    u.update(await pos_api.shop_order_stats(uid))
+    # Τζίρος/πλήθος παραγγελιών ΜΟΝΟ για demo λογαριασμούς (δικοί μας) — οι
+    # επιδόσεις των πελατών δεν εμφανίζονται πουθενά στο admin panel
+    u.update(await pos_api.shop_order_stats(uid, with_totals=bool(u.get("is_demo"))))
     u["profiles"] = await db.profiles.find(
         {"user_id": uid},
         {"_id": 0, "id": 1, "name": 1, "role": 1, "must_change_pin": 1, "pin_lock_until": 1},

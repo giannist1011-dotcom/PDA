@@ -5,6 +5,10 @@ KPIs με τάση 30 ημερών, «Θέλουν την προσοχή σου�
 growth ανά εβδομάδα και πρόσφατη δραστηριότητα. Σεβασμός στο scope των
 sub-admins (πόλεις ευθύνης) — ίδιο get_admin_ctx gate με το υπόλοιπο panel.
 
+ΑΠΟΡΡΗΤΟ ΠΕΛΑΤΗ (σκληρός κανόνας): τίποτα εδώ δεν μετρά τζίρο ή όγκο
+παραγγελιών μαγαζιών/εταιρειών — μόνο λογαριασμούς (εγγραφές, πλάνα, πόλεις)
+και το δικό μας MRR από τις συνδρομές. Ούτε το growth chart μετρά παραγγελίες.
+
 Χάρτης: οι συντεταγμένες κάθε πόλης γεωκωδικοποιούνται ΜΙΑ φορά (Nominatim,
 fire-and-forget στο background) και αποθηκεύονται στο admin_city_geo — ποτέ
 geocoding σε κάθε load. Όλα τα νούμερα βγαίνουν από λίγα aggregate queries
@@ -21,7 +25,6 @@ from shared.core import db
 from admin.admins import get_admin_ctx, scope_city_match
 from shared.geocoding import nominatim_lookup
 from fleet import api as fleet_api
-from pos import api as pos_api
 
 router = APIRouter()
 logger = logging.getLogger("orderdeck")
@@ -97,9 +100,6 @@ def _warm_city_geocode(missing: list[str]):
 @router.get("/admin/overview")
 async def admin_overview(ctx: dict = Depends(get_admin_ctx)):
     now = datetime.now(timezone.utc)
-    today_iso = now.astimezone(ATHENS).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    ).astimezone(timezone.utc).isoformat()
     d30 = (now - timedelta(days=30)).isoformat()
     d60 = (now - timedelta(days=60)).isoformat()
     d7 = (now - timedelta(days=7)).isoformat()
@@ -113,7 +113,6 @@ async def admin_overview(ctx: dict = Depends(get_admin_ctx)):
     }).to_list(None)
     stores = [u for u in accounts if u.get("account_type") != "fleet_company"]
     companies = [u for u in accounts if u.get("account_type") == "fleet_company"]
-    store_ids = [u["id"] for u in stores]
     account_ids = {u["id"] for u in accounts}
     scoped = not ctx["is_master"] and bool(ctx["cities"])
 
@@ -156,19 +155,9 @@ async def admin_overview(ctx: dict = Depends(get_admin_ctx)):
             if (u.get("created_at") or "") >= d30:
                 mrr_added_30d += eur
 
-    # ---- Παραγγελίες: σήμερα + όγκος 30ημέρου για την τάση (6 count queries σε indexes)
-    pos_match = {"user_id": {"$in": store_ids}} if scoped else {}
-    fleet_match = (
-        {"$or": [{"team_id": {"$in": list(team_owner)}},
-                 {"store_user_id": {"$in": store_ids}}]}
-        if scoped else {}
-    )
-    pos_today = await pos_api.count_orders(pos_match, today_iso)
-    fleet_today = await fleet_api.count_orders(fleet_match, today_iso)
-    pos_30 = await pos_api.count_orders(pos_match, d30)
-    fleet_30 = await fleet_api.count_orders(fleet_match, d30)
-    pos_prev = await pos_api.count_orders(pos_match, d60, d30)
-    fleet_prev = await fleet_api.count_orders(fleet_match, d60, d30)
+    # ΑΠΟΡΡΗΤΟ ΠΕΛΑΤΗ: καμία μέτρηση όγκου/τζίρου παραγγελιών μαγαζιών ή εταιρειών
+    # στην Επισκόπηση. Τα KPIs μετρούν ΜΟΝΟ λογαριασμούς και τη δική μας συνδρομητική
+    # αξία (MRR). Το growth chart μετρά εγγραφές, όχι παραγγελίες.
 
     # ---- «Θέλουν την προσοχή σου»
     bill_match = {"billing_request": {"$ne": None}, "is_demo": {"$ne": True}}
@@ -296,10 +285,6 @@ async def admin_overview(ctx: dict = Depends(get_admin_ctx)):
                 "active": len(active_companies), "drivers": drivers_total,
                 "demo": sum(1 for u in companies if u.get("is_demo")),
                 "new_30d": comp_new30, "prev_30d": comp_prev30,
-            },
-            "orders_today": {
-                "total": pos_today + fleet_today, "pos": pos_today, "fleet": fleet_today,
-                "last_30d": pos_30 + fleet_30, "prev_30d": pos_prev + fleet_prev,
             },
             "mrr": {
                 "total": round(mrr_total, 2), "paying_accounts": paying,

@@ -5,7 +5,6 @@ import {
   X,
   ShoppingCart,
   BarChart3,
-  Settings as SettingsIcon,
   Calendar,
   LogOut,
   ClipboardList,
@@ -24,6 +23,7 @@ import {
   Store,
   WifiOff,
   ChevronDown,
+  BookOpen,
   Gauge,
   Bot,
   FileText,
@@ -56,7 +56,6 @@ const NAV_ALL = [
   { to: "/app", label: "Παραγγελίες", icon: ShoppingCart, testId: "drawer-link-pda", roles: STAFF },
   { to: "/app/tables", label: "Τραπέζια", icon: LayoutGrid, testId: "drawer-link-tables", roles: ALL_ROLES, requiresTables: true },
   { to: "/app/history", label: "Ιστορικό", icon: HistoryIcon, testId: "drawer-link-history", roles: STAFF, perm: "history" },
-  { to: "/app/menu", label: "Διαχείριση μενού", icon: SettingsIcon, testId: "drawer-link-menu", roles: MANAGERS, perm: "menu" },
   { to: "/app/stock", label: "Ελλείψεις", icon: ClipboardList, testId: "drawer-link-stock", roles: STAFF },
   { to: "/app/checklist", label: "Checklist", icon: ListChecks, testId: "drawer-link-checklist", roles: STAFF },
   { to: "/app/schedule", label: "Πρόγραμμα υπαλλήλων", icon: Calendar, testId: "drawer-link-schedule", roles: STAFF },
@@ -65,7 +64,10 @@ const NAV_ALL = [
 
 // Ομάδα "Κατάστημα" — collapsible στο drawer. Εμφανίζεται μόνο αν ο ρόλος
 // βλέπει τουλάχιστον ένα από τα περιεχόμενά της.
+// Η «Διαχείριση μενού» ζει εδώ (όχι πια στο κυρίως μενού) — η διαδρομή /app/menu
+// μένει ίδια, οπότε κάθε παλιός σύνδεσμος/bookmark συνεχίζει να δουλεύει.
 const NAV_STORE = [
+  { to: "/app/menu", label: "Διαχείριση μενού", icon: BookOpen, testId: "drawer-link-menu", roles: MANAGERS, perm: "menu" },
   { to: "/app/analytics", label: "Στατιστικά", icon: BarChart3, testId: "drawer-link-analytics", roles: ["owner"], perm: "analytics" },
   { to: "/app/deckpilot", label: "DeckPilot (AI βοηθός)", icon: Bot, testId: "drawer-link-deckpilot", roles: ["owner"], beta: true, requiresAI: true },
   { to: "/app/brief", label: "Ημερήσιο Brief", icon: FileText, testId: "drawer-link-brief", roles: ["owner"], beta: true, requiresAI: true },

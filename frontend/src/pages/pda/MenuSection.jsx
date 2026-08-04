@@ -1,16 +1,12 @@
 import { memo } from "react";
-import { LayoutGrid, List } from "lucide-react";
 import MenuGrid from "@/components/pos/MenuGrid";
 import MenuList from "@/components/pos/MenuList";
 import CodeNumpad from "@/components/shared/CodeNumpad";
 import ScheduledPanel from "./ScheduledPanel";
 
-const VIEWS = [
-  { id: "list", label: "Λίστα", Icon: List },
-  { id: "grid", label: "Πλέγμα", Icon: LayoutGrid },
-];
-
 // Αριστερή στήλη: περιοχή προγραμματισμένων + μενού (πλέγμα ή αριθμημένη λίστα).
+// Ο διακόπτης «Λίστα/Πλέγμα» ζει στη γραμμή εργαλείων της σελίδας (MenuViewToggle),
+// στην ίδια σειρά με τις καρτέλες παραγγελιών.
 // memo: το μενού ΔΕΝ ξαναρεντάρεται όταν αλλάζει state της δεξιάς στήλης
 // (π.χ. πληκτρολόγηση διεύθυνσης) — όλα τα props εδώ μένουν σταθερά τότε
 // (οι handlers έρχονται useCallback-αρισμένοι από το PDA)
@@ -25,7 +21,6 @@ function MenuSection({
   setActiveCategory,
   handleItemClick,
   menuView,
-  setMenuView,
 }) {
   const isList = menuView === "list";
   return (
@@ -40,29 +35,6 @@ function MenuSection({
         onCancel={onCancelScheduled}
         onOpenAll={() => setScheduledOpen(true)}
       />
-
-      {/* Προβολή προϊόντων — η επιλογή μένει αποθηκευμένη στη συσκευή/προφίλ */}
-      <div className="flex justify-end gap-1.5 mb-2 shrink-0" data-testid="menu-view-toggle">
-        {VIEWS.map(({ id, label, Icon }) => {
-          const active = menuView === id;
-          return (
-            <button
-              key={id}
-              onClick={() => setMenuView(id)}
-              data-testid={`menu-view-${id}`}
-              data-state={active ? "on" : "off"}
-              className={`h-9 px-3 flex items-center gap-1.5 rounded-md text-xs font-bold border transition-colors no-select ${
-                active
-                  ? "bg-flame text-white border-flame"
-                  : "bg-[#4A1B27] text-neutral-300 border-[#723645] hover:border-flame"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          );
-        })}
-      </div>
 
       {isList ? (
         <MenuList

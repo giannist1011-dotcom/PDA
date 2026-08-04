@@ -1,15 +1,14 @@
 import { ShoppingCart } from "lucide-react";
 import { platformById } from "@/lib/platforms";
 
-// Καρτέλες πάνω από την περιοχή παραγγελιών: «Παραγγελίες» (η κανονική προβολή,
-// προεπιλογή) + μία ανά ενεργή πλατφόρμα, με badge εκκρεμών.
+// Καρτέλες στη γραμμή εργαλείων της σελίδας παραγγελιών (ίδια σειρά με το
+// «Λίστα/Πλέγμα»): «Παραγγελίες» = το ταμείο/τηλεφωνικές (η κανονική προβολή,
+// προεπιλογή) + μία ανά ενεργή πλατφόρμα με badge εκκρεμών. Κάθε καρτέλα
+// πλατφόρμας ανοίγει ΔΙΚΟ της dashboard (PlatformTab) — όχι το πλέγμα του POS.
 export default function PlatformTabs({ tab, setTab, platforms, pendingByPlatform }) {
   if (platforms.length === 0) return null;
   return (
-    <div
-      className="shrink-0 flex gap-1.5 px-3 md:px-4 xl:px-6 pt-3 overflow-x-auto"
-      data-testid="platform-tabs"
-    >
+    <div className="flex gap-1.5 min-w-0 overflow-x-auto" data-testid="platform-tabs">
       <button
         onClick={() => setTab("orders")}
         data-testid="platform-tab-orders"

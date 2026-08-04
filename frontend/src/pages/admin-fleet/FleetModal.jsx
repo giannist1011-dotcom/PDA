@@ -187,8 +187,14 @@ function FleetModal({ pw, companyId, onClose, onChanged }) {
                   {company.last_activity ? formatGRDateTime(company.last_activity) : "—"}
                 </Row>
                 <Row label="Διανομείς">{company.drivers_count}</Row>
-                <Row label="Παραγγελίες (30ημ)">{company.orders_30d}</Row>
-                <Row label="Παραγγελίες (σύνολο)">{company.orders_total}</Row>
+                {/* Όγκος παραγγελιών ΜΟΝΟ σε demo (δικά μας) — για λογαριασμούς
+                    πελατών το backend δεν στέλνει καν αυτά τα πεδία */}
+                {company.orders_total !== undefined && (
+                  <>
+                    <Row label="Παραγγελίες 30ημ (demo)">{company.orders_30d}</Row>
+                    <Row label="Παραγγελίες σύνολο (demo)">{company.orders_total}</Row>
+                  </>
+                )}
                 <Row label="Invite code">
                   {company.team?.invite_code ? (
                     <span className="font-mono text-gold">{company.team.invite_code}</span>

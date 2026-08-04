@@ -66,9 +66,17 @@ async def set_team_disabled(user_id: str, disabled: bool) -> None:
 
 
 # ============ ΑΝΑΦΟΡΕΣ ΓΙΑ ΤΟ ADMIN PANEL (read-only) ============
-async def team_counters_for_users(user_ids: list) -> dict:
-    """{user_id: {drivers_count, orders_30d}} — μία σάρωση, όχι N+1."""
-    out = {uid: {"drivers_count": 0, "orders_30d": 0} for uid in user_ids}
+async def team_counters_for_users(user_ids: list, totals_for: set | None = None) -> dict:
+    """{user_id: {drivers_count, [orders_30d]}} — μία σάρωση, όχι N+1.
+
+    ΑΠΟΡΡΗΤΟ ΠΕΛΑΤΗ: ο όγκος παραγγελιών επιστρέφεται ΜΟΝΟ για τα user_ids του
+    totals_for (demo λογαριασμοί) — το admin panel δεν βλέπει επιδόσεις εταιρειών."""
+    totals_for = totals_for or set()
+    out = {
+        uid: ({"drivers_count": 0, "orders_30d": 0} if uid in totals_for
+              else {"drivers_count": 0})
+        for uid in user_ids
+    }
     if not user_ids:
         return out
     team_by_uid = {}
@@ -84,19 +92,23 @@ async def team_counters_for_users(user_ids: list) -> dict:
         {"$group": {"_id": "$team_id", "n": {"$sum": 1}}},
     ]):
         out[team_by_uid[r["_id"]]]["drivers_count"] = r["n"]
-    d30 = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-    async for r in db.fleet_orders.aggregate([
-        {"$match": {"team_id": {"$in": tids}, "created_at": {"$gte": d30}}},
-        {"$group": {"_id": "$team_id", "n": {"$sum": 1}}},
-    ]):
-        out[team_by_uid[r["_id"]]]["orders_30d"] = r["n"]
+    demo_tids = [t for t in tids if team_by_uid[t] in totals_for]
+    if demo_tids:
+        d30 = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        async for r in db.fleet_orders.aggregate([
+            {"$match": {"team_id": {"$in": demo_tids}, "created_at": {"$gte": d30}}},
+            {"$group": {"_id": "$team_id", "n": {"$sum": 1}}},
+        ]):
+            out[team_by_uid[r["_id"]]]["orders_30d"] = r["n"]
     return out
 
 
-async def team_detail_for_user(user_id: str) -> dict:
-    """Ομάδα + μέλη + μετρητές παραγγελιών μιας εταιρείας, για την καρτέλα admin."""
-    out = {"team": None, "members": [], "orders_total": 0, "orders_30d": 0,
-           "last_activity": None}
+async def team_detail_for_user(user_id: str, with_totals: bool = False) -> dict:
+    """Ομάδα + μέλη μιας εταιρείας, για την καρτέλα admin. Οι μετρητές
+    παραγγελιών (όγκος) μόνο με with_totals — ΜΟΝΟ για demo λογαριασμούς."""
+    out: dict = {"team": None, "members": [], "last_activity": None}
+    if with_totals:
+        out.update({"orders_total": 0, "orders_30d": 0})
     team = await db.fleet_teams.find_one(
         {"owner_user_id": user_id}, {"_id": 0, "id": 1, "name": 1, "invite_code": 1}
     )
@@ -108,18 +120,18 @@ async def team_detail_for_user(user_id: str) -> dict:
         {"_id": 0, "id": 1, "name": 1, "role": 1, "identifier": 1, "created_at": 1},
     ).sort("created_at", 1).to_list(200)
     d30 = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    group: dict = {"_id": None, "last": {"$max": "$created_at"}}
+    if with_totals:
+        group["n"] = {"$sum": 1}
+        group["n30"] = {"$sum": {"$cond": [{"$gte": ["$created_at", d30]}, 1, 0]}}
     async for r in db.fleet_orders.aggregate([
         {"$match": {"team_id": team["id"]}},
-        {"$group": {
-            "_id": None,
-            "n": {"$sum": 1},
-            "last": {"$max": "$created_at"},
-            "n30": {"$sum": {"$cond": [{"$gte": ["$created_at", d30]}, 1, 0]}},
-        }},
+        {"$group": group},
     ]):
-        out["orders_total"] = r["n"]
-        out["orders_30d"] = r["n30"]
         out["last_activity"] = r["last"]
+        if with_totals:
+            out["orders_total"] = r["n"]
+            out["orders_30d"] = r["n30"]
     return out
 
 
@@ -146,12 +158,6 @@ async def drivers_per_team(team_ids: list) -> dict:
     ]):
         out[r["_id"]] = r["n"]
     return out
-
-
-async def count_orders(match: dict, since: str, until: Optional[str] = None) -> int:
-    """Πλήθος παραγγελιών διανομής σε χρονικό εύρος (admin Επισκόπηση)."""
-    rng = {"$gte": since} if until is None else {"$gte": since, "$lt": until}
-    return await db.fleet_orders.count_documents({**match, "created_at": rng})
 
 
 async def pending_partnerships(limit: int = 500) -> list:

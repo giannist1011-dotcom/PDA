@@ -106,27 +106,55 @@ async def available_menu_items(user_id: str, limit: int = 400) -> list:
 
 
 # ============ ΑΝΑΦΟΡΕΣ ΓΙΑ ΤΟ ADMIN PANEL (read-only) ============
-async def count_orders(match: dict, since: str, until: Optional[str] = None) -> int:
-    """Πλήθος παραγγελιών POS σε χρονικό εύρος (admin Επισκόπηση)."""
-    rng = {"$gte": since} if until is None else {"$gte": since, "$lt": until}
-    return await db.orders.count_documents({**match, "created_at": rng})
-
-
-async def shop_order_stats(user_id: str) -> dict:
-    """Πλήθος/τζίρος/τελευταία παραγγελία ενός μαγαζιού (καρτέλα admin)."""
-    out = {"orders_count": 0, "orders_revenue": 0, "last_activity": None}
+# ΑΠΟΡΡΗΤΟ ΠΕΛΑΤΗ: το admin panel ΔΕΝ βλέπει επιδόσεις μαγαζιών (πλήθος
+# παραγγελιών/τζίρο). Επιστρέφεται μόνο η τελευταία δραστηριότητα (σήμα υγείας
+# λογαριασμού). Εξαίρεση: demo λογαριασμοί (δικοί μας) — with_totals=True.
+async def shop_order_stats(user_id: str, with_totals: bool = False) -> dict:
+    """Τελευταία παραγγελία ενός μαγαζιού (καρτέλα admin). Με with_totals
+    (ΜΟΝΟ demo) και πλήθος/τζίρο."""
+    out: dict = {"last_activity": None}
+    if with_totals:
+        out.update({"orders_count": 0, "orders_revenue": 0})
+    group = {"_id": None, "last": {"$max": "$created_at"}}
+    if with_totals:
+        group["n"] = {"$sum": 1}
+        group["revenue"] = {"$sum": {"$ifNull": ["$total", 0]}}
     async for row in db.orders.aggregate([
         {"$match": {"user_id": user_id}},
+        {"$group": group},
+    ]):
+        out["last_activity"] = row["last"]
+        if with_totals:
+            out["orders_count"] = row["n"]
+            out["orders_revenue"] = round(row["revenue"], 2)
+    return out
+
+
+async def shops_activity(user_ids: list, totals_for: set | None = None) -> dict:
+    """{user_id: {last_activity, [orders_count, orders_revenue]}} για τη λίστα
+    του admin — μία σάρωση, όχι N+1. Πλήθος/τζίρος ΜΟΝΟ για τα user_ids του
+    totals_for (demo λογαριασμοί)."""
+    out: dict = {uid: {"last_activity": None} for uid in user_ids}
+    if not user_ids:
+        return out
+    async for r in db.orders.aggregate([
+        {"$match": {"user_id": {"$in": list(user_ids)}}},
         {"$group": {
-            "_id": None, "n": {"$sum": 1}, "last": {"$max": "$created_at"},
+            "_id": "$user_id", "n": {"$sum": 1}, "last": {"$max": "$created_at"},
             "revenue": {"$sum": {"$ifNull": ["$total", 0]}},
         }},
     ]):
-        out = {
-            "orders_count": row["n"],
-            "orders_revenue": round(row["revenue"], 2),
-            "last_activity": row["last"],
-        }
+        row = out.get(r["_id"])
+        if row is None:
+            continue
+        row["last_activity"] = r["last"]
+        if totals_for and r["_id"] in totals_for:
+            row["orders_count"] = r["n"]
+            row["orders_revenue"] = round(r["revenue"] or 0, 2)
+    for uid in (totals_for or set()):
+        if uid in out:
+            out[uid].setdefault("orders_count", 0)
+            out[uid].setdefault("orders_revenue", 0)
     return out
 
 

@@ -1,4 +1,4 @@
-import { Store, Truck, ShoppingBag, Euro, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Store, Truck, Euro, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { fmtEur } from "./utils";
 
 // Βελάκι τάσης vs προηγούμενο 30ήμερο — πράσινο πάνω / κόκκινο κάτω / γκρι ίσο
@@ -38,11 +38,13 @@ const Mini = ({ label, value }) => (
   </span>
 );
 
-// Τα 4 μεγάλα νούμερα της πλατφόρμας — demo λογαριασμοί ΕΚΤΟΣ των headline αριθμών
+// Τα μεγάλα νούμερα της πλατφόρμας — demo λογαριασμοί ΕΚΤΟΣ των headline αριθμών.
+// ΑΠΟΡΡΗΤΟ ΠΕΛΑΤΗ: κανένα KPI παραγγελιών/τζίρου μαγαζιών — μετράμε λογαριασμούς
+// και το MRR των δικών μας συνδρομών.
 export default function KpiCards({ kpis }) {
-  const { shops, companies, orders_today: orders, mrr } = kpis;
+  const { shops, companies, mrr } = kpis;
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
       <Card
         icon={Store}
         label="Ενεργά μαγαζιά"
@@ -64,18 +66,6 @@ export default function KpiCards({ kpis }) {
         testid="kpi-companies"
       >
         <Mini label="ενεργοί διανομείς" value={companies.drivers} />
-      </Card>
-      <Card
-        icon={ShoppingBag}
-        label="Παραγγελίες σήμερα"
-        value={orders.total.toLocaleString("el-GR")}
-        trend={<Trend now={orders.last_30d} prev={orders.prev_30d} />}
-        testid="kpi-orders"
-      >
-        <div className="flex flex-wrap gap-x-3 gap-y-1">
-          <Mini label="POS" value={orders.pos.toLocaleString("el-GR")} />
-          <Mini label="FleetDeck" value={orders.fleet.toLocaleString("el-GR")} />
-        </div>
       </Card>
       <Card
         icon={Euro}

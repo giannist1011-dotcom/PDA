@@ -33,6 +33,7 @@ import { usePlatformOrders } from "@/context/platforms/PlatformOrdersContext";
 import MobileTabs from "./pda/MobileTabs";
 import MenuSection from "./pda/MenuSection";
 import PlatformTabs from "./pda/PlatformTabs";
+import MenuViewToggle from "./pda/MenuViewToggle";
 import PlatformTab from "./pda/platform/PlatformTab";
 import PDAModals from "./pda/PDAModals";
 import ReprintPromptModal from "./pda/ReprintPromptModal";
@@ -618,13 +619,24 @@ export default function PDA() {
           Το breakpoint βασίζεται σε CSS viewport width (Tailwind media queries),
           όχι σε user-agent/touch. Android tablets 1280x800 με DPR ~1.33 δίνουν
           ~960 CSS px, γι' αυτό το παλιό lg: (1024px) τα έριχνε σε mobile layout. */}
-      {/* Καρτέλες: Παραγγελίες (κανονική προβολή) + μία ανά ενεργή πλατφόρμα */}
-      <PlatformTabs
-        tab={topTab}
-        setTab={setTopTab}
-        platforms={platformTabs}
-        pendingByPlatform={pendingByPlatform}
-      />
+      {/* Γραμμή εργαλείων της σελίδας: καρτέλες «Παραγγελίες» (ταμείο +
+          τηλεφωνικές) / efood / Box / Wolt αριστερά, «Λίστα/Πλέγμα» δεξιά.
+          Οι καρτέλες πλατφορμών ανοίγουν δικό τους dashboard, όχι το πλέγμα POS. */}
+      <div className="shrink-0 flex items-center gap-2 px-3 md:px-4 xl:px-6 pt-3">
+        <PlatformTabs
+          tab={topTab}
+          setTab={setTopTab}
+          platforms={platformTabs}
+          pendingByPlatform={pendingByPlatform}
+        />
+        {topTab === "orders" && (
+          <MenuViewToggle
+            value={menuView}
+            onChange={changeMenuView}
+            className={`ml-auto shrink-0 ${mobileTab === "menu" ? "flex" : "hidden"} sm:flex`}
+          />
+        )}
+      </div>
 
       {topTab !== "orders" ? (
         <PlatformTab platform={topTab} onPrint={setPrintOrder} />
@@ -642,7 +654,6 @@ export default function PDA() {
           setActiveCategory={setActiveCategory}
           handleItemClick={handleItemClick}
           menuView={menuView}
-          setMenuView={changeMenuView}
         />
         <div
           className={`min-h-0 overflow-hidden flex-1 sm:flex-none flex-col ${
