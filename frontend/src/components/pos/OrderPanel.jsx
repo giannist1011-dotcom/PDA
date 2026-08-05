@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Minus, Plus, Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent, StickyNote, Pencil, ChevronLeft } from "lucide-react";
+import { Trash2, Printer, ReceiptText, Truck, ShoppingBag, Clock, Percent, StickyNote, Pencil, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LineEditModal from "@/components/pos/LineEditModal";
+import QtyStepper from "@/components/pos/QtyStepper";
 import AddressAutocomplete from "@/components/shared/AddressAutocomplete";
 import TimePicker from "@/components/shared/TimePicker";
 import DatePicker from "@/components/shared/DatePicker";
@@ -280,28 +281,14 @@ export default function OrderPanel({
                 </div>
               </button>
               <div className="flex items-center justify-between mt-3">
-                <div className="flex items-center gap-2 bg-[#2A0E14] rounded-md p-1">
-                  <button
-                    onClick={() => onDecrement(it.line_id)}
-                    data-testid={`decrement-${it.line_id}`}
-                    className="w-10 h-10 rounded flex items-center justify-center text-white hover:bg-[#4A1B27] active:scale-95"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span
-                    className="w-8 text-center font-mono font-bold text-lg"
-                    data-testid={`qty-${it.line_id}`}
-                  >
-                    {it.quantity}
-                  </span>
-                  <button
-                    onClick={() => onIncrement(it.line_id)}
-                    data-testid={`increment-${it.line_id}`}
-                    className="w-10 h-10 rounded flex items-center justify-center text-white hover:bg-[#4A1B27] active:scale-95"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
+                <QtyStepper
+                  value={it.quantity}
+                  onDecrement={() => onDecrement(it.line_id)}
+                  onIncrement={() => onIncrement(it.line_id)}
+                  decrementTestId={`decrement-${it.line_id}`}
+                  valueTestId={`qty-${it.line_id}`}
+                  incrementTestId={`increment-${it.line_id}`}
+                />
                 <button
                   onClick={() => onRemove(it.line_id)}
                   data-testid={`remove-${it.line_id}`}
