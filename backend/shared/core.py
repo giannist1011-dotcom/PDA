@@ -31,6 +31,17 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
 
+# ============ GLOBAL KILL SWITCH — AI FEATURES ============
+# Platform-level διακόπτης για DeckPilot & Ημερήσιο Brief. Default OFF: όσο είναι
+# OFF τα AI features δεν εμφανίζονται ΠΟΥΘΕΝΑ (ούτε σε demo) και τα /ai/* endpoints
+# γυρνάνε 403 για όλους, ανεξάρτητα από το per-store ai_features_enabled.
+# Ενεργοποίηση: env var AI_FEATURES_GLOBAL=1 (Render) — βλ. PROJECT_MAP.md.
+def ai_features_global() -> bool:
+    return os.environ.get("AI_FEATURES_GLOBAL", "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
 # ============ HELPERS ============
 from zoneinfo import ZoneInfo
 
@@ -396,7 +407,9 @@ def public_user(u: dict) -> dict:
         "print_bridge_configured": bool(u.get("print_bridge_token")),
         "is_demo": bool(u.get("is_demo", False)),
         "demo_expires_at": u.get("demo_expires_at"),
-        "ai_features_enabled": bool(u.get("ai_features_enabled", False)),
+        # Global kill switch ΠΑΝΩ από το per-store flag: όσο το AI_FEATURES_GLOBAL
+        # είναι OFF, κανένας λογαριασμός δεν βλέπει AI features
+        "ai_features_enabled": ai_features_global() and bool(u.get("ai_features_enabled", False)),
         # Ενεργές πλατφόρμες delivery — το UI ξέρει από την πρώτη στιγμή αν πρέπει
         # να δείξει καρτέλες/popup, χωρίς επιπλέον κλήση (λεπτομέρειες: /platforms/settings)
         "platforms_enabled": [

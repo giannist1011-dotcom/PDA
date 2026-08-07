@@ -10,7 +10,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from shared.core import db, require_owner
+from shared.core import db, require_owner, ai_features_global
 
 router = APIRouter()
 
@@ -22,6 +22,14 @@ PLAN_PRICES_EUR = {"orderdeck": "20,00"}
 ADDONS = {
     "deckpilot": {"label": "DeckPilot AI", "coming_soon": True},
 }
+# Add-ons που κρύβονται τελείως όσο ο global διακόπτης AI_FEATURES_GLOBAL είναι OFF
+AI_ADDONS = ("deckpilot",)
+
+
+def visible_addons() -> dict:
+    if ai_features_global():
+        return ADDONS
+    return {k: v for k, v in ADDONS.items() if k not in AI_ADDONS}
 
 
 def _subscription_view(u: dict) -> dict:
@@ -34,7 +42,7 @@ def _subscription_view(u: dict) -> dict:
         "payment_status": u.get("payment_status") or "pending",
         "addons": {
             key: {**meta, "active": bool(addons_state.get(key))}
-            for key, meta in ADDONS.items()
+            for key, meta in visible_addons().items()
         },
         "pending_request": u.get("billing_request"),
     }
@@ -59,6 +67,8 @@ class BillingChangeIn(BaseModel):
 async def request_billing_change(body: BillingChangeIn, user: dict = Depends(require_owner)):
     """Αίτημα ενεργοποίησης/απενεργοποίησης add-on — εγκρίνεται χειροκίνητα από τον
     διαχειριστή της πλατφόρμας. Ένα εκκρεμές αίτημα κάθε φορά (το νέο αντικαθιστά)."""
+    if body.addon not in visible_addons():
+        raise HTTPException(403, "Το add-on δεν είναι διαθέσιμο")
     if ADDONS[body.addon].get("coming_soon"):
         raise HTTPException(400, "Το add-on θα είναι σύντομα διαθέσιμο")
     req = {

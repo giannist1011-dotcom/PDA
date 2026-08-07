@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from pydantic import BaseModel, Field, EmailStr
 
 from shared.core import (
+    ai_features_global,
     db,
     hash_password,
     verify_password,
@@ -216,7 +217,8 @@ async def start_demo(body: DemoIn, request: Request):
         "employee_pin_set": False,
         "is_demo": True,
         "demo_expires_at": expires_iso,
-        "ai_features_enabled": True,  # demo: τα AI features φαίνονται πλήρη στον επισκέπτη
+        # demo: AI features μόνο όταν είναι ON ο global διακόπτης AI_FEATURES_GLOBAL
+        "ai_features_enabled": ai_features_global(),
         "created_at": now_iso,
     }
     await db.users.insert_one(doc)

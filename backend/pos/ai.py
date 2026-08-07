@@ -12,13 +12,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from pymongo import ReturnDocument
 from pydantic import BaseModel, Field
 
-from shared.core import db, require_owner, athens_now, local_day_range, to_athens
+from shared.core import (
+    db, require_owner, athens_now, local_day_range, to_athens, ai_features_global,
+)
 
 router = APIRouter()
 
 
 async def require_ai_features(user: dict = Depends(require_owner)) -> dict:
-    """Owner + ανά λογαριασμό flag ai_features_enabled (admin toggle) — αλλιώς 403."""
+    """Global kill switch (AI_FEATURES_GLOBAL) + owner + per-store ai_features_enabled.
+    Όσο ο global διακόπτης είναι OFF, όλα τα /ai/* endpoints γυρνάνε 403 για όλους."""
+    if not ai_features_global():
+        raise HTTPException(403, "Τα AI features δεν είναι διαθέσιμα")
     if not user.get("ai_features_enabled"):
         raise HTTPException(403, "Τα AI features δεν είναι ενεργά για αυτόν τον λογαριασμό")
     return user

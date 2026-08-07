@@ -94,7 +94,9 @@ export default function SubscriptionSettings() {
         </div>
       )}
 
-      {/* Add-ons */}
+      {/* Add-ons — κρύβεται τελείως όταν το backend δεν επιστρέφει κανένα
+          (π.χ. όσο ο global διακόπτης AI_FEATURES_GLOBAL είναι OFF) */}
+      {Object.keys(sub.addons || {}).length > 0 && (
       <div className="space-y-2">
         <div className="text-xs uppercase tracking-widest text-neutral-500 font-bold">
           Πρόσθετα (add-ons)
@@ -135,6 +137,7 @@ export default function SubscriptionSettings() {
           );
         })}
       </div>
+      )}
 
       <p className="text-xs text-neutral-500">
         Οι αλλαγές συνδρομής εγκρίνονται από την ομάδα του OrderDeck και η χρέωση γίνεται

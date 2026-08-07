@@ -25,21 +25,39 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 `pos_order_id` στο `POST /store/fleet/orders`· από εκεί περνούν «καθ' οδόν»,
 ενημερώσεις προς οδηγό, ακυρώσεις και ο συγχρονισμός κατάστασης πίσω στην κάρτα POS.
 
+## AI FEATURES — ΚΡΥΜΜΕΝΑ (global kill switch)
+
+DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υπάρχει ολόκληρος αλλά
+δεν εμφανίζεται πουθενά και τα `/api/ai/*` γυρνάνε 403 σε όλους — ούτε στα demo.
+Ο διακόπτης είναι το env var **`AI_FEATURES_GLOBAL`** (Render), default OFF.
+Έλεγχος στο `shared/core.py → ai_features_global()`, το οποίο:
+- μηδενίζει το `ai_features_enabled` στο `public_user()` → κρύβεται μόνο του κάθε UI σημείο
+  (drawer links, DeckPilot FAB στο AppShell, `requiresAI` routes στο ProtectedRoute)
+- κόβει με 403 το `pos/ai.py → require_ai_features`
+- κρύβει το add-on «DeckPilot AI» από τη συνδρομή (`pos/billing.py → visible_addons()`)
+- κρύβει το per-store AI toggle στο admin panel (`ai_features_global` στο shop detail)
+  και μπλοκάρει κάθε αλλαγή AI πεδίων μέσω `PATCH /admin/shops/{uid}`
+- σταματά τους αυτόματους κανόνες «demo = AI on» (`pos/seeding.py`, `shared/auth.py`,
+  `admin/fleet_accounts.py`) — ήταν αυτοί που ξανά-άναβαν το toggle σε κάθε restart
+
+**Επαναφορά όταν ετοιμαστεί:** βάλε `AI_FEATURES_GLOBAL=1` στο Render. Όλα τα UI
+σημεία επανεμφανίζονται μόνα τους — δεν χρειάζεται καμία αλλαγή κώδικα.
+
 ## BACKEND — endpoints (backend/<domain>/*.py)
 ### shared/auth.py
-- POST /auth/register → register @71
-- POST /auth/login → login @165
-- POST /auth/demo → start_demo @183 — Δημιουργεί δοκιμαστικό λογαριασμό που λήγει σε 3 ώρες…
-- GET /auth/offline-profiles → offline_profiles @249 — Λίστα προφίλ για τοπική cache της συσκευής (PWA…
-- GET /auth/me → me @260
-- GET /profiles → list_profiles @297
-- POST /profiles → create_profile @306
-- PUT /profiles/{pid} → update_profile @327
-- DELETE /profiles/{pid} → delete_profile @353
-- POST /profile/select → profile_select @370
-- POST /profile/change-pin → change_own_pin @411 — Αλλαγή PIN του ενεργού προφίλ — χρησιμοποιείται στην…
-- POST /profile/exit → profile_exit @429 — Return a token with profile cleared (used for…
-- POST /auth/verify-owner-pin → verify_owner_pin @441
+- POST /auth/register → register @72
+- POST /auth/login → login @166
+- POST /auth/demo → start_demo @184 — Δημιουργεί δοκιμαστικό λογαριασμό που λήγει σε 3 ώρες…
+- GET /auth/offline-profiles → offline_profiles @251 — Λίστα προφίλ για τοπική cache της συσκευής (PWA…
+- GET /auth/me → me @262
+- GET /profiles → list_profiles @299
+- POST /profiles → create_profile @308
+- PUT /profiles/{pid} → update_profile @329
+- DELETE /profiles/{pid} → delete_profile @355
+- POST /profile/select → profile_select @372
+- POST /profile/change-pin → change_own_pin @413 — Αλλαγή PIN του ενεργού προφίλ — χρησιμοποιείται στην…
+- POST /profile/exit → profile_exit @431 — Return a token with profile cleared (used for…
+- POST /auth/verify-owner-pin → verify_owner_pin @443
 ### shared/printing.py
 - POST /print/jobs → create_print_job @63
 - GET /print/jobs/stream → print_jobs_stream @91 — SSE stream του σταθμού εκτύπωσης: event `job` μόλις…
@@ -53,13 +71,13 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - POST /print/relay/jobs/{jid}/retry → relay_retry_job @296 — Επανεκτύπωση αποτυχημένου job από τον σταθμό — γίνεται…
 - GET /print/relay/status → relay_status @317 — Πότε έκανε τελευταίο poll ο σταθμός — για…
 ### pos/ai.py
-- POST /ai/chat → ai_chat @199
-- GET /ai/brief → get_brief @275 — Επιστρέφει cached brief της ημέρας αν υπάρχει, αλλιώς…
-- POST /ai/brief → create_brief @295
+- POST /ai/chat → ai_chat @204
+- GET /ai/brief → get_brief @280 — Επιστρέφει cached brief της ημέρας αν υπάρχει, αλλιώς…
+- POST /ai/brief → create_brief @300
 ### pos/billing.py
-- GET /billing/subscription → get_subscription @44
-- POST /billing/request-change → request_billing_change @59 — Αίτημα ενεργοποίησης/απενεργοποίησης add-on — εγκρίνεται χειροκίνητα από τον
-- DELETE /billing/request-change → cancel_billing_request @77 — Ακύρωση του εκκρεμούς αιτήματος από τον ίδιο τον…
+- GET /billing/subscription → get_subscription @52
+- POST /billing/request-change → request_billing_change @67 — Αίτημα ενεργοποίησης/απενεργοποίησης add-on — εγκρίνεται χειροκίνητα από τον
+- DELETE /billing/request-change → cancel_billing_request @87 — Ακύρωση του εκκρεμούς αιτήματος από τον ίδιο τον…
 ### pos/checklist.py
 - GET /checklist/templates → list_templates @45
 - POST /checklist/templates → create_template @63
@@ -262,14 +280,14 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - DELETE /admin/announcements/{aid} → admin_delete_announcement @96
 - GET /announcements/active → active_announcement @108 — Η πιο πρόσφατη ενεργή ανακοίνωση που αφορά αυτό…
 ### admin/fleet_accounts.py
-- GET /admin/fleet → admin_list_fleet @50
-- GET /admin/fleet/{uid} → admin_fleet_detail @95
-- PATCH /admin/fleet/{uid} → admin_update_fleet @130
-- DELETE /admin/fleet/{uid} → admin_delete_fleet @175
-- POST /admin/demos → admin_create_demo @293 — Demo λογαριασμός από τον admin — μαγαζί (με…
-- POST /admin/demos/{uid}/reset → admin_reset_demo @357 — Επαναφορά demo στην αρχική seeded κατάσταση — τα…
-- POST /admin/demos/{uid}/reset-password → admin_reset_demo_password @397 — Νέος κωδικός demo λογαριασμού: ενημερώνει το hash ΚΑΙ…
-- DELETE /admin/demos/{uid} → admin_delete_demo @422 — Οριστική διαγραφή demo λογαριασμού (χωρίς επιβεβαίωση ονόματος —…
+- GET /admin/fleet → admin_list_fleet @51
+- GET /admin/fleet/{uid} → admin_fleet_detail @96
+- PATCH /admin/fleet/{uid} → admin_update_fleet @131
+- DELETE /admin/fleet/{uid} → admin_delete_fleet @176
+- POST /admin/demos → admin_create_demo @294 — Demo λογαριασμός από τον admin — μαγαζί (με…
+- POST /admin/demos/{uid}/reset → admin_reset_demo @359 — Επαναφορά demo στην αρχική seeded κατάσταση — τα…
+- POST /admin/demos/{uid}/reset-password → admin_reset_demo_password @399 — Νέος κωδικός demo λογαριασμού: ενημερώνει το hash ΚΑΙ…
+- DELETE /admin/demos/{uid} → admin_delete_demo @424 — Οριστική διαγραφή demo λογαριασμού (χωρίς επιβεβαίωση ονόματος —…
 ### admin/overview.py
 - GET /admin/overview → admin_overview @101
 ### admin/partnerships.py
@@ -287,15 +305,15 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - GET /admin/promo/{pid}/uses → admin_promo_uses @166
 - POST /promo/validate → validate_promo @204
 ### admin/shops.py
-- POST /admin/demo/cleanup → admin_demo_cleanup @30 — Καθαρισμός ληγμένων demo λογαριασμών — καλείται από cron…
-- GET /admin/ping → admin_ping @68 — Έλεγχος admin auth (master password ή sub-admin token)…
-- GET /admin/shops → admin_list_shops @85
-- GET /admin/shops/{uid} → admin_shop_detail @156
-- POST /admin/shops/{uid}/profiles/{pid}/reset-pin → admin_reset_profile_pin @189 — Επαναφορά PIN προφίλ από τον διαχειριστή πλατφόρμας: προσωρινό…
-- PATCH /admin/shops/{uid} → admin_update_shop @253
-- DELETE /admin/shops/{uid} → admin_delete_shop @290
-- GET /admin/subscriptions/expiring → admin_expiring_subscriptions @305 — Συνδρομές/δοκιμές που λήγουν στις επόμενες 7 ημέρες (για…
-- GET /admin/leads → admin_leads @327
+- POST /admin/demo/cleanup → admin_demo_cleanup @32 — Καθαρισμός ληγμένων demo λογαριασμών — καλείται από cron…
+- GET /admin/ping → admin_ping @70 — Έλεγχος admin auth (master password ή sub-admin token)…
+- GET /admin/shops → admin_list_shops @87
+- GET /admin/shops/{uid} → admin_shop_detail @158
+- POST /admin/shops/{uid}/profiles/{pid}/reset-pin → admin_reset_profile_pin @193 — Επαναφορά PIN προφίλ από τον διαχειριστή πλατφόρμας: προσωρινό…
+- PATCH /admin/shops/{uid} → admin_update_shop @257
+- DELETE /admin/shops/{uid} → admin_delete_shop @300
+- GET /admin/subscriptions/expiring → admin_expiring_subscriptions @315 — Συνδρομές/δοκιμές που λήγουν στις επόμενες 7 ημέρες (για…
+- GET /admin/leads → admin_leads @337
 ### admin/stock_photos.py
 - GET /admin/stock-photos → admin_list_stock_photos @44
 - POST /admin/stock-photos → admin_create_stock_photo @61
@@ -461,7 +479,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - admin-shops/CreateDemoModal.jsx (237 γρ): CreateDemoModal@42
 - admin-shops/DemoCredentials.jsx (112 γρ): CredRow@8, DemoCredentials@33
 - admin-shops/PinResetSection.jsx (112 γρ): PinResetSection@12
-- admin-shops/ShopModal.jsx (490 γρ): ShopModal@27
+- admin-shops/ShopModal.jsx (493 γρ): ShopModal@27
 - admin-shops/ShopsContent.jsx (229 γρ): ShopsContent@17
 - admin-shops/utils.js (15 γρ)
 - analytics/AddressHeatmap.jsx (180 γρ): AddressHeatmap@17
@@ -554,7 +572,7 @@ Frontend (ίδιος διαχωρισμός): `components/pos|fleet|platforms|sh
 - schedule/ShareDialog.jsx (41 γρ): ShareDialog@11
 - schedule/ShiftModal.jsx (111 γρ): ShiftModal@16
 - schedule/utils.js (67 γρ)
-- settings/SubscriptionSettings.jsx (146 γρ): SubscriptionSettings@20
+- settings/SubscriptionSettings.jsx (149 γρ): SubscriptionSettings@20
 - settings/TablesSettings.jsx (65 γρ): TablesSettings@8
 - stock/AddItemModal.jsx (97 γρ): AddItemModal@6
 - stock/CategoryModal.jsx (61 γρ): CategoryModal@5

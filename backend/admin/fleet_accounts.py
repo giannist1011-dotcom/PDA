@@ -23,6 +23,7 @@ from admin.admins import (
     scope_city_match,
 )
 from shared.core import (
+    ai_features_global,
     db,
     hash_password,
     purge_shared_user_data,
@@ -247,7 +248,7 @@ async def _create_fleet_company_demo(name: str, city: str) -> dict:
         "employee_pin_set": False,
         "is_demo": True,  # χωρίς demo_expires_at → δεν τον αγγίζει το cron cleanup
         "demo_credentials": {"email": email, "password": password},
-        "ai_features_enabled": True,
+        "ai_features_enabled": ai_features_global(),
         "account_type": "fleet_company",
         "plan": "fleet15",
         "tables_enabled": False,
@@ -325,7 +326,8 @@ async def admin_create_demo(body: DemoCreateIn, x_admin_password: Optional[str] 
         "is_demo": True,  # χωρίς demo_expires_at → δεν τον αγγίζει το cron cleanup
         # Ανακτήσιμα credentials — επιτρέπονται ΜΟΝΟ επειδή is_demo=True στο ίδιο doc
         "demo_credentials": {"email": email, "password": password},
-        "ai_features_enabled": True,  # κανόνας demo: τα AI features πάντα ενεργά
+        # κανόνας demo: AI features μόνο με ON τον global διακόπτη AI_FEATURES_GLOBAL
+        "ai_features_enabled": ai_features_global(),
         "created_at": now_iso,
         "account_type": "store",
         "plan": body.plan,

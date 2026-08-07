@@ -245,7 +245,9 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
                   </>
                 )}
                 <Row label="Προφίλ / Είδη">{`${shop.profiles_count} / ${shop.items_count}`}</Row>
-                <Row label="DeckPilot">{shop.uses_deckpilot ? "Ναι" : "Όχι"}</Row>
+                {shop.ai_features_global && (
+                  <Row label="DeckPilot">{shop.uses_deckpilot ? "Ναι" : "Όχι"}</Row>
+                )}
                 <Row label="Onboarding">
                   {shop.onboarding
                     ? `${shop.onboarding.done}/${shop.onboarding.total} (${shop.onboarding.percent}%)`
@@ -340,8 +342,9 @@ function ShopModal({ pw, shopId, onClose, onChanged }) {
               </div>
             </div>
 
-            {/* AI FEATURES & ADD-ONS — μόνο master (χρεώσεις) */}
-            {isMaster && (
+            {/* AI FEATURES & ADD-ONS — μόνο master (χρεώσεις) και μόνο όταν είναι
+                ON ο global διακόπτης AI_FEATURES_GLOBAL του backend */}
+            {isMaster && shop.ai_features_global && (
             <div className="px-5 pb-5">
               <h3 className="text-xs uppercase tracking-widest font-bold text-neutral-400 mb-2 flex items-center gap-1.5">
                 <Bot className="w-3.5 h-3.5" /> AI features & add-ons

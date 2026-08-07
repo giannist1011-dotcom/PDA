@@ -11,7 +11,9 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from pydantic import BaseModel, Field
 
-from shared.core import cleanup_expired_demos, db, hash_password, purge_user_data
+from shared.core import (
+    ai_features_global, cleanup_expired_demos, db, hash_password, purge_user_data,
+)
 from admin.admins import (
     audit_subadmin,
     check_city,
@@ -160,6 +162,8 @@ async def admin_shop_detail(uid: str, ctx: dict = Depends(get_admin_ctx)):
         raise HTTPException(404, "Το μαγαζί δεν βρέθηκε")
     check_city(ctx, u)
     u["status"] = shop_status(u)
+    # Global kill switch: όσο είναι OFF, το admin panel κρύβει το per-store AI toggle
+    u["ai_features_global"] = ai_features_global()
     fill_city(u)
     # Τζίρος/πλήθος παραγγελιών ΜΟΝΟ για demo λογαριασμούς (δικοί μας) — οι
     # επιδόσεις των πελατών δεν εμφανίζονται πουθενά στο admin panel
@@ -271,6 +275,12 @@ async def admin_update_shop(
             ctx, "update_shop", uid, target.get("restaurant_name") or "",
             ", ".join(f"{k}={v!r}" for k, v in update.items()),
         )
+    # Όσο ο global διακόπτης είναι OFF, κανείς (ούτε το admin panel) δεν αλλάζει
+    # AI πεδία — μένουν παγωμένα μέχρι το rollout
+    if not ai_features_global():
+        for k in ("ai_features_enabled", "addon_deckpilot"):
+            if k in update:
+                raise HTTPException(403, "Τα AI features δεν είναι διαθέσιμα")
     if update.get("subscription_expires_at") == "":
         update["subscription_expires_at"] = None
     # Add-ons: αποθηκεύονται στο nested "addons" — όχι ως top-level πεδία

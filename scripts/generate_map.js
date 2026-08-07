@@ -201,6 +201,25 @@ out.push("`pos_order_id` στο `POST /store/fleet/orders`· από εκεί π�
 out.push("ενημερώσεις προς οδηγό, ακυρώσεις και ο συγχρονισμός κατάστασης πίσω στην κάρτα POS.");
 out.push("");
 
+out.push("## AI FEATURES — ΚΡΥΜΜΕΝΑ (global kill switch)");
+out.push("");
+out.push("DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υπάρχει ολόκληρος αλλά");
+out.push("δεν εμφανίζεται πουθενά και τα `/api/ai/*` γυρνάνε 403 σε όλους — ούτε στα demo.");
+out.push("Ο διακόπτης είναι το env var **`AI_FEATURES_GLOBAL`** (Render), default OFF.");
+out.push("Έλεγχος στο `shared/core.py → ai_features_global()`, το οποίο:");
+out.push("- μηδενίζει το `ai_features_enabled` στο `public_user()` → κρύβεται μόνο του κάθε UI σημείο");
+out.push("  (drawer links, DeckPilot FAB στο AppShell, `requiresAI` routes στο ProtectedRoute)");
+out.push("- κόβει με 403 το `pos/ai.py → require_ai_features`");
+out.push("- κρύβει το add-on «DeckPilot AI» από τη συνδρομή (`pos/billing.py → visible_addons()`)");
+out.push("- κρύβει το per-store AI toggle στο admin panel (`ai_features_global` στο shop detail)");
+out.push("  και μπλοκάρει κάθε αλλαγή AI πεδίων μέσω `PATCH /admin/shops/{uid}`");
+out.push("- σταματά τους αυτόματους κανόνες «demo = AI on» (`pos/seeding.py`, `shared/auth.py`,");
+out.push("  `admin/fleet_accounts.py`) — ήταν αυτοί που ξανά-άναβαν το toggle σε κάθε restart");
+out.push("");
+out.push("**Επαναφορά όταν ετοιμαστεί:** βάλε `AI_FEATURES_GLOBAL=1` στο Render. Όλα τα UI");
+out.push("σημεία επανεμφανίζονται μόνα τους — δεν χρειάζεται καμία αλλαγή κώδικα.");
+out.push("");
+
 out.push("## BACKEND — endpoints (backend/<domain>/*.py)");
 const DOMAIN_DIRS = ["shared", "pos", "fleet", "platforms", "admin"];
 let epCount = 0;

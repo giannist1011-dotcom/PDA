@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from shared.core import db, hash_password, verify_password
+from shared.core import ai_features_global, db, hash_password, verify_password
 from pos.presets import PRESETS, DEFAULT_TABLE_NAMES
 from pos.seed_data import DEFAULT_CUSTOMIZATION
 
@@ -119,8 +119,10 @@ async def ensure_demo_account():
                 {"email": demo_email},
                 {"$set": {"password_hash": hash_password(demo_pw)}},
             )
-        # Το seeded demo έχει πάντα ενεργά τα AI features (εκεί γυαλίζονται πριν το rollout)
-        if not existing.get("ai_features_enabled"):
+        # Το seeded demo έχει ενεργά τα AI features ΜΟΝΟ όταν ο global διακόπτης
+        # AI_FEATURES_GLOBAL είναι ON — αλλιώς ο κανόνας δεν τρέχει καθόλου (αυτός
+        # ο κανόνας ήταν που ξανα-άναβε το toggle σε κάθε restart του backend)
+        if ai_features_global() and not existing.get("ai_features_enabled"):
             await db.users.update_one(
                 {"email": demo_email}, {"$set": {"ai_features_enabled": True}}
             )
@@ -153,7 +155,8 @@ async def ensure_demo_account():
         "employee_pin_hash": hash_password("0000"),
         "owner_pin_set": False,
         "employee_pin_set": False,
-        "ai_features_enabled": True,  # demo λογαριασμός: AI features πάντα ενεργά
+        # demo λογαριασμός: AI features μόνο αν είναι ON ο global διακόπτης
+        "ai_features_enabled": ai_features_global(),
         # ΚΑΤΑΣΤΗΜΑ — ποτέ εταιρεία διανομής: το πλάνο δίνει πρόσβαση στο FleetDeck,
         # δεν αλλάζει την ταυτότητα του λογαριασμού
         "account_type": "store",
