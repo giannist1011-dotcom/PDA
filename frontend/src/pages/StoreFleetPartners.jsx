@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Handshake, Send, Truck, XCircle } from "lucide-react";
 import AppShell from "@/components/shared/AppShell";
+import EmptyState from "@/components/shared/EmptyState";
+import SectionHeader from "@/components/shared/SectionHeader";
 import {
   apiStoreFleetCompanies,
   apiStoreFleetEndPartnership,
@@ -66,14 +68,13 @@ export default function StoreFleetPartners() {
       <main className="flex-1 overflow-y-auto p-4 space-y-6 max-w-3xl mx-auto w-full">
         {/* Ενεργές συνεργασίες — με «Τερματισμός» */}
         <section>
-          <div className="flex items-center gap-2 font-heading font-bold mb-3">
-            <Handshake className="w-4 h-4 text-flame" />
-            Ενεργές συνεργασίες ({activeParts.length})
-          </div>
+          <SectionHeader
+            icon={Handshake}
+            title={`Ενεργές συνεργασίες (${activeParts.length})`}
+            size="sm"
+          />
           {activeParts.length === 0 ? (
-            <div className="border border-dashed border-[#723645]/60 rounded-lg p-6 text-center text-sm text-neutral-500">
-              Καμία ενεργή συνεργασία — στείλτε αίτημα σε μια εταιρεία παρακάτω
-            </div>
+            <EmptyState text="Καμία ενεργή συνεργασία — στείλτε αίτημα σε μια εταιρεία παρακάτω" />
           ) : (
             <div className="space-y-2">
               {activeParts.map((p) => (
@@ -103,17 +104,14 @@ export default function StoreFleetPartners() {
 
         {/* Διαθέσιμες εταιρείες στην πόλη του καταστήματος */}
         <section>
-          <div className="font-heading font-bold mb-1">
-            Εταιρείες delivery{data?.store_city ? ` στην πόλη «${data.store_city}»` : ""}
-          </div>
-          <p className="text-xs text-neutral-400 mb-3">
-            Με την αποδοχή του αιτήματος από την εταιρεία, μπορείτε να της ανεβάζετε
-            παραγγελίες. Ένα κατάστημα μπορεί να έχει πολλές ενεργές συνεργασίες.
-          </p>
+          <SectionHeader
+            icon={Truck}
+            title={`Εταιρείες delivery${data?.store_city ? ` στην πόλη «${data.store_city}»` : ""}`}
+            subtitle="Με την αποδοχή του αιτήματος από την εταιρεία, μπορείτε να της ανεβάζετε παραγγελίες. Ένα κατάστημα μπορεί να έχει πολλές ενεργές συνεργασίες."
+            size="sm"
+          />
           {companies.length === 0 ? (
-            <div className="border border-dashed border-[#723645]/60 rounded-lg p-6 text-center text-sm text-neutral-500">
-              Δεν βρέθηκαν εταιρείες διανομής για την πόλη σας ακόμα
-            </div>
+            <EmptyState text="Δεν βρέθηκαν εταιρείες διανομής για την πόλη σας ακόμα" />
           ) : (
             <div className="space-y-2">
               {companies.map((c) => {

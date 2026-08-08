@@ -5,6 +5,7 @@ import PeriodFilter from "@/components/shared/PeriodFilter";
 import StatCard from "@/components/shared/StatCard";
 import CountBarChart from "@/components/shared/CountBarChart";
 import EmptyState from "@/components/shared/EmptyState";
+import SectionHeader from "@/components/shared/SectionHeader";
 import { apiFleetStats } from "@/lib/fleetApi";
 import { presetRange } from "@/lib/dates";
 import { daySeries, hourSeries } from "@/lib/series";
@@ -111,10 +112,7 @@ export default function FleetStats() {
         />
 
         <section data-testid="fleet-stats-drivers">
-          <div className="flex items-center gap-2 mb-3">
-            <Bike className="w-4 h-4 text-flame" />
-            <h2 className="font-heading font-semibold text-lg">Ανά διανομέα</h2>
-          </div>
+          <SectionHeader icon={Bike} title="Ανά διανομέα" size="sm" />
           {drivers.length === 0 ? (
             <EmptyState text="Καμία ανάθεση στην περίοδο" />
           ) : (
@@ -150,10 +148,7 @@ export default function FleetStats() {
         </section>
 
         <section data-testid="fleet-stats-stores">
-          <div className="flex items-center gap-2 mb-3">
-            <Store className="w-4 h-4 text-flame" />
-            <h2 className="font-heading font-semibold text-lg">Ανά κατάστημα</h2>
-          </div>
+          <SectionHeader icon={Store} title="Ανά κατάστημα" size="sm" />
           {stores.length === 0 ? (
             <EmptyState text="Καμία παραγγελία στην περίοδο" />
           ) : (

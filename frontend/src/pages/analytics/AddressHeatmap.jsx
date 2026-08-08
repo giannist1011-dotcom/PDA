@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Flame, MapPin, RefreshCcw } from "lucide-react";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
+import MapCanvas from "@/components/shared/map/MapCanvas";
 import { useAuth } from "@/context/shared/AuthContext";
 import { apiOrdersHeatmap } from "@/lib/api";
 import { presetRange } from "@/lib/dates";
@@ -27,8 +27,7 @@ export default function AddressHeatmap() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const mapEl = useRef(null);
-  const mapRef = useRef(null);
+  const [map, setMap] = useState(null);
   const heatRef = useRef(null);
 
   const load = async (f = period.from, t = period.to) => {
@@ -53,15 +52,9 @@ export default function AddressHeatmap() {
     if (meta.fromPreset) load(next.from, next.to);
   };
 
-  // Init χάρτη
+  // Σημείο καταστήματος στον χάρτη — μόλις είναι έτοιμος ο καμβάς
   useEffect(() => {
-    if (!hasStoreLocation || !mapEl.current || mapRef.current) return;
-    const map = L.map(mapEl.current, { attributionControl: false }).setView(
-      [user.store_lat, user.store_lng],
-      13
-    );
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
-    L.control.attribution({ prefix: false }).addAttribution("© OpenStreetMap").addTo(map);
+    if (!map) return;
     L.circleMarker([user.store_lat, user.store_lng], {
       radius: 7,
       color: "#fff",
@@ -69,19 +62,15 @@ export default function AddressHeatmap() {
       fillColor: "#E8590C",
       fillOpacity: 1,
     }).addTo(map);
-    mapRef.current = map;
-    return () => {
-      map.remove();
-      mapRef.current = null;
-      heatRef.current = null;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasStoreLocation]);
+  }, [map]);
 
   // Συγχρονισμός heat layer με τα σημεία
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+    if (!map) {
+      heatRef.current = null;
+      return;
+    }
     if (heatRef.current) {
       map.removeLayer(heatRef.current);
       heatRef.current = null;
@@ -93,7 +82,7 @@ export default function AddressHeatmap() {
       points.map((p) => [p.lat, p.lng, p.count]),
       { radius: 28, blur: 18, max: maxCount, maxZoom: 17 }
     ).addTo(map);
-  }, [data]);
+  }, [map, data]);
 
   if (!hasStoreLocation) {
     return (
@@ -153,10 +142,11 @@ export default function AddressHeatmap() {
 
       {error && <div className="text-sm text-[#FF6961] mb-3">{error}</div>}
 
-      <div
-        ref={mapEl}
-        data-testid="address-heatmap"
-        className="h-[50vh] min-h-[300px] rounded-lg border border-[#723645] overflow-hidden z-0"
+      <MapCanvas
+        testId="address-heatmap"
+        heightClass="h-[50vh] min-h-[300px]"
+        center={{ lat: user.store_lat, lng: user.store_lng }}
+        onReady={setMap}
       />
 
       <div className="text-xs text-neutral-500 mt-2 flex flex-wrap gap-x-4 gap-y-1">

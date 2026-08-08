@@ -5,6 +5,7 @@ import PeriodFilter from "@/components/shared/PeriodFilter";
 import StatCard from "@/components/shared/StatCard";
 import CountBarChart from "@/components/shared/CountBarChart";
 import EmptyState from "@/components/shared/EmptyState";
+import SectionHeader from "@/components/shared/SectionHeader";
 import { apiStoreFleetStats } from "@/lib/api";
 import { presetRange } from "@/lib/dates";
 import { daySeries } from "@/lib/series";
@@ -92,10 +93,7 @@ export default function StoreFleetStats() {
         />
 
         <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Truck className="w-4 h-4 text-flame" />
-            <h2 className="font-heading font-semibold text-lg">Ανά εταιρεία</h2>
-          </div>
+          <SectionHeader icon={Truck} title="Ανά εταιρεία" size="sm" />
           {!data || data.companies.length === 0 ? (
             <EmptyState text="Καμία παραγγελία στην περίοδο" />
           ) : (

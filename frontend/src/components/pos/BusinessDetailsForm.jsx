@@ -4,7 +4,7 @@ import { MapPin, Search, Loader2 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { geocodeAddress, geocodeCityCenter, formatApiError } from "@/lib/api";
-import { addBaseLayer, formPinIcon } from "@/components/shared/mapPin";
+import { addBaseLayer, formPinIcon, GREECE_VIEW, MAP_BOX } from "@/components/shared/map/pins";
 
 // Κοινός πυρήνας «Στοιχεία επιχείρησης»: όνομα, τηλέφωνο/α, πόλη, διεύθυνση με
 // «Εύρεση στον χάρτη» + pin picker (Leaflet). Τον χρησιμοποιούν οι ρυθμίσεις
@@ -12,8 +12,8 @@ import { addBaseLayer, formPinIcon } from "@/components/shared/mapPin";
 // εταιρείας FleetDeck. Χωρίς pin ο χάρτης κεντράρει στην αποθηκευμένη πόλη
 // (geocode) — τελικό fallback η Ελλάδα.
 
-const GREECE_CENTER = [38.3, 23.8];
-const GREECE_ZOOM = 6;
+const GREECE_CENTER = [GREECE_VIEW.lat, GREECE_VIEW.lng];
+const GREECE_ZOOM = GREECE_VIEW.zoom;
 
 const inputCls =
   "w-full h-10 px-3 rounded-md bg-[#2A0E14] border border-[#723645] focus:border-flame outline-none text-sm";
@@ -214,7 +214,7 @@ export default function BusinessDetailsForm({
         <div
           ref={mapEl}
           data-testid={`${testPrefix}-map`}
-          className="h-[300px] rounded-md border border-[#723645] overflow-hidden z-0"
+          className={`h-[300px] ${MAP_BOX}`}
         />
       </div>
 

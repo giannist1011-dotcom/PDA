@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import AppShell from "@/components/shared/AppShell";
+import EmptyState from "@/components/shared/EmptyState";
 import { useAuth } from "@/context/shared/AuthContext";
 import { apiStoreFleetBoard, apiStoreFleetCancelOrder } from "@/lib/api";
 import OrderCard from "@/components/fleet/OrderCard";
@@ -76,9 +77,7 @@ export default function StoreFleet() {
 
   const cardsGrid = (list, empty) =>
     list.length === 0 ? (
-      <div className="border border-dashed border-[#723645]/60 rounded-lg p-6 text-center text-sm text-neutral-500">
-        {empty}
-      </div>
+      <EmptyState text={empty} />
     ) : (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {list.map((o) => (

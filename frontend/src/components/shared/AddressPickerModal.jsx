@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { MapPin, X } from "lucide-react";
 import AddressAutocomplete from "@/components/shared/AddressAutocomplete";
 import { geocodeCityCenter } from "@/lib/api";
-import { addBaseLayer, formPinIcon } from "@/components/shared/mapPin";
+import { addBaseLayer, formPinIcon, GREECE_VIEW, MAP_BOX } from "@/components/shared/map/pins";
 
 // Επιλογή ελεύθερου σημείου (κείμενο + pin) — ΤΟ κοινό component για κάθε φόρμα
 // που χρειάζεται «διεύθυνση + ακριβές σημείο στον χάρτη»: το ίδιο
@@ -13,8 +13,8 @@ import { addBaseLayer, formPinIcon } from "@/components/shared/mapPin";
 // Το pin ακολουθεί την επιλογή πρότασης· ο χρήστης το διορθώνει σέρνοντάς το
 // ή πατώντας στον χάρτη. Επιστρέφει {address, lat, lng} — lat/lng null όταν
 // δεν μπήκε ποτέ pin (το κείμενο αρκεί, το σημείο απλώς λείπει από τον χάρτη).
-const GREECE_CENTER = [38.3, 23.8];
-const GREECE_ZOOM = 6;
+const GREECE_CENTER = [GREECE_VIEW.lat, GREECE_VIEW.lng];
+const GREECE_ZOOM = GREECE_VIEW.zoom;
 
 export default function AddressPickerModal({
   title = "Διεύθυνση παραλαβής",
@@ -148,7 +148,7 @@ export default function AddressPickerModal({
           <div
             ref={mapEl}
             data-testid={`${testId}-map`}
-            className="h-[260px] rounded-md border border-[#723645] overflow-hidden z-0"
+            className={`h-[260px] ${MAP_BOX}`}
           />
         </div>
 

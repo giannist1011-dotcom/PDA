@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
-  Menu,
   X,
   ShoppingCart,
   BarChart3,
   Calendar,
-  LogOut,
   ClipboardList,
   ListChecks,
   KeyRound,
@@ -22,7 +20,6 @@ import {
   ArrowRight,
   Store,
   WifiOff,
-  ChevronDown,
   BookOpen,
   Gauge,
   Bot,
@@ -31,6 +28,12 @@ import {
   Truck,
   Handshake,
 } from "lucide-react";
+import ShellHeader, { RoleBadge, LogoutButton } from "@/components/shared/shell/ShellHeader";
+import NavDrawer, {
+  DrawerButton,
+  DrawerGroup,
+  DrawerLink,
+} from "@/components/shared/shell/NavDrawer";
 import DeckPilotChat from "@/components/pos/DeckPilotChat";
 import OfflineBanner from "@/components/shared/OfflineBanner";
 import AnnouncementBanner from "@/components/shared/AnnouncementBanner";
@@ -278,102 +281,59 @@ export default function AppShell({ title, headerTabs, children }) {
     : [...NAV_STORE, ...(isODFleet ? NAV_OD_FLEET_STORE : [])].filter(navVisible);
   const storeActive = storeNav.some((n) => location.pathname === n.to);
 
-  const renderNavLink = (n) => {
-    const Icon = n.icon;
-    const active = location.pathname === n.to;
-    return (
-      <Link
-        key={n.to}
-        to={n.to}
-        onClick={() => setOpen(false)}
-        data-testid={n.testId}
-        className={`flex items-center gap-3 px-4 py-3 rounded-md mb-1 transition-colors ${
-          active
-            ? "bg-flame/15 text-flame border border-flame/40"
-            : "text-neutral-200 hover:bg-[#3D1620] border border-transparent"
-        }`}
-      >
-        <Icon className="w-5 h-5" />
-        <span className="font-semibold">{n.label}</span>
-        {n.beta && <BetaBadge />}
-      </Link>
-    );
-  };
+  const renderNavLink = (n) => (
+    <DrawerLink
+      key={n.to}
+      to={n.to}
+      label={n.label}
+      icon={n.icon}
+      testId={n.testId}
+      active={location.pathname === n.to}
+      onClick={() => setOpen(false)}
+      trailing={n.beta ? <BetaBadge /> : null}
+    />
+  );
 
-  const roleColor = ROLE_COLORS[role] || "#888";
   const profileBadge = role ? (
-    <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest"
-      style={{ backgroundColor: `${roleColor}26`, color: roleColor }}
+    <RoleBadge
+      color={ROLE_COLORS[role] || "#888"}
+      icon={role === "owner" ? Crown : UserIcon}
     >
-      {role === "owner" ? <Crown className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
       {profileName && !nameMatchesRole(profileName, role) ? `${profileName} · ` : ""}
       {ROLE_LABELS[role] || role}
-    </span>
+    </RoleBadge>
   ) : null;
+
+  // Σήμα λογαριασμού (λογότυπο ή εικονίδιο επιχείρησης) — header & drawer
+  const brandMark = (testId) =>
+    storeLogo ? (
+      <img
+        src={storeLogo}
+        alt={user?.restaurant_name || "Λογότυπο"}
+        className="w-9 h-9 rounded-md object-contain bg-white/5 shrink-0"
+        data-testid={testId}
+      />
+    ) : (
+      <div
+        className="w-9 h-9 rounded-md bg-brand flex items-center justify-center shrink-0"
+        data-testid={testId}
+      >
+        <BizIcon className="w-5 h-5 text-white" />
+      </div>
+    );
 
   return (
     <div className="h-screen w-screen flex flex-col bg-[#2A0E14] text-white">
-      {/* HEADER: μία γραμμή (burger + όνομα/τίτλος + καρτέλες σελίδας + ρόλος).
-          Οι καρτέλες (headerTabs) ζουν ΜΕΣΑ στο header για να μη χάνεται κάθετος
-          χώρος: από lg δίπλα στον τίτλο, σε στενότερα πλάτη (flex-wrap + w-full)
-          πέφτουν σε μία ΛΕΠΤΗ δεύτερη γραμμή του ίδιου header με scrollable pills. */}
-      <header className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 px-4 md:px-6 border-b border-[#723645] bg-[#2A0E14] shrink-0">
-        <div className="order-1 flex items-center gap-2 sm:gap-3 min-w-0 h-14 lg:h-16">
-          <button
-            onClick={() => setOpen(true)}
-            data-testid="burger-btn"
-            aria-label="Μενού"
-            className="w-11 h-11 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center text-white transition-colors shrink-0"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            {storeLogo ? (
-              <img
-                src={storeLogo}
-                alt={user?.restaurant_name || "Λογότυπο"}
-                className="w-9 h-9 rounded-md object-contain bg-white/5 shrink-0"
-                data-testid="business-icon"
-              />
-            ) : (
-              <div
-                className="w-9 h-9 rounded-md bg-brand flex items-center justify-center shrink-0"
-                data-testid="business-icon"
-              >
-                <BizIcon className="w-5 h-5 text-white" />
-              </div>
-            )}
-            <div className="flex items-baseline gap-2 min-w-0">
-              <span
-                className="font-heading text-lg lg:text-xl xl:text-2xl font-bold tracking-tight truncate"
-                data-testid="restaurant-name"
-              >
-                {user?.restaurant_name || "POS"}
-              </span>
-              {title && (
-                <span className="text-xs uppercase tracking-widest text-neutral-500 hidden sm:inline shrink-0">
-                  · {title}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        {headerTabs && (
-          <div
-            className="order-3 lg:order-2 w-full lg:w-auto lg:flex-1 min-w-0 pb-1.5 lg:pb-0 lg:h-16 flex items-center overflow-x-auto no-scrollbar"
-            data-testid="header-tabs"
-          >
-            {headerTabs}
-          </div>
-        )}
-        <div
-          className="order-2 lg:order-3 ml-auto hidden sm:flex items-center shrink-0 h-14 lg:h-16"
-          data-testid="profile-badge"
-        >
-          {profileBadge}
-        </div>
-      </header>
+      <ShellHeader
+        onBurger={() => setOpen(true)}
+        burgerTestId="burger-btn"
+        mark={brandMark("business-icon")}
+        name={user?.restaurant_name || "POS"}
+        nameTestId="restaurant-name"
+        title={title}
+        tabs={headerTabs}
+        badge={profileBadge}
+      />
 
       {user && user !== false && user.is_demo && user.demo_expires_at && (
         <DemoBanner expiresAt={user.demo_expires_at} />
@@ -391,107 +351,48 @@ export default function AppShell({ title, headerTabs, children }) {
       {/* Νέα παραγγελία πλατφόρμας — popup πάνω δεξιά σε κάθε οθόνη */}
       <PlatformOrderPopup />
 
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-            data-testid="drawer-backdrop"
-          />
-          <aside
-            className="fixed left-0 top-0 bottom-0 z-50 w-[320px] bg-[#2A0E14] border-r border-[#723645] flex flex-col"
-            data-testid="drawer"
+      <NavDrawer
+        open={open}
+        onClose={() => setOpen(false)}
+        testIdPrefix="drawer"
+        brand={{
+          mark: brandMark(),
+          name: user?.restaurant_name || "POS",
+          badge: profileBadge,
+        }}
+        footer={<LogoutButton onClick={handleLogout} testId="drawer-logout-btn" />}
+      >
+        {nav.map((n) => renderNavLink(n))}
+        {storeNav.length > 0 && (
+          <DrawerGroup
+            label="Κατάστημα"
+            icon={Store}
+            open={storeOpen}
+            onToggle={toggleStore}
+            active={storeActive}
+            testId="drawer-group-store"
           >
-            <div className="flex items-center justify-between px-5 h-16 border-b border-[#723645]">
-              <div className="flex items-center gap-3">
-                {storeLogo ? (
-                  <img
-                    src={storeLogo}
-                    alt={user?.restaurant_name || "Λογότυπο"}
-                    className="w-9 h-9 rounded-md object-contain bg-white/5"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-md bg-brand flex items-center justify-center">
-                    <BizIcon className="w-5 h-5 text-white" />
-                  </div>
-                )}
-                <div>
-                  <div className="font-heading text-lg font-bold leading-tight">
-                    {user?.restaurant_name || "POS"}
-                  </div>
-                  <div className="mt-0.5">{profileBadge}</div>
-                </div>
-              </div>
-              <button
-                onClick={() => setOpen(false)}
-                data-testid="drawer-close-btn"
-                className="w-10 h-10 rounded-md border border-[#723645] hover:border-flame flex items-center justify-center"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <nav className="flex-1 p-3 overflow-y-auto">
-              {nav.map((n) => renderNavLink(n))}
-              {storeNav.length > 0 && (
-                <div className="mb-1">
-                  <button
-                    onClick={toggleStore}
-                    data-testid="drawer-group-store"
-                    aria-expanded={storeOpen}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-colors border border-transparent ${
-                      storeActive && !storeOpen
-                        ? "text-flame hover:bg-[#3D1620]"
-                        : "text-neutral-200 hover:bg-[#3D1620]"
-                    }`}
-                  >
-                    <Store className="w-5 h-5" />
-                    <span className="font-semibold flex-1 text-left">Κατάστημα</span>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform ${storeOpen ? "" : "-rotate-90"}`}
-                    />
-                  </button>
-                  {storeOpen && (
-                    <div className="ml-4 pl-3 border-l border-[#723645]">
-                      {storeNav.map((n) => renderNavLink(n))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {role === "owner" && installPrompt && (
-                <button
-                  onClick={handleInstall}
-                  data-testid="drawer-install-btn"
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-md mb-1 text-neutral-200 hover:bg-[#3D1620] border border-transparent"
-                >
-                  <Download className="w-5 h-5" />
-                  <span className="font-semibold">Εγκατάσταση εφαρμογής</span>
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setOpen(false);
-                  handleSwitchProfile();
-                }}
-                data-testid="drawer-switch-profile-btn"
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-md mb-1 text-neutral-200 hover:bg-[#3D1620] border border-transparent"
-              >
-                <RefreshCw className="w-5 h-5" />
-                <span className="font-semibold">Αλλαγή προφίλ</span>
-              </button>
-            </nav>
-            <div className="p-3 border-t border-[#723645]">
-              <button
-                onClick={handleLogout}
-                data-testid="drawer-logout-btn"
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-neutral-300 hover:bg-[#FF3B30]/10 hover:text-[#FF3B30] border border-[#723645] hover:border-[#FF3B30] transition-colors"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-semibold">Αποσύνδεση</span>
-              </button>
-            </div>
-          </aside>
-        </>
-      )}
+            {storeNav.map((n) => renderNavLink(n))}
+          </DrawerGroup>
+        )}
+        {role === "owner" && installPrompt && (
+          <DrawerButton
+            label="Εγκατάσταση εφαρμογής"
+            icon={Download}
+            onClick={handleInstall}
+            testId="drawer-install-btn"
+          />
+        )}
+        <DrawerButton
+          label="Αλλαγή προφίλ"
+          icon={RefreshCw}
+          onClick={() => {
+            setOpen(false);
+            handleSwitchProfile();
+          }}
+          testId="drawer-switch-profile-btn"
+        />
+      </NavDrawer>
 
       {blockedLabel ? (
         <div

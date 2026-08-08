@@ -1,88 +1,62 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import { Map as MapIcon } from "lucide-react";
+import MapCanvas from "@/components/shared/map/MapCanvas";
+import { bubblePin, esc, fitToPoints, popupHtml } from "@/components/shared/map/pins";
 import { PLAN_LABELS } from "./utils";
 
 // Ο χάρτης επέκτασης (centerpiece): ένα marker ανά πόλη με παρουσία
-// OrderDeck/FleetDeck. Μέγεθος/χρώμα ~ ενεργοί πληρωτικοί λογαριασμοί,
-// γκρι οι demo-only πόλεις. Οι συντεταγμένες έρχονται έτοιμες από το backend
-// (cached ανά πόλη) — καμία γεωκωδικοποίηση στο frontend.
-
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+// OrderDeck/FleetDeck, στον ίδιο καμβά/tiles/popups με τους χάρτες των δύο
+// εφαρμογών (components/shared/map). Μέγεθος/χρώμα ~ ενεργοί πληρωτικοί
+// λογαριασμοί, γκρι οι demo-only πόλεις. Οι συντεταγμένες έρχονται έτοιμες από
+// το backend (cached ανά πόλη) — καμία γεωκωδικοποίηση στο frontend.
 
 const markerSize = (paying) => Math.min(52, 26 + paying * 3);
 
 const cityIcon = (c) => {
   const demoOnly = c.paying === 0 && c.companies === 0;
-  const size = demoOnly ? 24 : markerSize(c.paying + c.companies);
-  const bg = demoOnly
-    ? "#6B7280"
-    : "radial-gradient(circle at 32% 30%, #F97316, #B91C1C 78%)";
-  return L.divIcon({
-    className: "",
-    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};
-      border:2px solid #2A0E14;box-shadow:0 2px 6px rgba(0,0,0,.55);display:flex;
-      align-items:center;justify-content:center;color:#fff;font-weight:bold;
-      font-family:monospace;font-size:${Math.max(11, size / 3)}px">
-      ${demoOnly ? "d" : c.paying + c.companies}</div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+  return bubblePin({
+    size: demoOnly ? 24 : markerSize(c.paying + c.companies),
+    background: demoOnly ? "#6B7280" : "radial-gradient(circle at 32% 30%, #F97316, #B91C1C 78%)",
+    label: demoOnly ? "d" : c.paying + c.companies,
+    muted: demoOnly,
   });
 };
 
 // Popup: μαγαζιά ανά πλάνο + εταιρίες, με τα demo ξεχωριστά (εκτός headline)
-const popupHtml = (c) => {
+const cityPopup = (c) => {
   const plans = Object.entries(c.stores || {})
     .filter(([, n]) => n > 0)
-    .map(([k, n]) => `<div style="font-size:12px;color:#555">${esc(PLAN_LABELS[k] || k)}: <b>${n}</b></div>`)
-    .join("");
-  return `
-  <div style="font-family:inherit;min-width:170px;color:#2A0E14">
-    <div style="font-weight:bold;font-size:14px;margin-bottom:4px">📍 ${esc(c.name)}</div>
-    ${plans || `<div style="font-size:12px;color:#555">Κανένα ενεργό μαγαζί</div>`}
-    ${c.companies > 0 ? `<div style="font-size:12px;color:#555">Εταιρίες delivery: <b>${c.companies}</b></div>` : ""}
-    ${c.demo > 0 ? `<div style="font-size:12px;color:#888;margin-top:4px">Demo λογαριασμοί: ${c.demo}</div>` : ""}
-  </div>`;
+    .map(([k, n]) => `${esc(PLAN_LABELS[k] || k)}: <b>${n}</b>`);
+  return popupHtml({
+    title: `📍 ${esc(c.name)}`,
+    lines: [
+      ...(plans.length ? plans : ["Κανένα ενεργό μαγαζί"]),
+      c.companies > 0 ? `Εταιρίες delivery: <b>${c.companies}</b>` : null,
+      c.demo > 0 ? `<span style="color:#888">Demo λογαριασμοί: ${c.demo}</span>` : null,
+    ],
+  });
 };
 
 export default function ExpansionMap({ cities, geocodingPending }) {
-  const mapEl = useRef(null);
-  const mapRef = useRef(null);
+  const [map, setMap] = useState(null);
   const layerRef = useRef(null);
-
-  useEffect(() => {
-    if (!mapEl.current || mapRef.current) return;
-    const map = L.map(mapEl.current, { attributionControl: false }).setView([38.3, 23.8], 6);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
-    L.control.attribution({ prefix: false }).addAttribution("© OpenStreetMap").addTo(map);
-    mapRef.current = map;
-    return () => {
-      map.remove();
-      mapRef.current = null;
-      layerRef.current = null;
-    };
-  }, []);
 
   const located = (cities || []).filter((c) => c.lat != null && c.lng != null);
 
   useEffect(() => {
-    const map = mapRef.current;
     if (!map) return;
     if (layerRef.current) map.removeLayer(layerRef.current);
-    const layer = L.layerGroup(
-      located.map((c) =>
-        L.marker([c.lat, c.lng], { icon: cityIcon(c) }).bindPopup(popupHtml(c))
-      )
+    layerRef.current = L.layerGroup(
+      located.map((c) => L.marker([c.lat, c.lng], { icon: cityIcon(c) }).bindPopup(cityPopup(c)))
     ).addTo(map);
-    layerRef.current = layer;
-    if (located.length) {
-      map.fitBounds(L.latLngBounds(located.map((c) => [c.lat, c.lng])).pad(0.3), {
-        maxZoom: 9,
-      });
-    }
+    fitToPoints(
+      map,
+      located.map((c) => [c.lat, c.lng]),
+      { maxZoom: 9, pad: 0.3, once: false }
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cities]);
+  }, [map, cities]);
 
   return (
     <div className="bg-[#3D1620] border border-[#723645] rounded-lg p-4 space-y-3">
@@ -99,24 +73,27 @@ export default function ExpansionMap({ cities, geocodingPending }) {
           </span>
         </div>
       </div>
-      <div
-        ref={mapEl}
-        data-testid="expansion-map"
-        className="h-[60vh] min-h-[380px] rounded-lg border border-[#723645] overflow-hidden z-0"
+      <MapCanvas
+        testId="expansion-map"
+        heightClass="h-[60vh] min-h-[380px]"
+        onReady={setMap}
+        notes={[
+          located.length === 0
+            ? "Καμία πόλη με συντεταγμένες ακόμα — θα εμφανιστούν μόλις γεωκωδικοποιηθούν."
+            : null,
+          geocodingPending > 0
+            ? {
+                small: true,
+                testId: "map-geocoding",
+                text: `${
+                  geocodingPending === 1
+                    ? "1 πόλη γεωκωδικοποιείται στο παρασκήνιο"
+                    : `${geocodingPending} πόλεις γεωκωδικοποιούνται στο παρασκήνιο`
+                } — ανανεώστε σε λίγο για να εμφανιστούν.`,
+              }
+            : null,
+        ]}
       />
-      {located.length === 0 && (
-        <div className="text-sm text-neutral-500 text-center">
-          Καμία πόλη με συντεταγμένες ακόμα — θα εμφανιστούν μόλις γεωκωδικοποιηθούν.
-        </div>
-      )}
-      {geocodingPending > 0 && (
-        <div className="text-xs text-neutral-500 text-center" data-testid="map-geocoding">
-          {geocodingPending === 1
-            ? "1 πόλη γεωκωδικοποιείται στο παρασκήνιο"
-            : `${geocodingPending} πόλεις γεωκωδικοποιούνται στο παρασκήνιο`}{" "}
-          — ανανεώστε σε λίγο για να εμφανιστούν.
-        </div>
-      )}
     </div>
   );
 }

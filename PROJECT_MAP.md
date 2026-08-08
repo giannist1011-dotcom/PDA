@@ -445,14 +445,14 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - FleetDispatch.jsx (228 γρ): FleetDispatch@21
 - FleetDriver.jsx (366 γρ): FleetDriver@41
 - FleetDriverLogin.jsx (249 γρ): FleetDriverLogin@19
-- FleetDriverSettings.jsx (111 γρ): Row@10, FleetDriverSettings@28
+- FleetDriverSettings.jsx (104 γρ): FleetDriverSettings@15
 - FleetLogin.jsx (133 γρ): FleetLogin@9
 - FleetMembers.jsx (357 γρ): FleetMembers@22
 - FleetSchedule.jsx (56 γρ): FleetSchedule@19
 - FleetSelect.jsx (136 γρ): FleetSelect@11
-- FleetSettings.jsx (93 γρ): FleetSettings@13
+- FleetSettings.jsx (94 γρ): FleetSettings@18
 - FleetSignup.jsx (291 γρ): Field@10, FleetSignup@38
-- FleetStats.jsx (179 γρ): FleetStats@21
+- FleetStats.jsx (174 γρ): FleetStats@22
 - FleetStores.jsx (135 γρ): FleetStores@17
 - History.jsx (305 γρ): History@28
 - Landing.jsx (397 γρ): Landing@88
@@ -464,12 +464,12 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - PublicMenu.jsx (209 γρ): PublicMenu@19
 - Register.jsx (244 γρ): Register@23
 - Schedule.jsx (64 γρ): Schedule@23
-- Settings.jsx (140 γρ): Section@22, Settings@37
+- Settings.jsx (117 γρ): Settings@110
 - Stock.jsx (103 γρ): Stock@12
-- StoreFleet.jsx (172 γρ): StoreFleet@16
-- StoreFleetPartners.jsx (159 γρ): StoreFleetPartners@22
-- StoreFleetSettings.jsx (48 γρ): StoreFleetSettings@9
-- StoreFleetStats.jsx (125 γρ): StoreFleetStats@19
+- StoreFleet.jsx (171 γρ): StoreFleet@17
+- StoreFleetPartners.jsx (157 γρ): StoreFleetPartners@24
+- StoreFleetSettings.jsx (50 γρ): StoreFleetSettings@43
+- StoreFleetStats.jsx (123 γρ): StoreFleetStats@20
 - TableOrder.jsx (354 γρ): TableOrder@30
 - Tables.jsx (159 γρ): Tables@12
 - Waiters.jsx (27 γρ): Waiters@6
@@ -483,7 +483,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - admin-overview/ActivityFeed.jsx (49 γρ): ActivityFeed@14
 - admin-overview/AttentionStrip.jsx (62 γρ): Chip@4, AttentionStrip@17
 - admin-overview/CityTable.jsx (91 γρ): CityTable@25
-- admin-overview/ExpansionMap.jsx (123 γρ): ExpansionMap@49
+- admin-overview/ExpansionMap.jsx (100 γρ): ExpansionMap@41
 - admin-overview/GrowthChart.jsx (56 γρ): GrowthChart@15
 - admin-overview/KpiCards.jsx (82 γρ): Trend@5, Card@19, Mini@35, KpiCards@44
 - admin-overview/utils.js (27 γρ)
@@ -494,7 +494,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - admin-shops/ShopModal.jsx (493 γρ): ShopModal@27
 - admin-shops/ShopsContent.jsx (229 γρ): ShopsContent@17
 - admin-shops/utils.js (15 γρ)
-- analytics/AddressHeatmap.jsx (180 γρ): AddressHeatmap@17
+- analytics/AddressHeatmap.jsx (170 γρ): AddressHeatmap@17
 - analytics/ChangeBadge.jsx (26 γρ): ChangeBadge@3
 - analytics/ChartsRow.jsx (125 γρ): ChartsRow@19
 - analytics/CompareCard.jsx (34 γρ): CompareCard@4
@@ -519,13 +519,13 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - fleet/DriverHistory.jsx (93 γρ): DriverHistory@13
 - fleet/DriverMineTab.jsx (162 γρ): useCollapseOnScroll@19, DriverMineTab@50
 - fleet/DriverStats.jsx (132 γρ): Tile@12, DriverStats@24
-- fleet/FleetOrdersMap.jsx (200 γρ): FleetOrdersMap@66
-- fleet/FleetShell.jsx (366 γρ): FleetShell@49
+- fleet/FleetOrdersMap.jsx (128 γρ): FleetOrdersMap@60
+- fleet/FleetShell.jsx (305 γρ): FleetShell@52
 - fleet/NewOrderForm.jsx (155 γρ): NewOrderForm@25
 - fleet/PartnershipRequests.jsx (81 γρ): PartnershipRequests@10
 - fleet/ProblemModal.jsx (81 γρ): ProblemModal@15
 - fleet/PushToggle.jsx (56 γρ): PushToggle@10
-- fleet/StoresMap.jsx (122 γρ): StoresMap@35
+- fleet/StoresMap.jsx (64 γρ): StoresMap@22
 - fleet/alerts.js (51 γρ)
 - history/CustomerDetailModal.jsx (119 γρ): CustomerDetailModal@5
 - history/CustomersTab.jsx (84 γρ): CustomersTab@4
@@ -618,7 +618,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - pos/CustomizationModal.jsx (412 γρ): OptionTile@15, LegacyOptions@49, GroupsOptions@144, CustomizationModal@227
 - pos/DeckPilotChat.jsx (148 γρ): DeckPilotChat@31
 - pos/LineEditModal.jsx (133 γρ): LineEditModal@14
-- pos/LiveOrdersMap.jsx (256 γρ): LiveOrdersMap@44
+- pos/LiveOrdersMap.jsx (225 γρ): LiveOrdersMap@35
 - pos/MenuGrid.jsx (233 γρ): MenuGrid@7
 - pos/MenuList.jsx (206 γρ): MenuList@10
 - pos/OnboardingChecklist.jsx (100 γρ): OnboardingChecklist@18
@@ -638,7 +638,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - shared/AdminPartnerships.jsx (165 γρ): AdminPartnerships@20
 - shared/AdminShell.jsx (355 γρ): useAdminPw@31, useAdminInfo@35, MasterOnly@38, LoginForm@67, ForcePasswordChange@146, AdminShell@210
 - shared/AnnouncementBanner.jsx (88 γρ): AnnouncementBanner@32
-- shared/AppShell.jsx (569 γρ): BetaBadge@119, DemoBanner@143, AppShell@186
+- shared/AppShell.jsx (470 γρ): BetaBadge@122, DemoBanner@146, AppShell@189
 - shared/CodeNumpad.jsx (110 γρ): CodeNumpad@11
 - shared/CountBarChart.jsx (64 γρ): CountBarChart@14
 - shared/DatePicker.jsx (168 γρ): DatePicker@20
@@ -649,9 +649,11 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - shared/PinGateModal.jsx (179 γρ): PinGateModal@16
 - shared/PrintingSettings.jsx (231 γρ): PrintingSettings@36
 - shared/ProtectedRoute.jsx (43 γρ): ProtectedRoute@13
+- shared/SectionHeader.jsx (25 γρ): SectionHeader@4
 - shared/StatCard.jsx (21 γρ): StatCard@4
 - shared/TimePicker.jsx (119 γρ): Column@23, TimePicker@60
-- shared/mapPin.js (19 γρ)
+- shared/map/MapCanvas.jsx (76 γρ): MapCanvas@15
+- shared/map/pins.js (155 γρ)
 - shared/printing/BridgeSetup.jsx (185 γρ): BridgeSetup@17
 - shared/printing/KioskSetup.jsx (82 γρ): KioskSetup@12
 - shared/printing/RelayAgent.jsx (243 γρ): StationLoop@27, StationDownBanner@195, RelayAgent@234
@@ -663,6 +665,9 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - shared/schedule/ShareDialog.jsx (41 γρ): ShareDialog@11
 - shared/schedule/ShiftModal.jsx (111 γρ): ShiftModal@16
 - shared/schedule/utils.js (103 γρ)
+- shared/settings/SettingsPage.jsx (90 γρ): SettingsSection@16, SettingsRow@31, SettingsPage@47
+- shared/shell/NavDrawer.jsx (129 γρ): DrawerLink@21, DrawerButton@36, DrawerSectionLabel@55, DrawerGroup@64, NavDrawer@84
+- shared/shell/ShellHeader.jsx (96 γρ): ShellHeader@9, RoleBadge@70, LogoutButton@84
 
 ## FRONTEND — lib/api.js (exported)
 - api — axios instance (baseURL /api)

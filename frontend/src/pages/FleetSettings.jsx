@@ -1,7 +1,11 @@
 import { toast } from "sonner";
-import { Bell, Building2 } from "lucide-react";
+import { Bell, Building2, SlidersHorizontal } from "lucide-react";
 import { useFleet } from "@/context/fleet/FleetAuthContext";
 import { apiFleetUpdateCompany } from "@/lib/fleetApi";
+import SettingsPage, {
+  SettingsRow,
+  SettingsSection,
+} from "@/components/shared/settings/SettingsPage";
 import BusinessDetailsForm from "@/components/pos/BusinessDetailsForm";
 import FleetShell from "@/pages/fleet/FleetShell";
 import PushToggle from "@/pages/fleet/PushToggle";
@@ -9,7 +13,8 @@ import PushToggle from "@/pages/fleet/PushToggle";
 // «Ρυθμίσεις» εταιρείας διανομής (μόνο διαχειριστής): στοιχεία επιχείρησης —
 // όνομα, πόλη, διεύθυνση με pin, τηλέφωνα. Πόλη/pin κεντράρουν τους χάρτες και
 // τις προτάσεις διευθύνσεων, και η πόλη ταιριάζει την εταιρεία με καταστήματα
-// της περιοχής στην αναζήτηση συνεργασιών.
+// της περιοχής στην αναζήτηση συνεργασιών. Ίδιο pill nav κατηγοριών + ίδιες
+// ενότητες/κάρτες με τις Ρυθμίσεις του OrderDeck.
 export default function FleetSettings() {
   const { team, refresh } = useFleet();
 
@@ -26,49 +31,17 @@ export default function FleetSettings() {
     toast.success("Τα στοιχεία επιχείρησης αποθηκεύτηκαν");
   };
 
-  return (
-    <FleetShell title="Ρυθμίσεις">
-      <section className="max-w-[900px] mb-8">
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Bell className="w-5 h-5 text-flame" />
-            <h2 className="font-heading text-lg font-bold">Ειδοποιήσεις</h2>
-          </div>
-          <p className="text-sm text-neutral-400">
-            Ειδοποιήσεις push για νέες παραγγελίες καταστημάτων και αιτήματα
-            συνεργασίας — και με κλειστή την εφαρμογή
-          </p>
-        </div>
-        <div className="px-4 bg-[#3D1620] border border-[#723645] rounded-lg">
-          <div
-            className="flex items-center gap-3 py-3"
-            data-testid="fleet-set-push"
-          >
-            <Bell className="w-5 h-5 text-flame shrink-0" />
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold text-sm">Ειδοποιήσεις push</div>
-              <div className="text-xs text-neutral-500 mt-0.5">
-                Σε αυτή τη συσκευή
-              </div>
-            </div>
-            <PushToggle surface="dispatcher" />
-          </div>
-        </div>
-      </section>
-
-      <section className="max-w-[900px]">
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Building2 className="w-5 h-5 text-flame" />
-            <h2 className="font-heading text-lg font-bold">Στοιχεία επιχείρησης</h2>
-          </div>
-          <p className="text-sm text-neutral-400">
-            Η πόλη και το pin κεντράρουν τον χάρτη παραγγελιών και τις προτάσεις
-            διευθύνσεων — και η πόλη εμφανίζει την εταιρεία σε καταστήματα της
-            περιοχής που ψάχνουν συνεργασία
-          </p>
-        </div>
-        <div className="p-4 md:p-6 bg-[#3D1620] border border-[#723645] rounded-lg">
+  const categories = [
+    {
+      key: "company",
+      label: "Στοιχεία επιχείρησης",
+      icon: Building2,
+      render: () => (
+        <SettingsSection
+          icon={Building2}
+          title="Στοιχεία επιχείρησης"
+          subtitle="Η πόλη και το pin κεντράρουν τον χάρτη παραγγελιών και τις προτάσεις διευθύνσεων — και η πόλη εμφανίζει την εταιρεία σε καταστήματα της περιοχής που ψάχνουν συνεργασία"
+        >
           {team && team !== false && (
             <BusinessDetailsForm
               initial={{
@@ -85,8 +58,36 @@ export default function FleetSettings() {
               testPrefix="fleet-company"
             />
           )}
-        </div>
-      </section>
+        </SettingsSection>
+      ),
+    },
+    {
+      key: "misc",
+      label: "Λοιπά",
+      icon: SlidersHorizontal,
+      render: () => (
+        <SettingsSection
+          icon={Bell}
+          title="Ειδοποιήσεις"
+          subtitle="Ειδοποιήσεις push για νέες παραγγελίες καταστημάτων και αιτήματα συνεργασίας — και με κλειστή την εφαρμογή"
+          tight
+        >
+          <SettingsRow
+            icon={Bell}
+            title="Ειδοποιήσεις push"
+            subtitle="Σε αυτή τη συσκευή"
+            testId="fleet-set-push"
+          >
+            <PushToggle surface="dispatcher" />
+          </SettingsRow>
+        </SettingsSection>
+      ),
+    },
+  ];
+
+  return (
+    <FleetShell title="Ρυθμίσεις">
+      <SettingsPage categories={categories} testPrefix="fleet-settings" scrollable={false} />
     </FleetShell>
   );
 }
