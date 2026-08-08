@@ -25,6 +25,30 @@ const pinIcon = (o) => {
   });
 };
 
+// Pin ΣΗΜΕΙΟΥ ΠΑΡΑΛΑΒΗΣ — χρυσό, με σχήμα σπιτιού ώστε να ξεχωρίζει με μια ματιά
+// από τα (στρογγυλά) pins παράδοσης
+const pickupIcon = L.divIcon({
+  className: "",
+  html: `<div style="width:28px;height:34px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))">
+      <svg width="28" height="34" viewBox="0 0 24 28" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 28 4 18h16Z" fill="#FFC300"/>
+        <rect x="2" y="2" width="20" height="17" rx="3" fill="#FFC300" stroke="#2A0E14" stroke-width="1.2"/>
+        <path d="M7 15v-5h10v5" fill="none" stroke="#2A0E14" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M5 9.5 12 5l7 4.5" fill="none" stroke="#2A0E14" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>`,
+  iconSize: [28, 34],
+  iconAnchor: [14, 32],
+});
+
+const pickupPopupHtml = (o) => `
+  <div style="font-family:inherit;min-width:150px;color:#2A0E14">
+    <div style="font-weight:bold;font-size:13px;margin-bottom:2px">📦 Παραλαβή</div>
+    <div style="font-size:12px;color:#555">${esc(o.pickup_name)}</div>
+    ${o.pickup_address ? `<div style="font-size:12px;color:#555">${esc(o.pickup_address)}</div>` : ""}
+    <a href="https://www.google.com/maps/search/?api=1&query=${o.pickup_lat},${o.pickup_lng}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:4px;font-weight:bold;color:#B8860B">Άνοιγμα στο Google Maps</a>
+  </div>`;
+
 // Popup = η κάρτα της παραγγελίας: αριθμός, κατάστημα, διεύθυνση, οδηγός, ⏱ λεπτά
 const popupHtml = (o) => {
   const meta = STATUS_META[o.status] || STATUS_META.waiting;
@@ -46,12 +70,16 @@ export default function FleetOrdersMap({
   defaultCenter = null,
   heightClass = "h-[55vh] min-h-[320px]",
   withPopups = true,
+  // Δεύτερο pin ανά παραγγελία στο σημείο παραλαβής (χρυσό, με δικό του popup
+  // + σύνδεσμο Google Maps) — η οθόνη του οδηγού το θέλει, ο πίνακας όχι
+  showPickups = false,
   onPinTap = null,
   emptyText = "Καμία ενεργή παραγγελία με pin στον χάρτη",
 }) {
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef({}); // order id -> Leaflet marker
+  const pickupsRef = useRef({}); // order id -> Leaflet marker (σημείο παραλαβής)
   const fittedRef = useRef(false);
   // Σταθερό handler για τα click listeners των markers (δεν ξαναδένονται ανά poll)
   const onPinTapRef = useRef(onPinTap);
@@ -59,6 +87,9 @@ export default function FleetOrdersMap({
 
   const located = orders.filter((o) => o.lat != null && o.lng != null);
   const unlocated = orders.length - located.length;
+  const pickups = showPickups
+    ? orders.filter((o) => o.pickup_lat != null && o.pickup_lng != null)
+    : [];
 
   // Init χάρτη — αρχική θέα το pin του λογαριασμού (αλλιώς Ελλάδα) μέχρι το
   // πρώτο fitBounds στα pins παραγγελιών
@@ -75,6 +106,7 @@ export default function FleetOrdersMap({
       map.remove();
       mapRef.current = null;
       markersRef.current = {};
+      pickupsRef.current = {};
       fittedRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,12 +146,37 @@ export default function FleetOrdersMap({
         delete markersRef.current[id];
       }
     });
+    // Ίδιο μοτίβο για τα pins παραλαβής (μόνο όταν ζητούνται)
+    const alivePickups = new Set();
+    pickups.forEach((o) => {
+      alivePickups.add(o.id);
+      const existing = pickupsRef.current[o.id];
+      if (existing) {
+        existing.setLatLng([o.pickup_lat, o.pickup_lng]);
+        existing.setPopupContent(pickupPopupHtml(o));
+      } else {
+        const m = L.marker([o.pickup_lat, o.pickup_lng], { icon: pickupIcon }).addTo(map);
+        m.bindPopup(pickupPopupHtml(o));
+        m.on("click", () => onPinTapRef.current?.(o.id));
+        pickupsRef.current[o.id] = m;
+      }
+    });
+    Object.keys(pickupsRef.current).forEach((id) => {
+      if (!alivePickups.has(id)) {
+        map.removeLayer(pickupsRef.current[id]);
+        delete pickupsRef.current[id];
+      }
+    });
     if (!fittedRef.current && located.length) {
-      map.fitBounds(L.latLngBounds(located.map((o) => [o.lat, o.lng])).pad(0.25), { maxZoom: 15 });
+      const pts = [
+        ...located.map((o) => [o.lat, o.lng]),
+        ...pickups.map((o) => [o.pickup_lat, o.pickup_lng]),
+      ];
+      map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
       fittedRef.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders, withPopups]);
+  }, [orders, withPopups, showPickups]);
 
   return (
     <div className="space-y-2">

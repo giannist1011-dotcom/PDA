@@ -224,6 +224,13 @@ async def store_fleet_board(
     ).sort("created_at", -1).to_list(500)
     return {
         "store_name": store_name(user),
+        # Γεωγραφία του καταστήματος από τη ΒΑΣΗ: η φόρμα ανεβάσματος παίρνει από
+        # εδώ το bias των προτάσεων διεύθυνσης (πόλη/pin/ζώνη), ώστε να μην
+        # εξαρτάται από cached «me» της συσκευής
+        "store_city": (user.get("store_city") or "").strip(),
+        "store_lat": user.get("store_lat"),
+        "store_lng": user.get("store_lng"),
+        "delivery_radius_km": user.get("delivery_radius_km") or 6,
         "partnerships": [public_partnership(p) for p in partnerships],
         "drivers": drivers,
         "orders": orders,
@@ -259,6 +266,11 @@ async def store_fleet_create_order(body: StoreOrderIn, user: dict = Depends(get_
         "store_user_id": user["id"],
         "number": None,
         "pickup_name": store_name(user),
+        # Σημείο παραλαβής = τα στοιχεία τοποθεσίας του ίδιου του καταστήματος,
+        # ώστε ο οδηγός να βλέπει και pin παραλαβής (όχι μόνο όνομα)
+        "pickup_address": (user.get("store_address") or "").strip(),
+        "pickup_lat": user.get("store_lat"),
+        "pickup_lng": user.get("store_lng"),
         "address": body.address.strip(),
         "floor": body.floor.strip(),
         "phone": body.phone.strip(),

@@ -197,58 +197,58 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - POST /tabs/{tab_id}/close → close_tab @282 — Κλείσιμο τραπεζιού: turn the tab into a normal…
 - POST /tabs/{tab_id}/transfer → transfer_tab @325
 ### fleet/company.py
-- POST /fleet/signup → fleet_signup @497 — Εγγραφή εταιρείας διανομής στο ΕΝΙΑΙΟ auth (users, account_type=fleet_company).
-- POST /fleet/exchange → fleet_exchange @544 — Unified JWT (users) → team-level fleet token, χωρίς…
-- POST /fleet/register → fleet_register @560
-- POST /fleet/login → fleet_login @597
-- GET /fleet/me → fleet_me @609
-- PUT /fleet/settings/company → fleet_update_company @623 — Στοιχεία επιχείρησης εταιρείας — όνομα, πόλη, διεύθυνση +…
-- GET /fleet/members → fleet_list_members @658
-- POST /fleet/members → fleet_create_member @666
-- POST /fleet/members/{mid}/reset-password → fleet_reset_member_password @718 — Νέος προσωρινός κωδικός διανομέα — υποχρεωτική αλλαγή στην…
-- PUT /fleet/members/{mid} → fleet_update_member @734
-- DELETE /fleet/members/{mid} → fleet_delete_member @754
-- POST /fleet/member/select → fleet_member_select @790
-- POST /fleet/member/exit → fleet_member_exit @803
-- POST /fleet/driver/login → fleet_driver_login @830 — Είσοδος διανομέα με τηλέφωνο/email + κωδικό (προσωρινό ή…
-- POST /fleet/driver/change-password → fleet_driver_change_password @846
-- POST /fleet/driver/select → fleet_driver_select @857 — Επιλογή εταιρείας → πλήρες fleet token (team +…
-- POST /fleet/admin/display-name → fleet_admin_display_name @880 — Προσωπικό όνομα του διαχειριστή («Το όνομά μου») —…
-- POST /fleet/admin/driver-mode → fleet_admin_driver_mode @899 — «Λειτουργία διανομέα»: βρίσκει ή δημιουργεί το προσωπικό driver…
-- POST /fleet/orders → fleet_create_order @949
-- GET /fleet/board → fleet_board @979 — Ο πίνακας του διαχειριστή: παραγγελίες ημέρας + feed…
-- GET /fleet/partnerships → fleet_partnerships @1022 — Αιτήματα & ενεργές συνεργασίες καταστημάτων της εταιρείας.
-- POST /fleet/partnerships/{pid}/respond → fleet_respond_partnership @1034 — Αποδοχή/απόρριψη αιτήματος συνεργασίας καταστήματος. Με αποδοχή η
-- GET /fleet/driver/board → fleet_driver_board @1057 — Η οθόνη του οδηγού: ελεύθερες + δικές του…
-- POST /fleet/orders/{oid}/claim → fleet_claim_order @1087 — ΑΤΟΜΙΚΟ claim: μόνο ένας οδηγός παίρνει την παραγγελία…
-- POST /fleet/orders/{oid}/status → fleet_order_status @1112
-- POST /fleet/orders/{oid}/assign → fleet_assign_order @1145
-- POST /fleet/orders/{oid}/cancel → fleet_cancel_order @1187
-- PUT /fleet/orders/{oid} → fleet_edit_order @1218 — Επεξεργασία παραγγελίας από τον διαχειριστή. Πριν το claim…
-- POST /fleet/orders/{oid}/urgent → fleet_set_urgent @1265 — «⚡ Επείγον»: καρφιτσώνει την παραγγελία πρώτη στις «Ελεύθερες»…
-- POST /fleet/orders/{oid}/problem → fleet_report_problem @1291 — Ο οδηγός σημαίνει πρόβλημα σε claimed παραγγελία του…
-- POST /fleet/orders/{oid}/problem/resolve → fleet_resolve_problem @1327
-- POST /fleet/driver/shift → fleet_driver_shift @1342 — «Ξεκινάω/Τέλος βάρδιας»: on_shift στο μέλος (πράσινη κουκκίδα στον…
-- GET /fleet/driver/stats → fleet_driver_stats @1376 — Στατιστικά του ίδιου του οδηγού: σύνολο παραδόσεων, σήμερα/εβδομάδα,
-- GET /fleet/driver/orders → fleet_driver_orders @1507 — Ιστορικό παραγγελιών του οδηγού (claimed/παραδομένες) με φίλτρο ημέρας…
-- GET /fleet/pickup-names → fleet_pickup_names @1540 — Ονόματα καταστημάτων παραλαβής που έχουν ξαναχρησιμοποιηθεί (autocomplete).
-- GET /fleet/address-book → fleet_address_book @1547 — Πρόσφατες διευθύνσεις της ομάδας για το AddressAutocomplete (μορφή…
-- GET /fleet/stats → fleet_stats @1565 — Στατιστικά εταιρείας για περίοδο: πλήθη ανά κατάσταση, ανά…
-- GET /fleet/day-summary → fleet_day_summary @1679 — Πλήθη παραγγελιών ανά οδηγό για ημέρα ή εύρος…
-- GET /fleet/push/vapid-key → fleet_push_vapid_key @1736 — Δημόσιο VAPID κλειδί για το pushManager.subscribe — null…
-- POST /fleet/push/subscribe → fleet_push_subscribe @1743
-- POST /fleet/push/unsubscribe → fleet_push_unsubscribe @1751
+- POST /fleet/signup → fleet_signup @509 — Εγγραφή εταιρείας διανομής στο ΕΝΙΑΙΟ auth (users, account_type=fleet_company).
+- POST /fleet/exchange → fleet_exchange @556 — Unified JWT (users) → team-level fleet token, χωρίς…
+- POST /fleet/register → fleet_register @572
+- POST /fleet/login → fleet_login @609
+- GET /fleet/me → fleet_me @621
+- PUT /fleet/settings/company → fleet_update_company @635 — Στοιχεία επιχείρησης εταιρείας — όνομα, πόλη, διεύθυνση +…
+- GET /fleet/members → fleet_list_members @670
+- POST /fleet/members → fleet_create_member @678
+- POST /fleet/members/{mid}/reset-password → fleet_reset_member_password @730 — Νέος προσωρινός κωδικός διανομέα — υποχρεωτική αλλαγή στην…
+- PUT /fleet/members/{mid} → fleet_update_member @746
+- DELETE /fleet/members/{mid} → fleet_delete_member @766
+- POST /fleet/member/select → fleet_member_select @802
+- POST /fleet/member/exit → fleet_member_exit @815
+- POST /fleet/driver/login → fleet_driver_login @842 — Είσοδος διανομέα με τηλέφωνο/email + κωδικό (προσωρινό ή…
+- POST /fleet/driver/change-password → fleet_driver_change_password @858
+- POST /fleet/driver/select → fleet_driver_select @869 — Επιλογή εταιρείας → πλήρες fleet token (team +…
+- POST /fleet/admin/display-name → fleet_admin_display_name @892 — Προσωπικό όνομα του διαχειριστή («Το όνομά μου») —…
+- POST /fleet/admin/driver-mode → fleet_admin_driver_mode @911 — «Λειτουργία διανομέα»: βρίσκει ή δημιουργεί το προσωπικό driver…
+- POST /fleet/orders → fleet_create_order @961
+- GET /fleet/board → fleet_board @994 — Ο πίνακας του διαχειριστή: παραγγελίες ημέρας + feed…
+- GET /fleet/partnerships → fleet_partnerships @1037 — Αιτήματα & ενεργές συνεργασίες καταστημάτων της εταιρείας.
+- GET /fleet/partner-stores → fleet_partner_stores @1049 — Τα ΣΥΝΕΡΓΑΖΟΜΕΝΑ μαγαζιά της εταιρείας με τα στοιχεία…
+- POST /fleet/partnerships/{pid}/respond → fleet_respond_partnership @1103 — Αποδοχή/απόρριψη αιτήματος συνεργασίας καταστήματος. Με αποδοχή η
+- GET /fleet/driver/board → fleet_driver_board @1126 — Η οθόνη του οδηγού: ελεύθερες + δικές του…
+- POST /fleet/orders/{oid}/claim → fleet_claim_order @1156 — ΑΤΟΜΙΚΟ claim: μόνο ένας οδηγός παίρνει την παραγγελία…
+- POST /fleet/orders/{oid}/status → fleet_order_status @1181
+- POST /fleet/orders/{oid}/assign → fleet_assign_order @1214
+- POST /fleet/orders/{oid}/cancel → fleet_cancel_order @1256
+- PUT /fleet/orders/{oid} → fleet_edit_order @1287 — Επεξεργασία παραγγελίας από τον διαχειριστή. Πριν το claim…
+- POST /fleet/orders/{oid}/urgent → fleet_set_urgent @1348 — «⚡ Επείγον»: καρφιτσώνει την παραγγελία πρώτη στις «Ελεύθερες»…
+- POST /fleet/orders/{oid}/problem → fleet_report_problem @1374 — Ο οδηγός σημαίνει πρόβλημα σε claimed παραγγελία του…
+- POST /fleet/orders/{oid}/problem/resolve → fleet_resolve_problem @1410
+- POST /fleet/driver/shift → fleet_driver_shift @1425 — «Ξεκινάω/Τέλος βάρδιας»: on_shift στο μέλος (πράσινη κουκκίδα στον…
+- GET /fleet/driver/stats → fleet_driver_stats @1459 — Στατιστικά του ίδιου του οδηγού: σύνολο παραδόσεων, σήμερα/εβδομάδα,
+- GET /fleet/driver/orders → fleet_driver_orders @1590 — Ιστορικό παραγγελιών του οδηγού (claimed/παραδομένες) με φίλτρο ημέρας…
+- GET /fleet/address-book → fleet_address_book @1626 — Πρόσφατες διευθύνσεις της ομάδας για το AddressAutocomplete (μορφή…
+- GET /fleet/stats → fleet_stats @1644 — Στατιστικά εταιρείας για περίοδο: πλήθη ανά κατάσταση, ανά…
+- GET /fleet/day-summary → fleet_day_summary @1758 — Πλήθη παραγγελιών ανά οδηγό για ημέρα ή εύρος…
+- GET /fleet/push/vapid-key → fleet_push_vapid_key @1815 — Δημόσιο VAPID κλειδί για το pushManager.subscribe — null…
+- POST /fleet/push/subscribe → fleet_push_subscribe @1822
+- POST /fleet/push/unsubscribe → fleet_push_unsubscribe @1830
 ### fleet/store.py
 - GET /store/fleet/companies → store_fleet_companies @103 — Εταιρείες διανομής που καλύπτουν την πόλη του καταστήματος…
 - POST /store/fleet/partners/{team_id}/request → store_fleet_request_partner @134 — Αίτημα συνεργασίας προς εταιρεία — ειδοποιείται η διαχείρισή…
 - POST /store/fleet/partnerships/{pid}/end → store_fleet_end_partnership @182 — Τερματισμός ενεργής συνεργασίας από το κατάστημα.
 - GET /store/fleet/board → store_fleet_board @201 — Ο πίνακας του καταστήματος (ένα poll): ενεργές συνεργασίες,…
-- POST /store/fleet/orders → store_fleet_create_order @234 — Ανέβασμα παραγγελίας στην επιλεγμένη εταιρεία: παραλαβή = το…
-- GET /store/fleet/dispatch → store_fleet_dispatch @298 — Καρτέλα «Αποστολή παραγγελίας» (πλάνο OrderDeck Fleet): οι τυπωμένες
-- POST /store/fleet/orders/{oid}/publish-now → store_fleet_publish_now @330 — «Αποστολή τώρα» σε προγραμματισμένο ανέβασμα — δημοσιεύεται αμέσως…
-- POST /store/fleet/orders/{oid}/cancel → store_fleet_cancel_order @347 — Ακύρωση από το κατάστημα. Προγραμματισμένη → διαγραφή πριν…
-- GET /store/fleet/address-book → store_fleet_address_book @385 — Πρόσφατες διευθύνσεις του καταστήματος για το AddressAutocomplete.
-- GET /store/fleet/stats → store_fleet_stats @403 — Πλήθη ανεβασμένων παραγγελιών ανά εταιρεία και κατάσταση για…
+- POST /store/fleet/orders → store_fleet_create_order @241 — Ανέβασμα παραγγελίας στην επιλεγμένη εταιρεία: παραλαβή = το…
+- GET /store/fleet/dispatch → store_fleet_dispatch @310 — Καρτέλα «Αποστολή παραγγελίας» (πλάνο OrderDeck Fleet): οι τυπωμένες
+- POST /store/fleet/orders/{oid}/publish-now → store_fleet_publish_now @342 — «Αποστολή τώρα» σε προγραμματισμένο ανέβασμα — δημοσιεύεται αμέσως…
+- POST /store/fleet/orders/{oid}/cancel → store_fleet_cancel_order @359 — Ακύρωση από το κατάστημα. Προγραμματισμένη → διαγραφή πριν…
+- GET /store/fleet/address-book → store_fleet_address_book @397 — Πρόσφατες διευθύνσεις του καταστήματος για το AddressAutocomplete.
+- GET /store/fleet/stats → store_fleet_stats @415 — Πλήθη ανεβασμένων παραγγελιών ανά εταιρεία και κατάσταση για…
 ### platforms/router.py
 - GET /platforms/settings → platform_settings @103
 - PUT /platforms/{platform}/enabled → toggle_platform @118 — Εμφάνιση/απόκρυψη της καρτέλας της πλατφόρμας στις Παραγγελίες.
@@ -374,6 +374,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - driver-login → FleetDriverLogin
 - select → FleetSelect
 - members → FleetProtected [fleet_admin]
+- stores → FleetProtected [fleet_admin]
 - stats → FleetProtected [fleet_admin]
 - settings → FleetProtected [fleet_admin]
 - driver → FleetProtected
@@ -442,6 +443,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - FleetSettings.jsx (93 γρ): FleetSettings@13
 - FleetSignup.jsx (291 γρ): Field@10, FleetSignup@38
 - FleetStats.jsx (179 γρ): FleetStats@21
+- FleetStores.jsx (135 γρ): FleetStores@17
 - History.jsx (305 γρ): History@28
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
@@ -454,9 +456,9 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - Schedule.jsx (338 γρ): Schedule@30
 - Settings.jsx (140 γρ): Section@22, Settings@37
 - Stock.jsx (103 γρ): Stock@12
-- StoreFleet.jsx (169 γρ): StoreFleet@16
+- StoreFleet.jsx (172 γρ): StoreFleet@16
 - StoreFleetPartners.jsx (159 γρ): StoreFleetPartners@22
-- StoreFleetSettings.jsx (47 γρ): StoreFleetSettings@9
+- StoreFleetSettings.jsx (48 γρ): StoreFleetSettings@9
 - StoreFleetStats.jsx (125 γρ): StoreFleetStats@19
 - TableOrder.jsx (354 γρ): TableOrder@30
 - Tables.jsx (159 γρ): Tables@12
@@ -503,16 +505,17 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - expenses/CategoryManagerModal.jsx (114 γρ): CategoryManagerModal@6
 - expenses/ExpenseModal.jsx (142 γρ): ExpenseModal@8
 - fleet/DayTotals.jsx (67 γρ): DayTotals@9
-- fleet/DriverCard.jsx (98 γρ): DriverCard@14
+- fleet/DriverCard.jsx (116 γρ): DriverCard@15
 - fleet/DriverHistory.jsx (93 γρ): DriverHistory@13
-- fleet/DriverMineTab.jsx (111 γρ): DriverMineTab@13
+- fleet/DriverMineTab.jsx (162 γρ): useCollapseOnScroll@19, DriverMineTab@50
 - fleet/DriverStats.jsx (132 γρ): Tile@12, DriverStats@24
-- fleet/FleetOrdersMap.jsx (143 γρ): FleetOrdersMap@42
-- fleet/FleetShell.jsx (362 γρ): FleetShell@45
-- fleet/NewOrderForm.jsx (161 γρ): NewOrderForm@22
+- fleet/FleetOrdersMap.jsx (200 γρ): FleetOrdersMap@66
+- fleet/FleetShell.jsx (364 γρ): FleetShell@47
+- fleet/NewOrderForm.jsx (155 γρ): NewOrderForm@25
 - fleet/PartnershipRequests.jsx (81 γρ): PartnershipRequests@10
 - fleet/ProblemModal.jsx (81 γρ): ProblemModal@15
 - fleet/PushToggle.jsx (56 γρ): PushToggle@10
+- fleet/StoresMap.jsx (122 γρ): StoresMap@35
 - fleet/alerts.js (51 γρ)
 - history/CustomerDetailModal.jsx (119 γρ): CustomerDetailModal@5
 - history/CustomersTab.jsx (84 γρ): CustomersTab@4
@@ -594,16 +597,17 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - table-order/utils.js (6 γρ)
 
 ## FRONTEND — components (frontend/src/components)
-- fleet/EditOrderModal.jsx (139 γρ): EditOrderModal@14
+- fleet/EditOrderModal.jsx (148 γρ): EditOrderModal@15
 - fleet/OrderCard.jsx (299 γρ): OrderCard@32
-- fleet/utils.js (105 γρ): useAccountCenter@10
+- fleet/PickupPicker.jsx (131 γρ): PickupPicker@17
+- fleet/utils.js (122 γρ): useAccountCenter@10
 - platforms/PlatformOrderPopup.jsx (102 γρ): PlatformOrderPopup@13
 - platforms/PlatformSettings.jsx (209 γρ): PlatformSettings@20
 - platforms/order/Countdown.jsx (37 γρ): Countdown@7
 - platforms/order/PlatformOrderBody.jsx (79 γρ): PlatformOrderBody@6
 - platforms/order/ReadyTimePicker.jsx (37 γρ): ReadyTimePicker@6
 - pos/BulkActionsBar.jsx (478 γρ): PriceChangeDialog@32, CategoryDialog@126, OptionGroupDialog@186, BulkActionsBar@362
-- pos/BusinessDetailsForm.jsx (244 γρ): BusinessDetailsForm@27
+- pos/BusinessDetailsForm.jsx (236 γρ): BusinessDetailsForm@21
 - pos/CustomizationModal.jsx (412 γρ): OptionTile@15, LegacyOptions@49, GroupsOptions@144, CustomizationModal@227
 - pos/DeckPilotChat.jsx (148 γρ): DeckPilotChat@31
 - pos/LineEditModal.jsx (133 γρ): LineEditModal@14
@@ -619,14 +623,15 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - pos/Receipt.jsx (171 γρ): ReceiptCopy@15, Receipt@156
 - pos/SourceFilter.jsx (39 γρ): SourceFilter@5
 - pos/SourceMix.jsx (57 γρ): SourceMix@7
-- pos/StoreDetailsSettings.jsx (165 γρ): StoreDetailsSettings@16
+- pos/StoreDetailsSettings.jsx (169 γρ): StoreDetailsSettings@18
 - pos/StoreHoursEditor.jsx (123 γρ): StoreHoursEditor@19
 - pos/TablesEditor.jsx (164 γρ): TablesEditor@14
-- shared/AddressAutocomplete.jsx (431 γρ): AddressAutocomplete@104
+- shared/AddressAutocomplete.jsx (471 γρ): AddressAutocomplete@114
+- shared/AddressPickerModal.jsx (177 γρ): AddressPickerModal@19
 - shared/AdminPartnerships.jsx (165 γρ): AdminPartnerships@20
 - shared/AdminShell.jsx (355 γρ): useAdminPw@31, useAdminInfo@35, MasterOnly@38, LoginForm@67, ForcePasswordChange@146, AdminShell@210
 - shared/AnnouncementBanner.jsx (88 γρ): AnnouncementBanner@32
-- shared/AppShell.jsx (567 γρ): BetaBadge@119, DemoBanner@143, AppShell@186
+- shared/AppShell.jsx (569 γρ): BetaBadge@119, DemoBanner@143, AppShell@186
 - shared/CodeNumpad.jsx (110 γρ): CodeNumpad@11
 - shared/CountBarChart.jsx (64 γρ): CountBarChart@14
 - shared/DatePicker.jsx (168 γρ): DatePicker@20
@@ -639,6 +644,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - shared/ProtectedRoute.jsx (43 γρ): ProtectedRoute@13
 - shared/StatCard.jsx (21 γρ): StatCard@4
 - shared/TimePicker.jsx (119 γρ): Column@23, TimePicker@60
+- shared/mapPin.js (19 γρ)
 - shared/printing/BridgeSetup.jsx (185 γρ): BridgeSetup@17
 - shared/printing/KioskSetup.jsx (82 γρ): KioskSetup@12
 - shared/printing/RelayAgent.jsx (243 γρ): StationLoop@27, StationDownBanner@195, RelayAgent@234

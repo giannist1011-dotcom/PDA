@@ -13,7 +13,9 @@ const inputCls =
 // Στοιχεία καταστήματος: κοινός πυρήνας (BusinessDetailsForm — όνομα, τηλέφωνα,
 // πόλη, διεύθυνση + pin) + πεδία μαγαζιού: ζώνη διανομής και, με catalogExtras,
 // ωράριο & Google review (δημόσιος κατάλογος — κρύβονται στο πλάνο FleetDeck).
-export default function StoreDetailsSettings({ catalogExtras = true }) {
+// printing=false (FleetDeck καταστήματος): καμία ρύθμιση εκτύπωσης — φεύγει και
+// το «Όνομα στην απόδειξη», που αφορά μόνο επιφάνειες που τυπώνουν.
+export default function StoreDetailsSettings({ catalogExtras = true, printing = true }) {
   const { user, refreshMe } = useAuth();
   const [radiusKm, setRadiusKm] = useState(String(user?.delivery_radius_km ?? 6));
   const [receiptName, setReceiptName] = useState(user?.receipt_name || "");
@@ -97,19 +99,21 @@ export default function StoreDetailsSettings({ catalogExtras = true }) {
         </div>
       }
     >
-      <div>
-        <label className="block text-xs text-neutral-400 mb-1.5">
-          Όνομα στην απόδειξη — προαιρετικό· αν οριστεί, η κεφαλίδα της απόδειξης δείχνει αυτό αντί για το πλήρες όνομα (ο κατάλογος και η εφαρμογή δεν αλλάζουν)
-        </label>
-        <input
-          value={receiptName}
-          onChange={(e) => setReceiptName(e.target.value)}
-          maxLength={80}
-          placeholder={user?.restaurant_name || "π.χ. Πεινώκιο"}
-          data-testid="receipt-name-input"
-          className={inputCls}
-        />
-      </div>
+      {printing && (
+        <div>
+          <label className="block text-xs text-neutral-400 mb-1.5">
+            Όνομα στην απόδειξη — προαιρετικό· αν οριστεί, η κεφαλίδα της απόδειξης δείχνει αυτό αντί για το πλήρες όνομα (ο κατάλογος και η εφαρμογή δεν αλλάζουν)
+          </label>
+          <input
+            value={receiptName}
+            onChange={(e) => setReceiptName(e.target.value)}
+            maxLength={80}
+            placeholder={user?.restaurant_name || "π.χ. Το κατάστημά μου"}
+            data-testid="receipt-name-input"
+            className={inputCls}
+          />
+        </div>
+      )}
 
       {catalogExtras && (
         <>

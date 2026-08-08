@@ -126,6 +126,10 @@ export const apiFleetPartnerships = () =>
   fleetApi.get("/fleet/partnerships").then((r) => r.data);
 export const apiFleetRespondPartnership = (id, accept) =>
   fleetApi.post(`/fleet/partnerships/${id}/respond`, { accept }).then((r) => r.data);
+// Συνεργαζόμενα μαγαζιά με στοιχεία/pin + παραγγελίες σήμερα (σελίδα «Μαγαζιά»
+// και dropdown «Παραλαβή από»)
+export const apiFleetPartnerStores = () =>
+  fleetApi.get("/fleet/partner-stores").then((r) => r.data);
 
 // ΒΑΡΔΙΑ ΟΔΗΓΟΥ
 export const apiFleetDriverShift = (on) =>
@@ -154,8 +158,6 @@ export const apiFleetPushUnsubscribe = (endpoint) =>
   fleetApi.post("/fleet/push/unsubscribe", { endpoint }).then((r) => r.data);
 
 // AUTOCOMPLETE + ΣΥΝΟΛΑ
-export const apiFleetPickupNames = () =>
-  fleetApi.get("/fleet/pickup-names").then((r) => r.data);
 export const apiFleetAddressBook = () =>
   fleetApi.get("/fleet/address-book").then((r) => r.data);
 // Στατιστικά εταιρείας για περίοδο (σελίδα «Στατιστικά» της διαχείρισης)

@@ -1,4 +1,4 @@
-import { MapPin, Phone, StickyNote, Timer, Zap, Pencil } from "lucide-react";
+import { MapPin, Phone, Store, StickyNote, Timer, Zap, Pencil } from "lucide-react";
 import {
   STATUS_META,
   EDIT_FIELD_LABELS,
@@ -6,6 +6,7 @@ import {
   fmtTime,
   mapsUrl,
   minutesSince,
+  pickupPoint,
 } from "@/components/fleet/utils";
 
 // Κάρτα παραγγελίας οδηγού — module-level ώστε να μην γίνεται remount σε κάθε poll.
@@ -17,6 +18,7 @@ export function DriverCard({ o, city, dim = false, showStatus = false, highlight
   const ageCls = o.status === "waiting" ? ageColorClass(mins) : "text-neutral-500";
   const urgent = o.urgent && o.status === "waiting";
   const edited = ["pickup", "enroute"].includes(o.status) && o.updated_fields?.length;
+  const pickup = pickupPoint(o);
   return (
     <div
       className={`bg-[#3D1620] border rounded-lg p-4 transition-shadow ${dim ? "opacity-60" : ""} ${
@@ -42,8 +44,24 @@ export function DriverCard({ o, city, dim = false, showStatus = false, highlight
         )}
         <span className="ml-auto text-xs text-neutral-500">{fmtTime(o.created_at)}</span>
       </div>
+      {/* Σημείο παραλαβής — tap → Google Maps στο pin του (ή στο κείμενό του),
+          ακριβώς όπως και η διεύθυνση παράδοσης από κάτω */}
+      {pickup && (pickup.lat != null || pickup.address) && (
+        <a
+          href={mapsUrl(pickup.address || pickup.name, city, pickup.lat, pickup.lng)}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 mt-2 text-sm text-neutral-300 active:text-flame"
+          data-testid={`fleet-drv-pickup-${o.id}`}
+        >
+          <Store className="w-4 h-4 text-gold shrink-0" />
+          <span className="truncate underline underline-offset-2">
+            Παραλαβή: {pickup.address || pickup.name}
+          </span>
+        </a>
+      )}
       <a
-        href={mapsUrl(o.address, city)}
+        href={mapsUrl(o.address, city, o.lat, o.lng)}
         target="_blank"
         rel="noreferrer"
         className="flex items-center gap-2 mt-2 text-white active:text-flame"

@@ -4,6 +4,7 @@ import { Pencil, X } from "lucide-react";
 import AddressAutocomplete from "@/components/shared/AddressAutocomplete";
 import { apiFleetEditOrder, apiFleetAddressBook } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
+import PickupPicker from "./PickupPicker";
 import { geocodeFleetAddress } from "./utils";
 
 const inputCls =
@@ -19,7 +20,13 @@ export default function EditOrderModal({
   onClose,
   onSaved,
 }) {
-  const [pickup, setPickup] = useState(order.pickup_name || "");
+  // Σημείο παραλαβής (όνομα + διεύθυνση + pin) — ίδιος επιλογέας με τη φόρμα
+  const [pickup, setPickup] = useState({
+    name: order.pickup_name || "",
+    address: order.pickup_address || "",
+    lat: order.pickup_lat ?? null,
+    lng: order.pickup_lng ?? null,
+  });
   const [address, setAddress] = useState(order.address || "");
   // Pin της διεύθυνσης: ξεκινά από την παραγγελία, καθαρίζει σε πληκτρολόγηση,
   // ξαναγεμίζει από επιλογή πρότασης ή auto-geocode στην αποθήκευση
@@ -31,11 +38,18 @@ export default function EditOrderModal({
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!pickup.name.trim()) {
+      toast.error("Επιλέξτε σημείο παραλαβής");
+      return;
+    }
     setBusy(true);
     try {
       const c = coords || (await geocodeFleetAddress(address.trim(), city));
       const res = await apiFleetEditOrder(order.id, {
-        pickup_name: pickup.trim(),
+        pickup_name: pickup.name.trim(),
+        pickup_address: pickup.address.trim(),
+        pickup_lat: pickup.lat,
+        pickup_lng: pickup.lng,
         address: address.trim(),
         notes: notes.trim(),
         lat: c?.lat ?? null,
@@ -73,19 +87,14 @@ export default function EditOrderModal({
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div>
-          <label className="text-[11px] uppercase tracking-widest font-bold text-neutral-400">
-            Παραλαβή από
-          </label>
-          <input
-            required
-            maxLength={80}
-            value={pickup}
-            onChange={(e) => setPickup(e.target.value)}
-            data-testid="fleet-edit-pickup"
-            className={`${inputCls} mt-1`}
-          />
-        </div>
+        <PickupPicker
+          value={pickup}
+          onChange={setPickup}
+          city={city}
+          companyLat={companyLat}
+          companyLng={companyLng}
+          testId="fleet-edit-pickup"
+        />
         <div>
           <label className="text-[11px] uppercase tracking-widest font-bold text-neutral-400">
             Διεύθυνση παράδοσης

@@ -22,7 +22,8 @@ export default function StoreFleetSettings() {
             </p>
           </div>
           <div className="p-6 bg-[#3D1620] border border-[#723645] rounded-lg">
-            <StoreDetailsSettings catalogExtras={false} />
+            {/* Χωρίς εκτύπωση: το FleetDeck καταστήματος μόνο ανεβάζει παραγγελίες */}
+            <StoreDetailsSettings catalogExtras={false} printing={false} />
           </div>
         </section>
 

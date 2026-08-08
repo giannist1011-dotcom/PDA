@@ -85,7 +85,7 @@ export default function StoreFleet() {
           <OrderCard
             key={o.id}
             order={o}
-            city={user?.store_city || ""}
+            city={board?.store_city || user?.store_city || ""}
             storeMode
             onCancel={(order) => apiStoreFleetCancelOrder(order.id)}
             onChanged={load}
@@ -119,12 +119,15 @@ export default function StoreFleet() {
           </div>
         )}
 
+        {/* Πόλη/pin/ζώνη από τον πίνακα (ό,τι λέει η βάση αυτή τη στιγμή), με το
+            cached «me» μόνο ως fallback πριν το πρώτο poll — αλλιώς ένα παλιό
+            snapshot της συσκευής θα έστελνε το autocomplete χωρίς bias */}
         <StoreOrderForm
           storeName={board?.store_name || user?.restaurant_name || ""}
-          city={user?.store_city || ""}
-          storeLat={user?.store_lat ?? null}
-          storeLng={user?.store_lng ?? null}
-          radiusKm={user?.delivery_radius_km ?? null}
+          city={board?.store_city ?? user?.store_city ?? ""}
+          storeLat={board?.store_lat ?? user?.store_lat ?? null}
+          storeLng={board?.store_lng ?? user?.store_lng ?? null}
+          radiusKm={board?.delivery_radius_km ?? user?.delivery_radius_km ?? null}
           partnerships={partnerships}
           teamId={teamId}
           onTeamChange={setTeamId}

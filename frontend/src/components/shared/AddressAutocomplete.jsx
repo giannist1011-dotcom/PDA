@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, User } from "lucide-react";
-import { photonSearch } from "@/lib/api";
+import { geocodeCityCenter, photonSearch } from "@/lib/api";
 import { getAddressBookCached } from "@/lib/offline";
 
-// Autocomplete διεύθυνσης για τη φόρμα παράδοσης του PDA.
-// Προτάσεις: 1) γνωστές διευθύνσεις πελατών (πρώτες, με όνομα) 2) Photon geocoder
-// με bias στις συντεταγμένες του καταστήματος και φίλτρο στην πόλη του.
+// Autocomplete διεύθυνσης — ΤΟ ΕΝΑ component για κάθε φόρμα διεύθυνσης
+// (OrderDeck παράδοση, FleetDeck καταστήματος, FleetDeck εταιρείας).
+// Προτάσεις: 1) γνωστές διευθύνσεις (πρώτες, με όνομα) 2) Photon geocoder με
+// ΓΕΩΓΡΑΦΙΚΟ BIAS. Το bias είναι πάντα ένα από τα δύο:
+//   · pin του λογαριασμού (storeLat/storeLng) + ακτίνα ζώνης → και ζώνη διανομής
+//   · χωρίς pin αλλά ΜΕ πόλη → κέντρο πόλης (geocodeCityCenter, cached) + φαρδιά
+//     ακτίνα· μόνο bias, ΟΧΙ ζώνη διανομής (κανένα «εκτός ζώνης» warning)
+// Χωρίς κανένα από τα δύο οι προτάσεις είναι πανελλαδικές — γι' αυτό οι φόρμες
+// δείχνουν παραπομπή στις ρυθμίσεις όταν λείπουν και πόλη και pin.
 // Ποτέ εμπόδιο στην πληκτρολόγηση: το Photon έχει debounce 200ms, min 2 χαρακτήρες,
 // και offline/σφάλμα δεν μπλοκάρει — οι τοπικές προτάσεις δουλεύουν από cache.
 // Κάθε early-return του Photon path γράφει console.warn για εύκολο debugging στο πεδίο.
@@ -13,6 +19,10 @@ import { getAddressBookCached } from "@/lib/offline";
 const DEBOUNCE_MS = 200;
 const MIN_CHARS = 2;
 const DEFAULT_RADIUS_KM = 6;
+// Ακτίνα bias όταν το bias βγαίνει από το κέντρο της πόλης (χωρίς pin): αρκετά
+// φαρδιά για να καλύψει ολόκληρη πόλη + προάστια, αρκετά στενή για να κόψει
+// ομώνυμες οδούς άλλων νομών
+const CITY_BIAS_RADIUS_KM = 15;
 const MAX_SUGGESTIONS = 6;
 
 // Session cache query→αποτελέσματα Photon: ο ίδιος όρος (π.χ. backspace και ξανά)
@@ -148,9 +158,35 @@ export default function AddressAutocomplete({
 
   const q = (value || "").trim();
 
-  // Ζώνη διανομής: ενεργή μόνο όταν υπάρχει pin μαγαζιού
+  // Ζώνη διανομής: ενεργή μόνο όταν υπάρχει pin λογαριασμού
   const hasZone = storeLat != null && storeLng != null;
   const zoneKm = Number(radiusKm) > 0 ? Number(radiusKm) : DEFAULT_RADIUS_KM;
+
+  // Fallback bias: χωρίς pin αλλά με δηλωμένη πόλη, το κέντρο της πόλης παίζει
+  // τον ρόλο του pin ΜΟΝΟ για το bias των προτάσεων (cached ανά πόλη στο lib/api)
+  const [cityCenter, setCityCenter] = useState(null);
+  useEffect(() => {
+    if (hasZone || !(city || "").trim()) {
+      setCityCenter(null);
+      return undefined;
+    }
+    let alive = true;
+    geocodeCityCenter(city).then((c) => {
+      if (!alive) return;
+      if (!c) console.warn(`[AddressAutocomplete] η πόλη "${city}" δεν βρέθηκε — προτάσεις χωρίς bias`);
+      setCityCenter(c || null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [hasZone, city]);
+
+  // ΤΟ bias: pin λογαριασμού (= και ζώνη διανομής) ή κέντρο πόλης (μόνο bias).
+  // Ό,τι πέφτει έξω από τον κύκλο του bias δεν εμφανίζεται ποτέ ως πρόταση.
+  const biasLat = hasZone ? storeLat : cityCenter?.lat ?? null;
+  const biasLng = hasZone ? storeLng : cityCenter?.lng ?? null;
+  const biasKm = hasZone ? zoneKm : CITY_BIAS_RADIUS_KM;
+  const hasBias = biasLat != null && biasLng != null;
 
   // Τοπικές προτάσεις: γνωστοί πελάτες που ταιριάζουν στο query — όσες έχουν
   // αποθηκευμένες συντεταγμένες (από το geocode cache) κόβονται εκτός ζώνης
@@ -161,10 +197,10 @@ export default function AddressAutocomplete({
       .filter((e) => e.normAddress.includes(qn))
       .filter(
         (e) =>
-          !hasZone ||
+          !hasBias ||
           e.lat == null ||
           e.lng == null ||
-          distanceKm(storeLat, storeLng, e.lat, e.lng) <= zoneKm
+          distanceKm(biasLat, biasLng, e.lat, e.lng) <= biasKm
       )
       .slice(0, 4)
       .map((e) => ({
@@ -175,7 +211,7 @@ export default function AddressAutocomplete({
         lat: e.lat ?? null,
         lng: e.lng ?? null,
       }));
-  }, [q, book, city, hasZone, storeLat, storeLng, zoneKm]);
+  }, [q, book, city, hasBias, biasLat, biasLng, biasKm]);
 
   // Photon: debounce + abort προηγούμενου request + σιωπηλή παράλειψη σε σφάλμα/offline
   useEffect(() => {
@@ -209,22 +245,23 @@ export default function AddressAutocomplete({
     debounceRef.current = setTimeout(async () => {
       const ctrl = new AbortController();
       abortRef.current = ctrl;
-      const bbox = hasZone ? radiusBbox(storeLat, storeLng, zoneKm) : undefined;
+      const bbox = hasBias ? radiusBbox(biasLat, biasLng, biasKm) : undefined;
       const cityN = norm(city);
       // Ένα αίτημα Photon· αν το bbox έκοψε τα πάντα, δεύτερο ΧΩΡΙΣ bbox για να
       // ξεχωρίσουμε "δεν υπάρχει τέτοια οδός" από "υπάρχει αλλά εκτός ζώνης"
+      // (τα αποτελέσματα του δεύτερου περνούν πάντα από το biasFilter παρακάτω)
       const search = async (term) => {
         let data = await cachedPhotonSearch(term, {
-          lat: storeLat,
-          lon: storeLng,
+          lat: biasLat,
+          lon: biasLng,
           bbox,
           signal: ctrl.signal,
         });
         let features = data?.features || [];
         if (!features.length && bbox) {
           data = await cachedPhotonSearch(term, {
-            lat: storeLat,
-            lon: storeLng,
+            lat: biasLat,
+            lon: biasLng,
             signal: ctrl.signal,
           });
           features = data?.features || [];
@@ -250,20 +287,21 @@ export default function AddressAutocomplete({
             return { key: `photon:${label}`, label, sub: null, local: false, inCity, lat: flat, lon: flon, lng: flon };
           })
           .filter(Boolean);
-      // Φίλτρο ζώνης διανομής: haversine από το pin του μαγαζιού — ό,τι είναι
-      // πέρα από την ακτίνα κόβεται (το bbox είναι τετράγωνο, εδώ γίνεται κύκλος)
-      const zoneFilter = (rows) =>
-        hasZone
+      // Φίλτρο bias: haversine από το κέντρο του bias (pin ή πόλη) — ό,τι είναι
+      // πέρα από την ακτίνα κόβεται (το bbox είναι τετράγωνο, εδώ γίνεται κύκλος).
+      // Αυτό είναι που εμποδίζει ομώνυμες οδούς άλλων πόλεων να φτάσουν στη λίστα.
+      const biasFilter = (rows) =>
+        hasBias
           ? rows.filter(
               (r) =>
                 r.lat != null &&
                 r.lon != null &&
-                distanceKm(storeLat, storeLng, r.lat, r.lon) <= zoneKm
+                distanceKm(biasLat, biasLng, r.lat, r.lon) <= biasKm
             )
           : rows;
       try {
         let mapped = mapFeatures(await search(q));
-        let inZone = zoneFilter(mapped);
+        let inZone = biasFilter(mapped);
         // Ο αριθμός σπιτιού λείπει από το OSM στις ελληνικές επαρχιακές πόλεις:
         // αν με τον αριθμό δεν βρέθηκε τίποτα (ή όλα έπεσαν εκτός ζώνης — τυπικά
         // ομώνυμος δρόμος αλλού), ξαναρωτάμε ΜΟΝΟ την οδό. Η οδός καθορίζει το pin
@@ -277,12 +315,13 @@ export default function AddressAutocomplete({
               `[AddressAutocomplete] q="${q}": fallback σε σκέτη οδό "${split.street}" (ο αριθμός λείπει από το OSM)`
             );
             mapped = streetRows;
-            inZone = zoneFilter(streetRows);
+            inZone = biasFilter(streetRows);
           }
         }
         // Ξεκίνησε νεότερο query όσο περιμέναμε — ΠΟΤΕ render αποτελεσμάτων παλιού query
         if (ctrl.signal.aborted) return;
         // Η οδός υπάρχει αλλά μόνο εκτός ζώνης → μη μπλοκάρον warning στη φόρμα.
+        // ΜΟΝΟ με πραγματικό pin: το bias πόλης δεν είναι ζώνη διανομής.
         // Ποτέ επειδή απέτυχε ο αριθμός: εδώ φτάνει μόνο ό,τι έλυσε η ίδια η οδός.
         const outOfZone = hasZone && mapped.length > 0 && inZone.length === 0;
         if (onZoneStatus) onZoneStatus(outOfZone);
@@ -290,9 +329,10 @@ export default function AddressAutocomplete({
           console.warn(
             `[AddressAutocomplete] Photon: ${mapped.length} αποτελέσματα για q="${q}" αλλά όλα εκτός ζώνης ${zoneKm}km`
           );
-        // Προτίμηση στην πόλη του καταστήματος — αλλά αν το φίλτρο θα άδειαζε τη λίστα
-        // (το Photon γυρνάει λατινικές μεταγραφές ή ονόματα οικισμών/χωριών αντί για
-        // την πόλη), κρατάμε όλα τα αποτελέσματα: το lat/lon bias ήδη τα κρατά κοντινά
+        // Προτίμηση στην πόλη του λογαριασμού — αλλά αν το φίλτρο ονόματος θα άδειαζε
+        // τη λίστα (το Photon γυρνάει λατινικές μεταγραφές ή ονόματα οικισμών/χωριών
+        // αντί για την πόλη), κρατάμε ό,τι πέρασε το biasFilter: είναι ήδη γεωγραφικά
+        // μέσα στην περιοχή, οπότε δεν μπορεί να εμφανιστεί οδός άλλης πόλης
         const cityMatches = inZone.filter((r) => r.inCity);
         if (!mapped.length)
           console.warn(`[AddressAutocomplete] Photon: κανένα feature για q="${q}"`);
@@ -311,7 +351,7 @@ export default function AddressAutocomplete({
     }, DEBOUNCE_MS);
     return () => clearTimeout(debounceRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, city, storeLat, storeLng, radiusKm]);
+  }, [q, city, storeLat, storeLng, radiusKm, biasLat, biasLng, biasKm]);
 
   // Συγχώνευση: τοπικές πρώτα, μετά Photon χωρίς διπλότυπα (και μεταξύ τους —
   // ίδια οδός μπορεί να έρθει από πολλούς γειτονικούς οικισμούς).

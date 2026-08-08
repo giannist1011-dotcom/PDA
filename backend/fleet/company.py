@@ -366,6 +366,12 @@ class FleetOrderIn(BaseModel):
     # φόρμα) — None όταν η διεύθυνση δεν βρέθηκε: η παραγγελία μένει εκτός χάρτη
     lat: Optional[float] = None
     lng: Optional[float] = None
+    # ΣΗΜΕΙΟ ΠΑΡΑΛΑΒΗΣ — κείμενο + pin. Έρχεται είτε από συνεργαζόμενο μαγαζί
+    # (όνομα/διεύθυνση/pin των ρυθμίσεών του) είτε από ελεύθερη διεύθυνση με
+    # χάρτη. Ο οδηγός το βλέπει στην κάρτα και στον χάρτη του.
+    pickup_address: str = Field(default="", max_length=160)
+    pickup_lat: Optional[float] = None
+    pickup_lng: Optional[float] = None
 
 
 class FleetOrderEditIn(BaseModel):
@@ -374,6 +380,9 @@ class FleetOrderEditIn(BaseModel):
     notes: str = Field(default="", max_length=300)
     lat: Optional[float] = None
     lng: Optional[float] = None
+    pickup_address: str = Field(default="", max_length=160)
+    pickup_lat: Optional[float] = None
+    pickup_lng: Optional[float] = None
 
 
 class StatusIn(BaseModel):
@@ -407,6 +416,9 @@ EDIT_FIELD_LABELS = {
     "address": "Διεύθυνση",
     "notes": "Σημείωση",
 }
+# Το σημείο παραλαβής ακολουθεί πάντα το «Παραλαβή από» — αλλάζει μαζί του,
+# χωρίς δική του ετικέτα στην ειδοποίηση του οδηγού
+PICKUP_POINT_FIELDS = ("pickup_address", "pickup_lat", "pickup_lng")
 
 
 # ============ UNIFIED AUTH (account_type στους users — όχι παράλληλο σύστημα) ============
@@ -954,6 +966,9 @@ async def fleet_create_order(body: FleetOrderIn, team: dict = Depends(require_fl
         "team_id": team["id"],
         "number": number,
         "pickup_name": body.pickup_name.strip(),
+        "pickup_address": body.pickup_address.strip(),
+        "pickup_lat": body.pickup_lat,
+        "pickup_lng": body.pickup_lng,
         "address": body.address.strip(),
         "notes": body.notes.strip(),
         "urgent": bool(body.urgent),
@@ -1028,6 +1043,60 @@ async def fleet_partnerships(team: dict = Depends(require_fleet_admin)):
         "pending": [p for p in docs if p["status"] == "pending"],
         "active": [p for p in docs if p["status"] == "active"],
     }
+
+
+@router.get("/fleet/partner-stores")
+async def fleet_partner_stores(team: dict = Depends(require_fleet_admin)):
+    """Τα ΣΥΝΕΡΓΑΖΟΜΕΝΑ μαγαζιά της εταιρείας με τα στοιχεία επικοινωνίας και το
+    pin των ρυθμίσεών τους + πόσες παραγγελίες έστειλαν σήμερα.
+
+    Τα τροφοδοτεί η σελίδα «Μαγαζιά» (χάρτης + λίστα) και το dropdown «Παραλαβή
+    από» της φόρμας του διαχειριστή. Το `users` είναι shared collection — εδώ
+    διαβάζονται ΜΟΝΟ τα δημόσια στοιχεία καταστήματος, κανένα δεδομένο POS."""
+    parts = await db.fleet_partnerships.find(
+        {"team_id": team["id"], "status": "active"}, {"_id": 0}
+    ).sort("requested_at", 1).to_list(200)
+    if not parts:
+        return {"stores": []}
+    uids = [p["store_user_id"] for p in parts]
+    users = {
+        u["id"]: u
+        async for u in db.users.find(
+            {"id": {"$in": uids}},
+            {"_id": 0, "id": 1, "restaurant_name": 1, "store_address": 1,
+             "store_city": 1, "store_phone": 1, "store_lat": 1, "store_lng": 1},
+        )
+    }
+    start, end = local_day_range(athens_today())
+    counts = {}
+    async for row in db.fleet_orders.aggregate([
+        {"$match": {
+            "team_id": team["id"],
+            "store_user_id": {"$in": uids},
+            "created_at": {"$gte": start, "$lt": end},
+            "status": {"$ne": "cancelled"},
+        }},
+        {"$group": {"_id": "$store_user_id", "n": {"$sum": 1}}},
+    ]):
+        counts[row["_id"]] = row["n"]
+    stores = []
+    for p in parts:
+        u = users.get(p["store_user_id"]) or {}
+        stores.append({
+            "partnership_id": p["id"],
+            "store_user_id": p["store_user_id"],
+            # Το όνομα των ρυθμίσεων του μαγαζιού είναι το τρέχον· η συνεργασία
+            # κρατά snapshot από τη στιγμή του αιτήματος (fallback)
+            "name": (u.get("restaurant_name") or p.get("store_name") or "").strip(),
+            "address": (u.get("store_address") or "").strip(),
+            "city": (u.get("store_city") or p.get("store_city") or "").strip(),
+            "phone": (u.get("store_phone") or "").strip(),
+            "lat": u.get("store_lat"),
+            "lng": u.get("store_lng"),
+            "orders_today": counts.get(p["store_user_id"], 0),
+        })
+    stores.sort(key=lambda s: s["name"].lower())
+    return {"stores": stores}
 
 
 @router.post("/fleet/partnerships/{pid}/respond")
@@ -1230,16 +1299,30 @@ async def fleet_edit_order(
         f for f in EDIT_FIELD_LABELS
         if getattr(body, f).strip() != (o.get(f) or "")
     ]
+    # Το σημείο παραλαβής (κείμενο + pin) γράφεται όποτε διαφέρει — δεν παράγει
+    # δική του ετικέτα, ακολουθεί το «Παραλαβή από»
+    pickup_point = {
+        "pickup_address": body.pickup_address.strip(),
+        "pickup_lat": body.pickup_lat,
+        "pickup_lng": body.pickup_lng,
+    }
+    pickup_moved = any(pickup_point[f] != o.get(f) for f in PICKUP_POINT_FIELDS)
     if not changed:
         # Ίδιο κείμενο αλλά ήρθαν (νέες) συντεταγμένες — π.χ. re-save για να
         # αποκτήσει pin παλιά παραγγελία: αποθήκευση χωρίς ειδοποίηση οδηγού
+        quiet = {}
         if body.lat is not None and (o.get("lat") != body.lat or o.get("lng") != body.lng):
+            quiet.update({"lat": body.lat, "lng": body.lng})
+        if pickup_moved:
+            quiet.update(pickup_point)
+        if quiet:
             await db.fleet_orders.update_one(
-                {"id": oid, "team_id": team["id"]},
-                {"$set": {"lat": body.lat, "lng": body.lng}},
+                {"id": oid, "team_id": team["id"]}, {"$set": quiet}
             )
         return {"ok": True, "changed": []}
     update = {f: getattr(body, f).strip() for f in changed}
+    if pickup_moved:
+        update.update(pickup_point)
     if "address" in changed:
         # Νέα διεύθυνση → νέες συντεταγμένες (ή None αν δεν βρέθηκε — εκτός χάρτη)
         update["lat"] = body.lat
@@ -1536,13 +1619,9 @@ async def fleet_driver_orders(
 
 
 # ============ AUTOCOMPLETE ============
-@router.get("/fleet/pickup-names")
-async def fleet_pickup_names(team: dict = Depends(get_fleet_member)):
-    """Ονόματα καταστημάτων παραλαβής που έχουν ξαναχρησιμοποιηθεί (autocomplete)."""
-    names = await db.fleet_orders.distinct("pickup_name", {"team_id": team["id"]})
-    return sorted(n for n in names if n)[:100]
-
-
+# Το «Παραλαβή από» ΔΕΝ είναι πια ελεύθερο κείμενο με autocomplete παλιών
+# ονομάτων: επιλέγεται συνεργαζόμενο μαγαζί (/fleet/partner-stores) ή ελεύθερη
+# διεύθυνση με pin, ώστε το σημείο παραλαβής να έχει πάντα τοποθεσία.
 @router.get("/fleet/address-book")
 async def fleet_address_book(team: dict = Depends(get_fleet_member)):
     """Πρόσφατες διευθύνσεις της ομάδας για το AddressAutocomplete (μορφή address book)."""

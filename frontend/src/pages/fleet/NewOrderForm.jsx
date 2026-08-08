@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Zap } from "lucide-react";
 import AddressAutocomplete from "@/components/shared/AddressAutocomplete";
-import { apiFleetCreateOrder, apiFleetPickupNames, apiFleetAddressBook } from "@/lib/fleetApi";
+import { apiFleetCreateOrder, apiFleetAddressBook } from "@/lib/fleetApi";
 import { formatApiError } from "@/lib/api";
 import { geocodeFleetAddress } from "@/components/fleet/utils";
+import PickupPicker from "@/components/fleet/PickupPicker";
 import { Button } from "@/components/ui/button";
 
 const inputCls =
@@ -15,45 +16,48 @@ const inputCls =
 // (η εταιρεία καλύπτει όλη την πόλη, όχι ζώνη διανομής ενός καταστήματος)
 const COMPANY_SUGGEST_RADIUS_KM = 10;
 
-// Γρήγορη καταχώρηση παραγγελίας από τον διαχειριστή: κατάστημα παραλαβής
-// (autocomplete από προηγούμενα ονόματα), διεύθυνση (AddressAutocomplete με
-// bias στο pin/πόλη της εταιρείας), σημείωση. Χωρίς ποσά/πληρωμή — υπόθεση
-// του μαγαζιού, όχι της εταιρείας.
+const EMPTY_PICKUP = { name: "", address: "", lat: null, lng: null };
+
+// Γρήγορη καταχώρηση παραγγελίας από τον διαχειριστή: σημείο παραλαβής
+// (συνεργαζόμενο μαγαζί ή ελεύθερη διεύθυνση με pin — PickupPicker), διεύθυνση
+// παράδοσης (AddressAutocomplete με bias στο pin/πόλη της εταιρείας), σημείωση.
+// Χωρίς ποσά/πληρωμή — υπόθεση του μαγαζιού, όχι της εταιρείας.
 export default function NewOrderForm({ city, companyLat = null, companyLng = null, onCreated }) {
-  const [pickup, setPickup] = useState("");
+  const [pickup, setPickup] = useState(EMPTY_PICKUP);
   const [address, setAddress] = useState("");
   // Pin της διεύθυνσης: από επιλογή πρότασης· καθαρίζει σε κάθε πληκτρολόγηση
   const [coords, setCoords] = useState(null);
   const [notes, setNotes] = useState("");
   const [urgent, setUrgent] = useState(false);
-  const [names, setNames] = useState([]);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    apiFleetPickupNames().then(setNames).catch(() => {});
-  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!pickup.name.trim()) {
+      toast.error("Επιλέξτε σημείο παραλαβής");
+      return;
+    }
     setBusy(true);
     try {
       // Χωρίς επιλεγμένο pin → auto-geocode της πρώτης πρότασης, ώστε κάθε
       // παραγγελία να βγαίνει στον χάρτη όποτε η διεύθυνση βρίσκεται
       const c = coords || (await geocodeFleetAddress(address.trim(), city));
       await apiFleetCreateOrder({
-        pickup_name: pickup.trim(),
+        pickup_name: pickup.name.trim(),
+        pickup_address: pickup.address.trim(),
+        pickup_lat: pickup.lat,
+        pickup_lng: pickup.lng,
         address: address.trim(),
         notes: notes.trim(),
         urgent,
         lat: c?.lat ?? null,
         lng: c?.lng ?? null,
       });
-      setPickup("");
+      setPickup(EMPTY_PICKUP);
       setAddress("");
       setCoords(null);
       setNotes("");
       setUrgent(false);
-      if (!names.includes(pickup.trim())) setNames((n) => [...n, pickup.trim()].sort());
       onCreated();
       toast.success("Η παραγγελία καταχωρήθηκε");
     } catch (err) {
@@ -70,24 +74,14 @@ export default function NewOrderForm({ city, companyLat = null, companyLng = nul
       data-testid="fleet-new-order"
     >
       <div className="md:col-span-3">
-        <label className="text-[11px] uppercase tracking-widest font-bold text-neutral-400">
-          Παραλαβή από
-        </label>
-        <input
-          required
-          list="fleet-pickup-names"
-          maxLength={80}
-          placeholder="π.χ. Πεινώκιο"
+        <PickupPicker
           value={pickup}
-          onChange={(e) => setPickup(e.target.value)}
-          data-testid="fleet-order-pickup"
-          className={`${inputCls} mt-1`}
+          onChange={setPickup}
+          city={city}
+          companyLat={companyLat}
+          companyLng={companyLng}
+          testId="fleet-order-pickup"
         />
-        <datalist id="fleet-pickup-names">
-          {names.map((n) => (
-            <option key={n} value={n} />
-          ))}
-        </datalist>
       </div>
       <div className="md:col-span-5">
         <label className="text-[11px] uppercase tracking-widest font-bold text-neutral-400">

@@ -383,8 +383,10 @@ export default function AppShell({ title, headerTabs, children }) {
 
       <OfflineBanner />
 
-      {/* Kiosk Relay: poll/εκτύπωση στον σταθμό, warning banner στις άλλες συσκευές */}
-      <RelayAgent />
+      {/* Kiosk Relay: poll/εκτύπωση στον σταθμό, warning banner στις άλλες συσκευές.
+          ΠΟΤΕ στο πλάνο «fleet» (FleetDeck καταστήματος): εκεί το μαγαζί μόνο
+          ανεβάζει παραγγελίες — καμία εκτύπωση, άρα και κανένας σταθμός. */}
+      {hasPOS(user) && <RelayAgent />}
 
       {/* Νέα παραγγελία πλατφόρμας — popup πάνω δεξιά σε κάθε οθόνη */}
       <PlatformOrderPopup />

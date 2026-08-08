@@ -97,8 +97,25 @@ export const fmtTime = (iso) => {
   }
 };
 
-// Σύνδεσμος πλοήγησης — tap στη διεύθυνση ανοίγει Google Maps
-export const mapsUrl = (address, city) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    city ? `${address}, ${city}` : address
-  )}`;
+// Σύνδεσμος πλοήγησης — tap στη διεύθυνση ανοίγει Google Maps. Με συντεταγμένες
+// στέλνουμε το ίδιο το σημείο (ακριβές pin), αλλιώς το κείμενο + πόλη.
+export const mapsUrl = (address, city, lat = null, lng = null) =>
+  lat != null && lng != null
+    ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        city ? `${address}, ${city}` : address
+      )}`;
+
+// Το σημείο παραλαβής μιας παραγγελίας όπως το βλέπει ο οδηγός: κείμενο +
+// (προαιρετικό) pin. null όταν δεν υπάρχει καν όνομα παραλαβής.
+export const pickupPoint = (o) => {
+  const name = (o?.pickup_name || "").trim();
+  if (!name) return null;
+  const address = (o?.pickup_address || "").trim();
+  return {
+    name,
+    address: address && address !== name ? address : "",
+    lat: o?.pickup_lat ?? null,
+    lng: o?.pickup_lng ?? null,
+  };
+};

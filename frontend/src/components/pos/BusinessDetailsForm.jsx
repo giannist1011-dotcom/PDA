@@ -4,6 +4,7 @@ import { MapPin, Search, Loader2 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { geocodeAddress, geocodeCityCenter, formatApiError } from "@/lib/api";
+import { addBaseLayer, formPinIcon } from "@/components/shared/mapPin";
 
 // Κοινός πυρήνας «Στοιχεία επιχείρησης»: όνομα, τηλέφωνο/α, πόλη, διεύθυνση με
 // «Εύρεση στον χάρτη» + pin picker (Leaflet). Τον χρησιμοποιούν οι ρυθμίσεις
@@ -13,13 +14,6 @@ import { geocodeAddress, geocodeCityCenter, formatApiError } from "@/lib/api";
 
 const GREECE_CENTER = [38.3, 23.8];
 const GREECE_ZOOM = 6;
-
-const pinIcon = L.divIcon({
-  className: "",
-  html: `<svg width="34" height="34" viewBox="0 0 24 24" fill="#E8590C" stroke="#fff" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,.6))"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3" fill="#fff" stroke="none"/></svg>`,
-  iconSize: [34, 34],
-  iconAnchor: [17, 32],
-});
 
 const inputCls =
   "w-full h-10 px-3 rounded-md bg-[#2A0E14] border border-[#723645] focus:border-flame outline-none text-sm";
@@ -61,7 +55,7 @@ export default function BusinessDetailsForm({
     if (markerRef.current) {
       markerRef.current.setLatLng([lat, lng]);
     } else {
-      markerRef.current = L.marker([lat, lng], { icon: pinIcon }).addTo(map);
+      markerRef.current = L.marker([lat, lng], { icon: formPinIcon }).addTo(map);
     }
     if (pan) map.setView([lat, lng], Math.max(map.getZoom(), 16));
   };
@@ -69,18 +63,16 @@ export default function BusinessDetailsForm({
   useEffect(() => {
     if (!mapEl.current || mapRef.current) return;
     const start = latlng ? [latlng.lat, latlng.lng] : GREECE_CENTER;
-    const map = L.map(mapEl.current, { attributionControl: false }).setView(
-      start,
-      latlng ? 16 : GREECE_ZOOM
+    const map = addBaseLayer(
+      L.map(mapEl.current, { attributionControl: false }).setView(
+        start,
+        latlng ? 16 : GREECE_ZOOM
+      )
     );
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-    }).addTo(map);
-    L.control.attribution({ prefix: false }).addAttribution("© OpenStreetMap").addTo(map);
     map.on("click", (e) => placePin(e.latlng.lat, e.latlng.lng, false));
     mapRef.current = map;
     if (latlng) {
-      markerRef.current = L.marker([latlng.lat, latlng.lng], { icon: pinIcon }).addTo(map);
+      markerRef.current = L.marker([latlng.lat, latlng.lng], { icon: formPinIcon }).addTo(map);
     } else if ((initial.city || "").trim()) {
       // Χωρίς pin: κεντράρισμα στην αποθηκευμένη πόλη (αν βρεθεί)
       geocodeCityCenter(initial.city).then((c) => {

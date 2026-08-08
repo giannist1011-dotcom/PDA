@@ -12,6 +12,7 @@ import {
   Bike,
   ShieldCheck,
   PackageSearch,
+  Store,
   RefreshCw,
   Menu,
   X,
@@ -27,6 +28,7 @@ import { formatApiError } from "@/lib/api";
 const NAV_ADMIN = [
   { to: "/fleet", tab: "active", label: "Παραγγελίες", icon: ShoppingCart, testId: "fleet-drawer-orders" },
   { to: "/fleet", tab: "map", label: "Χάρτης", icon: MapIcon, testId: "fleet-drawer-map" },
+  { to: "/fleet/stores", label: "Μαγαζιά", icon: Store, testId: "fleet-drawer-stores" },
   { to: "/fleet/members", label: "Διανομείς", icon: Users, testId: "fleet-drawer-members" },
   { to: "/fleet/stats", label: "Στατιστικά", icon: BarChart3, testId: "fleet-drawer-stats" },
   { to: "/fleet/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "fleet-drawer-settings" },
