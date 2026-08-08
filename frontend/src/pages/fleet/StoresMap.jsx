@@ -4,22 +4,30 @@ import { esc, fitToPoints, housePin, popupHtml, syncMarkers } from "@/components
 
 // Χάρτης συνεργαζόμενων μαγαζιών — ίδιος καμβάς/pins/popups με τους υπόλοιπους
 // χάρτες (components/shared/map). Ένα pin ανά μαγαζί από το pin των ρυθμίσεών
-// του· tap → popup με όνομα, διεύθυνση, τηλέφωνο (tap-to-call) και πλήθος
-// παραγγελιών σήμερα. Μαγαζιά χωρίς pin απλώς δεν εμφανίζονται (φαίνονται στη λίστα).
+// του· tap → popup με όνομα, διεύθυνση, τηλέφωνο (tap-to-call) και — μόνο στη
+// διαχείριση (`showStats`) — πλήθος παραγγελιών σήμερα. Μαγαζιά χωρίς pin απλώς
+// δεν εμφανίζονται (φαίνονται στη λίστα).
 
 const storeIcon = housePin({ fill: "#E8590C", stroke: "#fff", size: 30 });
 
-const storePopup = (s) =>
+const storePopup = (s, showStats) =>
   popupHtml({
     title: esc(s.name),
     lines: [
       s.address ? `${esc(s.address)}${s.city ? `, ${esc(s.city)}` : ""}` : null,
-      `<b>Σήμερα: ${s.orders_today} ${s.orders_today === 1 ? "παραγγελία" : "παραγγελίες"}</b>`,
+      showStats
+        ? `<b>Σήμερα: ${s.orders_today} ${s.orders_today === 1 ? "παραγγελία" : "παραγγελίες"}</b>`
+        : null,
     ],
     link: s.phone ? { href: `tel:${esc(s.phone)}`, label: `📞 ${esc(s.phone)}` } : null,
   });
 
-export default function StoresMap({ stores, defaultCenter = null, onPinTap = null }) {
+export default function StoresMap({
+  stores,
+  defaultCenter = null,
+  onPinTap = null,
+  showStats = false,
+}) {
   const [map, setMap] = useState(null);
   const markersRef = useRef({});
   const onPinTapRef = useRef(onPinTap);
@@ -34,12 +42,12 @@ export default function StoresMap({ stores, defaultCenter = null, onPinTap = nul
       key: (s) => s.store_user_id,
       latlng: (s) => [s.lat, s.lng],
       icon: () => storeIcon,
-      popup: storePopup,
+      popup: (s) => storePopup(s, showStats),
       onClick: (s) => onPinTapRef.current?.(s.store_user_id),
     });
     fitToPoints(map, located.map((s) => [s.lat, s.lng]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, stores]);
+  }, [map, stores, showStats]);
 
   return (
     <MapCanvas

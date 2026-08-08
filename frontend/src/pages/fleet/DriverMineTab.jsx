@@ -1,93 +1,28 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronDown, AlertTriangle } from "lucide-react";
-import FleetOrdersMap from "./FleetOrdersMap";
 import { DriverCard } from "./DriverCard";
 import EmptyState from "@/components/shared/EmptyState";
 import DriverHistory from "./DriverHistory";
 import { NEXT_ACTION } from "@/components/fleet/utils";
 
-// Ύψος του χάρτη-κεφαλίδας ανοιχτού· κλειστός συρρικνώνεται στο 0
-const MAP_H = 224;
-// Κατώφλια collapsing header: πόσο πρέπει να κινηθεί το scroll για να μετρήσει
-// και από πόσο κάτω αρχίζει να κρύβεται (ώστε να μην «τρεμοπαίζει» στην κορυφή)
-const SCROLL_DELTA = 8;
-const HIDE_AFTER = 120;
-
-// Collapsing χάρτης: κρύβεται όταν ο οδηγός σκρολάρει προς τα κάτω (θέλει τη
-// λίστα) και επανέρχεται στο πρώτο scroll προς τα πάνω. Ένας passive listener
-// + rAF — καμία μέτρηση layout ανά frame, οπότε δεν κάνει jank σε μεσαία κινητά.
-const useCollapseOnScroll = () => {
-  const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => {
-    let last = window.scrollY;
-    let ticking = false;
-    const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      window.requestAnimationFrame(() => {
-        const y = window.scrollY;
-        const dy = y - last;
-        if (Math.abs(dy) >= SCROLL_DELTA) {
-          last = y;
-          if (dy > 0 && y > HIDE_AFTER) setCollapsed(true);
-          else if (dy < 0) setCollapsed(false);
-        }
-        if (y <= HIDE_AFTER) setCollapsed(false);
-        ticking = false;
-      });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-  return collapsed;
-};
-
-// Το tab «Δικές μου» του οδηγού: ΠΑΝΩ-ΠΑΝΩ ο χάρτης με pins στις ενεργές του
-// παραγγελίες + στα σημεία παραλαβής (tap σε pin → φωτίζεται η κάρτα), που
-// συρρικνώνεται ομαλά στο scroll της λίστας· μετά κάρτες με κουμπί προόδου +
-// «Πρόβλημα», παραδομένες σήμερα και ιστορικό. Το state της σελίδας (board,
-// busyId, highlight) μένει στο FleetDriver.jsx.
+// Το tab «Οι παραγγελίες μου» του οδηγού: κάρτες με κουμπί προόδου +
+// «Πρόβλημα», παραδομένες σήμερα και ιστορικό. Ο χάρτης ΔΕΝ ζει εδώ — είναι
+// κεφαλίδα ολόκληρης της σελίδας (DriverMapHeader), κοινός με τις «Ελεύθερες».
+// Το state της σελίδας (board, busyId, highlight) μένει στο FleetDriver.jsx.
 export default function DriverMineTab({
   mine,
   delivered,
   city,
-  mapCenter = null,
   busyId,
   onAdvance,
   onProblem,
   highlightId,
-  onPinTap,
 }) {
   const [showDelivered, setShowDelivered] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const collapsed = useCollapseOnScroll();
-  const hasPins = mine.some(
-    (o) => (o.lat != null && o.lng != null) || (o.pickup_lat != null && o.pickup_lng != null)
-  );
 
   return (
     <section className="space-y-4">
-      {/* Χάρτης-κεφαλίδα: το εξωτερικό div κόβει το ύψος (ο ίδιος ο χάρτης
-          κρατά σταθερές διαστάσεις — κανένα invalidateSize/relayout του Leaflet).
-          Η πλοήγηση μένει στο «άνοιγμα στο Google Maps» της κάθε κάρτας. */}
-      {hasPins && (
-        <div
-          className="overflow-hidden transition-[height,opacity] duration-300 ease-out will-change-[height]"
-          style={{ height: collapsed ? 0 : MAP_H, opacity: collapsed ? 0 : 1 }}
-          aria-hidden={collapsed}
-          data-testid="fleet-drv-map-header"
-        >
-          <FleetOrdersMap
-            orders={mine}
-            defaultCenter={mapCenter}
-            heightClass="h-56"
-            withPopups={false}
-            showPickups
-            onPinTap={onPinTap}
-            emptyText=""
-          />
-        </div>
-      )}
       {mine.length === 0 ? (
         <EmptyState text="Καμία ενεργή παραγγελία" />
       ) : (

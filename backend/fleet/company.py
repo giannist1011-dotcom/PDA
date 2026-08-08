@@ -1046,13 +1046,17 @@ async def fleet_partnerships(team: dict = Depends(require_fleet_admin)):
 
 
 @router.get("/fleet/partner-stores")
-async def fleet_partner_stores(team: dict = Depends(require_fleet_admin)):
+async def fleet_partner_stores(team: dict = Depends(get_fleet_member)):
     """Τα ΣΥΝΕΡΓΑΖΟΜΕΝΑ μαγαζιά της εταιρείας με τα στοιχεία επικοινωνίας και το
     pin των ρυθμίσεών τους + πόσες παραγγελίες έστειλαν σήμερα.
 
     Τα τροφοδοτεί η σελίδα «Μαγαζιά» (χάρτης + λίστα) και το dropdown «Παραλαβή
     από» της φόρμας του διαχειριστή. Το `users` είναι shared collection — εδώ
-    διαβάζονται ΜΟΝΟ τα δημόσια στοιχεία καταστήματος, κανένα δεδομένο POS."""
+    διαβάζονται ΜΟΝΟ τα δημόσια στοιχεία καταστήματος, κανένα δεδομένο POS.
+
+    Ο διανομέας βλέπει την ίδια λίστα read-only (όνομα/διεύθυνση/τηλέφωνο) —
+    ΧΩΡΙΣ τα πλήθη παραγγελιών, που μένουν στη διαχείριση."""
+    is_admin = team.get("role") == "fleet_admin"
     parts = await db.fleet_partnerships.find(
         {"team_id": team["id"], "status": "active"}, {"_id": 0}
     ).sort("requested_at", 1).to_list(200)
@@ -1067,22 +1071,23 @@ async def fleet_partner_stores(team: dict = Depends(require_fleet_admin)):
              "store_city": 1, "store_phone": 1, "store_lat": 1, "store_lng": 1},
         )
     }
-    start, end = local_day_range(athens_today())
     counts = {}
-    async for row in db.fleet_orders.aggregate([
-        {"$match": {
-            "team_id": team["id"],
-            "store_user_id": {"$in": uids},
-            "created_at": {"$gte": start, "$lt": end},
-            "status": {"$ne": "cancelled"},
-        }},
-        {"$group": {"_id": "$store_user_id", "n": {"$sum": 1}}},
-    ]):
-        counts[row["_id"]] = row["n"]
+    if is_admin:
+        start, end = local_day_range(athens_today())
+        async for row in db.fleet_orders.aggregate([
+            {"$match": {
+                "team_id": team["id"],
+                "store_user_id": {"$in": uids},
+                "created_at": {"$gte": start, "$lt": end},
+                "status": {"$ne": "cancelled"},
+            }},
+            {"$group": {"_id": "$store_user_id", "n": {"$sum": 1}}},
+        ]):
+            counts[row["_id"]] = row["n"]
     stores = []
     for p in parts:
         u = users.get(p["store_user_id"]) or {}
-        stores.append({
+        row = {
             "partnership_id": p["id"],
             "store_user_id": p["store_user_id"],
             # Το όνομα των ρυθμίσεων του μαγαζιού είναι το τρέχον· η συνεργασία
@@ -1093,8 +1098,10 @@ async def fleet_partner_stores(team: dict = Depends(require_fleet_admin)):
             "phone": (u.get("store_phone") or "").strip(),
             "lat": u.get("store_lat"),
             "lng": u.get("store_lng"),
-            "orders_today": counts.get(p["store_user_id"], 0),
-        })
+        }
+        if is_admin:
+            row["orders_today"] = counts.get(p["store_user_id"], 0)
+        stores.append(row)
     stores.sort(key=lambda s: s["name"].lower())
     return {"stores": stores}
 

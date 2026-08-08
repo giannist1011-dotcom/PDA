@@ -42,6 +42,7 @@ const NAV_ADMIN = [
 const NAV_DRIVER = [
   { to: "/fleet/driver", tab: "free", label: "Ελεύθερες", icon: PackageSearch, testId: "fleet-drawer-free" },
   { to: "/fleet/driver", tab: "mine", label: "Οι παραγγελίες μου", icon: Bike, testId: "fleet-drawer-mine" },
+  { to: "/fleet/driver/stores", label: "Μαγαζιά", icon: Store, testId: "fleet-drawer-drv-stores" },
   { to: "/fleet/driver", tab: "stats", label: "Στατιστικά", icon: BarChart3, testId: "fleet-drawer-drv-stats" },
   { to: "/fleet/driver/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "fleet-drawer-drv-settings" },
 ];

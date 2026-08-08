@@ -220,25 +220,25 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - GET /fleet/board → fleet_board @994 — Ο πίνακας του διαχειριστή: παραγγελίες ημέρας + feed…
 - GET /fleet/partnerships → fleet_partnerships @1037 — Αιτήματα & ενεργές συνεργασίες καταστημάτων της εταιρείας.
 - GET /fleet/partner-stores → fleet_partner_stores @1049 — Τα ΣΥΝΕΡΓΑΖΟΜΕΝΑ μαγαζιά της εταιρείας με τα στοιχεία…
-- POST /fleet/partnerships/{pid}/respond → fleet_respond_partnership @1103 — Αποδοχή/απόρριψη αιτήματος συνεργασίας καταστήματος. Με αποδοχή η
-- GET /fleet/driver/board → fleet_driver_board @1126 — Η οθόνη του οδηγού: ελεύθερες + δικές του…
-- POST /fleet/orders/{oid}/claim → fleet_claim_order @1156 — ΑΤΟΜΙΚΟ claim: μόνο ένας οδηγός παίρνει την παραγγελία…
-- POST /fleet/orders/{oid}/status → fleet_order_status @1181
-- POST /fleet/orders/{oid}/assign → fleet_assign_order @1214
-- POST /fleet/orders/{oid}/cancel → fleet_cancel_order @1256
-- PUT /fleet/orders/{oid} → fleet_edit_order @1287 — Επεξεργασία παραγγελίας από τον διαχειριστή. Πριν το claim…
-- POST /fleet/orders/{oid}/urgent → fleet_set_urgent @1348 — «⚡ Επείγον»: καρφιτσώνει την παραγγελία πρώτη στις «Ελεύθερες»…
-- POST /fleet/orders/{oid}/problem → fleet_report_problem @1374 — Ο οδηγός σημαίνει πρόβλημα σε claimed παραγγελία του…
-- POST /fleet/orders/{oid}/problem/resolve → fleet_resolve_problem @1410
-- POST /fleet/driver/shift → fleet_driver_shift @1425 — «Ξεκινάω/Τέλος βάρδιας»: on_shift στο μέλος (πράσινη κουκκίδα στον…
-- GET /fleet/driver/stats → fleet_driver_stats @1459 — Στατιστικά του ίδιου του οδηγού: σύνολο παραδόσεων, σήμερα/εβδομάδα,
-- GET /fleet/driver/orders → fleet_driver_orders @1590 — Ιστορικό παραγγελιών του οδηγού (claimed/παραδομένες) με φίλτρο ημέρας…
-- GET /fleet/address-book → fleet_address_book @1626 — Πρόσφατες διευθύνσεις της ομάδας για το AddressAutocomplete (μορφή…
-- GET /fleet/stats → fleet_stats @1644 — Στατιστικά εταιρείας για περίοδο: πλήθη ανά κατάσταση, ανά…
-- GET /fleet/day-summary → fleet_day_summary @1758 — Πλήθη παραγγελιών ανά οδηγό για ημέρα ή εύρος…
-- GET /fleet/push/vapid-key → fleet_push_vapid_key @1815 — Δημόσιο VAPID κλειδί για το pushManager.subscribe — null…
-- POST /fleet/push/subscribe → fleet_push_subscribe @1822
-- POST /fleet/push/unsubscribe → fleet_push_unsubscribe @1830
+- POST /fleet/partnerships/{pid}/respond → fleet_respond_partnership @1110 — Αποδοχή/απόρριψη αιτήματος συνεργασίας καταστήματος. Με αποδοχή η
+- GET /fleet/driver/board → fleet_driver_board @1133 — Η οθόνη του οδηγού: ελεύθερες + δικές του…
+- POST /fleet/orders/{oid}/claim → fleet_claim_order @1163 — ΑΤΟΜΙΚΟ claim: μόνο ένας οδηγός παίρνει την παραγγελία…
+- POST /fleet/orders/{oid}/status → fleet_order_status @1188
+- POST /fleet/orders/{oid}/assign → fleet_assign_order @1221
+- POST /fleet/orders/{oid}/cancel → fleet_cancel_order @1263
+- PUT /fleet/orders/{oid} → fleet_edit_order @1294 — Επεξεργασία παραγγελίας από τον διαχειριστή. Πριν το claim…
+- POST /fleet/orders/{oid}/urgent → fleet_set_urgent @1355 — «⚡ Επείγον»: καρφιτσώνει την παραγγελία πρώτη στις «Ελεύθερες»…
+- POST /fleet/orders/{oid}/problem → fleet_report_problem @1381 — Ο οδηγός σημαίνει πρόβλημα σε claimed παραγγελία του…
+- POST /fleet/orders/{oid}/problem/resolve → fleet_resolve_problem @1417
+- POST /fleet/driver/shift → fleet_driver_shift @1432 — «Ξεκινάω/Τέλος βάρδιας»: on_shift στο μέλος (πράσινη κουκκίδα στον…
+- GET /fleet/driver/stats → fleet_driver_stats @1466 — Στατιστικά του ίδιου του οδηγού: σύνολο παραδόσεων, σήμερα/εβδομάδα,
+- GET /fleet/driver/orders → fleet_driver_orders @1597 — Ιστορικό παραγγελιών του οδηγού (claimed/παραδομένες) με φίλτρο ημέρας…
+- GET /fleet/address-book → fleet_address_book @1633 — Πρόσφατες διευθύνσεις της ομάδας για το AddressAutocomplete (μορφή…
+- GET /fleet/stats → fleet_stats @1651 — Στατιστικά εταιρείας για περίοδο: πλήθη ανά κατάσταση, ανά…
+- GET /fleet/day-summary → fleet_day_summary @1765 — Πλήθη παραγγελιών ανά οδηγό για ημέρα ή εύρος…
+- GET /fleet/push/vapid-key → fleet_push_vapid_key @1822 — Δημόσιο VAPID κλειδί για το pushManager.subscribe — null…
+- POST /fleet/push/subscribe → fleet_push_subscribe @1829
+- POST /fleet/push/unsubscribe → fleet_push_unsubscribe @1837
 ### fleet/schedule.py
 - GET /fleet/schedule/weeks → fleet_list_schedule_weeks @58 — Εβδομάδες με καταχωρημένες βάρδιες — για το ιστορικό.
 - GET /fleet/schedule → fleet_list_schedule @65
@@ -387,6 +387,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - stats → FleetProtected [fleet_admin]
 - settings → FleetProtected [fleet_admin]
 - driver → FleetProtected
+- driver/stores → FleetProtected
 - driver/settings → FleetProtected
 - / → Landing
 - /menu/:slug → PublicMenu
@@ -443,9 +444,10 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - DeckView.jsx (311 γρ): BigCard@24, Panel@42, DeckView@52
 - Expenses.jsx (401 γρ): Expenses@33
 - FleetDispatch.jsx (228 γρ): FleetDispatch@21
-- FleetDriver.jsx (366 γρ): FleetDriver@41
+- FleetDriver.jsx (381 γρ): FleetDriver@43
 - FleetDriverLogin.jsx (249 γρ): FleetDriverLogin@19
 - FleetDriverSettings.jsx (104 γρ): FleetDriverSettings@15
+- FleetDriverStores.jsx (14 γρ): FleetDriverStores@7
 - FleetLogin.jsx (133 γρ): FleetLogin@9
 - FleetMembers.jsx (357 γρ): FleetMembers@22
 - FleetSchedule.jsx (56 γρ): FleetSchedule@19
@@ -453,7 +455,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - FleetSettings.jsx (94 γρ): FleetSettings@18
 - FleetSignup.jsx (291 γρ): Field@10, FleetSignup@38
 - FleetStats.jsx (174 γρ): FleetStats@22
-- FleetStores.jsx (135 γρ): FleetStores@17
+- FleetStores.jsx (14 γρ): FleetStores@7
 - History.jsx (305 γρ): History@28
 - Landing.jsx (397 γρ): Landing@88
 - Login.jsx (138 γρ): Login@15
@@ -517,15 +519,17 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - fleet/DayTotals.jsx (67 γρ): DayTotals@9
 - fleet/DriverCard.jsx (116 γρ): DriverCard@15
 - fleet/DriverHistory.jsx (93 γρ): DriverHistory@13
-- fleet/DriverMineTab.jsx (162 γρ): useCollapseOnScroll@19, DriverMineTab@50
+- fleet/DriverMapHeader.jsx (72 γρ): useCollapseOnScroll@14, DriverMapHeader@46
+- fleet/DriverMineTab.jsx (97 γρ): DriverMineTab@12
 - fleet/DriverStats.jsx (132 γρ): Tile@12, DriverStats@24
 - fleet/FleetOrdersMap.jsx (128 γρ): FleetOrdersMap@60
-- fleet/FleetShell.jsx (305 γρ): FleetShell@52
+- fleet/FleetShell.jsx (306 γρ): FleetShell@53
 - fleet/NewOrderForm.jsx (155 γρ): NewOrderForm@25
+- fleet/PartnerStoresView.jsx (160 γρ): PartnerStoresView@17
 - fleet/PartnershipRequests.jsx (81 γρ): PartnershipRequests@10
 - fleet/ProblemModal.jsx (81 γρ): ProblemModal@15
 - fleet/PushToggle.jsx (56 γρ): PushToggle@10
-- fleet/StoresMap.jsx (64 γρ): StoresMap@22
+- fleet/StoresMap.jsx (72 γρ): StoresMap@25
 - fleet/alerts.js (51 γρ)
 - history/CustomerDetailModal.jsx (119 γρ): CustomerDetailModal@5
 - history/CustomersTab.jsx (84 γρ): CustomersTab@4

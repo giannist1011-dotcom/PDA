@@ -15,6 +15,7 @@ import { DriverCard } from "@/pages/fleet/DriverCard";
 import EmptyState from "@/components/shared/EmptyState";
 import DriverStats from "@/pages/fleet/DriverStats";
 import DriverMineTab from "@/pages/fleet/DriverMineTab";
+import DriverMapHeader from "@/pages/fleet/DriverMapHeader";
 import ProblemModal from "@/pages/fleet/ProblemModal";
 import { notify } from "@/pages/fleet/alerts";
 import { NEXT_ACTION, useAccountCenter } from "@/components/fleet/utils";
@@ -35,7 +36,8 @@ const readQueue = () => {
 };
 const writeQueue = (q) => localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
 
-// Η οθόνη του οδηγού (κινητό), σε τρία tabs: «Ελεύθερες» (μεγάλο «Την παίρνω»),
+// Η οθόνη του οδηγού (κινητό): πάνω-πάνω ο collapsing χάρτης της σελίδας (pins
+// κατά ενεργό tab) και από κάτω τρία tabs: «Ελεύθερες» (μεγάλο «Την παίρνω»),
 // «Δικές μου» (κουμπιά προόδου + παραδομένες σήμερα + ιστορικό με φίλτρο
 // περιόδου) και «Στατιστικά». Tap στη διεύθυνση → Google Maps.
 export default function FleetDriver() {
@@ -280,6 +282,16 @@ export default function FleetDriver() {
       }
     >
       <div className="max-w-md mx-auto space-y-4">
+        {/* Χάρτης-κεφαλίδα της σελίδας: pins κατά ενεργό tab (ελεύθερες προς
+            claim / δικές μου ενεργές), συρρικνώνεται στο scroll της λίστας */}
+        {tab !== "stats" && (
+          <DriverMapHeader
+            orders={tab === "mine" ? mine : available}
+            mapCenter={mapCenter}
+            onPinTap={highlightOrder}
+          />
+        )}
+
         {board && (
           <button
             onClick={toggleShift}
@@ -320,7 +332,12 @@ export default function FleetDriver() {
             ) : (
               <div className="space-y-3">
                 {available.map((o) => (
-                  <DriverCard key={o.id} o={o} city={team?.city || ""}>
+                  <DriverCard
+                    key={o.id}
+                    o={o}
+                    city={team?.city || ""}
+                    highlight={highlightId === o.id}
+                  >
                     <button
                       disabled={busyId === o.id}
                       onClick={() => claim(o)}
@@ -341,12 +358,10 @@ export default function FleetDriver() {
             mine={mine}
             delivered={delivered}
             city={team?.city || ""}
-            mapCenter={mapCenter}
             busyId={busyId}
             onAdvance={advance}
             onProblem={setProblemOrder}
             highlightId={highlightId}
-            onPinTap={highlightOrder}
           />
         )}
 

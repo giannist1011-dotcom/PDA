@@ -44,6 +44,7 @@ import FleetSelect from "@/pages/FleetSelect";
 import FleetDispatch from "@/pages/FleetDispatch";
 import FleetDriver from "@/pages/FleetDriver";
 import FleetDriverSettings from "@/pages/FleetDriverSettings";
+import FleetDriverStores from "@/pages/FleetDriverStores";
 import FleetMembers from "@/pages/FleetMembers";
 import FleetSettings from "@/pages/FleetSettings";
 import FleetStats from "@/pages/FleetStats";
@@ -140,6 +141,14 @@ function FleetRoutes() {
           element={
             <FleetProtected>
               <FleetDriver />
+            </FleetProtected>
+          }
+        />
+        <Route
+          path="driver/stores"
+          element={
+            <FleetProtected>
+              <FleetDriverStores />
             </FleetProtected>
           }
         />
