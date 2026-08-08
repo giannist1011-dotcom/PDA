@@ -13,7 +13,7 @@ import { DAY_LABELS, formatWeekRange } from "@/lib/dates";
 import TimePicker from "@/components/shared/TimePicker";
 
 // Shift editor modal
-export default function ShiftModal({ open, employee, day, weekStart, initial, onClose, onSave, onDelete }) {
+export default function ShiftModal({ open, member, day, weekStart, initial, onClose, onSave, onDelete }) {
   const [start, setStart] = useState(initial?.start || "17:00");
   const [end, setEnd] = useState(initial?.end || "01:00");
   const [busy, setBusy] = useState(false);
@@ -25,7 +25,7 @@ export default function ShiftModal({ open, employee, day, weekStart, initial, on
     }
   }, [open, initial]);
 
-  if (!employee) return null;
+  if (!member) return null;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -46,7 +46,7 @@ export default function ShiftModal({ open, employee, day, weekStart, initial, on
       <DialogContent className="max-w-md bg-[#2A0E14] border-[#723645] text-white" data-testid="shift-modal">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">
-            Βάρδια — {employee.name}
+            Βάρδια — {member.name}
           </DialogTitle>
           <p className="text-sm text-neutral-400 mt-1">
             {DAY_LABELS[day]} · Εβδομάδα {formatWeekRange(weekStart)}

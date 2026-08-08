@@ -145,14 +145,15 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - GET /branding → get_branding @179
 - GET /public/menu/{slug} → public_menu @186
 ### pos/schedule.py
-- GET /employees → list_employees @36
-- POST /employees → create_employee @44
-- PUT /employees/{eid} → update_employee @57
-- DELETE /employees/{eid} → delete_employee @68
-- GET /shifts/weeks → list_shift_weeks @86 — Εβδομάδες (week_start) που έχουν καταχωρημένες βάρδιες — για…
-- GET /shifts → list_shifts @93
-- PUT /shifts → upsert_shift @102
-- DELETE /shifts → delete_shift @124
+- GET /employees → list_employees @46
+- POST /employees → create_employee @54
+- PUT /employees/{eid} → update_employee @67
+- DELETE /employees/{eid} → delete_employee @78
+- GET /shifts/weeks → list_shift_weeks @96 — Εβδομάδες (week_start) που έχουν καταχωρημένες βάρδιες — για…
+- GET /shifts → list_shifts @103
+- PUT /shifts → upsert_shift @112
+- DELETE /shifts → delete_shift @134
+- POST /shifts/autofill → autofill_shifts @157 — Αντιγράφει τις βάρδιες της προηγούμενης εβδομάδας στην τρέχουσα…
 ### pos/stats.py
 - GET /analytics → analytics @76
 - GET /analytics/yoy → analytics_yoy @191 — Ίδια περίοδος πέρσι: έσοδα/παραγγελίες + delta. available=False όταν…
@@ -238,6 +239,12 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - GET /fleet/push/vapid-key → fleet_push_vapid_key @1815 — Δημόσιο VAPID κλειδί για το pushManager.subscribe — null…
 - POST /fleet/push/subscribe → fleet_push_subscribe @1822
 - POST /fleet/push/unsubscribe → fleet_push_unsubscribe @1830
+### fleet/schedule.py
+- GET /fleet/schedule/weeks → fleet_list_schedule_weeks @58 — Εβδομάδες με καταχωρημένες βάρδιες — για το ιστορικό.
+- GET /fleet/schedule → fleet_list_schedule @65
+- PUT /fleet/schedule → fleet_upsert_schedule_shift @73
+- DELETE /fleet/schedule → fleet_delete_schedule_shift @98
+- POST /fleet/schedule/autofill → fleet_autofill_schedule @115 — Αντιγράφει τις βάρδιες της προηγούμενης εβδομάδας στην εβδομάδα-στόχο
 ### fleet/store.py
 - GET /store/fleet/companies → store_fleet_companies @103 — Εταιρείες διανομής που καλύπτουν την πόλη του καταστήματος…
 - POST /store/fleet/partners/{team_id}/request → store_fleet_request_partner @134 — Αίτημα συνεργασίας προς εταιρεία — ειδοποιείται η διαχείρισή…
@@ -344,9 +351,10 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - fleet_accounts: fleet/company.py, fleet/demo.py, server.py
 - fleet_counters: fleet/company.py, fleet/demo.py, server.py
 - fleet_events: fleet/company.py, fleet/demo.py, server.py
-- fleet_members: fleet/api.py, fleet/company.py, fleet/demo.py, fleet/store.py, server.py
+- fleet_members: fleet/api.py, fleet/company.py, fleet/demo.py, fleet/schedule.py, fleet/store.py, server.py
 - fleet_orders: fleet/api.py, fleet/company.py, fleet/demo.py, fleet/store.py, server.py
 - fleet_partnerships: fleet/api.py, fleet/company.py, fleet/demo.py, fleet/store.py, server.py
+- fleet_roster_shifts: fleet/schedule.py, server.py
 - fleet_shifts: fleet/company.py, server.py
 - fleet_teams: fleet/api.py, fleet/company.py, fleet/store.py, server.py
 - geocode_cache: server.py, shared/geocoding.py
@@ -375,6 +383,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - select → FleetSelect
 - members → FleetProtected [fleet_admin]
 - stores → FleetProtected [fleet_admin]
+- schedule → FleetProtected [fleet_admin]
 - stats → FleetProtected [fleet_admin]
 - settings → FleetProtected [fleet_admin]
 - driver → FleetProtected
@@ -439,6 +448,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - FleetDriverSettings.jsx (111 γρ): Row@10, FleetDriverSettings@28
 - FleetLogin.jsx (133 γρ): FleetLogin@9
 - FleetMembers.jsx (357 γρ): FleetMembers@22
+- FleetSchedule.jsx (56 γρ): FleetSchedule@19
 - FleetSelect.jsx (136 γρ): FleetSelect@11
 - FleetSettings.jsx (93 γρ): FleetSettings@13
 - FleetSignup.jsx (291 γρ): Field@10, FleetSignup@38
@@ -453,7 +463,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - ProfileSelect.jsx (292 γρ): PinPad@13, ProfileSelect@122
 - PublicMenu.jsx (209 γρ): PublicMenu@19
 - Register.jsx (244 γρ): Register@23
-- Schedule.jsx (338 γρ): Schedule@30
+- Schedule.jsx (64 γρ): Schedule@23
 - Settings.jsx (140 γρ): Section@22, Settings@37
 - Stock.jsx (103 γρ): Stock@12
 - StoreFleet.jsx (172 γρ): StoreFleet@16
@@ -510,7 +520,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - fleet/DriverMineTab.jsx (162 γρ): useCollapseOnScroll@19, DriverMineTab@50
 - fleet/DriverStats.jsx (132 γρ): Tile@12, DriverStats@24
 - fleet/FleetOrdersMap.jsx (200 γρ): FleetOrdersMap@66
-- fleet/FleetShell.jsx (364 γρ): FleetShell@47
+- fleet/FleetShell.jsx (366 γρ): FleetShell@49
 - fleet/NewOrderForm.jsx (155 γρ): NewOrderForm@25
 - fleet/PartnershipRequests.jsx (81 γρ): PartnershipRequests@10
 - fleet/ProblemModal.jsx (81 γρ): ProblemModal@15
@@ -571,10 +581,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - register/StepPin.jsx (60 γρ): StepPin@6
 - register/StepPlan.jsx (78 γρ): StepPlan@31
 - register/utils.js (3 γρ)
-- schedule/ScheduleGrid.jsx (115 γρ): ScheduleGrid@5
-- schedule/ShareDialog.jsx (41 γρ): ShareDialog@11
-- schedule/ShiftModal.jsx (111 γρ): ShiftModal@16
-- schedule/utils.js (67 γρ)
+- schedule/utils.js (28 γρ)
 - settings/SubscriptionSettings.jsx (149 γρ): SubscriptionSettings@20
 - settings/TablesSettings.jsx (65 γρ): TablesSettings@8
 - stock/AddItemModal.jsx (97 γρ): AddItemModal@6
@@ -650,6 +657,12 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - shared/printing/RelayAgent.jsx (243 γρ): StationLoop@27, StationDownBanner@195, RelayAgent@234
 - shared/printing/RelaySetup.jsx (181 γρ): RelaySetup@19
 - shared/printing/relayRender.jsx (51 γρ)
+- shared/schedule/AutofillDialog.jsx (127 γρ): AutofillDialog@15
+- shared/schedule/ScheduleBoard.jsx (425 γρ): ScheduleBoard@25
+- shared/schedule/ScheduleGrid.jsx (130 γρ): ScheduleGrid@7
+- shared/schedule/ShareDialog.jsx (41 γρ): ShareDialog@11
+- shared/schedule/ShiftModal.jsx (111 γρ): ShiftModal@16
+- shared/schedule/utils.js (103 γρ)
 
 ## FRONTEND — lib/api.js (exported)
 - api — axios instance (baseURL /api)
@@ -732,6 +745,7 @@ DeckPilot & Ημερήσιο Brief είναι **dormant**: ο κώδικας υ�
 - apiUpsertShift(payload) → PUT /shifts
 - apiListShiftWeeks() → GET /shifts/weeks
 - apiDeleteShift(employeeId, weekStart, day) → DELETE /shifts
+- apiAutofillShifts(weekStart, sourceWeekStart) → POST /shifts/autofill
 - fetchNextOrderNumber() → GET /orders/next-number
 - submitOrder(payload) → POST /orders
 - fetchOrders(params) → GET /orders

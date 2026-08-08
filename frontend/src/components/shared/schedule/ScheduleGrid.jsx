@@ -1,25 +1,31 @@
 import { Trash2, X } from "lucide-react";
 import { formatGRDayMonth } from "@/lib/format";
 
-// Weekly schedule grid: employees x days
+// Εβδομαδιαίο πλέγμα: μέλη × ημέρες. Κοινό σε OrderDeck (υπάλληλοι) και
+// FleetDeck (διαχειριστής + διανομείς) — η μετονομασία/διαγραφή μέλους
+// εμφανίζεται μόνο όταν η επιφάνεια τη δίνει (memberActions).
 export default function ScheduleGrid({
   loading,
-  employees,
+  members,
   days,
+  memberLabel = "Υπάλληλος",
+  emptyText = "Δεν έχετε προσθέσει υπαλλήλους ακόμα",
+  canRename = false,
+  canRemove = false,
   editingId,
   editingName,
   setEditingId,
   setEditingName,
-  saveEmployeeName,
+  saveMemberName,
   findShift,
   openShiftModal,
-  removeEmployee,
+  removeMember,
 }) {
   return loading ? (
     <div className="text-neutral-500 py-12 text-center">Φόρτωση...</div>
-  ) : employees.length === 0 ? (
+  ) : members.length === 0 ? (
     <div className="text-neutral-500 py-16 text-center bg-[#3D1620] border border-[#723645] rounded-lg">
-      Δεν έχετε προσθέσει υπαλλήλους ακόμα
+      {emptyText}
     </div>
   ) : (
     <div className="overflow-x-auto bg-[#3D1620] border border-[#723645] rounded-lg">
@@ -27,7 +33,7 @@ export default function ScheduleGrid({
         <thead>
           <tr className="border-b border-[#723645]">
             <th className="text-left px-4 py-3 text-xs uppercase tracking-widest text-neutral-400 font-bold w-48">
-              Υπάλληλος
+              {memberLabel}
             </th>
             {days.map((d) => (
               <th
@@ -40,24 +46,24 @@ export default function ScheduleGrid({
                 </div>
               </th>
             ))}
-            <th className="w-12"></th>
+            {canRemove && <th className="w-12"></th>}
           </tr>
         </thead>
         <tbody>
-          {employees.map((emp) => (
+          {members.map((m) => (
             <tr
-              key={emp.id}
+              key={m.id}
               className="border-b border-[#431A25] last:border-0"
-              data-testid={`emp-row-${emp.id}`}
+              data-testid={`emp-row-${m.id}`}
             >
               <td className="px-4 py-3">
-                {editingId === emp.id ? (
+                {canRename && editingId === m.id ? (
                   <div className="flex items-center gap-1">
                     <input
                       value={editingName}
                       onChange={(e) => setEditingName(e.target.value)}
-                      onBlur={() => saveEmployeeName(emp.id)}
-                      onKeyDown={(e) => e.key === "Enter" && saveEmployeeName(emp.id)}
+                      onBlur={() => saveMemberName(m.id)}
+                      onKeyDown={(e) => e.key === "Enter" && saveMemberName(m.id)}
                       autoFocus
                       className="h-9 px-2 bg-[#2A0E14] border border-flame rounded text-white text-sm w-full"
                     />
@@ -65,26 +71,33 @@ export default function ScheduleGrid({
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                ) : (
+                ) : canRename ? (
                   <button
                     onClick={() => {
-                      setEditingId(emp.id);
-                      setEditingName(emp.name);
+                      setEditingId(m.id);
+                      setEditingName(m.name);
                     }}
                     className="text-left font-semibold text-white hover:text-flame"
-                    data-testid={`emp-name-${emp.id}`}
+                    data-testid={`emp-name-${m.id}`}
                   >
-                    {emp.name}
+                    {m.name}
                   </button>
+                ) : (
+                  <div data-testid={`emp-name-${m.id}`}>
+                    <div className="font-semibold text-white truncate">{m.name}</div>
+                    {m.sub && (
+                      <div className="text-[11px] text-neutral-500 truncate">{m.sub}</div>
+                    )}
+                  </div>
                 )}
               </td>
               {days.map((d) => {
-                const sh = findShift(emp.id, d.idx);
+                const sh = findShift(m.id, d.idx);
                 return (
                   <td key={d.idx} className="px-2 py-2 text-center">
                     <button
-                      onClick={() => openShiftModal(emp, d.idx)}
-                      data-testid={`cell-${emp.id}-${d.idx}`}
+                      onClick={() => openShiftModal(m, d.idx)}
+                      data-testid={`cell-${m.id}-${d.idx}`}
                       className={`w-full h-14 rounded-md border font-mono text-sm transition-all active:scale-[0.98] ${
                         sh
                           ? "bg-flame/15 border-flame/40 text-flame hover:bg-flame/25 font-bold"
@@ -96,15 +109,17 @@ export default function ScheduleGrid({
                   </td>
                 );
               })}
-              <td className="px-2 py-2 text-center">
-                <button
-                  onClick={() => removeEmployee(emp.id)}
-                  data-testid={`del-emp-${emp.id}`}
-                  className="p-2 text-neutral-500 hover:text-[#FF3B30]"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </td>
+              {canRemove && (
+                <td className="px-2 py-2 text-center">
+                  <button
+                    onClick={() => removeMember(m.id)}
+                    data-testid={`del-emp-${m.id}`}
+                    className="p-2 text-neutral-500 hover:text-[#FF3B30]"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

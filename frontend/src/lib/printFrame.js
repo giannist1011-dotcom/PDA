@@ -54,7 +54,9 @@ function getFrame() {
   return _frame;
 }
 
-export function printHtmlInFrame(html) {
+// `css`: εναλλακτικό stylesheet για εκτυπώσεις που ΔΕΝ είναι θερμικές 72mm
+// (π.χ. εβδομαδιαίο πρόγραμμα σε A4 από τον browser του διαχειριστή).
+export function printHtmlInFrame(html, css = FRAME_CSS) {
   return new Promise((resolve, reject) => {
     try {
       const iframe = getFrame();
@@ -62,7 +64,7 @@ export function printHtmlInFrame(html) {
       doc.open();
       doc.write(
         `<!doctype html><html><head><meta charset="utf-8">` +
-          `<style>${FRAME_CSS}</style></head><body>${html}</body></html>`
+          `<style>${css}</style></head><body>${html}</body></html>`
       );
       doc.close();
       let printed = false;

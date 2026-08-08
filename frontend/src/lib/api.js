@@ -335,6 +335,11 @@ export const apiUpsertShift = (payload) => api.put("/shifts", payload).then((r) 
 export const apiListShiftWeeks = () => api.get("/shifts/weeks").then((r) => r.data);
 export const apiDeleteShift = (employeeId, weekStart, day) =>
   api.delete("/shifts", { params: { employee_id: employeeId, week_start: weekStart, day } }).then((r) => r.data);
+// Αυτοσυμπλήρωση: αντιγραφή βαρδιών από την προηγούμενη (ή δοσμένη) εβδομάδα
+export const apiAutofillShifts = (weekStart, sourceWeekStart) =>
+  api
+    .post("/shifts/autofill", { week_start: weekStart, source_week_start: sourceWeekStart })
+    .then((r) => r.data);
 
 // ORDERS
 export const fetchNextOrderNumber = async () => (await api.get("/orders/next-number")).data.next_order_number;

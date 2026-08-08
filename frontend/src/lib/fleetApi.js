@@ -157,6 +157,25 @@ export const apiFleetPushSubscribe = (surface, subscription) =>
 export const apiFleetPushUnsubscribe = (endpoint) =>
   fleetApi.post("/fleet/push/unsubscribe", { endpoint }).then((r) => r.data);
 
+// ΠΡΟΓΡΑΜΜΑ ΜΕΛΩΝ (εβδομαδιαίες βάρδιες — μόνο διαχείριση)
+export const apiFleetSchedule = (weekStart) =>
+  fleetApi.get("/fleet/schedule", { params: { week_start: weekStart } }).then((r) => r.data);
+export const apiFleetScheduleWeeks = () =>
+  fleetApi.get("/fleet/schedule/weeks").then((r) => r.data);
+export const apiFleetUpsertScheduleShift = (payload) =>
+  fleetApi.put("/fleet/schedule", payload).then((r) => r.data);
+export const apiFleetDeleteScheduleShift = (memberId, weekStart, day) =>
+  fleetApi
+    .delete("/fleet/schedule", { params: { member_id: memberId, week_start: weekStart, day } })
+    .then((r) => r.data);
+export const apiFleetAutofillSchedule = (weekStart, sourceWeekStart) =>
+  fleetApi
+    .post("/fleet/schedule/autofill", {
+      week_start: weekStart,
+      source_week_start: sourceWeekStart,
+    })
+    .then((r) => r.data);
+
 // AUTOCOMPLETE + ΣΥΝΟΛΑ
 export const apiFleetAddressBook = () =>
   fleetApi.get("/fleet/address-book").then((r) => r.data);

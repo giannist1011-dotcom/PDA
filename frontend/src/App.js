@@ -47,6 +47,7 @@ import FleetDriverSettings from "@/pages/FleetDriverSettings";
 import FleetMembers from "@/pages/FleetMembers";
 import FleetSettings from "@/pages/FleetSettings";
 import FleetStats from "@/pages/FleetStats";
+import FleetSchedule from "@/pages/FleetSchedule";
 import FleetStores from "@/pages/FleetStores";
 import StoreFleet from "@/pages/StoreFleet";
 import StoreFleetPartners from "@/pages/StoreFleetPartners";
@@ -107,6 +108,14 @@ function FleetRoutes() {
           element={
             <FleetProtected roles={["fleet_admin"]}>
               <FleetStores />
+            </FleetProtected>
+          }
+        />
+        <Route
+          path="schedule"
+          element={
+            <FleetProtected roles={["fleet_admin"]}>
+              <FleetSchedule />
             </FleetProtected>
           }
         />

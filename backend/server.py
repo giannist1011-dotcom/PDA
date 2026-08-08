@@ -16,7 +16,11 @@ from pos import (
     ai, billing, checklist, expenses, menu, onboarding, orders,
     public_menu, schedule, stats, stock, tables,
 )
-from fleet import company as fleet_company, store as fleet_store
+from fleet import (
+    company as fleet_company,
+    schedule as fleet_schedule,
+    store as fleet_store,
+)
 from platforms import router as platforms_router
 from admin import (
     admins as admin_admins, announcements, fleet_accounts as admin_fleet,
@@ -66,6 +70,7 @@ api.include_router(announcements.router)
 api.include_router(onboarding.router)
 api.include_router(billing.router)
 api.include_router(fleet_company.router)
+api.include_router(fleet_schedule.router)
 api.include_router(fleet_store.router)
 api.include_router(printing.router)
 api.include_router(platforms_router.router)
@@ -165,6 +170,11 @@ async def on_startup():
     await db.fleet_events.create_index([("team_id", 1), ("created_at", -1)])
     # Βάρδιες οδηγών (ώρες στα στατιστικά οδηγού)
     await db.fleet_shifts.create_index([("team_id", 1), ("member_id", 1), ("ended_at", -1)])
+    # Πρόγραμμα εταιρείας (προγραμματισμένες βάρδιες μελών, ανά εβδομάδα)
+    await db.fleet_roster_shifts.create_index([("team_id", 1), ("week_start", 1)])
+    await db.fleet_roster_shifts.create_index(
+        [("team_id", 1), ("member_id", 1), ("week_start", 1), ("day", 1)], unique=True
+    )
     await db.fleet_counters.create_index([("team_id", 1), ("day", 1)], unique=True)
     # FleetDeck καταστημάτων: συνεργασίες κατάστημα ↔ εταιρεία + παραγγελίες ανά κατάστημα
     await db.fleet_partnerships.create_index([("store_user_id", 1), ("status", 1)])

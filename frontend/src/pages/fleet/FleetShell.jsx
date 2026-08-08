@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Map as MapIcon,
   BarChart3,
+  CalendarDays,
   Bike,
   ShieldCheck,
   PackageSearch,
@@ -30,6 +31,7 @@ const NAV_ADMIN = [
   { to: "/fleet", tab: "map", label: "Χάρτης", icon: MapIcon, testId: "fleet-drawer-map" },
   { to: "/fleet/stores", label: "Μαγαζιά", icon: Store, testId: "fleet-drawer-stores" },
   { to: "/fleet/members", label: "Διανομείς", icon: Users, testId: "fleet-drawer-members" },
+  { to: "/fleet/schedule", label: "Πρόγραμμα", icon: CalendarDays, testId: "fleet-drawer-schedule" },
   { to: "/fleet/stats", label: "Στατιστικά", icon: BarChart3, testId: "fleet-drawer-stats" },
   { to: "/fleet/settings", label: "Ρυθμίσεις", icon: KeyRound, testId: "fleet-drawer-settings" },
 ];

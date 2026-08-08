@@ -4,7 +4,8 @@
 στη βάση ως ιστορικό και είναι ΜΟΝΟ για προβολή (τα writes τις απορρίπτουν).
 """
 import uuid
-from datetime import timedelta
+from datetime import date as date_cls, timedelta
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
@@ -18,6 +19,15 @@ def _current_week_start() -> str:
     """Η Δευτέρα της τρέχουσας εβδομάδας (ημέρα Ελλάδας, YYYY-MM-DD)."""
     today = athens_now().date()
     return (today - timedelta(days=today.weekday())).isoformat()
+
+
+def _prev_week_start(week_start: str) -> str:
+    """Η αμέσως προηγούμενη Δευτέρα — για την αυτοσυμπλήρωση."""
+    try:
+        d = date_cls.fromisoformat(week_start)
+    except ValueError:
+        raise HTTPException(400, "Μη έγκυρη εβδομάδα")
+    return (d - timedelta(days=7)).isoformat()
 
 
 def _reject_past_week(week_start: str):
@@ -135,3 +145,48 @@ async def delete_shift(
         "day": day,
     })
     return {"ok": True, "deleted": r.deleted_count}
+
+
+# ============ ΑΥΤΟΣΥΜΠΛΗΡΩΣΗ ============
+class AutofillIn(BaseModel):
+    week_start: str            # η εβδομάδα-στόχος (YYYY-MM-DD, Δευτέρα)
+    source_week_start: Optional[str] = None  # default: η αμέσως προηγούμενη
+
+
+@router.post("/shifts/autofill")
+async def autofill_shifts(body: AutofillIn, user: dict = Depends(require_manager)):
+    """Αντιγράφει τις βάρδιες της προηγούμενης εβδομάδας στην τρέχουσα (ίδιες
+    μέρες/ώρες/άτομα). Υπάλληλοι που δεν υπάρχουν πια παραλείπονται."""
+    _reject_past_week(body.week_start)
+    source = body.source_week_start or _prev_week_start(body.week_start)
+    if source == body.week_start:
+        raise HTTPException(400, "Η εβδομάδα προέλευσης πρέπει να είναι διαφορετική")
+    src = await db.shifts.find(
+        {"user_id": user["id"], "week_start": source}, {"_id": 0}
+    ).to_list(1000)
+    emp_ids = {
+        e["id"]
+        for e in await db.employees.find({"user_id": user["id"]}, {"_id": 0, "id": 1}).to_list(500)
+    }
+    copied = 0
+    skipped = 0
+    for s in src:
+        if s.get("employee_id") not in emp_ids:
+            skipped += 1
+            continue
+        key = {
+            "user_id": user["id"],
+            "employee_id": s["employee_id"],
+            "week_start": body.week_start,
+            "day": s["day"],
+        }
+        await db.shifts.update_one(
+            key,
+            {
+                "$set": {"start": s["start"], "end": s["end"]},
+                "$setOnInsert": {"id": str(uuid.uuid4()), **key},
+            },
+            upsert=True,
+        )
+        copied += 1
+    return {"copied": copied, "skipped": skipped, "source_week_start": source}
